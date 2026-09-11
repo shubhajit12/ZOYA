@@ -108,50 +108,50 @@ export function computeCarlottaIdleOffset(
   const breath = t * BREATH_SPEED;
   switch (name) {
     case 'spine':
-      // Extremely subtle posture sway (two slow, unrelated axes).
+      // Readable but still slow posture sway (two unrelated axes).
       out.set(
-        Math.sin(t * 0.31 + 0.5) * 0.01,
+        Math.sin(t * 0.31 + 0.5) * 0.018,
         0,
-        Math.sin(t * 0.43 + 2.1) * 0.008,
+        Math.sin(t * 0.43 + 2.1) * 0.014,
       );
       break;
     case 'chest':
-      // Primary breathing + faint secondary swell.
+      // Primary breathing + faint secondary swell; ~2.3° peak breathing.
       out.set(
-        Math.sin(breath) * 0.02 + Math.sin(t * 0.61 + 1.7) * 0.006,
+        Math.sin(breath) * 0.04 + Math.sin(t * 0.61 + 1.7) * 0.012,
         0,
-        Math.sin(t * 0.37 + 0.9) * 0.005,
+        Math.sin(t * 0.37 + 0.9) * 0.01,
       );
       break;
     case 'neck':
       // Small lagged counter-movement so the head feels decoupled.
       out.set(
-        Math.sin(breath + 0.9) * 0.008,
-        Math.sin(t * 0.23) * 0.006,
+        Math.sin(breath + 0.9) * 0.014,
+        Math.sin(t * 0.23) * 0.01,
         0,
       );
       break;
     case 'head':
-      // Very subtle independent drift on incommensurate frequencies.
+      // Clearly visible independent drift without turning into a head-bob.
       out.set(
-        Math.sin(t * 0.27 + 0.4) * 0.012,
-        Math.sin(t * 0.69 + 1.2) * 0.02,
-        Math.sin(t * 0.132 + 2.6) * 0.008,
+        Math.sin(t * 0.27 + 0.4) * 0.022,
+        Math.sin(t * 0.69 + 1.2) * 0.035,
+        Math.sin(t * 0.132 + 2.6) * 0.012,
       );
       break;
     case 'leftShoulder':
       // Loosely breath-synced, own phase/amplitude.
       out.set(
-        Math.sin(breath - 0.5) * 0.014,
+        Math.sin(breath - 0.5) * 0.022,
         0,
-        Math.sin(t * 0.5) * 0.005,
+        Math.sin(t * 0.5) * 0.008,
       );
       break;
     case 'rightShoulder':
       out.set(
-        Math.sin(breath - 0.9) * 0.012,
+        Math.sin(breath - 0.9) * 0.02,
         0,
-        Math.sin(t * 0.47 + 1.1) * 0.005,
+        Math.sin(t * 0.47 + 1.1) * 0.008,
       );
       break;
   }
