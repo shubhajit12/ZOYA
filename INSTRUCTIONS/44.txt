@@ -1,0 +1,416 @@
+## UPGRADE MINT: EMOTION-AWARE BODY POSTURE
+
+We now have a working facial emotion system and a procedural body animation controller.
+
+The facial emotions visually look good. **Do not modify or retune the facial expression system.**
+
+Your task is to add a subtle, persistent **emotion-aware body posture layer** to the existing `CarlottaAnimationController`.
+
+### HARD CONSTRAINTS
+
+DO NOT:
+
+* use Mixamo
+* add animation files
+* add AnimationMixer
+* add animation clips
+* replace the VRM/model
+* replace the skeleton
+* modify mesh vertices
+* modify textures/materials
+* change camera
+* change OrbitControls
+* change Groq
+* change TTS
+* change lip-sync
+* change the existing facial expression recipes/mappings
+* create a second body animation controller
+* create another per-frame bone writer
+* accumulate bone rotations
+* use `bone.rotation.x += ...` or equivalent cumulative rotation
+* alter the existing relaxed/base pose
+* break existing idle/talking/listening/thinking behavior
+
+Keep the implementation lightweight and suitable for low-end PCs.
+
+---
+
+# GOAL
+
+Make Mint's **body language naturally reflect the current emotion** while preserving the existing behavior state.
+
+The architecture should become:
+
+Emotion
+↓
+Facial emotion system
++
+Emotion-aware body posture layer
+↓
+Existing procedural behavior state
+↓
+Final body pose
+
+Emotion and behavior MUST remain independent.
+
+Examples:
+
+```text
+Emotion = happy
+State = talking
+
+→ happy posture
+→ talking movement
+→ happy facial expression
+```
+
+```text
+Emotion = sad
+State = listening
+
+→ sad posture
+→ listening movement
+→ sad facial expression
+```
+
+Do NOT replace one state with another.
+
+---
+
+# EXISTING EMOTION STATE
+
+Reuse the existing:
+
+```ts
+currentEmotion
+targetEmotion
+emotionIntensity
+```
+
+Do NOT create a second emotion state.
+
+Emotion transitions must remain smooth.
+
+---
+
+# POSTURE DESIGN
+
+Implement subtle procedural posture offsets.
+
+These are NOT rigid poses. They should feel like natural body language.
+
+## CALM
+
+Baseline / relaxed posture.
+
+* relaxed shoulders
+* neutral chest
+* neutral head
+* gentle breathing
+* essentially the existing idle posture
+
+Do not disturb the current idle behavior.
+
+## HAPPY
+
+Subtle open/confident body language.
+
+* slightly lifted chest
+* shoulders slightly more open
+* very subtle upward head tendency
+* tiny positive weight shift
+* maintain relaxed shoulders
+
+Keep it subtle.
+
+## EXCITED
+
+More energetic version of happy.
+
+* slightly more upright chest
+* slightly elevated shoulders
+* slightly larger natural weight shifts
+* slightly more energetic head movement
+* preserve existing breathing
+
+Still believable, NOT exaggerated.
+
+## SAD
+
+Subtle closed/downward posture.
+
+* chest slightly lowered
+* shoulders slightly lowered/forward
+* head slightly lowered
+* reduced weight-shift amplitude
+* slightly softer movement
+
+Do not make the character collapse or slump dramatically.
+
+## ANGRY
+
+Subtle controlled tension.
+
+* chest slightly more upright
+* shoulders slightly firmer
+* head more stable
+* reduced loose weight shifting
+* subtle torso/shoulder tension
+
+Do NOT create an exaggerated fighting pose.
+
+---
+
+# IMPORTANT: USE EXISTING BONES ONLY
+
+First inspect the actual Carlotta skeleton and determine which existing bones are already used safely by the animation controller.
+
+Prefer existing relevant bones such as:
+
+```text
+spine
+chest
+upperChest
+neck
+head
+left/right shoulder
+left/right upperArm
+```
+
+Only use bones that actually exist.
+
+If a bone is missing, gracefully skip that component.
+
+Do not invent bone names blindly.
+
+---
+
+# LAYERING
+
+The emotion posture layer must coexist with:
+
+```text
+idle
+talking
+listening
+thinking
+```
+
+The final pose should be calculated from the original captured base quaternions.
+
+Conceptually:
+
+```text
+base quaternion
+    +
+idle/body behavior offset
+    +
+emotion posture offset
+    =
+final quaternion
+```
+
+Do NOT apply an emotion rotation on top of the previous frame's already modified rotation.
+
+No accumulation.
+
+---
+
+# SMOOTHING
+
+Emotion posture must smoothly interpolate using the existing emotion transition system.
+
+When transitioning:
+
+```text
+calm → happy
+```
+
+the posture should gradually change.
+
+When transitioning:
+
+```text
+happy → sad
+```
+
+the posture should gradually move toward sad.
+
+No snapping.
+
+Intensity must scale the posture:
+
+```text
+intensity = 0
+→ no emotion posture
+
+intensity = 0.5
+→ half strength
+
+intensity = 1
+→ full strength
+```
+
+---
+
+# SYMMETRY
+
+Avoid making the character look unnaturally crooked.
+
+Use mostly symmetrical posture offsets.
+
+Tiny asymmetry/weight shifts are acceptable only if they already exist in the procedural behavior system.
+
+---
+
+# PERFORMANCE
+
+Do not allocate objects every frame.
+
+Reuse temporary quaternions/vectors.
+
+Keep calculations lightweight.
+
+Do not introduce expensive IK, physics, or procedural skeletal solving.
+
+---
+
+# OWNERSHIP RULES
+
+The existing architecture remains authoritative:
+
+### Animation Controller owns:
+
+body bones.
+
+### Expression Controller owns:
+
+facial emotion expressions.
+
+### Lip-sync owns:
+
+```text
+aa
+```
+
+### Existing blink/look systems own:
+
+```text
+blink
+blinkLeft
+blinkRight
+lookUp
+lookDown
+lookLeft
+lookRight
+```
+
+Do not interfere with any of these.
+
+---
+
+# IMPLEMENTATION REQUIREMENTS
+
+Before changing code:
+
+1. Inspect the existing `CarlottaAnimationController`.
+2. Inspect how base quaternions are captured.
+3. Inspect how idle/talking/listening/thinking offsets are currently calculated.
+4. Inspect the existing emotion transition/intensity system.
+5. Inspect which actual skeleton bones are available.
+6. Integrate the new layer into the existing single body-animation update path.
+
+Do NOT create a parallel animation loop.
+
+---
+
+# DEV DIAGNOSTIC
+
+Add DEV-only controls for testing posture independently:
+
+```text
+Calm
+Happy
+Excited
+Sad
+Angry
+Reset
+```
+
+These controls must use the existing emotion/body controller architecture.
+
+Do not create a separate bone-writing diagnostic system.
+
+If an existing DEV emotion control already exists, extend/reuse it rather than duplicating it.
+
+---
+
+# TESTING
+
+Add/update tests covering:
+
+1. calm produces baseline-compatible posture
+2. happy posture is different from calm
+3. excited posture is stronger than happy
+4. sad posture is different from calm
+5. angry posture is different from calm
+6. intensity 0 produces no emotion posture
+7. intensity 0.5 produces approximately half-strength offsets
+8. intensity 1 produces full-strength offsets
+9. emotion transitions are smooth
+10. behavior states still work
+11. talking + emotion works
+12. listening + emotion works
+13. thinking + emotion works
+14. idle + emotion works
+15. no quaternion accumulation
+16. base pose remains unchanged
+17. facial expressions remain unchanged
+18. lip-sync remains unchanged
+19. blink/look remain unchanged
+20. no per-frame allocations introduced
+
+Run:
+
+```text
+tsc
+vite build
+server bundle/build
+all relevant tests
+```
+
+---
+
+# CRITICAL ACCEPTANCE CRITERIA
+
+The implementation is successful only if:
+
+* Existing idle still looks the same at calm/neutral.
+* Happy produces subtle positive/open posture.
+* Excited is noticeably more energetic than happy.
+* Sad produces subtle lowered/closed posture.
+* Angry produces subtle controlled tension.
+* Facial emotions remain exactly as they are now.
+* Talking/listening/thinking still work.
+* Emotion persists while behavior changes.
+* No animation clips/files are introduced.
+* No Mixamo is introduced.
+* No model/skeleton changes are introduced.
+* No camera changes are introduced.
+* Lip-sync remains untouched.
+* Production build passes.
+
+Do not claim that the posture looks good visually unless it has actually been browser-tested.
+
+At the end, report:
+
+1. files changed
+2. exact bones used
+3. posture implementation
+4. layering approach
+5. tests run/results
+6. build results
+7. confirmation that facial expressions, lip-sync, camera, model, and existing behavior were untouched
+8. whether a live browser visual test was performed
+
+**Do not perform unrelated cleanup or refactoring.**

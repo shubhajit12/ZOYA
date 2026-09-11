@@ -1,0 +1,227 @@
+We need to optimize ZOYA's Carlotta 3D renderer because real-world performance is currently poor.
+
+CURRENT OBSERVATION:
+
+* Medium quality reaches only ~50 FPS maximum.
+* Windows/system CPU usage remains around 100%.
+* GPU usage remains around 75% at its lowest and often higher.
+* A previous code-level benchmark showed our custom animation/expression/lip-sync JavaScript is extremely cheap (~3 µs/frame), so DO NOT assume the animation controller is the CPU bottleneck.
+* We need to identify the actual bottleneck first.
+
+IMPORTANT PROJECT CONSTRAINTS — DO NOT VIOLATE:
+
+* Do NOT use Mixamo.
+* Do NOT add external animation files.
+* Do NOT add AnimationMixer or animation clips.
+* Do NOT replace Carlotta.vrm.
+* Do NOT replace the skeleton, meshes, textures, or materials.
+* Do NOT modify camera behavior or OrbitControls.
+* Do NOT modify Groq/AI provider logic.
+* Do NOT modify TTS/audio pipeline.
+* Do NOT modify lip-sync behavior unless profiling proves it is directly responsible.
+* Do NOT modify the existing facial expression recipes/mappings.
+* Do NOT modify the existing emotion system or posture system unless profiling proves they are responsible.
+* Preserve hair/secondary spring-bone movement.
+* Preserve existing visual quality as much as possible.
+* Do not sacrifice the character's appearance just to make benchmark numbers look better.
+
+RELEVANT FILES:
+
+* src/mint/mintRenderer.ts
+* src/mint/performanceQuality.ts
+* src/mint/carlottaAnimationController.ts
+* src/mint/carlottaIdleController.ts
+* src/mint/carlottaExpressionController.ts
+* src/mint/carlottaLipSync.ts
+* src/mint/MintCanvas.tsx
+* src/mint/runtimeEnv.ts
+
+CURRENT QUALITY SYSTEM:
+HIGH:
+
+* uncapped
+* high DPR policy
+* highest visual quality
+
+MEDIUM:
+
+* currently targeted around 60 FPS
+* existing DPR cap around 1.25
+
+LOW:
+
+* currently targeted around 30 FPS
+* DPR 1.0
+* antialiasing disabled
+
+The frame pacing optimization is already implemented. Despite Medium, the user's actual system reaches only ~50 FPS and CPU remains ~100%.
+
+YOUR JOB:
+
+PHASE 1 — PROFILE BEFORE MODIFYING
+
+Inspect the entire Carlotta rendering path and identify likely CPU/GPU bottlenecks.
+
+Specifically investigate:
+
+1. Three.js renderer configuration
+2. WebGL render calls
+3. canvas drawing-buffer dimensions
+4. devicePixelRatio and actual render resolution
+5. antialiasing/MSAA
+6. shadows
+7. postprocessing
+8. transparent materials
+9. material count / draw calls
+10. scene graph traversal
+11. matrixWorld updates
+12. VRM humanoid/spring-bone update cost
+13. lookAt processing
+14. blink processing
+15. lip-sync analyser processing
+16. expression writes
+17. body animation writes
+18. resize handling
+19. OrbitControls updates
+20. browser compositor interaction
+21. unnecessary continuous rendering
+22. any duplicate render/update loops
+23. React re-renders affecting the canvas
+24. dev-only diagnostics that might accidentally run continuously
+25. GPU/CPU synchronization points such as readbacks or forced synchronization
+
+Look specifically for:
+
+* duplicate requestAnimationFrame loops
+* multiple renderer.render() calls per frame
+* multiple VRM.update() calls
+* unnecessary scene.updateMatrixWorld()
+* expensive Object3D traversal
+* repeated property allocations
+* texture uploads/reuploads
+* render target creation
+* shadow map rendering
+* high-resolution transparent passes
+* spring-bone simulation running more frequently than necessary
+* CPU/GPU synchronization stalls
+
+PHASE 2 — ADD TEMPORARY DIAGNOSTICS IF NECESSARY
+
+If the existing DEV readout is insufficient, add lightweight DEV-only diagnostics that can distinguish:
+
+CPU update time
+vs
+Three.js render time
+vs
+VRM update time
+vs
+spring-bone time
+vs
+expression/lip-sync/body-animation time.
+
+Also report:
+
+* actual canvas width/height
+* devicePixelRatio
+* renderer pixel ratio
+* draw calls
+* triangles
+* geometries
+* textures
+* frame time
+* update time
+* render time
+
+Do NOT leave expensive profiling instrumentation enabled in production.
+
+PHASE 3 — FIX THE ACTUAL BOTTLENECK
+
+Only after identifying the bottleneck, make the smallest safe optimization.
+
+Prioritize optimizations roughly in this order:
+
+A. Remove duplicate work.
+B. Reduce unnecessary scene/matrix traversal.
+C. Reduce unnecessary VRM/spring-bone work if safely possible.
+D. Reduce render resolution/DPR where appropriate.
+E. Reduce GPU-heavy rendering features.
+F. Improve frame scheduling.
+G. Only then consider more invasive changes.
+
+Do NOT optimize by simply disabling Carlotta's animation, expressions, lip-sync, hair, or visual systems.
+
+QUALITY REQUIREMENT:
+
+Medium should ideally sustain close to 60 FPS on the user's hardware if the hardware is capable of it.
+
+Low should prioritize performance and target ~30 FPS.
+
+However, if the GPU/CPU is genuinely the hardware limit, report that honestly instead of pretending the software can guarantee 60 FPS.
+
+IMPORTANT:
+Do not make a large speculative rewrite.
+
+First produce a diagnosis explaining:
+
+* what is actually consuming CPU
+* what is actually consuming GPU
+* whether the bottleneck is CPU-bound, GPU-bound, or synchronization-bound
+* the evidence supporting the diagnosis
+* the exact files/functions responsible
+
+Then implement the smallest high-confidence fix.
+
+REGRESSION REQUIREMENTS:
+
+After changes verify:
+
+* npm/build/typecheck
+* renderer starts
+* HEALTH endpoint still works
+* High/Medium/Low quality still work
+* frame pacing still works
+* OrbitControls still work
+* body animation still works
+* emotion/posture still works
+* facial expressions still work
+* lip-sync still works
+* blink/lookAt still work
+* hair/spring movement still works
+* no model/skeleton/material/texture replacement
+* no Mixamo
+* no animation clips
+* no new continuous render/update loop
+* no per-frame allocations introduced
+
+VERY IMPORTANT:
+Do not claim the optimization is successful based only on headless benchmarks.
+
+We need a clear distinction between:
+
+1. code-level benchmark results
+2. actual browser/laptop performance
+
+At the end give a concise report:
+
+FILES CHANGED:
+...
+
+ROOT CAUSE:
+...
+
+FIX:
+...
+
+BEFORE:
+...
+
+AFTER:
+...
+
+TESTS:
+...
+
+KNOWN LIMITATIONS:
+...
+
+Do not touch unrelated systems.

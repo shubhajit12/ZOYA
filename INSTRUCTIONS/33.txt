@@ -1,0 +1,344 @@
+ZOYA — PROCEDURAL ANIMATION SYSTEM — PASS 1
+
+We are now beginning the context-aware procedural animation system for Carlotta.
+
+CURRENT STATE:
+
+Carlotta.vrm is the active character.
+
+Already working:
+
+* Carlotta VRM loading
+* relaxed runtime pose
+* basic procedural idle
+* Sketchfab-style OrbitControls navigation
+* quality tiers
+* texture optimization
+* proper VRM/resource disposal
+
+Existing animation file:
+src/mint/carlottaIdleController.ts
+
+The existing idle controller is WORKING and must be preserved.
+
+IMPORTANT CHARACTER RULES:
+
+* Do NOT replace Carlotta.
+* Do NOT reintroduce Mint/FBX.
+* Do NOT use Mixamo.
+* Do NOT add external animation files.
+* Do NOT modify the VRM asset.
+* Do NOT change camera/navigation.
+* Do NOT change Carlotta's materials/appearance.
+* Do NOT break the relaxed pose.
+* Do NOT manually control spring/physics bones.
+* Do NOT modify the texture optimization system.
+* Do NOT modify performance quality behavior unless required for animation safety.
+* Keep animation lightweight.
+* Prefer small, surgical changes.
+
+GOAL:
+
+Build the FOUNDATION of a context-aware procedural animation controller.
+
+Do NOT implement every emotion yet.
+
+For this pass, implement only these animation states:
+
+* idle
+* listening
+* talking
+* thinking
+
+The controller must be designed so additional states can be added later without rewriting the architecture.
+
+ARCHITECTURE:
+
+Use this conceptual structure:
+
+Animation Intent
+↓
+Carlotta Animation Controller
+↓
+Procedural animation state
+↓
+Local bone rotations
+↓
+Carlotta VRM
+
+The future AI/Groq layer will only provide a SAFE animation intent.
+
+The AI must NEVER directly control:
+
+* bones
+* rotations
+* quaternions
+* transforms
+* numeric animation parameters
+
+The local controller owns all movement.
+
+SAFE INTENT TYPE:
+
+Create a strongly typed animation intent/state such as:
+
+idle
+listening
+talking
+thinking
+
+Do not use arbitrary strings throughout the codebase.
+
+Prefer a TypeScript union/enum/type that prevents unsupported animation names.
+
+CONTROLLER REQUIREMENTS:
+
+Create a dedicated controller, preferably:
+
+src/mint/carlottaAnimationController.ts
+
+unless inspection shows that integrating into the existing idle controller is significantly safer.
+
+The controller should:
+
+1. Store the current animation state.
+2. Store the target animation state.
+3. Smoothly blend between states.
+4. Avoid abrupt snapping.
+5. Preserve the original relaxed/base pose.
+6. Apply procedural offsets relative to captured base quaternions.
+7. Never accumulate rotations frame-to-frame.
+8. Avoid per-frame object allocations.
+9. Handle missing bones safely.
+10. Be frame-rate independent.
+11. Provide init(vrm), setState(state), update(delta), reset()/dispose() as appropriate.
+12. Work safely with the existing VRM lifecycle.
+
+IMPORTANT BASE-POSE RULE:
+
+The relaxed pose is applied BEFORE the animation controller captures its base quaternions.
+
+The intended initialization order remains:
+
+load VRM
+→ add model
+→ apply relaxed pose
+→ vrm.update(0)
+→ initialize animation controller
+→ normal per-frame updates
+
+Do NOT capture the original T-pose as the animation base.
+
+BONE SAFETY:
+
+Use only the already-inspected humanoid bones.
+
+Safe initial bones:
+
+* spine = joint_Torso
+* chest = joint_Torso2
+* neck = joint_Neck
+* head = joint_Head
+* leftShoulder = joint_LeftShoulder
+* rightShoulder = joint_RightShoulder
+
+For talking/listening/thinking, prefer these upper-body bones.
+
+DO NOT control:
+
+* eyes
+* spring bones
+* physics bones
+* fingers
+* jaw/mouth bones (none exist anyway)
+
+Do not modify hips or legs in this first pass unless absolutely necessary.
+
+IDLE:
+
+Preserve the existing idle behavior.
+
+Do NOT duplicate the existing breathing system if it already works.
+
+The new controller should cooperate with the existing idle rather than creating a second competing idle system.
+
+If necessary, refactor the existing idle code minimally so there is only one source of truth for procedural offsets.
+
+LISTENING:
+
+Create a subtle listening posture.
+
+Characteristics:
+
+* mostly calm
+* slightly attentive head orientation/movement
+* tiny upper-body responsiveness
+* subtle shoulder/chest movement
+* no exaggerated motion
+
+Listening should feel like Carlotta is paying attention.
+
+TALKING:
+
+Create the first clearly visible conversational procedural animation.
+
+Characteristics:
+
+* subtle head movement
+* tiny neck motion
+* slight chest/shoulder movement
+* gentle upper-body sway
+* small timing variation
+* natural pauses
+* NOT constant repetitive nodding
+* NOT exaggerated movement
+* NOT an animation-file loop
+
+Talking should be generated procedurally.
+
+It must remain lightweight.
+
+THINKING:
+
+Create a subtle thinking posture.
+
+Characteristics:
+
+* slightly slower movement
+* small head/neck shifts
+* subtle upper-body movement
+* calm pacing
+* no hand gestures yet
+* no eye manipulation
+* no exaggerated head rotation
+
+STATE TRANSITIONS:
+
+Transitions must be smooth.
+
+Example:
+
+idle → talking
+
+should gradually blend rather than snapping.
+
+talking → idle
+
+should smoothly return to the idle motion.
+
+Do not abruptly reset bones to their base rotation.
+
+Use normalized blend weights or another lightweight interpolation method.
+
+ROTATION SAFETY:
+
+Continue using the existing architecture where procedural rotations are calculated relative to base quaternions.
+
+Never do:
+
+bone.rotation.x += value
+
+or equivalent accumulating operations.
+
+Instead calculate the desired procedural offset from the base pose each frame and smoothly interpolate toward it.
+
+PERFORMANCE:
+
+This system must be extremely lightweight.
+
+Avoid:
+
+* per-frame allocations
+* arrays created every frame
+* object creation every frame
+* expensive traversals
+* searching the entire VRM hierarchy every frame
+* spring-bone manipulation
+* physics calculations
+
+Resolve bone references once during initialization.
+
+Use reusable temporary math objects if needed.
+
+VRM UPDATE ORDER:
+
+Inspect the existing mintRenderer.ts update loop before changing it.
+
+Preserve the correct VRM update lifecycle.
+
+Do not accidentally update VRM twice per frame.
+
+Do not interfere with existing:
+
+* lookAt
+* lip-sync
+* TTS
+* renderer
+* controls
+* quality systems
+
+IMPORTANT:
+
+Do NOT connect Groq to the animation controller yet.
+
+For this pass, animation states may be triggered locally or by temporary test code.
+
+The AI/context integration will be a later pass after the animation controller itself is visually verified.
+
+DEVELOPMENT TESTING:
+
+Add a temporary DEV-only way to test:
+
+idle
+listening
+talking
+thinking
+
+Use the simplest safe mechanism available in the existing architecture.
+
+Do not create permanent UI unless the project already has a suitable debug mechanism.
+
+Do not add noisy console logging.
+
+The purpose is simply to verify each state visually.
+
+VALIDATION:
+
+After implementation:
+
+* run lint
+* run production build
+* verify no TypeScript errors
+* verify no unrelated files changed
+* verify existing Carlotta loading still works
+* verify relaxed pose still works
+* verify basic idle still works
+* verify camera/navigation is untouched
+* verify performance quality system is untouched
+* verify texture optimization is untouched
+
+FINAL RESPONSE MUST REPORT:
+
+1. Exact files changed.
+2. New animation-controller architecture.
+3. How idle remains preserved.
+4. How listening works.
+5. How talking works.
+6. How thinking works.
+7. How state transitions are blended.
+8. Which bones are controlled.
+9. Confirmation that spring/physics bones are untouched.
+10. Confirmation that AI is NOT yet connected.
+11. Lint result.
+12. Build result.
+13. Any performance concerns.
+
+STOP AFTER THIS PASS.
+
+Do NOT implement emotions such as happy/sad/angry/excited yet.
+Do NOT implement gestures.
+Do NOT implement AI animation-intent parsing yet.
+Do NOT implement eye animation.
+Do NOT implement spring-bone animation.
+
+We will build those incrementally after this foundation is verified.

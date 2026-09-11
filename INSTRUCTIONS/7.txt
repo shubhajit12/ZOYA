@@ -1,0 +1,32 @@
+We found the issue.
+
+Do NOT change runMouthPoseTest() or its state-machine ordering.
+Do NOT change the Mint model, skeleton, calibration values, camera, audio, Groq, TTS, UI, or lip-sync behavior.
+
+Problem:
+After [MintMouth] TEST COMPLETE, [MOUTH OPEN TEST] continues printing stage=CLOSED every frame.
+
+Evidence:
+- The actual sweep correctly runs:
+  CLOSED → 25% → 50% → 75% → 100% → CLOSED → TEST COMPLETE
+- After TEST COMPLETE, measure logging continues once per frame.
+- This is debug-log spam, NOT a second sweep cycle.
+
+Find exactly why [MOUTH OPEN TEST] logging continues after runMouthPoseTest() sets:
+_mouthPoseTestActive=false
+_finishAfterClosed=false
+_mouthPoseLastAppliedPhase=null
+_sweepActive=false
+
+Trace where measureMouthGapCompact() / the "[MOUTH OPEN TEST]" console logging is called.
+
+Make the SMALLEST possible fix so that:
+1. Mouth-gap measurements still happen during the active mouth-pose test.
+2. The six stage measurements remain:
+   CLOSED, 25%, 50%, 75%, 100%, CLOSED.
+3. After TEST COMPLETE, there are NO further "[MOUTH OPEN TEST]" logs.
+4. Do not disable normal lip-sync or other face debugging.
+5. Do not alter the sweep state machine.
+6. Do not change any calibration values.
+
+After the change, run the relevant CLI/dev test and report exactly what file and lines were changed.

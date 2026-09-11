@@ -1,0 +1,162 @@
+# Remove Custom Shader Effects — Isolated Change
+
+I want to remove the custom shader effects that are making Mint look worse.
+
+## CRITICAL SCOPE
+
+Inspect the current rendering code first and identify exactly which shaders/custom shader modifications are being applied to Mint.
+
+Only remove the **custom shader effects**.
+
+Prefer changing only:
+`src/mint/mintRenderer.ts`
+
+If the shader implementation is actually located in another file, report that before modifying it. Do not make broad changes.
+
+## DO NOT TOUCH
+
+Absolutely preserve:
+
+* Mint's model
+* Carlotta's model
+* FBX/VRM loading
+* geometry
+* skeleton
+* bones
+* original textures
+* original material assignments
+* model scale/transform
+* camera
+* camera framing
+* OrbitControls
+* left-drag orbit
+* right-drag pan
+* native wheel zoom
+* `zoomToCursor`
+* distance limits
+* lip sync
+* mouth system
+* eye tracking
+* animations
+* emotions
+* Groq
+* TTS
+* UI
+* dependencies
+
+The navigation system is working now. **Do not touch it.**
+
+---
+
+# GOAL
+
+Remove custom shader effects that alter Mint's appearance.
+
+This means remove things such as custom:
+
+* `ShaderMaterial`
+* `onBeforeCompile` shader injections
+* custom vertex shader modifications
+* custom fragment shader modifications
+* custom lighting calculations
+* artificial rim-light shader effects
+* toon/cel shading
+* screen-space shader effects
+* color-processing shader modifications
+* custom shader uniforms used solely for visual effects
+
+ONLY remove custom shader modifications that are actually present.
+
+---
+
+# IMPORTANT: PRESERVE ORIGINAL MATERIALS
+
+Do NOT replace Mint's original materials with generic materials.
+
+Do NOT flatten the model into an untextured/default appearance.
+
+If Mint originally uses:
+
+* MeshStandardMaterial
+* MeshPhysicalMaterial
+* MeshPhongMaterial
+* MeshBasicMaterial
+* or another normal Three.js material
+
+restore/use that original material behavior rather than replacing it unnecessarily.
+
+Textures must remain intact.
+
+---
+
+# LIGHTING
+
+After removing the custom shader effect:
+
+Do not redesign the lighting system.
+
+Do not change the lights unless a shader-specific light dependency must be removed.
+
+The previous rim-light adjustment from:
+
+`0.8 → 0.35`
+
+may remain if it is part of the current code, but do not make additional lighting changes in this task.
+
+---
+
+# RENDERER
+
+Do not change:
+
+* renderer type
+* tone mapping
+* color space
+* exposure
+* antialiasing
+* resolution
+* shadows
+* post-processing
+
+unless one of these is explicitly part of the custom shader implementation being removed.
+
+---
+
+# VALIDATION
+
+After the change:
+
+1. Search the relevant rendering code for remaining custom shader modifications.
+2. Confirm original textured materials remain.
+3. Confirm no navigation code changed.
+4. Confirm no camera code changed.
+5. Confirm no model geometry/transform changed.
+
+Run:
+
+`npm run lint`
+
+Then:
+
+`npm run build`
+
+Inspect the final diff/scope.
+
+Report:
+
+* exactly which custom shader effect was removed
+* which file/lines changed
+* what material behavior remains
+* confirmation that original textures/materials were preserved
+* confirmation that navigation was untouched
+* lint result
+* build result
+* any pre-existing warnings
+
+## HARD RULE
+
+Do not create a replacement shader.
+
+Do not add another visual effect.
+
+**Remove the custom shader effect and let Mint render using its original material/rendering behavior.**

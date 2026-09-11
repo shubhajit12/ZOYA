@@ -1,0 +1,896 @@
+TASK: Implement **Pass 2 — Persistent Emotion Layer** for the CURRENT Carlotta VRM procedural animation system.
+
+IMPORTANT:
+Before editing anything, inspect the existing implementation.
+
+We already have a working Carlotta animation foundation. This pass must be **surgical** and must preserve it.
+
+==================================================
+CURRENT WORKING SYSTEMS — DO NOT BREAK
+======================================
+
+* Carlotta.vrm
+* Carlotta MToon appearance
+* VRM loading/unloading
+* relaxed base pose
+* existing procedural idle
+* CarlottaAnimationController
+* current `idle` state
+* current `listening` state
+* current `talking` state
+* current `thinking` state
+* smooth state blending
+* single animation update path
+* OrbitControls
+* camera
+* drag/orbit/pan/zoom
+* Groq brain
+* TTS / voice pipeline
+* lip-sync
+* VRM expressions
+* memory
+* UI
+* screen/browser/PC control
+* performance-quality system
+* texture-quality system
+* DEV animation test controls
+* no Mixamo
+* no external animation files
+* no model replacement
+* no skeleton replacement
+* no mesh vertex manipulation
+
+DO NOT modify unrelated systems.
+
+==================================================
+FILES / ARCHITECTURE
+====================
+
+Existing animation controller:
+
+`src/mint/carlottaAnimationController.ts`
+
+Existing idle implementation:
+
+`src/mint/carlottaIdleController.ts`
+
+The animation controller is already the single writer for the controlled body bones.
+
+DO NOT replace the controller with a giant state machine.
+
+DO NOT duplicate the idle system.
+
+The existing behavioral state and the new emotion layer must remain separate.
+
+Conceptually:
+
+CarlottaAnimationController
+|
++-- relaxed/base pose
+|
++-- idle layer
+|
++-- behavior layer
+|      ├── idle
+|      ├── listening
+|      ├── talking
+|      └── thinking
+|
++-- emotion layer          <-- THIS PASS
+|
++-- final bone output
+
+Emotion must coexist with behavior.
+
+Example:
+
+HAPPY + TALKING
+
+must produce:
+
+idle
+
+* talking micro-motion
+* happy posture/energy
+
+NOT:
+
+happy replacing talking.
+
+==================================================
+GOAL
+====
+
+Add a lightweight **persistent emotion layer**.
+
+Supported emotions for THIS PASS:
+
+* calm
+* happy
+* excited
+* sad
+* angry
+
+Do NOT implement these yet:
+
+* laughing
+* surprised
+* shy
+* greeting
+* goodbye
+* confused
+
+Those are transient reactions and belong to a later pass.
+
+Do NOT connect Groq yet.
+
+The emotion system must be independently testable through the existing DEV mechanism.
+
+==================================================
+EMOTION MODEL
+=============
+
+The controller should maintain:
+
+`currentEmotion`
+
+`targetEmotion`
+
+`emotionIntensity`
+
+Use a safe predefined union/type.
+
+Suggested:
+
+type CarlottaEmotion =
+| 'calm'
+| 'happy'
+| 'excited'
+| 'sad'
+| 'angry';
+
+Do not accept arbitrary strings as bone-control instructions.
+
+Unknown/invalid emotion input must safely resolve to `calm` or otherwise be rejected without affecting bones.
+
+==================================================
+PERSISTENCE
+===========
+
+Emotion is persistent until explicitly changed.
+
+Example:
+
+setEmotion('happy', 0.7)
+
+Then:
+
+talking
+→ listening
+→ thinking
+→ idle
+
+should preserve the happy emotional baseline.
+
+Changing behavioral state must NOT reset the emotion.
+
+Changing emotion must NOT reset the behavioral state.
+
+Example:
+
+current behavior = talking
+current emotion = happy
+
+Calling:
+
+`setEmotion('sad', 0.6)`
+
+should transition the emotional layer toward sad while TALKING continues underneath.
+
+==================================================
+SMOOTH EMOTION TRANSITIONS
+==========================
+
+Never snap emotion.
+
+When:
+
+`targetEmotion !== currentEmotion`
+
+smoothly blend toward the target.
+
+Use a configurable transition speed.
+
+Target approximately:
+
+0.8–1.5 seconds for normal emotion changes.
+
+Prefer delta-time based exponential smoothing or another stable frame-rate-independent method.
+
+Do NOT use:
+
+* setTimeout
+* setInterval
+* frame counters
+* fixed FPS assumptions
+
+Emotion intensity should also transition smoothly.
+
+For example:
+
+happy 0.2
+→
+happy 1.0
+
+should gradually increase rather than jump.
+
+Likewise:
+
+happy 1.0
+→
+calm 0.0
+
+should gradually settle.
+
+==================================================
+INTENSITY
+=========
+
+`emotionIntensity` must be safely clamped:
+
+`0.0 → 1.0`
+
+Use intensity to scale the emotion offsets.
+
+At intensity 0:
+
+emotion layer should contribute essentially no motion.
+
+At intensity 0.5:
+
+subtle emotion.
+
+At intensity 1:
+
+strongest allowed version.
+
+Even at intensity 1, movement must remain restrained and believable.
+
+Do NOT create exaggerated anime-like movement.
+
+==================================================
+IMPORTANT ROTATION RULE
+=======================
+
+NEVER modify a bone using its previous animated rotation.
+
+Never do:
+
+`bone.rotation.x += ...`
+
+Every frame must derive the final result from captured base quaternions plus procedural offsets.
+
+The existing controller already follows this principle.
+
+Preserve it.
+
+Do not introduce quaternion drift.
+
+==================================================
+LAYERING
+========
+
+The final animation should conceptually remain:
+
+base
+×
+idle
+×
+behavior
+×
+emotion
+
+or another mathematically equivalent safe local-space composition.
+
+Inspect the existing controller and use its current composition architecture.
+
+Do NOT rewrite the existing idle/behavior math unless absolutely required.
+
+The emotion layer should be an additional offset calculated from the same base/reference architecture.
+
+==================================================
+EMOTION MOTION DESIGN
+=====================
+
+Keep these movements SMALL.
+
+Use low-frequency procedural motion and posture offsets.
+
+Do not make every emotion simply a different sine wave.
+
+Natural variation is preferred.
+
+The emotion layer should mostly modify:
+
+* chest
+* spine
+* neck
+* head
+* shoulders
+
+Use only the already-approved controlled upper-body bones.
+
+Do NOT start controlling:
+
+* eyes
+* eye bones
+* fingers
+* hips
+* legs
+* spring bones
+* physics bones
+* facial expressions
+* mouth
+* jaw
+
+==================================================
+CALM
+====
+
+Calm should be the neutral baseline.
+
+Characteristics:
+
+* relaxed shoulders
+* neutral head
+* subtle breathing-compatible posture
+* very small natural drift
+
+Do not duplicate the existing idle breathing.
+
+Calm's contribution should be close to neutral.
+
+Think:
+
+"emotionally relaxed"
+
+not:
+
+"another idle animation."
+
+==================================================
+HAPPY
+=====
+
+Happy should add subtle positive energy.
+
+Use small:
+
+* chest openness
+* slight head lift
+* slight shoulder openness
+* gentle body sway
+
+Suggested maximum contribution at intensity 1:
+
+head:
+~0.5–1.5 degrees
+
+neck:
+~0.3–1 degree
+
+shoulders:
+~0.3–1 degree
+
+chest/spine:
+~0.3–1 degree
+
+Keep everything smooth.
+
+Happy must work naturally with talking.
+
+==================================================
+EXCITED
+=======
+
+Excited is stronger than happy.
+
+Use:
+
+* slightly more energetic chest
+* slightly more active shoulders
+* slightly greater head movement
+* slightly faster natural variation
+
+Still:
+
+NO shaking.
+
+NO constant bobbing.
+
+NO exaggerated movement.
+
+Suggested maximum contribution:
+
+head:
+~1–2 degrees
+
+neck:
+~0.5–1.2 degrees
+
+shoulders:
+~0.5–1.5 degrees
+
+chest/spine:
+~0.5–1.2 degrees
+
+These are upper bounds, not targets.
+
+==================================================
+SAD
+===
+
+Sad should reduce energy.
+
+Use:
+
+* slight head lowering
+* subtle shoulder drop
+* slightly reduced posture openness
+* slower emotional movement
+
+Keep the effect subtle.
+
+Do NOT rotate the entire character downward.
+
+Do NOT interfere with the relaxed pose foundation.
+
+Suggested maximum contribution:
+
+head:
+~0.5–1.5 degrees downward
+
+neck:
+~0.3–1 degree
+
+shoulders:
+~0.3–1 degree
+
+chest/spine:
+~0.3–1 degree
+
+==================================================
+ANGRY
+=====
+
+Angry should communicate restrained tension.
+
+Use:
+
+* slight forward head posture
+* subtle shoulder tension
+* small controlled head/neck movement
+* slightly stronger chest posture
+
+Do NOT create aggressive shaking.
+
+Do NOT make large rotations.
+
+Do NOT modify facial expressions.
+
+The eventual expression system will handle facial anger.
+
+Keep body language believable.
+
+==================================================
+MOTION STYLE
+============
+
+IMPORTANT:
+
+Do not implement emotions as obvious looping animations.
+
+The user should NOT immediately notice:
+
+"this is sine wave #3."
+
+Use several low-frequency oscillators with different phases/frequencies where useful.
+
+Keep amplitudes small.
+
+Use deterministic variation.
+
+Randomness is NOT required.
+
+If any variation is used, it must be deterministic/lightweight and must not cause emotion instability.
+
+Emotion should feel like a persistent posture/energy bias with subtle movement.
+
+==================================================
+BEHAVIOR + EMOTION
+==================
+
+This is critical.
+
+Test combinations:
+
+happy + idle
+happy + talking
+happy + listening
+happy + thinking
+
+sad + talking
+
+excited + talking
+
+angry + talking
+
+The emotion layer must NOT disable or replace the behavior layer.
+
+Talking must continue when emotion changes.
+
+Listening must continue when emotion changes.
+
+Thinking must continue when emotion changes.
+
+Idle must continue underneath everything.
+
+==================================================
+UPDATE ORDER
+============
+
+Inspect the current render loop first.
+
+Do NOT blindly add another update loop.
+
+There must remain exactly ONE animation update path.
+
+The existing flow must remain compatible with:
+
+VRM update
+→ animation controller
+→ render
+
+or whatever exact order the current implementation requires.
+
+Do not break:
+
+* spring-bone updates
+* VRM expressions
+* lip-sync
+* existing idle
+* relaxed pose
+
+Use the existing controller's current update architecture.
+
+==================================================
+API
+===
+
+Add the smallest clean API necessary.
+
+Preferred:
+
+`setEmotion(emotion, intensity?)`
+
+Existing behavior API must remain intact.
+
+Do not break:
+
+`setState(...)`
+
+or the existing DEV state hook.
+
+If useful internally, add:
+
+`getEmotion()`
+
+but do NOT expose unnecessary production APIs.
+
+The controller should remain the only system responsible for applying bone rotations.
+
+==================================================
+DEV TESTING
+===========
+
+Extend the EXISTING temporary DEV animation test control if appropriate.
+
+Do NOT redesign production UI.
+
+Do NOT create a permanent settings panel.
+
+If the current DEV control is:
+
+`[Idle] [Listen] [Talk] [Think]`
+
+you may add a small second row for:
+
+`[Calm] [Happy] [Excited] [Sad] [Angry]`
+
+Only in DEV.
+
+The buttons should ONLY call the controller's emotion API.
+
+They must NOT contain animation logic.
+
+Behavior and emotion should remain independently selectable.
+
+For example:
+
+Click `Talk`
++
+Click `Happy`
+
+must produce:
+
+Talking behavior + Happy emotion.
+
+Clicking `Sad` must NOT change Talking to Idle.
+
+This DEV UI is temporary and must remain production-hidden.
+
+==================================================
+PERFORMANCE
+===========
+
+Performance is critical.
+
+Do NOT:
+
+* add AnimationMixer
+* add animation clips
+* add external files
+* traverse the skeleton every frame
+* allocate objects every frame
+* allocate arrays every frame
+* create new Quaternions every frame if avoidable
+* create temporary Euler objects every frame if avoidable
+* add timers
+
+Cache:
+
+* bone references
+* base quaternions
+* reusable math objects
+
+Keep per-frame work lightweight.
+
+Do not unnecessarily increase the number of controlled bones.
+
+==================================================
+SAFETY
+======
+
+Gracefully handle missing bones.
+
+If a bone is unavailable:
+
+* skip that offset
+* do not crash
+* do not alter unrelated bones
+
+Do not touch spring/physics bones.
+
+Do not touch facial expressions.
+
+==================================================
+RESET / LIFECYCLE
+=================
+
+Preserve the existing controller lifecycle:
+
+`init()`
+`update()`
+`reset()`
+`dispose()`
+
+When the VRM is unloaded/reset:
+
+* no stale bone references
+* no stale quaternion references
+* no stale emotion state affecting the next model
+
+After reset:
+
+emotion should return to:
+
+`calm`
+
+with:
+
+`intensity = 0`
+
+or the controller's equivalent neutral baseline.
+
+The next Carlotta load must start cleanly.
+
+==================================================
+TESTING
+=======
+
+After implementation run:
+
+1. npm run lint
+2. npm run build
+
+Also inspect for:
+
+* duplicate animation loops
+* timers
+* frame-count animation
+* quaternion accumulation
+* per-frame allocations
+* skeleton traversal per frame
+* stale VRM references
+* invalid emotion handling
+
+If runtime/headless tests are practical, test:
+
+1. calm
+2. happy
+3. excited
+4. sad
+5. angry
+
+Then transitions:
+
+calm
+→ happy
+→ excited
+→ sad
+→ angry
+→ calm
+
+Verify transitions are smooth.
+
+Test intensity:
+
+happy 0
+→ happy 0.5
+→ happy 1
+→ happy 0
+
+Verify smooth scaling.
+
+Test layering:
+
+idle + happy
+
+talking + happy
+
+talking + sad
+
+talking + excited
+
+listening + happy
+
+thinking + sad
+
+Verify behavior remains active underneath emotion.
+
+Verify changing emotion does NOT reset behavior.
+
+Verify changing behavior does NOT reset emotion.
+
+Verify reset returns to neutral.
+
+==================================================
+VISUAL ACCEPTANCE CRITERIA
+==========================
+
+The character should feel:
+
+ALIVE
+SUBTLE
+NATURAL
+BELIEVABLE
+
+Not:
+
+ROBOTIC
+SHAKY
+EXAGGERATED
+REPETITIVE
+FLOATY
+T-POSED
+TWISTED
+
+The difference between emotions should be visible but restrained.
+
+Happy should feel warmer/more open.
+
+Excited should feel more energetic.
+
+Sad should feel lower/slower.
+
+Angry should feel slightly tense/forward.
+
+Calm should feel neutral/relaxed.
+
+Do not make emotions so strong that they overpower the character.
+
+==================================================
+DO NOT CONNECT GROQ YET
+=======================
+
+This pass is ONLY the procedural emotion layer.
+
+Do NOT modify the Groq prompt.
+
+Do NOT make Groq choose emotions.
+
+Do NOT change the brain provider.
+
+Do NOT modify TTS.
+
+Do NOT modify lip-sync.
+
+We will connect semantic intent later, after the procedural layers are visually validated.
+
+==================================================
+AUTONOMOUS BUG FIXING
+=====================
+
+You may fix bugs directly caused by this emotion-layer implementation.
+
+Do NOT refactor unrelated code.
+
+If an unrelated pre-existing issue is discovered:
+
+report it.
+
+Do not modify it.
+
+==================================================
+FINAL REPORT
+============
+
+At the end report:
+
+1. Exact files changed
+2. Exact files added
+3. Emotion architecture
+4. How emotion layers with behavior
+5. Emotion transition method
+6. Intensity handling
+7. Update order
+8. DEV testing controls
+9. Tests performed
+10. Lint result
+11. Build result
+12. Bugs found
+13. Bugs fixed
+14. Known limitations
+15. Confirmation that:
+
+    * relaxed pose remained intact
+    * existing idle remained intact
+    * existing behavior states remained intact
+    * camera remained untouched
+    * OrbitControls remained untouched
+    * Carlotta appearance remained untouched
+    * Groq remained untouched
+    * TTS remained untouched
+    * lip-sync remained untouched
+
+MOST IMPORTANT:
+
+This is a procedural BODY LANGUAGE system.
+
+Emotion is a persistent subtle layer.
+
+Behavior is separate.
+
+Idle remains underneath.
+
+Small movement > large movement.
+
+Smoothness > complexity.
+
+Natural posture > obvious animation.
+
+Context > randomness.
+
+Performance > unnecessary sophistication.
+
+DO NOT turn this into a traditional animation-clip system.

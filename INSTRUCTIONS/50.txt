@@ -1,0 +1,353 @@
+We need to significantly upgrade Zoya's animation architecture so it can eventually acquire and learn new animation skills when an animation is unavailable.
+
+IMPORTANT PROJECT CONTEXT:
+
+* Current model is Carlotta.vrm (VRM 0.0).
+* Do NOT treat the old Mint FBX as the current model.
+* Do NOT replace Carlotta's model or skeleton.
+* Do NOT use Mixamo as a required dependency.
+* Existing Carlotta procedural idle system should remain.
+* Existing lip-sync, expressions, camera, renderer, Groq brain, TTS, and UI must remain intact unless a change is strictly required by this task.
+* We already decided rendering optimization is good enough. DO NOT start another performance-optimization project.
+* Current animation architecture should become the foundation rather than being thrown away.
+
+GOAL:
+
+Design and implement the foundation for a scalable "Animation Skill System".
+
+The long-term architecture should be:
+
+Groq/Zoya Brain
+↓
+High-level Animation Intent
+↓
+Animation Skill Resolver
+↓
+Local Animation Library
+↓ if missing
+Animation Discovery/Acquisition System
+↓
+Animation Validation
+↓
+Animation Retargeter
+↓
+Carlotta-compatible animation
+↓
+Animation Cache/Library
+↓
+Layered Animation Controller
+↓
+Carlotta
+
+CRITICAL:
+Groq must NEVER directly control bones or output raw bone rotations.
+
+Groq should only produce safe high-level intents such as:
+idle
+listening
+talking
+happy
+excited
+sad
+angry
+surprised
+thinking
+laughing
+greeting
+goodbye
+confused
+shy
+calm
+wave
+bow
+point
+clap
+dance
+sit
+stand
+stretch
+shrug
+etc.
+
+The animation controller decides HOW the body moves.
+
+PHASE 1 — INSPECT CURRENT SYSTEM
+
+Before modifying anything:
+
+1. Inspect the existing Carlotta animation architecture.
+2. Inspect:
+
+   * carlottaIdleController
+   * carlottaAnimationController
+   * carlottaVrmLoader
+   * expression controller
+   * lip-sync
+   * mintRenderer
+   * any existing animation intent/state code
+3. Determine exactly where the new system should integrate.
+4. Do not duplicate existing functionality.
+5. Do not modify files unnecessarily.
+
+Then report the proposed architecture and files before making large changes.
+
+PHASE 2 — ANIMATION INTENT LAYER
+
+Create a strongly typed animation-intent system.
+
+Example conceptual structure:
+
+AnimationIntent:
+
+* idle
+* listening
+* talking
+* happy
+* excited
+* sad
+* angry
+* surprised
+* thinking
+* laughing
+* greeting
+* goodbye
+* confused
+* shy
+* calm
+* wave
+* bow
+* point
+* clap
+* dance
+* sit
+* stand
+* stretch
+* shrug
+
+Do not assume every intent needs a downloaded animation.
+
+Some intents should remain procedural.
+
+Example:
+
+"thinking"
+→ procedural head tilt + gaze + posture
+
+"talking"
+→ procedural body motion + existing lip-sync
+
+"wave"
+→ potentially learned animation skill
+
+PHASE 3 — ANIMATION SKILL LIBRARY
+
+Design a local animation registry/cache.
+
+Each animation skill should conceptually contain metadata like:
+
+{
+id,
+name,
+category,
+source,
+license,
+format,
+duration,
+compatible,
+retargetedFor,
+qualityScore,
+version
+}
+
+The registry should allow:
+
+resolve("wave")
+
+and return either:
+
+* an existing local animation
+* a procedural animation
+* a learned/downloaded animation
+* "unavailable"
+
+Do NOT implement web downloading yet unless the existing architecture makes it trivial and safe.
+
+First build the abstraction.
+
+PHASE 4 — UNIVERSAL RETARGETING ARCHITECTURE
+
+Design a retargeting layer capable of eventually converting animations from different skeleton formats into Carlotta's humanoid skeleton.
+
+Potential future inputs:
+
+* GLB/GLTF animations
+* BVH
+* VRM-compatible animations
+* other supported skeletal animation formats
+
+The retargeter must map semantic humanoid bones to Carlotta's existing humanoid bones.
+
+IMPORTANT:
+
+* Never replace Carlotta's skeleton.
+* Never modify mesh vertices.
+* Never permanently alter the VRM.
+* Never assume a source skeleton is identical to Carlotta.
+* Missing source bones must be handled gracefully.
+* Missing Carlotta bones must be handled gracefully.
+* Retargeting must be isolated from the renderer.
+
+For now, build the interfaces/types and determine what can safely be implemented with the current Three.js + three-vrm stack.
+
+PHASE 5 — LAYERED ANIMATION
+
+The final architecture should support multiple simultaneous layers:
+
+Base:
+idle
+
+State:
+listening / talking
+
+Emotion:
+happy / sad / angry / etc.
+
+Gesture:
+wave / point / shrug / etc.
+
+Facial:
+expressions + existing lip-sync
+
+Gaze:
+eye/head movement
+
+Example:
+
+happy + talking + wave
+
+should become:
+
+idle
+
+* happy body bias
+* talking motion
+* wave gesture
+* lip-sync
+
+rather than replacing everything with one animation.
+
+Each layer needs blending/priority rules so animations do not fight over the same bones.
+
+PHASE 6 — FUTURE WEB ACQUISITION
+
+Design an interface for a future Animation Discovery system:
+
+Animation missing
+↓
+Search approved web sources
+↓
+Find candidate animation
+↓
+Check source/license
+↓
+Validate file
+↓
+Inspect skeleton
+↓
+Check retargetability
+↓
+Retarget to Carlotta
+↓
+Quality test
+↓
+Cache locally
+↓
+Register as an animation skill
+
+IMPORTANT:
+Do NOT blindly download arbitrary files from the internet.
+
+Do NOT execute downloaded code.
+
+Do NOT allow a web result to modify the application source code.
+
+Downloaded animation data must be treated as untrusted data and validated before use.
+
+PHASE 7 — "LEARNING" MODEL
+
+We eventually want Zoya to "learn" animations.
+
+Do NOT interpret this as retraining the Groq model or training a neural network every time.
+
+Instead, define learning as:
+
+discover → validate → retarget → evaluate → remember → reuse
+
+So if Zoya learns a "wave" skill once, future requests should use the cached Carlotta-compatible version without searching again.
+
+The system should eventually support:
+
+"I don't know how to do this"
+→ discover animation
+→ learn skill
+→ save skill
+→ perform it later
+
+PHASE 8 — PROCEDURAL FALLBACK
+
+If no downloaded/learned animation exists:
+
+Animation Skill Resolver
+↓
+Can procedural system produce it?
+↓ YES → procedural animation
+↓ NO  → unavailable
+
+This is critical.
+
+Zoya must never freeze or break because an animation is missing.
+
+PHASE 9 — SAFETY / PERFORMANCE
+
+Animations must not:
+
+* create per-frame garbage unnecessarily
+* create uncontrolled animation mixers everywhere
+* alter the VRM skeleton permanently
+* modify mesh vertices
+* replace Carlotta's model
+* interfere with lip-sync
+* interfere with expressions
+* interfere with camera controls
+* introduce external runtime dependencies unnecessarily
+
+Keep low-end PC performance in mind, but DO NOT begin another broad optimization pass.
+
+PHASE 10 — IMPLEMENTATION RULE
+
+This is an architecture-first task.
+
+Do NOT immediately download animations from the web.
+
+First inspect the current codebase and implement the clean interfaces/controller foundation.
+
+After implementation:
+
+1. Run TypeScript checks.
+2. Run the existing build.
+3. Verify Carlotta still loads.
+4. Verify existing idle still works.
+5. Verify talking/listening behavior is not broken.
+6. Verify lip-sync is untouched.
+7. Report every file changed.
+8. Explain how the new architecture will support future web animation acquisition.
+
+DO NOT make unrelated changes.
+
+DO NOT rewrite the renderer.
+
+DO NOT replace the existing procedural idle system.
+
+DO NOT change Carlotta's appearance.
+
+The goal is to turn the current animation system into a scalable foundation where Zoya can eventually acquire new animation skills instead of being limited to a fixed set of hardcoded motions.

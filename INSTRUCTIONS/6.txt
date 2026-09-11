@@ -1,0 +1,38 @@
+Continue the Mint facial-bone lip-sync investigation.
+
+IMPORTANT:
+- Do NOT modify any files yet.
+- Do NOT change the recently fixed runMouthPoseTest() state-machine logic.
+- Do NOT change Mint's model, skeleton, textures, materials, camera, drag, zoom, audio, Groq, TTS, UI, or viseme system.
+- This is a diagnostic/test pass only.
+
+Goal:
+Use the existing CLI/debug infrastructure to determine exactly which Mint facial bones affect the mouth and jaw.
+
+Run the existing mouth/facial bone sweep and inspect the CLI output.
+
+For each tested bone, report:
+1. Bone name
+2. Axis being tested
+3. Direction of movement
+4. Minimum/maximum tested rotation
+5. Measured mouth-gap change, if available
+6. Whether the movement visibly/structurally affects the mouth
+7. Whether the bone should be considered useful for lip-sync
+
+Also verify that the sweep state machine completes exactly once:
+
+CLOSED → 25% → 50% → 75% → 100% → CLOSED → STOP
+
+Expected:
+- One measurement per stage
+- No second cycle
+- _mouthPoseTestActive becomes false
+- _finishAfterClosed is consumed
+- _mouthPoseLastAppliedPhase becomes null
+- bind/CLOSED pose is restored
+- _sweepActive becomes false
+
+Do not fix anything you find yet.
+Do not make speculative changes.
+At the end, give me a concise diagnostic report and identify the best candidate mouth/jaw bones for the next lip-sync test.

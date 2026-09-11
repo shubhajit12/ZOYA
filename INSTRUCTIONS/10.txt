@@ -1,0 +1,107 @@
+We are now entering an autonomous TEST → DIAGNOSE → FIX → RETEST cycle for the Mint mouth/lip-sync system.
+
+You may EDIT code ONLY when you find a reproducible bug.
+
+IMPORTANT:
+- Do not blindly change working behavior.
+- Do not rewrite working systems.
+- Make the smallest possible fix for each confirmed bug.
+- After every fix, rerun the relevant tests.
+- If a suspected issue cannot be reproduced, do NOT change code.
+- If everything passes, make no changes and report PASS.
+
+DO NOT CHANGE:
+- Mint model
+- Mint skeleton
+- Mint textures/materials
+- camera
+- drag rotation
+- zoom
+- Groq brain/provider
+- Google TTS
+- normal lip-sync architecture
+- existing calibration values unless a reproducible calibration bug is proven
+- runMouthPoseTest() state-machine ordering
+- unrelated UI or face systems
+
+CURRENT VERIFIED BEHAVIOR:
+1. Calibration detects 11 mouth bones successfully.
+2. Mouth pose test runs:
+   CLOSED → 25% → 50% → 75% → 100% → CLOSED
+3. TEST COMPLETE happens once.
+4. No post-test [MOUTH OPEN TEST] spam.
+5. Normal lip-sync continues after the test.
+6. Mouth geometry visibly moves when zoomed in.
+7. npm run lint passes.
+8. npm run build passes.
+9. The current mouth-gap measurement is known to be an imperfect diagnostic metric at extreme angles. Do NOT "fix" it unless you can demonstrate a real functional bug caused by it.
+
+TEST PLAN:
+
+A) Static/code validation
+- Inspect the complete Mint mouth/lip-sync path.
+- Check for null/undefined access, stale state, incorrect cleanup, repeated timers, animation-loop leaks, NaN/Infinity values, invalid bone references, and accidental state conflicts.
+- Check that TEST COMPLETE leaves the system in a clean state.
+- Check that normal lip-sync resumes correctly after the test.
+
+B) Mouth-pose test
+Run the existing mouth-pose test through the available runtime/test mechanisms.
+Verify:
+CLOSED → 25% → 50% → 75% → 100% → CLOSED
+
+Verify:
+- exactly one test cycle
+- exactly six stage measurements while testing
+- no measurements after completion
+- no stuck active flags
+- no stuck sweep flags
+- no repeated timer loop
+
+C) Repeated-run test
+Run the mouth-pose test multiple times consecutively.
+Verify that each run starts cleanly and produces exactly one complete cycle.
+Look specifically for:
+- stale state from previous run
+- duplicated callbacks
+- duplicate debug buttons
+- accumulating timers
+- accumulating animation loops
+- memory/state leaks
+
+D) Normal lip-sync regression
+After the mouth-pose test completes, exercise the normal bone lip-sync path.
+Verify that the test's cleanup does not disable or interfere with normal mouth posing.
+
+E) Build/test validation
+Run:
+- npm run lint
+- npm run build
+- any relevant existing Mint/lip-sync tests
+- any relevant TypeScript/esbuild validation
+
+AUTONOMOUS FIX RULE:
+If you find a REAL, reproducible bug:
+1. Explain the exact root cause.
+2. Make the smallest targeted fix.
+3. Show exactly which file/lines changed.
+4. Rerun the test that exposed it.
+5. Run lint/build afterward.
+6. Verify that the original behavior still works.
+7. Continue testing for remaining bugs.
+
+If a test cannot be performed because this environment lacks browser/pixel interaction, explicitly say so. Do NOT pretend numerical/code validation is visual verification.
+
+At the end, report:
+
+TEST RESULT:
+- PASS / FAIL
+- Bugs found:
+- Bugs fixed:
+- Files changed:
+- Tests executed:
+- Lint:
+- Build:
+- Remaining limitations:
+
+If no reproducible bugs are found:
+MAKE NO CODE CHANGES and report PASS.

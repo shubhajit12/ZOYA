@@ -1,0 +1,170 @@
+# Reduce Carlotta VRM MToon Shadowing — Isolated Fix
+
+The current character is **Carlotta (.vrm)**.
+
+I am referring to the **dark/shadowed areas visible on Carlotta**, NOT custom GLSL shaders.
+
+The previous audit established:
+
+* no Three.js shadow-casting lights
+* no shadow maps actually being rendered
+* no custom ShaderMaterial/onBeforeCompile/post-processing
+* Carlotta uses native three-vrm MToon materials
+
+Therefore, inspect the **MToon material's built-in shading/self-shadow configuration**.
+
+## STRICT SCOPE
+
+Only modify the current Carlotta VRM rendering/material configuration.
+
+Prefer the smallest possible change in:
+`src/mint/carlottaVrmLoader.ts`
+or the exact Carlotta VRM rendering code if that is where the MToon setting is controlled.
+
+Do NOT modify the old FBX/Mint pipeline.
+
+---
+
+## GOAL
+
+Reduce or remove the **MToon shadow/self-shadow appearance** that is making Carlotta look ugly.
+
+I want Carlotta to look:
+
+* cleaner
+* brighter
+* softer
+* less heavily shaded
+* less muddy
+
+while preserving:
+
+* original VRM textures
+* original material assignments
+* original model
+* original geometry
+* original skeleton
+* original expressions/blendshapes
+* spring bones
+* lookAt
+* animations
+
+---
+
+## FIRST INSPECT
+
+Inspect the actual three-vrm `MToonMaterial` API/version installed:
+
+`@pixiv/three-vrm@3.5.5`
+
+Determine which MToon properties control the built-in shadow/self-shadow appearance.
+
+Look specifically for the installed version's actual API/configuration rather than guessing property names.
+
+Examples of things to investigate include MToon shading/shadow-related settings, but DO NOT assume an API exists.
+
+---
+
+## IMPORTANT
+
+Do NOT:
+
+* add a custom shader
+* add ShaderMaterial
+* use onBeforeCompile
+* replace the VRM materials
+* convert MToon to MeshBasicMaterial
+* convert MToon to MeshStandardMaterial
+* modify textures
+* modify lights
+* modify renderer exposure
+* modify tone mapping
+* modify camera
+* modify navigation
+
+This must remain a **native MToon configuration change**.
+
+---
+
+## NAVIGATION LOCK
+
+The working Sketchfab-style navigation is completely locked.
+
+Do NOT touch:
+
+* OrbitControls
+* `enableZoom`
+* `zoomToCursor`
+* `enablePan`
+* mouse mappings
+* damping
+* rotate speed
+* pan speed
+* minDistance/maxDistance
+* camera position
+* camera target
+* controls.update()
+
+---
+
+## LIGHTING LOCK
+
+Do NOT change any scene lights.
+
+Keep the current lighting exactly as it is, including the recently adjusted rim light.
+
+We are testing the MToon shadow/shading behavior itself.
+
+---
+
+## IMPLEMENTATION
+
+After identifying the correct MToon shadow/shading property:
+
+1. Make ONE minimal change.
+2. Apply it only to Carlotta's VRM materials.
+3. Preserve all textures and material assignments.
+4. Do not create replacement materials.
+5. Do not alter the model.
+
+If the correct MToon property can disable or substantially reduce the unwanted self-shadowing, use that native property.
+
+If there are multiple possible MToon shadow controls, choose the **single least-invasive setting** that directly addresses the problem.
+
+Do NOT change multiple values at once.
+
+---
+
+## VALIDATION
+
+Run:
+
+`npm run lint`
+
+Then:
+
+`npm run build`
+
+Inspect the final diff.
+
+Confirm:
+
+1. Only Carlotta MToon shadow/shading configuration changed.
+2. VRM/model/textures/material assignments remain intact.
+3. No FBX code changed.
+4. No lights changed.
+5. No renderer settings changed.
+6. No camera/navigation code changed.
+7. No custom shader was added.
+8. Lint passes.
+9. Build passes.
+
+Do not claim visual validation unless the running browser was actually tested.
+
+## HARD RULE
+
+If the installed three-vrm 3.5.5 API does NOT expose a safe native MToon shadow/shading control that addresses this, **STOP and report the exact available property/API instead of guessing.**
+
+The target is:
+
+**Carlotta VRM + native MToon → reduced/unwanted shadow appearance → everything else unchanged.**

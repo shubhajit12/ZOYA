@@ -1,0 +1,289 @@
+# ZOYA — CARLOTTA LOW-END GPU PERFORMANCE AUDIT
+
+We are currently testing Zoya on a lower-end laptop.
+
+IMPORTANT UPDATE:
+
+Carlotta **DOES load successfully** on the laptop.
+
+The problem is now **GPU/VRAM usage**.
+
+The laptop has approximately **1.9 GB of GPU VRAM**, and while Zoya is running with Carlotta loaded, GPU memory usage reaches approximately **86–90%**.
+
+DO NOT modify the project yet.
+
+This task is **READ-ONLY PERFORMANCE AUDITING ONLY**.
+
+---
+
+# ABSOLUTE RULE
+
+Do NOT:
+
+* modify any files
+* optimize anything yet
+* replace Carlotta
+* replace the VRM
+* reduce texture resolution
+* change materials
+* change the renderer
+* change camera settings
+* change OrbitControls
+* disable spring bones
+* change animation
+* change lip sync
+* change AI
+* change TTS
+* change UI
+* add dependencies
+* remove dependencies
+* refactor the project
+
+We first need hard numbers to identify the actual bottleneck.
+
+---
+
+# AUDIT THE CURRENT CARLOTTA VRM
+
+Inspect:
+
+`5244609761843871363.vrm`
+
+Determine:
+
+### File
+
+* VRM file size
+
+### Textures
+
+* total texture count
+* every texture's resolution
+* texture formats if available
+* estimated GPU memory usage
+* identify the largest textures
+* identify whether textures are duplicated/shared
+
+### Geometry
+
+* total mesh count
+* total vertex count if available
+* total triangle count
+* largest meshes
+* whether any mesh is disproportionately expensive
+
+### Materials
+
+* total material count
+* MToon material count
+* other material types if any
+
+### VRM systems
+
+Inspect:
+
+* humanoid bone count
+* spring-bone count
+* collider count
+* spring-bone joint count
+* any other expensive VRM runtime systems
+
+---
+
+# AUDIT THREE.JS RENDERING
+
+Inspect the existing renderer and report:
+
+* renderer type
+* WebGL version
+* antialias setting
+* pixel ratio
+* canvas width/height
+* drawing buffer width/height
+* shadow-map status
+* post-processing
+* render targets
+* MSAA if applicable
+* tone mapping
+* color space
+* number of render calls per frame if measurable
+* draw calls
+* triangles rendered
+* points/lines if any
+* geometries
+* textures
+* programs
+
+If `renderer.info` is available, report its values.
+
+---
+
+# AUDIT THE DEVICE
+
+If safely available through the browser/runtime, report:
+
+* GPU renderer/vendor
+* WebGL capabilities
+* maximum texture size
+* available WebGL extensions relevant to performance
+* device pixel ratio
+
+Do not require installing additional software.
+
+Do not change system settings.
+
+---
+
+# AUDIT THE ANIMATION/VRM UPDATE LOOP
+
+Inspect the current render loop.
+
+Determine whether:
+
+`vrm.update()`
+
+is expensive.
+
+Check specifically:
+
+* spring-bone updates
+* secondary animation
+* procedural idle controller
+* unnecessary scene traversal
+* repeated allocations
+* unnecessary calculations every frame
+
+DO NOT disable anything.
+
+Only report what is currently happening.
+
+---
+
+# IMPORTANT: DISTINGUISH GPU LOAD TYPES
+
+Do not simply report:
+
+"GPU usage is high."
+
+Determine whether the likely issue is primarily:
+
+### VRAM PRESSURE
+
+Too much GPU memory consumed by:
+
+* textures
+* render targets
+* geometry
+* GPU resources
+
+OR
+
+### GPU RENDER/COMPUTE LOAD
+
+Too much work per frame caused by:
+
+* high resolution
+* high pixel ratio
+* too many fragments
+* too many triangles
+* too many draw calls
+* antialiasing
+* materials/shaders
+* other rendering work
+
+OR BOTH.
+
+---
+
+# DO NOT GUESS
+
+If something cannot be measured directly, clearly label it:
+
+`UNKNOWN / NOT MEASURABLE`
+
+Do not invent values.
+
+---
+
+# OUTPUT FORMAT
+
+Return a concise report like:
+
+```text
+========== CARLOTTA LOW-END PERFORMANCE AUDIT ==========
+
+VRM FILE
+Size:
+Textures:
+Materials:
+Meshes:
+Triangles:
+
+TEXTURES
+Total:
+Largest:
+Estimated VRAM:
+Details:
+
+GEOMETRY
+Vertices:
+Triangles:
+Meshes:
+
+MATERIALS
+Total:
+MToon:
+Other:
+
+VRM RUNTIME
+Humanoid bones:
+Spring bones:
+Colliders:
+Spring joints:
+
+RENDERER
+WebGL:
+Antialias:
+Pixel ratio:
+Canvas:
+Drawing buffer:
+Draw calls:
+Triangles:
+Textures:
+Geometries:
+Programs:
+
+GPU
+Renderer:
+Vendor:
+VRAM:
+Capabilities:
+
+ANIMATION
+vrm.update cost:
+Idle controller:
+Spring-bone cost:
+Other per-frame work:
+
+LIKELY BOTTLENECK
+1.
+2.
+3.
+
+RECOMMENDED OPTIMIZATION PRIORITY
+1.
+2.
+3.
+```
+
+---
+
+# FINAL REQUIREMENT
+
+At the end, give us a **recommended optimization order**, but DO NOT implement any of it.
+
+The goal is to determine exactly what is causing the laptop's approximately 86–90% GPU memory usage before we make changes.
+
+After this audit, we will decide together what to optimize.
+
+**READ-ONLY. NO FILE MODIFICATIONS.**

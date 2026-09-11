@@ -1,0 +1,255 @@
+We are continuing ZOYA's Carlotta performance optimization.
+
+PASS 1 IS COMPLETE.
+
+Pass 1 verified that:
+
+* DevicePixelRatio is correctly capped by quality tier.
+* Medium/Low use antialias:false.
+* No EffectComposer/post-processing/custom render targets exist.
+* Canvas sizing is panel-driven and was intentionally left alone.
+* Quality profile flow works correctly.
+* Quality-switch remounts now properly dispose the previous VRM/resources.
+* Lint passes.
+* Production build passes.
+* Runtime health check passes.
+
+PASS 2 OBJECTIVE:
+
+Reduce Carlotta's texture GPU/VRAM pressure.
+
+The previous audit found:
+
+* Carlotta.vrm ≈ 46 MB
+* 18 image textures
+* Many 2048×2048 textures
+* Approximately 150–200 MB estimated texture VRAM pressure
+* Texture memory is now one of the main remaining GPU suspects.
+
+IMPORTANT:
+This pass is ONLY about texture-memory optimization.
+
+DO NOT implement procedural animation.
+DO NOT optimize spring bones in this pass.
+
+STRICT RULES:
+
+* Do NOT replace Carlotta.vrm.
+* Do NOT reintroduce Mint/FBX.
+* Do NOT use Mixamo.
+* Do NOT add external animation files.
+* Do NOT modify the VRM asset on disk.
+* Do NOT modify the working OrbitControls/camera/navigation.
+* Do NOT modify the relaxed pose.
+* Do NOT modify carlottaIdleController behavior.
+* Do NOT manually control spring/physics bones.
+* Do NOT change AI/Groq/TTS.
+* Do NOT change Carlotta's overall visual/material style.
+* Do NOT blindly change every texture to a low resolution.
+* Do NOT make unrelated refactors.
+* Prefer small, surgical changes.
+* Preserve existing quality-tier architecture.
+* Ensure all changes are safe across quality switches/remounts.
+
+CURRENT QUALITY PROFILES:
+
+HIGH:
+
+* pixel ratio cap 2.0
+* AA on
+* shadows off
+* full springs
+* full textures
+
+MEDIUM:
+
+* pixel ratio cap 1.25
+* AA off
+* shadows off
+* full springs
+* medium textures
+
+LOW:
+
+* pixel ratio cap 1.0
+* AA off
+* shadows off
+* reduced springs
+* low textures
+
+IMPORTANT:
+The texture-quality fields already exist in the performance-quality system, but they currently are NOT actually applied.
+
+TASK:
+
+FIRST: INSPECT ONLY.
+
+Before editing anything, inspect:
+
+1. How Carlotta.vrm is loaded.
+2. How its textures are exposed through the VRM/Three.js material pipeline.
+3. Whether textures are shared between materials.
+4. Which textures are actually 2048×2048 or larger.
+5. Texture formats/types:
+
+   * color textures
+   * normal maps
+   * emissive maps
+   * metallic/roughness maps
+   * other maps
+6. Which textures are visually important to Carlotta's appearance.
+7. Whether texture dimensions can safely be reduced after VRM loading.
+8. Whether Three.js texture resizing can be performed without changing the VRM asset.
+9. How texture resources are currently disposed when Carlotta is unloaded.
+10. Whether the existing quality tier can safely control texture resolution.
+
+DO NOT assume every 2048×2048 texture should be reduced.
+
+DESIRED APPROACH:
+
+Use the existing quality-tier system.
+
+Conceptually:
+
+High:
+preserve current texture resolution
+
+Medium:
+safely reduce expensive oversized textures
+
+Low:
+reduce them further
+
+However, choose the actual scaling strategy only after inspecting the real texture usage.
+
+PREFERRED IMPLEMENTATION:
+
+If safe, perform runtime texture downscaling after the VRM has loaded, without modifying the original .vrm file.
+
+Important:
+
+* Do not replace textures with unrelated assets.
+* Do not change texture wrapping/filtering unnecessarily.
+* Preserve colorSpace/color encoding.
+* Preserve normal-map behavior.
+* Preserve material assignments.
+* Preserve transparency/alpha behavior.
+* Preserve mipmap behavior where appropriate.
+* Avoid accidentally creating duplicate GPU textures.
+* Dispose the old GPU texture correctly after replacement if and only if it is no longer referenced anywhere.
+* Handle shared textures correctly.
+* Never dispose a texture that another material still uses.
+
+If runtime resizing is NOT safe for the current VRM/Three.js pipeline, do not force it.
+
+Instead, report why and implement only a safer optimization.
+
+QUALITY TARGET:
+
+The priority is:
+
+1. High:
+   Keep visual quality essentially unchanged.
+
+2. Medium:
+   Reduce VRAM usage while keeping Carlotta visually very close to High.
+
+3. Low:
+   Reduce VRAM usage more aggressively, accepting some texture-detail loss.
+
+Do NOT reduce geometry in this pass.
+
+DO NOT modify:
+
+* triangle count
+* skeleton
+* spring bones
+* animation
+* camera
+* lighting
+* materials' visual parameters
+  unless a tiny change is strictly necessary to correctly apply the texture optimization.
+
+QUALITY-SWITCH SAFETY:
+
+This is especially important.
+
+The application can switch quality tiers, and some quality changes cause renderer remounts.
+
+Make sure:
+
+* switching High → Medium does not leak the High-resolution textures
+* switching Medium → Low does not retain old textures unnecessarily
+* switching Low → High restores the appropriate original/high-quality textures safely
+* unmount/dispose does not double-dispose textures
+* no stale references remain
+* no use-after-dispose occurs
+
+Do not create a texture copy on every frame.
+
+Do not perform texture resizing every frame.
+
+Texture processing should happen only when the VRM is loaded or when the quality tier actually changes.
+
+DIAGNOSTICS:
+
+If useful, add lightweight DEV-only diagnostics.
+
+For example:
+
+* active texture-quality tier
+* number of textures processed
+* original maximum texture dimension
+* resulting maximum texture dimension
+* approximate texture memory before/after
+
+Do NOT add per-frame logging.
+
+Keep diagnostics gated behind import.meta.env.DEV.
+
+IMPORTANT:
+Do not claim VRAM savings based only on theoretical texture dimensions.
+
+If you can calculate approximate texture memory, report the calculation clearly.
+
+APPROXIMATE ESTIMATE:
+
+For an uncompressed RGBA texture:
+width × height × 4 bytes
+
+If mipmaps are included, account for their additional memory appropriately.
+
+If the browser/GPU uses compressed formats or implementation-dependent memory, clearly label the result as an estimate.
+
+AFTER IMPLEMENTATION:
+
+Run:
+
+* lint
+* production build
+
+Fix only errors caused by this pass.
+
+Do not make unrelated fixes.
+
+FINAL RESPONSE MUST REPORT:
+
+1. Exact files changed.
+2. What texture optimization was implemented.
+3. Which quality tiers now use which texture resolutions/strategy.
+4. Estimated texture memory reduction.
+5. Whether High remains visually unchanged.
+6. Whether Medium/Low were visually affected and how much.
+7. How shared textures and disposal are handled.
+8. Whether quality switching was tested safely.
+9. Lint result.
+10. Build result.
+11. Any remaining likely GPU bottlenecks.
+
+VERY IMPORTANT:
+
+Do not proceed to spring-bone optimization.
+Do not proceed to procedural animation.
+Do not make additional optimization passes automatically.
+
+Stop after Pass 2 and report the results.

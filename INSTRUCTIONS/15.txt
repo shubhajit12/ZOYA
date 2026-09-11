@@ -1,0 +1,138 @@
+The latest single-target smooth zoom implementation is now **kinda broken in the live UI**.
+
+I cannot reliably describe the exact visual failure, so **do not ask me to diagnose it manually**. Inspect the implementation and reason through the camera math and runtime behavior yourself.
+
+IMPORTANT:
+
+* Keep this focused ONLY on zoom.
+* Do not change the Mint model.
+* Do not change the Carlotta model.
+* Do not change camera framing/initial framing.
+* Do not change drag/orbit rotation.
+* Do not change model scale/materials/textures.
+* Do not touch lip-sync, emotions, animation, eye tracking, Groq, TTS, UI, or dependencies.
+* Preserve the existing `ensureCursorZoom()` listener fix.
+* Prefer changing only `src/mint/mintRenderer.ts`.
+
+CURRENT IMPLEMENTATION:
+The previous implementation changed cursor zoom from a wheel-event camera jump to a single shared target:
+
+* `zoomTargetCam`
+* `zoomTargetLook`
+* wheel events raycast the cursor pivot
+* the target camera/look positions are dolly-transformed immediately
+* `applySmoothZoom(delta)` interpolates the real camera toward those targets
+* `controls.update()` runs once per frame
+* zoom remains disabled in OrbitControls
+* existing minDistance/maxDistance limits are 0.5 / 12
+* zoom sensitivity is approximately the original 0.88 scale
+* `zoomDampSpeed` is currently 15
+
+USER REPORT:
+"zoom is kinda broken"
+
+Because the user cannot describe the exact symptom, perform a **full code-level inspection** before making changes.
+
+INSPECT CAREFULLY:
+
+1. Trace the complete zoom flow:
+   wheel event
+   → cursor coordinates
+   → raycast
+   → pivot selection
+   → target camera/look calculation
+   → smoothing
+   → OrbitControls
+   → renderer frame loop.
+
+2. Verify the camera/look target math.
+   The intended cursor-pivot dolly is:
+   C' = P + s(C-P)
+   T' = P + s(T-P)
+
+   Verify that this transformation is applied consistently to BOTH the camera position and orbit target.
+
+3. Check whether repeatedly applying wheel transformations to an already-transformed `zoomTargetCam` / `zoomTargetLook` can cause incorrect behavior when the cursor pivot changes between wheel events.
+
+4. Check whether the pivot should be based on:
+
+   * the current camera/target state,
+   * the current zoom target state,
+   * or another stable reference.
+
+5. Check target distance and camera-target direction after every zoom operation.
+   Make sure the target cannot accidentally place the camera inside/through the model or create an invalid orbit state.
+
+6. Check minDistance/maxDistance clamping.
+   Make sure clamping does not modify camera position and target inconsistently.
+
+7. Check interaction with OrbitControls.
+   Verify that:
+
+   * `enableZoom` remains disabled if that is the existing design,
+   * `controls.target` is synchronized correctly,
+   * `controls.update()` is not undoing or fighting our zoom,
+   * no damping setting is creating a second smoothing layer,
+   * no stale target remains after model switching.
+
+8. Check model switching:
+   Mint → Carlotta → Mint
+   should not retain stale zoom targets, stale pivots, or stale camera state.
+
+9. Check rapid wheel input.
+   There must be NO queue/backlog.
+   New wheel input should update one shared zoom target.
+
+10. Check whether the smoothing implementation itself is causing:
+
+* delayed response,
+* camera drift,
+* pivot drift,
+* unexpected sideways movement,
+* oscillation,
+* overshoot,
+* incorrect zoom direction,
+* or accumulated numerical error.
+
+11. Inspect the existing code rather than assuming the previous implementation is correct.
+    If the current architecture has a fundamental flaw, fix the architecture in the smallest safe way.
+
+DESIRED FINAL BEHAVIOR:
+
+* Scroll up/down feels smooth and responsive.
+* Zoom begins immediately.
+* No visible wheel-step teleporting.
+* No laggy catch-up.
+* No queue.
+* No oscillation.
+* No rubber-band.
+* No unexpected sideways camera movement.
+* Cursor remains the zoom pivot.
+* Zoom direction remains intuitive.
+* Fast scrolling remains responsive.
+* Stopping the wheel stops the zoom naturally.
+* Mint and Carlotta behave consistently.
+* Existing drag rotation remains unchanged.
+
+IMPORTANT:
+Do NOT blindly tune `zoomDampSpeed`.
+First determine whether the current camera/target/pivot math is actually correct.
+
+If the current single-target camera-position approach is fundamentally causing the broken feel, it is acceptable to replace it with a more robust zoom-state implementation, but keep the change isolated and preserve the existing behavior.
+
+VALIDATION:
+After fixing:
+
+* run `npm run lint` / `tsc --noEmit`
+* run `npm run build`
+* inspect the final diff carefully
+* verify only the zoom path changed
+* report exactly which files changed
+* explain the actual root cause you found
+* explain the fix
+* report lint/build results
+
+Do not claim browser visual validation unless you actually performed it.
+
+MOST IMPORTANT:
+The user says the zoom is "kinda broken" and cannot reliably describe the symptom. **Use the code, math, and architecture to identify likely failure modes yourself rather than asking the user to explain the visual behavior.**

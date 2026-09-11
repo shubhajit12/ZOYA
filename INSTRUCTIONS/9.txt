@@ -1,0 +1,36 @@
+Do NOT modify any files.
+
+We have confirmed visually that Mint's mouth geometry does move during the mouth-pose test when zoomed in.
+
+Current measurements:
+CLOSED  = +0.004105
+25%     = -0.028788
+50%     = -0.057412
+75%     = -0.070108
+100%    = -0.060174
+CLOSED  = +0.004116
+
+The pose sequence itself is correct:
+CLOSED → 25% → 50% → 75% → 100% → CLOSED
+
+Investigate ONLY the measurement method used by measureMouthGapCompact().
+
+Determine why:
+1. The measured gap changes sign after 25%.
+2. The measured gap reaches its largest magnitude at 75%.
+3. The measured gap becomes smaller again at 100%.
+
+Do NOT change:
+- runMouthPoseTest()
+- applyMintMouthPose()
+- calibration values
+- bone axes/signs
+- pose angles
+- Mint model/skeleton
+- camera
+- normal lip-sync
+- audio/Groq/TTS/UI
+
+Do NOT edit anything.
+
+Report which vertices/landmarks are being measured, how upperY/lowerY are calculated, and whether this measurement is actually valid for determining visual mouth opening across the full pose range.

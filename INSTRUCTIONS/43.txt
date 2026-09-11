@@ -1,0 +1,520 @@
+We now have:
+
+1. A DEV-only single-expression tester.
+2. A DEV-only multi-expression recipe tester.
+3. The production emotion system is currently untouched.
+4. `aa` lip-sync is working independently.
+5. Carlotta.vrm has 17 known runtime VRM expressions.
+
+The recipe tests showed that:
+
+* Happy can produce a recognizable smile when combined appropriately.
+* Excited is currently the strongest visible expression.
+* Angry and Sad remain visually weak.
+* We do NOT yet know which underlying facial channels are actually available on Carlotta.
+
+Now create the NEXT DEV-ONLY diagnostic pass:
+
+# FULL SAFE-EXPRESSION CAPABILITY SCAN
+
+GOAL:
+
+Discover exactly what every SAFE, NON-PHONEME, NON-BLINK, NON-LOOK runtime expression on Carlotta.vrm actually does visually.
+
+We are NOT tuning production emotions in this pass.
+
+We are NOT guessing based on expression names.
+
+We want to discover which runtime expressions can control:
+
+* mouth
+* smile
+* mouth corners
+* frown
+* eyelids
+* eye openness
+* eyebrows
+* cheeks
+* facial tension
+* other useful facial deformation
+
+IMPORTANT PROJECT CONSTRAINTS:
+
+* Active character remains Carlotta.vrm.
+* Do NOT replace or modify the VRM asset.
+* Do NOT modify mesh geometry.
+* Do NOT modify materials.
+* Do NOT modify textures.
+* Do NOT modify skeleton.
+* Do NOT modify camera.
+* Do NOT modify OrbitControls.
+* Do NOT modify body animation.
+* Do NOT modify lip-sync.
+* Do NOT modify TTS.
+* Do NOT modify audio.
+* Do NOT modify production emotion recipes.
+* Do NOT modify the existing production emotion controller behavior.
+* Do NOT add Mixamo.
+* Do NOT add external animation files.
+* Do NOT use AnimationMixer.
+* Do NOT use animation clips.
+* Do NOT manipulate mesh vertices.
+* Do NOT modify blink behavior.
+* Do NOT modify lookAt behavior.
+* Do NOT modify phoneme behavior.
+
+`aa` MUST remain exclusively owned by the existing lip-sync controller.
+
+Everything added in this pass must be DEV-only.
+
+Do not make any production behavior depend on this scan.
+
+---
+
+1. DETERMINE THE COMPLETE RUNTIME EXPRESSION INVENTORY
+
+---
+
+Use the existing public three-vrm expression-manager APIs.
+
+Do not hard-code assumptions beyond the known expression names.
+
+Read the actual runtime expression map.
+
+The scan should identify:
+
+A. SAFE FACIAL EXPRESSIONS
+Expressions that are potentially useful for emotional facial deformation.
+
+B. PHONEMES
+These MUST be excluded from testing:
+
+* aa
+* ih
+* ou
+* ee
+* oh
+
+C. BLINK EXPRESSIONS
+These MUST be excluded:
+
+* blink
+* blinkLeft
+* blinkRight
+
+D. LOOK EXPRESSIONS
+These MUST be excluded:
+
+* lookUp
+* lookDown
+* lookLeft
+* lookRight
+
+The scan should dynamically classify the known runtime expressions and safely expose only the non-phoneme/non-blink/non-look expressions.
+
+If an unexpected runtime expression exists, do NOT automatically write it unless it passes the safe classification rules.
+
+Do not modify the expression inventory.
+
+---
+
+2. SAFE EXPRESSION TEST API
+
+---
+
+Add a DEV-only API similar to:
+
+window.__carlottaExpressionScan(name, weight)
+
+Requirements:
+
+* validate that `name` is in the safe diagnostic expression set
+* reject phonemes
+* reject blink expressions
+* reject look expressions
+* reject unknown expressions
+* clamp weight to 0..1
+* reject non-finite values
+* return true on successful activation
+* return false on rejection
+
+It must activate ONLY the requested safe expression.
+
+Do not modify other safe expressions when using the single-expression scan.
+
+Do not modify:
+
+* aa
+* ih
+* ou
+* ee
+* oh
+* blink
+* blinkLeft
+* blinkRight
+* lookUp
+* lookDown
+* lookLeft
+* lookRight
+
+Also expose:
+
+window.__carlottaExpressionScanReset()
+
+It must clear scan overrides and return control to the existing normal facial emotion follower.
+
+It must preserve:
+
+* current body emotion
+* current facial emotion target
+* lip-sync
+* blink
+* lookAt
+* body animation
+
+---
+
+3. FULL SCAN UI
+
+---
+
+Create a compact DEV-only expression scan UI.
+
+It should dynamically list every SAFE facial expression discovered from the runtime expression map.
+
+Do NOT manually list only:
+
+* neutral
+* happy
+* angry
+* sad
+* relaxed
+
+We already tested those.
+
+The purpose of this pass is to expose the remaining safe facial expressions too.
+
+Each expression should have:
+
+* expression name
+* weight control
+* current numeric weight
+* Activate/Test button
+
+Default test weight:
+
+0.7
+
+Also include:
+
+[Reset]
+
+The UI must be compact and positioned so it does not cover Carlotta's face.
+
+Use the same interaction-safe pattern as the existing DEV UI:
+
+* outer wrapper: pointer-events:none
+* interactive controls: pointer-events:auto
+* stop pointerdown propagation
+* OrbitControls must continue working normally
+
+Everything must be DEV-only.
+
+Production builds must contain no scan UI.
+
+---
+
+4. ONE-AT-A-TIME BEHAVIOR
+
+---
+
+When testing a single expression:
+
+* clear previous scan expression
+* activate only the selected expression
+* preserve the existing lip-sync `aa`
+* preserve blink/look
+* preserve body animation
+* preserve production emotion state
+
+This lets me visually compare:
+
+Expression A at 0.7
+vs
+Expression B at 0.7
+
+without multiple expressions hiding each other's effects.
+
+Do NOT normalize weights.
+
+---
+
+5. ADD A SAFE MULTI-EXPRESSION SCAN API
+
+---
+
+Also add:
+
+window.__carlottaExpressionScanRecipe({
+expressionName: weight,
+...
+})
+
+This is for testing combinations of the newly discovered safe expressions.
+
+Requirements:
+
+* only safe expressions allowed
+* phonemes rejected
+* blink rejected
+* look rejected
+* unknown names rejected
+* non-finite values rejected
+* values clamped 0..1
+* omitted safe expressions treated as 0
+* weights remain independent
+* do NOT normalize
+* preserve aa
+* preserve blink/look
+* preserve body emotion
+
+Example:
+
+{
+happy: 0.8,
+relaxed: 0.2, <newExpression>: 0.4
+}
+
+must preserve exactly those independent weights.
+
+Also expose:
+
+window.__carlottaExpressionScanRecipeReset()
+
+---
+
+6. DIAGNOSTIC INFORMATION
+
+---
+
+Expose:
+
+window.__carlottaExpressionScanInfo()
+
+Return useful information such as:
+
+{
+available: [...],
+safe: [...],
+phonemes: [...],
+blink: [...],
+look: [...],
+activeRecipe: {...}
+}
+
+Also expose current runtime values where possible through the existing public API.
+
+Do not use private three-vrm internals when a public API exists.
+
+---
+
+7. CONSOLE REPORT
+
+---
+
+When the scan initializes, print ONE concise DEV report.
+
+Example:
+
+[CarlottaExpressionScan]
+safe: neutral, happy, angry, sad, relaxed, ...
+phonemes: aa, ih, ou, ee, oh
+blink: blink, blinkLeft, blinkRight
+look: lookUp, lookDown, lookLeft, lookRight
+
+Do not spam the console every frame.
+
+When an expression is manually activated:
+
+[CarlottaExpressionScan] happy = 0.70
+
+Keep logging throttled and concise.
+
+---
+
+8. IMPORTANT — DO NOT MAKE VISUAL CLAIMS
+
+---
+
+Do NOT report:
+
+"angry controls brows"
+
+or:
+
+"sad controls mouth"
+
+unless the code itself can prove the expression's actual runtime value behavior.
+
+The purpose of this pass is to give ME the controls so I can visually inspect Carlotta.
+
+The final OpenCode report should describe what expressions were exposed and tested by code, NOT claim what they look like.
+
+I will determine the visual effect manually.
+
+---
+
+9. DO NOT CHANGE THE EXISTING RECIPE TESTER
+
+---
+
+Keep the existing recipe tester functional.
+
+If technically useful, the new full scan may extend the same underlying diagnostic mechanism, but:
+
+* do not break existing single-expression testing
+* do not break existing multi-expression recipe testing
+* do not change production mappings
+
+Avoid duplicate expression writers.
+
+The Carlotta expression controller must remain the single expression write path.
+
+---
+
+10. WRITE OWNERSHIP
+
+---
+
+Maintain strict ownership:
+
+LIP-SYNC:
+
+* `aa` only
+
+BLINK:
+
+* existing blink system only
+
+LOOK:
+
+* existing lookAt system only
+
+BODY:
+
+* animation controller only
+
+FACIAL EMOTION:
+
+* expression controller only
+
+DIAGNOSTIC:
+
+* temporary safe-expression override through the expression controller
+
+The diagnostic MUST NOT create a second independent per-frame expression writer.
+
+---
+
+11. TESTS
+
+---
+
+Add/extend headless tests proving:
+
+1. Runtime inventory is read correctly.
+2. All safe expressions are accepted.
+3. All phonemes are rejected.
+4. All blink expressions are rejected.
+5. All look expressions are rejected.
+6. Unknown names are rejected.
+7. Non-finite weights are rejected.
+8. Weights clamp to 0..1.
+9. Single-expression scan activates only one safe expression.
+10. Multi-expression recipe activates multiple safe expressions.
+11. Independent weights remain exact.
+12. No normalization occurs.
+13. `aa` remains untouched.
+14. Phoneme expressions remain untouched.
+15. Blink expressions remain untouched.
+16. Look expressions remain untouched.
+17. Body emotion state remains unchanged.
+18. Reset restores the normal production facial follower.
+19. Existing production facial values are unchanged when no scan is active.
+20. Existing single-expression diagnostic still works.
+21. Existing recipe tester still works.
+22. No body bones are written.
+23. No eye/look bones are written.
+24. No per-frame allocations are introduced.
+25. No AnimationMixer is introduced.
+26. No animation clips are introduced.
+27. No external animation files are introduced.
+28. Production build strips all scan UI and DEV hooks.
+
+Run:
+
+* relevant headless tests
+* existing animation tests
+* existing emotion tests
+* existing lip-sync tests
+* lint
+* Vite build
+* server build
+* dev server health check
+
+If full-project TypeScript checking hits the known machine memory/OOM issue, use the same scoped TypeScript validation approach that was previously successful and clearly report that limitation.
+
+---
+
+12. PRODUCTION SAFETY
+
+---
+
+When the diagnostic scan is inactive:
+
+The production expression path must be behaviorally identical to before this pass.
+
+No scan state should exist in production.
+
+No production emotion mapping should change.
+
+No lip-sync behavior should change.
+
+No body animation should change.
+
+---
+
+13. DELIVERABLE
+
+---
+
+At the end report exactly:
+
+1. Files changed
+2. Complete runtime expression inventory
+3. Safe expressions exposed
+4. Phonemes excluded
+5. Blink expressions excluded
+6. Look expressions excluded
+7. Scan API added
+8. Recipe scan API added
+9. Tests passed
+10. `aa` untouched
+11. Blink/look untouched
+12. Body animation untouched
+13. Production emotion mappings unchanged
+14. Production build verified
+
+DO NOT tune the emotions.
+
+DO NOT create final Happy/Sad/Angry recipes.
+
+DO NOT change lip-sync.
+
+DO NOT change body animation.
+
+DO NOT change TTS.
+
+DO NOT change the VRM.
+
+This pass exists ONLY to discover every safe facial expression available on Carlotta so we can build evidence-based emotion recipes in the NEXT pass.

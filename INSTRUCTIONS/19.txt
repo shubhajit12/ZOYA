@@ -1,0 +1,463 @@
+# Replace Custom Zoom with OrbitControls-Native Sketchfab-Style Navigation
+
+We need to fix the current zoom implementation in Zoya.
+
+## CRITICAL SCOPE RULE
+
+**ONLY modify:**
+`src/mint/mintRenderer.ts`
+
+Do not modify any other file.
+
+Do NOT change:
+
+* Mint model
+* Carlotta model
+* model loading
+* skeleton
+* bones
+* mesh geometry
+* materials/textures/shaders
+* model scale
+* model transforms
+* initial camera position
+* initial camera target
+* camera framing
+* lip sync
+* mouth system
+* eye tracking
+* emotions
+* animation system
+* Groq
+* TTS
+* UI
+* dependencies
+* package files
+* OrbitControls library/source in node_modules
+
+---
+
+# CURRENT PROBLEM
+
+The current architecture uses:
+
+* OrbitControls for orbit/pan
+* custom velocity-based camera/target dolly for zoom
+
+The custom zoom is currently broken.
+
+When the user scrolls to zoom in or out, the model can completely disappear from view.
+
+Do NOT attempt another sensitivity/friction/pivot-tuning patch to the existing custom camera-dolly system.
+
+The fundamental requirement is:
+
+> OrbitControls must remain the single owner of camera navigation state.
+
+The custom per-frame camera/target dolly must be removed.
+
+---
+
+# REQUIRED FINAL ARCHITECTURE
+
+Use ONE navigation controller:
+
+**OrbitControls owns:**
+
+* orbit
+* pan
+* zoom
+* camera position
+* controls.target
+* navigation state
+* damping/inertia
+
+There must be NO second camera-navigation controller fighting OrbitControls.
+
+There must be NO custom per-frame camera/target dolly.
+
+There must be NO code that independently moves the camera and controls.target for wheel zoom.
+
+There must be exactly ONE:
+
+`controls.update()`
+
+per animation frame.
+
+---
+
+# 1. LEFT DRAG — ORBIT
+
+Preserve the current working behavior:
+
+* LEFT mouse button = ROTATE
+* rotateSpeed = 0.8
+* enableRotate = true
+* damping enabled
+* dampingFactor = 0.08
+* polar angle limits remain:
+
+  * minPolarAngle = 0.1 * Math.PI
+  * maxPolarAngle = 0.85 * Math.PI
+
+Do not change initial camera framing.
+
+---
+
+# 2. RIGHT DRAG — PAN
+
+Preserve the current Sketchfab-style behavior:
+
+* RIGHT mouse button = PAN
+* enablePan = true
+* screenSpacePanning = true
+* panSpeed = 1
+
+Explicitly configure:
+
+* LEFT = ROTATE
+* RIGHT = PAN
+* MIDDLE = DOLLY
+
+But because wheel zoom is being handled through OrbitControls, configure the middle-button behavior consistently with OrbitControls rather than creating another custom camera controller.
+
+Right-drag must:
+
+* translate camera and target together
+* preserve camera orientation
+* preserve zoom distance
+* NOT rotate the model
+* NOT change model scale
+
+---
+
+# 3. WHEEL ZOOM — ORBITCONTROLS NATIVE
+
+THIS IS THE MOST IMPORTANT CHANGE.
+
+Remove the custom velocity-based wheel zoom implementation.
+
+Do NOT use:
+
+* zoomVelocity
+* pending zoom queues
+* zoomTargetCam
+* zoomTargetLook
+* custom exponential camera dolly
+* custom per-frame camera movement
+* custom per-frame target movement
+* custom camera scaling around a pivot
+* `C' = P + s(C-P)`
+* `T' = P + s(T-P)`
+
+The wheel should instead use OrbitControls' native zoom/dolly mechanism.
+
+Set:
+
+`enableZoom = true`
+
+and allow OrbitControls to process the wheel event itself.
+
+Use OrbitControls' native:
+
+* dollyIn()
+* dollyOut()
+* zoomToCursor
+
+capability if supported by the installed Three.js r185 OrbitControls implementation.
+
+Before changing anything, inspect the actual installed OrbitControls source in:
+
+`node_modules/three/examples/jsm/controls/OrbitControls.js`
+
+Confirm the exact r185 API/behavior rather than assuming it.
+
+---
+
+# 4. CURSOR-CENTERED ZOOM
+
+We want the zoom behavior to feel like Sketchfab.
+
+If the installed Three.js r185 OrbitControls supports:
+
+`controls.zoomToCursor`
+
+use that native functionality.
+
+Set it to:
+
+`true`
+
+if appropriate for the current camera type and OrbitControls implementation.
+
+Do NOT recreate zoom-to-cursor manually with raycasting unless OrbitControls r185 genuinely requires it.
+
+The goal is:
+
+mouse cursor over the model
+→ scroll
+→ camera zooms toward/away from that cursor position
+
+without manually moving camera/target ourselves.
+
+---
+
+# 5. REMOVE THE OLD CUSTOM ZOOM SYSTEM
+
+Find the code introduced for the custom zoom system, including any state/functions related to:
+
+* zoom velocity
+* zoom targets
+* pending zoom
+* custom wheel delta normalization
+* custom zoom pivot raycasts
+* custom zoom damping/friction
+* custom camera dolly
+* custom target dolly
+
+Remove it cleanly if it is now unnecessary.
+
+Do NOT leave a second wheel listener that also changes camera position.
+
+There must be exactly ONE owner of wheel zoom.
+
+OrbitControls owns it.
+
+Do not simply disable the old code while leaving duplicate listeners active.
+
+---
+
+# 6. DO NOT BREAK MODEL-SWAP BEHAVIOR
+
+Mint and Carlotta must both use the same OrbitControls navigation system.
+
+When models swap:
+
+* do not modify camera framing
+* do not reset camera unexpectedly
+* do not alter model scale
+* do not introduce custom zoom state
+
+There should be no custom zoom state that needs clearing anymore.
+
+---
+
+# 7. CONTEXT MENU
+
+Preserve the existing behavior:
+
+Right-click on the 3D canvas must NOT open the browser context menu.
+
+Right-click outside the 3D canvas must remain unaffected.
+
+Do not add global context-menu prevention.
+
+Do not change UI behavior.
+
+---
+
+# 8. IMPORTANT: DO NOT FIGHT ORBITCONTROLS
+
+Search the entire `src/mint/mintRenderer.ts` for code that manually changes:
+
+* `camera.position`
+* `controls.target`
+* camera look direction
+* spherical/orbit state
+
+during the animation/update loop.
+
+Do not remove legitimate existing camera initialization/framing.
+
+But ensure there is NO per-frame code that tries to perform custom zoom while OrbitControls is also updating.
+
+The final frame flow should effectively be:
+
+1. OrbitControls receives user input.
+2. OrbitControls updates its own navigation state.
+3. `controls.update()` runs once.
+4. renderer renders.
+
+No second camera-navigation pass.
+
+---
+
+# 9. DISTANCE LIMITS
+
+Preserve:
+
+`minDistance = 0.5`
+`maxDistance = 12`
+
+Do not loosen these limits.
+
+The user must never be able to zoom through the model or zoom so far away that normal navigation becomes broken.
+
+OrbitControls itself should enforce these limits.
+
+---
+
+# 10. PRESERVE INITIAL FRAMING
+
+This is extremely important.
+
+Do NOT change:
+
+* initial camera position
+* initial camera target
+* FOV
+* near/far planes
+* model position
+* model scale
+* camera framing
+
+The model must start exactly where it currently starts.
+
+We are changing ONLY the navigation implementation.
+
+---
+
+# 11. NO EXTRA EVENT LOOP
+
+Do not create:
+
+* another requestAnimationFrame
+* another setInterval
+* another animation loop
+* another controls.update()
+* another wheel-navigation system
+
+There must remain exactly one navigation update owner.
+
+---
+
+# 12. VERIFY THREE.JS r185 BEFORE CODING
+
+Before editing:
+
+1. Inspect the currently installed `three` version.
+2. Inspect the actual `OrbitControls.js` source in node_modules.
+3. Confirm whether `zoomToCursor` exists.
+4. Confirm how wheel dolly works in this exact installed version.
+5. Confirm how `mouseButtons` should be configured in r185.
+
+Use the actual installed API, not assumptions from another Three.js version.
+
+---
+
+# 13. IMPORTANT: NO OVER-ENGINEERING
+
+Do NOT add a new custom zoom algorithm.
+
+Do NOT add another smoothing layer.
+
+Do NOT add another pivot system.
+
+Do NOT add another raycaster.
+
+Do NOT add another velocity controller.
+
+Do NOT add another camera controller.
+
+The entire point of this change is to make OrbitControls the authoritative navigation system.
+
+---
+
+# 14. ACCEPTANCE TEST
+
+After implementation, verify logically that:
+
+### Orbit
+
+LEFT drag:
+
+* rotates smoothly
+* damping works
+* zoom does not reset/kill orbit inertia
+
+### Pan
+
+RIGHT drag:
+
+* pans smoothly
+* camera and target move together
+* orientation remains unchanged
+
+### Zoom
+
+Wheel:
+
+* model NEVER disappears because of custom camera dolly
+* zoom direction is correct
+* zoom respects 0.5–12 distance limits
+* zoom is handled by OrbitControls
+* no laggy custom queue
+* no custom velocity backlog
+* no camera/target fighting
+
+### Cursor zoom
+
+With cursor over the model:
+
+* scrolling zooms toward that area
+* moving the cursor to another part and scrolling changes the zoom focus naturally
+
+### Combined
+
+Test:
+
+* orbit → zoom
+* zoom → orbit
+* pan → zoom
+* zoom → pan
+* orbit while wheel scrolling
+
+These must not fight each other.
+
+---
+
+# 15. VALIDATION
+
+Run:
+
+`npm run lint`
+
+Then:
+
+`npm run build`
+
+Both must pass.
+
+Finally inspect:
+
+`git diff -- src/mint/mintRenderer.ts`
+
+Confirm that ONLY the intended navigation/zoom code changed.
+
+Report:
+
+1. Exact navigation configuration used.
+2. Whether native `zoomToCursor` was available in the installed Three.js r185 OrbitControls.
+3. What custom zoom code was removed.
+4. Confirmation that there is only one `controls.update()` per frame.
+5. Lint result.
+6. Build result.
+7. Any pre-existing warnings.
+
+Do NOT claim browser testing was performed unless you actually tested it in the running Zoya app.
+
+## FINAL REQUIREMENT
+
+Do not make unrelated cleanup.
+
+Do not modify any other file.
+
+The desired result is simple:
+
+**Sketchfab-style navigation powered by one OrbitControls instance:**
+
+LEFT DRAG = ORBIT
+RIGHT DRAG = PAN
+WHEEL = NATIVE ORBITCONTROLS ZOOM
+CURSOR = ZOOM FOCUS
+NO SECOND CAMERA CONTROLLER

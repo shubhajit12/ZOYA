@@ -1,0 +1,334 @@
+I want the 3D model interaction/navigation in Zoya to behave like a Sketchfab-style 3D viewer.
+
+This is NOT just a zoom request anymore.
+
+The entire camera interaction system should feel like Sketchfab:
+
+* Left mouse drag = orbit/rotate
+* Right mouse drag = pan
+* Mouse wheel = smooth cursor-centered zoom
+* All three interactions must work together naturally.
+
+IMPORTANT:
+Inspect the CURRENT implementation first. Do not blindly rewrite it.
+
+Keep the changes isolated to the existing renderer/navigation implementation, preferably:
+`src/mint/mintRenderer.ts`
+
+Do NOT change:
+
+* Mint model
+* Carlotta model
+* model scale
+* model materials/textures
+* initial camera framing
+* initial camera position
+* lip-sync
+* emotions
+* animation
+* eye tracking
+* Groq
+* TTS
+* UI
+* dependencies
+
+Do NOT break the existing:
+
+* model loading
+* Mint/Carotta switching
+* cursor zoom pivot
+* camera framing
+* existing rotation behavior unless required to match the requested interaction.
+
+==================================================
+TARGET INTERACTION — SKETCHFAB STYLE
+====================================
+
+### 1. LEFT MOUSE DRAG — ORBIT
+
+Left-button drag should orbit the camera around the model/orbit target.
+
+Requirements:
+
+* smooth
+* responsive
+* no input lag
+* no snapping
+* no unexpected camera translation
+* preserve current orbit limits if they already exist
+* preserve current initial orientation/framing
+
+The model should rotate around the intended orbit target rather than behaving like a flat 2D object.
+
+### 2. RIGHT MOUSE DRAG — PAN
+
+Right-button drag should perform true camera/view panning.
+
+This is IMPORTANT:
+
+Right drag should NOT rotate the model.
+
+It should move the camera and `controls.target` together in screen-space so the viewed model position moves naturally.
+
+Requirements:
+
+* horizontal right-drag → natural horizontal pan
+* vertical right-drag → natural vertical pan
+* camera and target move together
+* distance/orientation remain unchanged
+* no accidental zoom
+* no orbit rotation
+* smooth and responsive
+* pan speed should feel natural for a 3D model viewer
+
+Prevent the browser's context menu while right-dragging the canvas.
+
+Do NOT disable right-click globally — only prevent the context menu for the 3D viewer interaction.
+
+### 3. MOUSE WHEEL — SMOOTH ZOOM
+
+Use the CURRENT velocity-based cursor zoom implementation as the starting point.
+
+Requirements:
+
+* smooth continuous zoom
+* immediate response
+* no queue
+* no target-chasing lag
+* no catch-up after scrolling stops
+* use actual WheelEvent.deltaY magnitude
+* correctly handle deltaMode
+* cursor-centered zoom
+* raycast pivot only on wheel events when needed
+* no per-frame raycasts
+* respect existing min/max zoom distance
+* rapid scrolling stays responsive
+* reversing direction works immediately
+
+The current velocity architecture is intended to be:
+wheel → zoom velocity → camera movement → velocity decay.
+
+Do NOT revert to the old queued target interpolation.
+
+### 4. CURSOR-CENTERED ZOOM
+
+The point under the mouse cursor should be the zoom focus.
+
+Example:
+
+* cursor over face → zoom toward face
+* cursor over chest → zoom toward chest
+* cursor over background → use the existing fallback behavior
+
+Do not introduce camera swimming when scrolling repeatedly.
+
+### 5. COMBINED INTERACTION
+
+Test the interaction conceptually as a single navigation system:
+
+LEFT DRAG
+→ orbit
+
+RIGHT DRAG
+→ pan
+
+WHEEL
+→ zoom
+
+Then combinations:
+
+orbit → zoom
+pan → zoom
+zoom → orbit
+zoom → pan
+right-drag → wheel
+left-drag → wheel
+
+There must be no stale state from one interaction affecting another.
+
+==================================================
+ORBITCONTROLS AUDIT
+===================
+
+Inspect the existing OrbitControls configuration.
+
+Determine whether OrbitControls already provides reliable:
+
+* orbit
+* pan
+* damping
+* mouse-button mapping
+
+If it can provide Sketchfab-like behavior cleanly, prefer configuring it correctly rather than implementing a second custom orbit/pan system.
+
+However:
+
+Do NOT enable OrbitControls zoom if that would conflict with the custom cursor-centered zoom.
+
+We need exactly ONE system responsible for each interaction:
+
+Orbit → one system
+Pan → one system
+Zoom → custom cursor zoom
+
+No competing camera controllers.
+
+Check:
+
+* `mouseButtons`
+* `enablePan`
+* `enableRotate`
+* `enableZoom`
+* `enableDamping`
+* `dampingFactor`
+* `screenSpacePanning`
+* rotate speed
+* pan speed
+* minDistance
+* maxDistance
+* polar angle limits
+* azimuth limits
+
+Do not arbitrarily change existing camera/framing values.
+
+### IMPORTANT ABOUT RIGHT CLICK
+
+The desired behavior is:
+
+RIGHT BUTTON DOWN
+→ begin pan
+
+RIGHT BUTTON MOVE
+→ pan camera + controls.target
+
+RIGHT BUTTON UP
+→ stop pan
+
+CONTEXT MENU
+→ prevented ONLY on the 3D canvas/viewer.
+
+Do not interfere with normal right-click behavior elsewhere in the application.
+
+==================================================
+SMOOTHNESS
+==========
+
+The whole navigation system should feel like a professional 3D model viewer.
+
+Avoid:
+
+* teleporting
+* wheel-step jumps
+* input backlog
+* excessive damping
+* camera lag
+* overshoot
+* oscillation
+* accumulated velocity
+* competing update loops
+
+If OrbitControls damping is used for orbit/pan, make sure it does not accidentally make zoom laggy.
+
+There should be only ONE `controls.update()` per frame.
+
+Inspect the render loop and ensure the ordering is correct.
+
+==================================================
+CAMERA/PIVOT MATH
+=================
+
+For cursor zoom, preserve the existing correct dolly relationship:
+
+C' = P + s(C-P)
+T' = P + s(T-P)
+
+Camera and controls.target must be transformed consistently around the pivot.
+
+For pan:
+camera and target should receive the same translation vector.
+
+For orbit:
+use the existing OrbitControls orbit mechanism if appropriate.
+
+Do NOT mix camera position changes from one interaction with stale state from another.
+
+==================================================
+PERFORMANCE
+===========
+
+The model is relatively heavy.
+
+Do NOT:
+
+* raycast every frame
+* allocate unnecessary objects every frame
+* create multiple animation loops
+* create duplicate event listeners
+* create duplicate OrbitControls instances
+
+Reuse vectors/scratch objects where appropriate.
+
+The zoom raycast should remain event-driven.
+
+==================================================
+MODEL SWITCHING
+===============
+
+When switching:
+Mint → Carlotta → Mint
+
+navigation must continue working correctly.
+
+Clear only navigation state that must be cleared:
+
+* zoom velocity
+* zoom pivot
+* temporary pan state
+* temporary drag state
+
+Do NOT reset the intended camera framing unless the existing model-loading system already does that.
+
+==================================================
+VALIDATION
+==========
+
+After implementation:
+
+Run:
+
+* npm run lint / tsc --noEmit
+* npm run build
+
+Inspect the final diff.
+
+Report:
+
+1. Current navigation architecture.
+2. How left drag works.
+3. How right drag/pan works.
+4. How wheel zoom works.
+5. How cursor-centered zoom works.
+6. How OrbitControls is configured.
+7. How context-menu prevention works.
+8. How interaction state is cleared.
+9. Exact files changed.
+10. Lint result.
+11. Build result.
+
+Do NOT claim the final feel is identical to Sketchfab without browser testing.
+
+MOST IMPORTANT:
+
+I want the USER EXPERIENCE to feel like Sketchfab, not merely the code to contain similar features.
+
+The priority is:
+
+1. Responsive input
+2. Smooth orbit
+3. Smooth right-click pan
+4. Smooth cursor-centered zoom
+5. No interaction conflicts
+6. No lag
+7. No accidental camera drift
+
+Do not make unrelated changes.

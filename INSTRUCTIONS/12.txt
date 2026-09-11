@@ -1,0 +1,53 @@
+FIX CARLOTTA VRM SCROLL ZOOM — ISOLATED BUGFIX ONLY
+
+Context:
+Carlotta VRM now loads and renders correctly in MintCanvas.
+Visual verification shows:
+- Carlotta appears correctly
+- textures/materials are working
+- orientation is correct
+- existing drag-to-rotate UI is present
+- BUT mouse-wheel scroll does NOT zoom the Carlotta VRM.
+
+Task:
+Investigate why the existing scroll-wheel zoom behavior is not affecting the active Carlotta VRM camera/render path.
+
+IMPORTANT CONSTRAINTS:
+- DO NOT replace Carlotta.
+- DO NOT modify the VRM model, skeleton, materials, textures, expressions, or scale.
+- DO NOT change the camera's initial position/framing.
+- DO NOT change drag-to-rotate behavior.
+- DO NOT change OrbitControls behavior except if the existing zoom handler specifically needs to recognize the VRM path.
+- DO NOT change lip sync.
+- DO NOT change emotions.
+- DO NOT change body animation.
+- DO NOT change eye tracking.
+- DO NOT change Groq.
+- DO NOT change TTS.
+- DO NOT change UI.
+- DO NOT add a second camera.
+- DO NOT introduce AnimationMixer.
+- DO NOT add new dependencies.
+
+First inspect the current camera/zoom implementation in:
+- src/mint/mintRenderer.ts
+- src/mint/MintCanvas.tsx
+and determine exactly why wheel zoom stopped working after adding the VRM branch.
+
+The existing Mint zoom behavior must remain unchanged.
+
+Implement the SMALLEST possible fix so that:
+1. Mouse wheel scroll zooms Carlotta in/out.
+2. Drag-to-rotate still works exactly as before.
+3. Initial Carlotta framing remains exactly as it is now.
+4. FBX/Mint zoom behavior remains unchanged.
+5. No per-frame unnecessary work is introduced.
+
+Prefer reusing the existing camera distance / wheel zoom mechanism rather than creating a separate VRM-specific camera system.
+
+After the fix:
+- run npm run lint
+- run npm run build
+- report the exact files changed and the exact reason the VRM path was bypassing/breaking zoom.
+
+Do NOT make any other improvements or refactors.

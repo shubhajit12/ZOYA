@@ -1,0 +1,157 @@
+We need to optimize ZOYA's Carlotta VRM rendering because GPU usage is still around 70–80% on the laptop.
+
+IMPORTANT: This is an optimization-only task. Do NOT implement the procedural emotion/gesture animation system yet.
+
+STRICT RULES:
+
+* Do NOT replace Carlotta.vrm.
+* Do NOT reintroduce Mint/FBX.
+* Do NOT use Mixamo.
+* Do NOT add external animation files.
+* Do NOT modify the VRM asset itself.
+* Do NOT change the working OrbitControls/camera/navigation.
+* Do NOT modify Carlotta's current visual/material appearance unless absolutely required for the specific optimization and verified visually.
+* Do NOT break the existing relaxed pose.
+* Do NOT remove or rewrite the existing carlottaIdleController architecture.
+* Do NOT manually control spring/physics bones.
+* Do NOT change the AI brain/provider.
+* Do NOT make broad architectural changes.
+* Keep all changes lightweight and reversible.
+* Prefer small, surgical edits.
+* Validate with lint/build after changes.
+
+CURRENT IMPORTANT STATE:
+
+Active character:
+
+* Carlotta.vrm
+
+Working navigation:
+
+* Three.js OrbitControls
+* left drag = rotate
+* right drag = pan
+* native wheel zoom
+* zoomToCursor = true
+* enableZoom = true
+* enablePan = true
+* screenSpacePanning = true
+* damping enabled
+* minDistance = 0.5
+* maxDistance = 12
+
+Do NOT touch this.
+
+Carlotta performance audit:
+
+* VRM ≈ 46 MB
+* 18 images/textures
+* many 2048×2048 textures
+* ≈72k triangles
+* ≈32 material primitives/draw calls
+* 53 humanoid bones
+* 62 spring-bone joints
+* 627 scene nodes
+* 3 skinned meshes
+* 623 joints in the skins
+
+Previous audit conclusion:
+
+* Geometry (~72k triangles) is NOT considered the primary problem.
+* Texture memory is a major suspect.
+* Rendering resolution / devicePixelRatio / MSAA are major GPU suspects.
+* VRM scene/skeleton/spring processing can contribute CPU cost.
+* Current quality-tier texture/spring fields exist but are NOT actually applied yet.
+
+Existing performance quality system:
+
+* src/mint/performanceQuality.ts
+* src/types.ts
+* src/App.tsx
+* src/mint/mintRenderer.ts
+* src/mint/MintCanvas.tsx
+* src/ui/SettingsModal.tsx
+
+Quality tiers:
+HIGH:
+
+* pixel ratio cap 2.0
+* AA on
+* shadows off
+* full springs
+* full textures
+
+MEDIUM:
+
+* pixel ratio cap 1.25
+* AA off
+* shadows off
+* full springs
+* medium textures
+
+LOW:
+
+* pixel ratio cap 1.0
+* AA off
+* shadows off
+* reduced springs
+* low textures
+
+IMPORTANT:
+The pixel-ratio, AA, and shadow settings are already active.
+The texture-quality and spring-quality fields are currently only declared/configured and are NOT actually applied.
+
+TASK — OPTIMIZATION PASS 1:
+
+First inspect the existing renderer and performance-quality implementation.
+
+Do NOT immediately modify code.
+
+Determine:
+
+1. What devicePixelRatio is actually being used.
+2. Whether the current pixel-ratio cap is correctly enforced on the actual WebGL renderer.
+3. Whether MSAA/antialiasing is definitely disabled for Medium/Low.
+4. Whether any post-processing, effects, high-resolution render targets, or unnecessary renderer settings are increasing GPU cost.
+5. Whether the canvas is rendering at a larger resolution than necessary.
+6. Whether the current quality profile is actually reaching the renderer correctly.
+
+Then implement ONLY the safest high-impact optimization(s) you find.
+
+PRIORITY ORDER:
+
+1. Correct/limit rendering resolution and DPR if the current implementation is inefficient.
+2. Ensure Medium/Low do not accidentally use MSAA or expensive render targets.
+3. Remove any clearly unnecessary GPU-heavy renderer configuration.
+4. Do NOT optimize textures yet unless the existing code already has a safe mechanism for doing so.
+
+IMPORTANT:
+Do not blindly downgrade Carlotta's textures or materials in this pass.
+
+We want to establish a clean GPU baseline first.
+
+Add lightweight development-only diagnostics if useful, such as:
+
+* renderer pixel ratio
+* drawing buffer width/height
+* active quality tier
+
+Do not leave noisy console logging running every frame.
+
+AFTER CHANGES:
+
+* Run lint.
+* Run production build.
+* Fix any errors caused by the changes.
+* Do not make unrelated fixes.
+
+FINAL RESPONSE MUST REPORT:
+
+1. Exact files changed.
+2. Exact renderer/performance changes made.
+3. What was intentionally NOT changed.
+4. Lint result.
+5. Build result.
+6. Any remaining likely GPU bottlenecks.
+
+Do not proceed to procedural animation in this task.

@@ -1,0 +1,456 @@
+# TASK: Build Carlotta Procedural Animation — Phase 1 Natural Idle
+
+We are now starting the procedural animation system for Zoya's **current Carlotta VRM model**.
+
+The goal of this task is ONLY to implement a subtle, natural, procedural **IDLE** animation.
+
+---
+
+## 🚨 ABSOLUTE RULE — DO NOT REGRESS EXISTING SYSTEMS
+
+Before editing anything, inspect the current implementation.
+
+DO NOT modify:
+
+* Carlotta VRM model/file
+* textures
+* materials
+* MToon configuration
+* `src/mint/carlottaVrmLoader.ts`
+* lighting
+* renderer configuration
+* camera
+* OrbitControls
+* left-drag orbit
+* right-drag pan
+* wheel zoom-to-cursor
+* lip-sync
+* mouth/blendshapes
+* eye tracking/look-at
+* blinking
+* expressions
+* Groq brain/provider
+* TTS
+* emotion system
+* UI
+* dependencies
+* package versions
+
+Do NOT add Mixamo animations.
+
+Do NOT add an external animation file.
+
+Do NOT replace the skeleton.
+
+Only implement the procedural animation controller required for this task.
+
+---
+
+# STEP 1 — VERIFY THE LIVE VRM SKELETON FIRST
+
+The previous skeleton report was a STATIC inspection of the `.vrm` file.
+
+Before implementing anything, inspect the **actual runtime Carlotta VRM instance loaded by the existing three-vrm pipeline**.
+
+The current model is VRM 0.x.
+
+Use the existing three-vrm humanoid API where appropriate.
+
+Verify that these runtime bones exist:
+
+```text
+hips
+spine
+chest
+neck
+head
+
+leftShoulder
+rightShoulder
+```
+
+Expected actual names from the static report:
+
+```text
+joint_HipMaster
+joint_Torso
+joint_Torso2
+joint_Neck
+joint_Head
+
+joint_LeftShoulder
+joint_RightShoulder
+```
+
+DO NOT assume these names are correct at runtime.
+
+Log the resolved runtime Object3D/bone names once during initialization.
+
+If any required bone cannot be resolved:
+
+* do NOT guess
+* do NOT modify the model
+* report which bone failed
+* stop before implementing animation for that missing bone
+
+---
+
+# STEP 2 — CREATE A SMALL PROCEDURAL ANIMATION CONTROLLER
+
+Create or extend the existing appropriate animation-controller location.
+
+First inspect the repository and determine the cleanest existing location.
+
+Do NOT create duplicate animation systems.
+
+The controller should conceptually be:
+
+```text
+Carlotta VRM
+      ↓
+Procedural Animation Controller
+      ↓
+small local bone rotation offsets
+      ↓
+existing skeleton
+```
+
+The controller must NOT replace or rebuild the skeleton.
+
+---
+
+# STEP 3 — PRESERVE ORIGINAL POSE
+
+This is critical.
+
+At controller initialization, capture each controlled bone's original/rest/current rotation.
+
+For Phase 1 control:
+
+```text
+spine
+chest
+neck
+head
+leftShoulder
+rightShoulder
+```
+
+Do NOT permanently overwrite the original pose.
+
+Every frame, procedural animation should be calculated as a **small offset from the captured base rotation**.
+
+Conceptually:
+
+```text
+finalRotation = baseRotation + proceduralOffset
+```
+
+Do NOT accumulate offsets every frame.
+
+BAD:
+
+```text
+bone.rotation.x += offset;
+```
+
+GOOD:
+
+```text
+bone.rotation = baseRotation + currentOffset;
+```
+
+Use quaternion-safe composition if the existing implementation requires it.
+
+---
+
+# STEP 4 — NATURAL PROCEDURAL IDLE
+
+Implement an indefinitely looping idle state.
+
+It must NOT use an animation clip.
+
+It must NOT use keyframe data.
+
+It must NOT require an external animation file.
+
+Use time-based procedural functions such as:
+
+```text
+sin()
+```
+
+and/or layered low-frequency oscillations with slightly different frequencies/phases.
+
+Avoid obvious synchronized looping.
+
+---
+
+# BODY MOVEMENT
+
+## Spine
+
+Extremely subtle movement.
+
+Purpose:
+
+* tiny posture sway
+* natural breathing support
+
+Amplitude must be very small.
+
+## Chest
+
+Primary breathing movement.
+
+Create a slow breathing cycle.
+
+The chest should subtly expand/contract rather than visibly rotate dramatically.
+
+## Neck
+
+Small counter-movement to prevent the head from looking mechanically attached.
+
+## Head
+
+Very subtle independent movement:
+
+* tiny left/right drift
+* tiny forward/back or pitch variation
+* occasional slow positional/rotational variation
+
+The head must NOT constantly wobble.
+
+It should feel like a person naturally holding their head.
+
+## Shoulders
+
+Very subtle movement synchronized loosely with breathing.
+
+Left and right should NOT be perfectly identical.
+
+Use slight phase/amplitude differences.
+
+---
+
+# IMPORTANT: NO ROBOTIC LOOP
+
+The idle animation should NOT look like:
+
+```text
+move left
+move right
+move left
+move right
+```
+
+Instead layer several very low-frequency movements.
+
+For example conceptually:
+
+```text
+breathing
++
+slow posture sway
++
+tiny head variation
++
+tiny shoulder variation
+```
+
+Use different frequencies/phases so the combined movement has natural variation.
+
+Keep everything subtle.
+
+---
+
+# STEP 5 — SMOOTHING
+
+All procedural offsets must be smoothly interpolated.
+
+No:
+
+* snapping
+* sudden rotations
+* visible frame-to-frame jumps
+* hard state transitions
+
+Use delta time.
+
+The animation must remain stable if FPS changes.
+
+Do not depend on a fixed frame rate.
+
+---
+
+# STEP 6 — ANIMATION UPDATE
+
+Integrate the controller into the existing Carlotta render/update loop.
+
+There must be **one clear owner** of procedural bone updates.
+
+Avoid multiple systems simultaneously writing to the same bones.
+
+Do NOT interfere with:
+
+* eye tracking
+* blinking
+* expressions
+* lip-sync
+* VRM spring bones
+* existing renderer update logic
+
+If any existing system already writes to one of these bones, identify it before taking ownership.
+
+---
+
+# STEP 7 — SPRING / PHYSICS BONES
+
+DO NOT manually control:
+
+* hair bones
+* skirt bones
+* accessory physics bones
+* unmapped spring-bone chains
+* `!` prefixed physics/helper bones
+
+Leave them to the existing VRM physics system.
+
+Do NOT disable spring physics.
+
+---
+
+# STEP 8 — EYES
+
+DO NOT modify:
+
+```text
+leftEye
+rightEye
+!joint_Eyes
+!joint_EyesTip
+```
+
+Eye/look-at logic must remain untouched.
+
+---
+
+# STEP 9 — HIPS / LEGS
+
+Do NOT modify:
+
+```text
+hips
+upperLeg
+lowerLeg
+foot
+toes
+```
+
+Phase 1 is upper-body only.
+
+---
+
+# STEP 10 — DEBUGGING
+
+Add minimal debug logging only if useful.
+
+If adding logs, they should clearly identify:
+
+```text
+[CarloAnim] controller initialized
+[CarloAnim] idle active
+```
+
+Do not spam the console every frame.
+
+If a debug toggle is necessary, keep it isolated and temporary.
+
+---
+
+# STEP 11 — PERFORMANCE
+
+This animation runs every render frame.
+
+Keep it lightweight.
+
+Do NOT:
+
+* allocate objects every frame
+* create new arrays every frame
+* traverse the entire scene every frame
+* perform expensive searches every frame
+* run unnecessary math on unused bones
+
+Resolve bones once during initialization.
+
+Reuse vectors/quaternions/eulers where appropriate.
+
+---
+
+# STEP 12 — VALIDATION
+
+After implementation:
+
+1. Run lint.
+2. Run the production build.
+3. Verify there are no TypeScript errors.
+4. Confirm only intended files changed.
+5. Confirm no dependencies changed.
+6. Confirm `src/mint/carlottaVrmLoader.ts` was NOT modified.
+7. Confirm navigation code was NOT modified.
+8. Confirm lip-sync code was NOT modified.
+
+Report:
+
+```text
+Files changed:
+...
+
+Files intentionally untouched:
+...
+
+Runtime bones resolved:
+...
+
+Procedural bones controlled:
+...
+
+Lint:
+...
+
+Build:
+...
+```
+
+---
+
+# SUCCESS CRITERIA
+
+When Zoya starts, Carlotta should simply look **alive while standing still**.
+
+The user should see:
+
+* subtle breathing
+* tiny natural posture movement
+* tiny head movement
+* subtle shoulder movement
+* smooth continuous variation
+
+It should NOT look like an animation clip.
+
+It should NOT look like dancing.
+
+It should NOT look robotic.
+
+It should NOT visibly disturb the original Carlotta pose.
+
+Most importantly:
+
+**DO NOT TOUCH ANYTHING OUTSIDE THE PROCEDURAL IDLE SYSTEM.**
+
+Do not proceed to talking, happy, sad, excited, angry, thinking, laughing, greeting, goodbye, or other emotional animations yet.
+
+Phase 1 is ONLY:
+
+**NATURAL PROCEDURAL IDLE.**

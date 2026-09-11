@@ -1,0 +1,256 @@
+We need a DEV-ONLY diagnostic pass for Carlotta.vrm facial expressions.
+
+GOAL:
+Determine exactly which runtime VRM expressions on Carlotta visibly affect:
+
+* mouth
+* smile / mouth corners
+* frown / mouth corners down
+* eyelids / eye openness
+* brows
+* cheeks
+* overall facial tension
+
+Do NOT redesign or tune the existing emotion system yet.
+
+IMPORTANT PROJECT CONSTRAINTS:
+
+* Active character is Carlotta.vrm.
+* Do NOT replace or modify the VRM asset.
+* Do NOT modify its mesh, materials, textures, skeleton, or model.
+* Do NOT modify camera or OrbitControls.
+* Do NOT modify body animation.
+* Do NOT modify lip-sync math or audio/TTS.
+* Do NOT modify the existing emotion mappings yet.
+* Do NOT add Mixamo animations.
+* Do NOT add external animation files.
+* Do NOT use AnimationMixer or animation clips.
+* Do NOT manipulate mesh vertices.
+* Do NOT modify blink/look expressions.
+* `aa` is the active lip-sync mouth-open expression and MUST remain untouched.
+* Do NOT change the existing production behavior.
+* Everything in this pass must be DEV-only and removable.
+
+KNOWN RUNTIME EXPRESSION INFORMATION:
+
+Carlotta.vrm is a VRM0 asset loaded through the installed three-vrm runtime, which remaps VRM0 expression names to VRM1-style runtime names.
+
+Known runtime expressions include:
+
+* `aa`
+* `ih`
+* `ou`
+* `ee`
+* `oh`
+* `blink`
+* `blinkLeft`
+* `blinkRight`
+* `lookUp`
+* `lookDown`
+* `lookLeft`
+* `lookRight`
+* `neutral`
+* `happy`
+* `angry`
+* `sad`
+* `relaxed`
+
+There are 17 runtime presets in total according to the previous diagnostic.
+
+The current facial emotion controller uses:
+
+* calm
+* happy
+* excited
+* sad
+* angry
+
+and currently maps emotions to a small set of expression weights.
+
+DO NOT assume the semantic name of a preset tells us what it visually does.
+
+For example:
+
+* `angry` may produce little/no visible deformation.
+* `sad` may produce little/no visible deformation.
+* `happy` may primarily affect the eyelids.
+* `relaxed` may potentially affect the mouth.
+* phoneme expressions may affect the mouth and MUST NOT be used as emotion expressions.
+
+TASK:
+
+1. Inspect the existing Carlotta expression controller and VRM expression manager.
+
+2. Add a DEV-only facial expression diagnostic API.
+
+Expose something similar to:
+
+window.__carlottaExpressionTest(name, weight)
+
+It should:
+
+* validate the expression exists
+* clamp weight to 0..1
+* set ONLY that requested expression
+* NOT alter `aa`
+* NOT alter blink/look expressions
+* return false for invalid names
+* return true for valid names
+
+Also expose:
+
+window.__carlottaExpressionReset()
+
+This must restore all diagnostic-controlled expressions to zero without disturbing:
+
+* lip-sync `aa`
+* blink
+* lookAt
+* body animation
+* emotion controller state
+
+3. Add a DEV-only UI panel or compact row for testing expressions individually.
+
+The panel should contain buttons for the NON-lip-sync facial expressions:
+
+* neutral
+* happy
+* angry
+* sad
+* relaxed
+
+Do NOT expose phoneme expressions:
+
+* aa
+* ih
+* ou
+* ee
+* oh
+
+Do NOT expose:
+
+* blink
+* blinkLeft
+* blinkRight
+* lookUp
+* lookDown
+* lookLeft
+* lookRight
+
+The buttons should allow testing at a useful weight such as 0.7 or 1.0.
+
+Also include:
+
+* Reset
+
+The diagnostic UI must:
+
+* be DEV-only
+* have pointer-events:none on its outer wrapper
+* have pointer-events:auto only on controls
+* stop pointerdown propagation
+* NOT interfere with OrbitControls
+* disappear from production builds/runtime
+
+4. IMPORTANT:
+   Before implementing anything, inspect how the existing expression controller writes expression values.
+
+Avoid creating two competing writers for the same expression.
+
+If necessary, temporarily structure the diagnostic so it can override only the diagnostic facial expressions while testing, but do not change the production emotion behavior.
+
+5. Add a DEV diagnostic reader:
+
+window.__carlottaExpressionInfo()
+
+It should return useful information such as:
+
+{
+available: [...],
+currentValues: {
+...
+}
+}
+
+Use the public VRM expression-manager APIs already available in the installed three-vrm version.
+
+Do NOT rely on private/internal APIs if a public API exists.
+
+6. Add DEV console logging when a diagnostic expression is activated.
+
+Example:
+
+[CarlottaExpressionTest] happy = 0.70
+
+Keep logs concise.
+
+7. VERY IMPORTANT:
+   Do NOT try to infer visual results from expression names.
+
+The purpose of this diagnostic is specifically to discover what the actual Carlotta mesh does.
+
+8. Do NOT modify the current emotion recipes in this pass.
+
+The existing mappings must remain exactly as they are.
+
+9. Do NOT modify lip-sync.
+
+The `aa` expression must continue to be controlled exclusively by the existing Carlotta lip-sync controller.
+
+10. Validation:
+
+Run:
+
+* relevant headless expression tests
+* lint
+* build
+* dev server health check
+
+Verify:
+
+* existing emotion tests still pass
+* existing lip-sync tests still pass
+* `aa` remains independently controllable
+* diagnostic expressions do not modify body bones
+* diagnostic expressions do not modify blink/look
+* reset works
+* invalid expression names are rejected
+* production has no visible diagnostic UI
+* no new per-frame allocations
+* no AnimationMixer
+* no animation clips
+* no external animation files
+
+Also perform a write audit confirming the diagnostic does not accidentally write:
+
+* body bones
+* eyes/lookAt
+* blink expressions
+* phoneme expressions
+* `aa`
+
+DELIVERABLE:
+
+At the end, report exactly:
+
+1. Files changed
+2. Runtime expressions confirmed available
+3. Diagnostic controls added
+4. Tests passed
+5. Whether `aa` remained untouched
+6. Whether existing emotion behavior remained unchanged
+
+DO NOT tune or redesign the facial emotion recipes yet.
+
+This is strictly a capability-discovery pass.
+
+After this pass, I will manually test each expression on Carlotta and report which ones visibly control:
+
+* smile
+* frown
+* brows
+* eyelids
+* cheeks
+* anger/tension
+
+Then we will build the real emotion recipes from those results.

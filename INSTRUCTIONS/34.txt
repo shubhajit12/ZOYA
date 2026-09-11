@@ -1,0 +1,163 @@
+Implement a **tiny temporary DEV-only animation test control** for the new Carlotta procedural animation state system.
+
+### Goal
+
+I need to visually test these animation states manually:
+
+`Idle → Listening → Talking → Thinking → Idle`
+
+The animation controller already exists. Do NOT redesign or rewrite it. This is only a temporary way to call its existing `setState()` method from the browser.
+
+### IMPORTANT — HARD RULES
+
+Do NOT:
+
+* replace Carlotta.vrm
+* reintroduce Mint/FBX
+* use Mixamo
+* add external animation files
+* modify the VRM asset
+* modify Carlotta's materials, textures, shaders, appearance, or shading
+* modify OrbitControls/camera/zoom/pan/rotation
+* modify the relaxed pose
+* modify the existing idle animation math
+* modify the existing animation states or their behavior
+* connect Groq
+* connect TTS
+* connect lip sync
+* add mouth/face animation
+* manually rotate bones from the UI
+* add production UI/settings
+* add any per-frame allocations
+* change the quality/performance system
+
+The existing animation controller must remain the **single writer** for Carlotta's controlled animation bones.
+
+### Existing architecture
+
+The relevant controller is:
+
+`src/mint/carlottaAnimationController.ts`
+
+It already exposes the state system:
+
+* `idle`
+* `listening`
+* `talking`
+* `thinking`
+
+and has `setState()`.
+
+There are also existing DEV hooks:
+
+`__carlottaAnimState`
+`__carlottaAnimInfo`
+
+Use the existing architecture if possible instead of creating a second animation system.
+
+### Implementation
+
+Add the smallest possible temporary DEV-only test control.
+
+Preferred behavior:
+
+* Only render it when running a DEV build.
+* Put a tiny floating control somewhere unobtrusive in the Carlotta/Mint viewport.
+* It should contain four small buttons:
+
+  * `Idle`
+  * `Listen`
+  * `Talk`
+  * `Think`
+* Clicking a button should call the existing animation controller's `setState()` with:
+
+  * Idle → `idle`
+  * Listen → `listening`
+  * Talk → `talking`
+  * Think → `thinking`
+
+Do NOT duplicate any animation logic in the UI.
+
+The UI should only request a state change.
+
+### Integration
+
+First inspect the current code and determine the cleanest existing path to access the `CarlottaAnimationController`.
+
+Prefer an existing DEV hook/access path if one already exists.
+
+If the existing `__carlottaAnimState` hook is intentionally designed for state testing, use that rather than exposing additional production APIs.
+
+If a tiny bridge is genuinely required, make it DEV-only and minimal.
+
+Do not expose animation controls in production builds.
+
+### UI requirements
+
+Keep it extremely small and temporary.
+
+Example layout:
+
+`[Idle] [Listen] [Talk] [Think]`
+
+Use existing project styling/components if convenient, but do not introduce a new UI framework or dependency.
+
+The control must not interfere with:
+
+* OrbitControls
+* left-drag rotation
+* right-drag pan
+* wheel zoom
+
+Make sure button clicks do not accidentally trigger camera dragging.
+
+### Testing
+
+After implementation:
+
+1. Start the DEV app.
+2. Verify the control appears in DEV.
+3. Click:
+   `Idle`
+4. Click:
+   `Listen`
+5. Click:
+   `Talk`
+6. Click:
+   `Think`
+7. Click:
+   `Idle`
+
+Verify:
+
+* transitions are smooth
+* no snapping
+* no shaking
+* no T-pose
+* relaxed pose remains intact
+* no strange twisting
+* no floating
+* no animation conflicts
+* OrbitControls still work normally
+* Carlotta appearance is unchanged
+
+Also verify that the control does NOT appear in a production build.
+
+### Validation
+
+Run:
+
+* lint
+* build
+
+Fix only issues caused by this change.
+
+At the end, report:
+
+1. exact files changed
+2. how the DEV control accesses `CarlottaAnimationController`
+3. whether production builds hide/remove the control
+4. lint result
+5. build result
+
+Keep this change surgical and temporary.

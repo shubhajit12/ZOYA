@@ -1,0 +1,112 @@
+Build the proposed architecture, with ONE important change:
+
+### APPROVED SCOPE
+
+Implement:
+
+1. `src/mint/carlottaSkillSystem.ts`
+
+   * Use the existing `AnimationIntent` union.
+   * Do NOT extend the union with new gesture nouns yet unless they already exist.
+   * `AnimationSkill` metadata/registry.
+   * `resolve(intent)` returning:
+
+     * `procedural`
+     * `library`
+     * `unavailable`
+   * Procedural entries delegate to the existing Carlotta controllers.
+   * Library starts empty.
+   * Unavailable must be explicit and must NEVER freeze or break Zoya.
+
+2. Retargeter interfaces/types + honest `canRetarget()` stub.
+
+   * No renderer imports.
+   * No VRM mutation.
+   * Return clear reasons when unsupported.
+   * Do not pretend arbitrary animations are compatible yet.
+
+3. Acquisition pipeline interface/status enum only.
+
+   * NO network I/O.
+   * NO downloading.
+   * Document validation/security requirements for future web acquisition.
+   * Treat downloaded animation data as untrusted data.
+
+4. Reserve a future gesture layer for arms only.
+
+   * It must not fight the existing 6-bone procedural body controller.
+   * Do not implement actual downloaded gestures yet.
+
+5. DEV diagnostics/hooks.
+
+6. Headless tests for resolver/retargeter behavior.
+
+7. Required `global.d.ts` additions.
+
+### IMPORTANT ADDITION: CONNECT CARLOTTA TO THE EXISTING INTENT FLOW
+
+The report says Groq already produces `AnimationIntent`, App already calls `setAnimationIntent()`, but Carlotta currently drops those intents.
+
+Fix that now.
+
+Wire:
+
+Groq AnimationIntent
+→ App existing `setAnimationIntent`
+→ MintCanvas
+→ renderer.setAnimationIntent()
+→ Carlotta animation intent/state layer
+→ `carlottaSkillSystem.resolve(intent)`
+→ existing Carlotta procedural controllers
+
+Do NOT rewrite the renderer.
+
+Do NOT make Groq control bones.
+
+Do NOT duplicate the existing idle/talking/listening/emotion controllers.
+
+The skill system should act as the resolver/orchestrator, while the existing procedural controller remains the single writer for its existing body bones.
+
+For intents already supported procedurally, resolving them should activate the existing Carlotta controller.
+
+For unsupported intents, return `unavailable` cleanly and fall back to the existing safe state (normally idle/listening/talking as appropriate).
+
+### DO NOT DO YET
+
+Do NOT:
+
+* download animations
+* search the web
+* add Mixamo
+* add AnimationMixer/clips
+* add external animation files
+* modify Carlotta's skeleton
+* modify mesh vertices
+* change lip-sync
+* change expressions
+* change camera
+* change TTS
+* change Groq
+* optimize rendering
+* redesign the renderer
+
+### SUCCESS CRITERIA
+
+After implementation:
+
+1. TypeScript check passes.
+2. Existing build passes.
+3. Carlotta still loads exactly as before.
+4. Existing idle remains intact.
+5. Talking/listening remains intact.
+6. Existing emotion behavior remains intact.
+7. Groq-generated animation intents now actually reach Carlotta.
+8. Unsupported intents do not crash/freeze Zoya.
+9. DEV diagnostics can show something like:
+
+`intent=happy → source=procedural`
+`intent=wave → source=unavailable`
+
+10. Report every changed file and explain the exact intent flow.
+
+Keep the implementation minimal and additive. No unrelated refactors.

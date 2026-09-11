@@ -1,0 +1,408 @@
+# ZOYA — IMPLEMENT PERFORMANCE QUALITY TIERS
+
+## IMPORTANT
+
+This is a controlled performance/settings task.
+
+DO NOT change:
+
+* Carlotta VRM model
+* Carlotta textures/materials
+* Carlotta skeleton
+* relaxed pose
+* procedural idle animation
+* lip-sync
+* eye/lookAt system
+* emotions
+* Groq brain/provider
+* TTS/voice
+* chat/UI layout
+* camera
+* OrbitControls/navigation
+* MToon/shading setup
+* existing renderer behavior except where explicitly required below
+
+Do not refactor unrelated code.
+
+Before editing, inspect the existing settings/state architecture and renderer initialization so the implementation fits the current project.
+
+---
+
+# GOAL
+
+Add a user-accessible performance quality system:
+
+**Settings → Performance → Quality**
+
+Available modes:
+
+1. **Auto**
+2. **High**
+3. **Medium**
+4. **Low**
+
+On the user's FIRST launch:
+
+* Quality should default to `Auto`.
+* Perform a lightweight device capability check.
+* Automatically select an appropriate starting quality internally.
+* Store the selected result locally.
+* Do NOT repeatedly override the user's choice after they manually change it.
+
+The user must always be able to manually choose High / Medium / Low.
+
+Do not create an overly complicated benchmark system yet.
+
+---
+
+# IMPORTANT DISTINCTION
+
+There are two concepts:
+
+### User setting
+
+`Auto | High | Medium | Low`
+
+### Effective runtime quality
+
+The actual profile currently being used:
+
+`High | Medium | Low`
+
+If the user selects `Auto`, the system determines the effective quality.
+
+If the user manually selects High/Medium/Low, respect that choice.
+
+---
+
+# FIRST-LAUNCH AUTO DETECTION
+
+Create a lightweight capability detector.
+
+Use information that is safely available in the browser/renderer, such as:
+
+* WebGL/WebGL2 availability
+* renderer/GPU information where safely available
+* devicePixelRatio
+* screen/canvas resolution
+* available hardware concurrency where available
+* other non-invasive renderer capability information
+
+Do NOT perform a long benchmark.
+
+Do NOT intentionally stress the GPU.
+
+Do NOT allocate large temporary textures.
+
+The detector should simply estimate:
+
+* High-capability device
+* Medium-capability device
+* Low-capability device
+
+Use conservative thresholds.
+
+If information is unavailable, choose Medium rather than making an aggressive assumption.
+
+---
+
+# QUALITY PROFILES
+
+Create one centralized quality configuration/profile system.
+
+Do not scatter quality constants throughout the renderer.
+
+Use approximately these starting profiles:
+
+## HIGH
+
+* pixel ratio cap: `2.0`
+* antialias: ON
+* shadow maps: OFF unless the current scene actually gains from them
+* spring bones: full
+* render target: normal/full quality
+* future texture quality: full
+
+## MEDIUM
+
+* pixel ratio cap: `1.25`
+* antialias: OFF
+* shadow maps: OFF
+* spring bones: full initially
+* render target: normal
+* future texture quality: medium
+
+## LOW
+
+* pixel ratio cap: `1.0`
+* antialias: OFF
+* shadow maps: OFF
+* spring bones: reduced quality can be supported by the profile, BUT DO NOT MODIFY SPRING-BONE BEHAVIOR IN THIS TASK
+* render target: normal
+* future texture quality: low
+
+IMPORTANT:
+
+For this task, only actually apply renderer settings that are safe with the current renderer architecture.
+
+Do NOT modify spring-bone behavior yet.
+
+Do NOT modify textures yet.
+
+Those are future optimization phases.
+
+---
+
+# RENDERER REQUIREMENT
+
+The current audit showed that:
+
+* Carlotta is ~72k triangles
+* geometry is NOT the primary bottleneck
+* textures are the largest asset memory consumer
+* pixel ratio + MSAA can create significant GPU/fill pressure
+* there are currently no actual shadow casters
+
+Therefore the first renderer-level quality controls should focus on:
+
+1. pixel ratio
+2. antialiasing
+3. shadow map state
+
+The effective pixel ratio must never exceed the selected profile's cap.
+
+For example:
+
+```ts
+renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio || 1, profile.pixelRatioCap)
+);
+```
+
+Make sure resize handling continues respecting the cap.
+
+---
+
+# ANTIALIASING
+
+Antialiasing is determined when `WebGLRenderer` is created.
+
+DO NOT attempt to simply toggle:
+
+```ts
+renderer.antialias
+```
+
+after creation.
+
+Inspect the current renderer initialization.
+
+If the current architecture cannot safely change antialiasing at runtime, do NOT introduce a risky renderer recreation system just for this phase.
+
+Instead:
+
+* apply the selected quality profile during renderer initialization
+* make first-launch Auto selection available before renderer creation if possible
+* if the existing architecture makes that impossible, preserve stability and document that antialias changes require renderer recreation/reload
+
+Do not break the renderer.
+
+---
+
+# SHADOW MAP
+
+The audit found:
+
+* shadow maps are enabled in renderer code
+* no lights currently appear to have `castShadow=true`
+* therefore there is likely no useful shadow pass
+
+Safely disable:
+
+```ts
+renderer.shadowMap.enabled = false;
+```
+
+for the current Carlotta path.
+
+Do not modify lighting appearance.
+
+Do not remove lights.
+
+Do not modify materials.
+
+---
+
+# SETTINGS STORAGE
+
+Use the project's existing persistence/settings mechanism if one already exists.
+
+Otherwise use a small localStorage entry.
+
+Suggested concept:
+
+```text
+zoya.performance.quality
+```
+
+Stored user value:
+
+```text
+auto
+high
+medium
+low
+```
+
+Also store the detected/effective tier if useful, but avoid unnecessary duplicated state.
+
+Handle invalid/missing stored values gracefully.
+
+---
+
+# SETTINGS UI
+
+Add:
+
+**Settings → Performance → Quality**
+
+Options:
+
+* Auto
+* High
+* Medium
+* Low
+
+When `Auto` is selected, optionally show something like:
+
+> Auto — currently using Medium
+
+The exact UI should match the existing Zoya settings design.
+
+Do NOT redesign the Settings screen.
+
+Do NOT create a new settings framework if one already exists.
+
+---
+
+# USER OVERRIDE BEHAVIOR
+
+Example:
+
+First launch:
+
+```text
+Quality = Auto
+Detected = Medium
+Effective = Medium
+```
+
+User changes:
+
+```text
+Quality = High
+```
+
+Then:
+
+```text
+Effective = High
+```
+
+The app must NOT silently switch them back to Medium.
+
+If the user later selects:
+
+```text
+Quality = Auto
+```
+
+automatic detection becomes active again.
+
+---
+
+# RESIZE BEHAVIOR
+
+Whenever the canvas/container is resized:
+
+* preserve the selected quality pixel-ratio cap
+* never accidentally restore uncapped `devicePixelRatio`
+* do not change camera FOV
+* do not change camera position
+* do not change OrbitControls
+
+---
+
+# MOBILE-FIRST DESIGN
+
+This system is being introduced because Zoya must eventually run on mobile hardware.
+
+Do not assume desktop GPU capability.
+
+The architecture should make it easy to add future controls such as:
+
+* texture quality
+* spring-bone quality
+* render frequency
+* adaptive performance
+* battery-saving mode
+
+But DO NOT implement those systems yet unless they already exist.
+
+Keep the profile structure extensible.
+
+---
+
+# SAFETY / REGRESSION RULES
+
+Before editing, inspect:
+
+* renderer creation
+* resize handling
+* existing Settings state
+* localStorage/state persistence
+* Carlotta loading path
+
+After editing verify:
+
+1. Carlotta still loads.
+2. Carlotta relaxed pose is unchanged.
+3. Basic procedural idle is unchanged.
+4. Camera is unchanged.
+5. OrbitControls are unchanged.
+6. Lighting appearance is unchanged except for removal of unused shadow-map work.
+7. Lip-sync is unchanged.
+8. TTS is unchanged.
+9. Groq/brain is unchanged.
+10. No external animation files are added.
+11. No Mixamo assets are added.
+12. No model replacement occurs.
+13. No texture files are modified.
+14. No spring-bone code is modified.
+15. No new heavy dependency is added.
+
+---
+
+# VALIDATION
+
+Run the project's existing:
+
+* TypeScript/lint checks
+* production build
+
+Then report:
+
+* files changed
+* quality profiles created
+* how Auto detection works
+* how the setting is persisted
+* whether antialiasing is selected at renderer creation
+* effective pixel ratio for each tier
+* whether shadow maps are disabled
+* build/lint result
+
+Do not make unrelated cleanup changes.
+
+Keep this implementation isolated and reversible.
+
+# END

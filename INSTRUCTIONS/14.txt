@@ -1,0 +1,131 @@
+The current smooth-zoom implementation is STILL NOT acceptable.
+
+USER TEST RESULT:
+
+* Zoom technically works.
+* It is NOT smooth.
+* It feels LAGGY / delayed.
+* Do NOT simply increase/decrease `zoomSmoothSpeed` and call it done.
+
+IMPORTANT:
+Keep the existing cursor-based zoom behavior and the previous `ensureCursorZoom()` fix.
+Do not change:
+
+* Mint model
+* Carlotta model
+* camera framing
+* initial camera position
+* drag/orbit rotation
+* model scale/materials/textures
+* lip-sync
+* emotions/animation
+* eye tracking
+* Groq
+* TTS
+* UI
+* dependencies
+
+Keep the change isolated to:
+`src/mint/mintRenderer.ts`
+
+FIRST:
+Inspect the current implementation carefully, especially:
+
+* `ensureCursorZoom()`
+* `handleCursorZoom()`
+* `pendingZooms`
+* `applyPendingZoom()`
+* the animation/update loop
+* OrbitControls update behavior
+
+PROBLEM WITH THE CURRENT APPROACH:
+The current implementation queues every wheel tick as a separate `{ pivot, remaining }` intent and then takes roughly 0.3 seconds to consume each intent.
+
+That creates INPUT LAG:
+rapid wheel input creates a backlog of old zoom intents, so the camera continues responding to previous wheel events after the user's input has already changed.
+
+NEW GOAL:
+Make zoom feel like a normal modern 3D viewport:
+
+* wheel input should affect the zoom target immediately,
+* camera movement should be smooth,
+* rapid scrolling must NOT create a backlog,
+* no delayed "catch-up" motion,
+* no visible stepping,
+* no rubber-band effect,
+* no overshoot,
+* cursor-pivot behavior must remain.
+
+RECOMMENDED ARCHITECTURE:
+Do NOT maintain a queue of independent zoom animations.
+
+Instead maintain a SINGLE current zoom state, for example:
+
+* current/target zoom scale or distance
+* current/target cursor pivot
+* optionally a zoom velocity
+
+On each wheel event:
+
+1. Raycast exactly as the existing implementation does.
+2. Determine the cursor pivot exactly as before.
+3. Update ONE shared zoom target/state.
+4. If another wheel event arrives, modify that existing target instead of creating another queued animation.
+5. New wheel input must effectively replace/combine stale pending input rather than waiting behind it.
+
+Per frame:
+
+1. Smoothly move the camera toward the CURRENT target using delta-time-independent damping.
+2. Smoothly update the pivot if necessary, but do not introduce noticeable cursor lag.
+3. Clamp to the existing OrbitControls minDistance/maxDistance.
+4. Stop immediately when sufficiently close to the target.
+
+IMPORTANT FEEL REQUIREMENT:
+A single wheel tick should begin responding essentially immediately on the next rendered frame.
+
+Rapid scrolling should remain responsive:
+If the user scrolls 10 times quickly, the camera should move toward the resulting zoom amount directly, NOT animate 10 old wheel events one after another.
+
+PRESERVE:
+
+* Existing 0.88 zoom sensitivity.
+* Existing raycast pivot.
+* Existing depth-plane fallback.
+* Existing zoom direction.
+* Existing camera/target dolly relationship:
+  C' = P + s(C-P)
+  T' = P + s(T-P)
+
+PERFORMANCE:
+
+* Do NOT add per-frame raycasts.
+* Do NOT allocate arrays/objects every frame.
+* Reuse scratch vectors.
+* Wheel-event raycasting remains event-driven.
+* The animation loop should only apply already-computed state.
+
+VERY IMPORTANT:
+Do not create a second competing camera controller.
+Integrate this with the existing OrbitControls/camera architecture.
+
+Also inspect whether `controls.update()` itself is applying damping or otherwise interacting with the new zoom smoothing. Avoid two competing smoothing systems that could create latency.
+
+VALIDATION:
+Run:
+
+* npm run lint / tsc --noEmit
+* npm run build
+
+Report:
+
+1. Exact files changed.
+2. Why the previous queue implementation felt laggy.
+3. What the new single-target/state approach does differently.
+4. Lint result.
+5. Build result.
+
+Do NOT claim visual smoothness is confirmed unless tested in the actual browser.
+
+MOST IMPORTANT:
+Optimize for FEEL, not merely mathematical convergence.
+The user specifically reports "still not smooth and laggy", so the final implementation must prioritize immediate wheel response with smooth interpolation and zero backlog.

@@ -1,0 +1,58 @@
+Now that the root cause is confirmed, make the minimal lip-sync fix.
+
+ROOT CAUSE:
+Carlotta.vrm contains VRM0 phoneme presets:
+
+* A → a
+* I → i
+* U → u
+* E → e
+* O → o
+
+The installed three-vrm runtime remaps these VRM0 presets to VRM1 runtime names:
+
+* a → aa
+* i → ih
+* u → ou
+* e → ee
+* o → oh
+
+Therefore carlottaLipSync.ts currently looking up `getExpression('a')` is wrong.
+
+REQUIRED CHANGE:
+In `src/mint/carlottaLipSync.ts`, change the lip-sync mouth expression target from runtime preset `'a'` to runtime preset `'aa'`.
+
+IMPORTANT:
+
+* Keep the existing audio analyser path exactly unchanged.
+* Keep all existing mouthOpen calculation unchanged.
+* Keep threshold/hold/latch behavior unchanged.
+* Keep attack/release smoothing unchanged.
+* Keep speechActive handling unchanged.
+* Keep setSpeaking behavior unchanged.
+* Keep reset/unbind behavior unchanged.
+* Do not add phoneme switching yet.
+* Do not use i/u/e/o yet.
+* Do not change TTS.
+* Do not change voicePipeline.
+* Do not change audioAnalyser.
+* Do not change animation controller.
+* Do not change emotion system.
+* Do not change Carlotta.vrm.
+* Do not change materials/textures/camera/controls.
+* No Mixamo.
+* No external animation files.
+* No mesh/vertex manipulation.
+* No new audio contexts, analysers, listeners, or playback paths.
+
+Update any DEV diagnostic/error text that specifically says the `'a'` preset is missing so it correctly refers to the runtime `'aa'` preset.
+
+Preserve the existing diagnostics that are useful for confirming the live analyser signal.
+
+VALIDATION:
+
+1. Run lint.
+2. Run build.
+3. Report exactly which files changed.
+4. Confirm the lip-sync controller now requests runtime expression `'aa'`.
+5. Do not claim visual lip-sync works until the user tests actual TTS playback in the browser.

@@ -1,0 +1,89 @@
+We are evaluating two newly obtained VRoid models as possible replacements/alternatives for Mint in the Zoya project.
+
+IMPORTANT: THIS IS AN INSPECTION-ONLY TASK.
+DO NOT MODIFY ANY FILE.
+DO NOT REPLACE MINT.
+DO NOT CHANGE THE CURRENT MINT MOUTH/LIP-SYNC SYSTEM.
+DO NOT CHANGE GROQ.
+DO NOT CHANGE GOOGLE TTS.
+DO NOT CHANGE CAMERA, DRAG ROTATION, ZOOM, UI, OR ANY EXISTING ZOYA BEHAVIOR.
+
+The two candidate model files are somewhere under the Zoya project / Z: drive. Find them first.
+
+Your job is to inspect BOTH candidate models and produce a technical comparison specifically for Zoya's facial animation and lip-sync requirements.
+
+For EACH model determine:
+
+1. Exact filename and path.
+2. File format and version if detectable (.vrm, VRM version, glTF/GLB, etc.).
+3. Whether the model loads successfully with the project's current Three.js/VRM-related dependencies.
+4. Skeleton:
+
+   * total bone count
+   * humanoid bone mapping if available
+   * facial bones
+   * jaw/mouth-related bones
+   * eye bones
+5. Facial expression system:
+
+   * VRM blendshapes / expression presets
+   * custom expression keys
+   * available mouth expressions
+   * A / I / U / E / O or equivalent phoneme/viseme shapes
+   * blink expressions
+   * smile
+   * angry
+   * sad
+   * surprised
+   * other useful emotion expressions
+6. Determine whether expressions are implemented as:
+
+   * blendshapes
+   * bones
+   * both
+7. Check whether the model has enough facial controls to produce clearly visible mouth opening and natural talking.
+8. Determine whether expressions can be driven procedurally at runtime from TypeScript/Three.js without modifying the model.
+9. Identify the exact runtime API/data structure that would need to be controlled for facial expressions, if detectable.
+10. Check whether the current Zoya lip-sync architecture could theoretically be adapted to this model without changing Groq or Google TTS.
+11. Check whether the current project already contains VRM loading/runtime support. Do NOT add it; only report what exists.
+12. Check polygon/vertex/texture/material complexity and estimate whether either model is reasonable for this PC (8 GB RAM, >500 GB free storage).
+13. Identify any licensing/usage metadata embedded in the model if available. Do not make assumptions if unavailable.
+
+MOST IMPORTANT:
+Compare the two models specifically on:
+
+A. Mouth opening range
+B. Lip-sync/viseme quality potential
+C. Facial emotion quality
+D. Eye/blink control
+E. Ease of integration with the existing Zoya animation architecture
+F. Runtime performance
+G. Risk of replacing Mint
+
+Then give a final recommendation:
+
+* MODEL 1: ...
+* MODEL 2: ...
+* MINT: ...
+
+State which is technically best for Zoya and WHY.
+
+Also explicitly state whether either VRoid model appears substantially better than Mint for facial/lip-sync animation.
+
+TESTING RULES:
+
+* You may inspect files, parse model metadata, inspect package/dependency information, and run read-only validation scripts.
+* You may load/parse the models for inspection.
+* You may NOT edit source files, package.json, model files, configuration files, or assets.
+* You may NOT install dependencies.
+* You may NOT automatically replace or import either model into Zoya.
+* If a model cannot be inspected because it is encrypted, inaccessible, unsupported, or missing, report the exact reason.
+
+At the end provide:
+
+1. A concise comparison table.
+2. Detailed findings for each model.
+3. Final recommendation.
+4. A list of exactly what would need to change to test the recommended model later — WITHOUT making those changes now.
+
+Do not claim visual quality unless you actually perform a valid visual/runtime inspection. Clearly distinguish verified facts from inferred capabilities.

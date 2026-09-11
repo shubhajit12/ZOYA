@@ -1,0 +1,68 @@
+Fix the current Mint/Carlotta cursor-based scroll zoom so it feels significantly smoother.
+
+IMPORTANT:
+
+* Do NOT change the current Mint model.
+* Do NOT change the Carlotta model.
+* Do NOT change camera framing or initial camera position.
+* Do NOT change drag rotation/orbit behavior.
+* Do NOT change model scale, materials, textures, skeleton, animations, lip-sync, emotions, eye tracking, Groq, TTS, UI, or dependencies.
+* Do NOT revert the existing `ensureCursorZoom()` fix.
+* Keep this isolated to `src/mint/mintRenderer.ts` unless absolutely impossible.
+
+CURRENT STATE:
+The scroll zoom now works correctly for both Mint and Carlotta after the previous fix:
+
+* `cursorZoomAttached` prevents duplicate listeners.
+* `ensureCursorZoom(canvas)` attaches the wheel listener once.
+* Mint calls it through `initEyeTracking()`.
+* Carlotta calls it after successful VRM loading.
+* `handleCursorZoom()` is the existing model-agnostic zoom mechanism.
+
+PROBLEM:
+The zoom works, but it does not feel smooth. The camera visibly jumps/steps with individual mouse-wheel events.
+
+GOAL:
+Make the existing cursor-based zoom feel fluid and natural without changing its behavior.
+
+IMPLEMENTATION:
+
+1. Keep the existing wheel listener and `handleCursorZoom()` concept.
+2. Do NOT directly make large camera-distance changes on every wheel event.
+3. Convert wheel input into a smoothed zoom target/velocity.
+4. Apply the actual camera/OrbitControls distance movement gradually in the existing animation/update loop.
+5. Use frame-rate-independent smoothing (delta time).
+6. Preserve the current cursor-ray pivot:
+
+   * Raycast the active model under the cursor.
+   * Zoom toward that hit point.
+   * Keep the existing depth-plane fallback.
+7. Preserve the current zoom direction and approximate zoom sensitivity.
+8. Add reasonable damping/easing so:
+
+   * small wheel movements don't visibly jump,
+   * rapid scrolling still responds quickly,
+   * releasing the wheel naturally settles,
+   * there is no noticeable lag or rubber-band effect.
+9. Respect the existing minimum/maximum zoom limits.
+10. Avoid adding expensive per-frame raycasts. Raycasting should remain wheel-event-driven; only the already-computed zoom state should be smoothly applied per frame.
+11. Ensure switching/reloading between Mint and Carlotta does not leave stale zoom state or duplicate listeners.
+12. Make the smallest possible isolated change.
+
+IMPORTANT TECHNICAL REQUIREMENT:
+Before editing, inspect the existing `handleCursorZoom()`, `ensureCursorZoom()`, camera/OrbitControls update flow, and renderer animation loop. Integrate the smoothing into the existing architecture rather than creating a second competing camera-control system.
+
+VALIDATION:
+
+* Run `npm run lint` / `tsc --noEmit`.
+* Run `npm run build`.
+* Report exactly which files changed.
+* Confirm that no unrelated behavior was modified.
+* Do not claim visual smoothness is confirmed unless it was actually tested in the browser.
+
+At the end, briefly explain:
+
+* what caused the stepped feeling,
+* how smoothing was implemented,
+* which file(s) changed,
+* lint/build results.

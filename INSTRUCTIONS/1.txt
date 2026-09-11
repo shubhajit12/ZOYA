@@ -1,0 +1,171 @@
+We are continuing work on the existing Zoya project.
+
+IMPORTANT: DO NOT restart the project from scratch. Inspect the existing code and continue from its current state.
+
+Project:
+`A:\whitehat-jr\Downloads\ZOYA\zoya-ai-companion-MAIN`
+
+Main file:
+`src/mint/lipSyncController.ts`
+
+## CURRENT OBJECTIVE
+
+Get the existing Zoya app compiling and running again.
+
+The previous AI agent already implemented the Mint procedural mouth system and introduced/fixed most of the required logic.
+
+There are currently ONLY 7 known TypeScript errors in `lipSyncController.ts`.
+
+Your job is to fix those compilation errors WITHOUT changing the existing Mint mouth design.
+
+## STRICT NO-CHANGE RULES
+
+DO NOT:
+
+* replace Mint
+* replace the FBX/model
+* change the skeleton
+* change textures
+* change materials
+* change the camera
+* change drag rotation
+* change zoom
+* change the UI
+* change Groq
+* change the AI provider
+* change Google TTS
+* change audio generation
+* change viseme generation
+* add Mixamo animations
+* add external animation files
+* add blendshapes
+* redesign the animation system
+* rewrite `lipSyncController.ts`
+* remove existing diagnostics
+* remove the mouth test buttons
+* revert the procedural mouth system
+* re-enable the old automatic `calculatedOpenDeg` mouth-angle system
+
+Do not make unrelated improvements.
+
+## MINT MOUTH STATE THAT MUST BE PRESERVED
+
+The current manual mouth pose is intentionally using the discovered X axis.
+
+At 100% mouth opening:
+
+Upper lip bones use approximately:
+
+`-8° X`
+
+Lower lip bones use approximately:
+
+`+8° X`
+
+The jaw uses the existing capped value.
+
+The existing smoothing and pipeline must remain:
+
+`audio/viseme → mouthOpen/mouthWide/mouthSmile → applyMintMouthPose() → GPU skinning`
+
+The existing:
+
+`🧪 TEST MINT MOUTH POSE`
+
+must remain.
+
+The existing:
+
+`🔬 LIP AXIS DISCOVERY`
+
+must remain.
+
+## KNOWN ERRORS
+
+Run:
+
+`npm run lint`
+
+First.
+
+The previous run reported these errors:
+
+### Errors 1–5: BufferAttribute typing
+
+At approximately:
+
+* line 1473
+* line 1552
+* line 1615
+* line 3099
+* line 3214
+
+The issue is:
+
+`geometry.getAttribute()` can return:
+
+`THREE.BufferAttribute | THREE.InterleavedBufferAttribute`
+
+but some helper functions currently expect only:
+
+`THREE.BufferAttribute`
+
+Fix the relevant helper parameter types so they correctly accept the actual Three.js attribute type.
+
+Prefer a proper type such as:
+
+`THREE.BufferAttribute | THREE.InterleavedBufferAttribute`
+
+or another appropriate Three.js attribute type already available in the project.
+
+Do NOT blindly cast every attribute to `THREE.BufferAttribute` just to silence TypeScript.
+
+Preserve the existing runtime behavior.
+
+### Error 6–7: Matrix4 / Vector3
+
+At approximately line 4356 the code currently contains:
+
+`new THREE.Vector3().copy(child.matrixWorld).getPosition(new THREE.Vector3())`
+
+This is invalid Three.js code.
+
+Replace it with:
+
+`new THREE.Vector3().setFromMatrixPosition(child.matrixWorld)`
+
+Do not change the surrounding diagnostic behavior.
+
+## IMPORTANT
+
+Before editing, inspect the surrounding functions and understand what types they actually use.
+
+Make the smallest possible changes.
+
+After the fixes:
+
+Run:
+
+`npm run lint`
+
+Then:
+
+`npm run build`
+
+Expected:
+
+`npm run lint` → 0 TypeScript errors
+
+`npm run build` → successful build
+
+If there are additional errors caused directly by these fixes, resolve them minimally.
+
+DO NOT continue into mouth tuning after the build succeeds.
+
+STOP after successful lint + build and report:
+
+* lint result
+* build result
+* files changed
+* confirmation that Mint's manual mouth pose values were preserved
+* confirmation that no model/provider/TTS/UI changes were made

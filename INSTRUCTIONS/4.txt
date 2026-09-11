@@ -1,0 +1,90 @@
+Now verify the CURRENT code in the running application.
+
+Do NOT edit any files yet.
+
+The source inspection says the per-stage guard is already present:
+
+`_mouthPoseLastAppliedPhase`
+
+and the expected behavior is approximately 6 diagnostic lines total:
+
+`CLOSED`
+`25%`
+`50%`
+`75%`
+`100%`
+`CLOSED`
+
+### 1. Start Zoya
+
+Run:
+
+`npm run dev`
+
+Keep the server running.
+
+### 2. Actually open and interact with the app
+
+Use whatever browser/UI interaction capability is available to you.
+
+Open the Zoya app at:
+
+`http://localhost:3000`
+
+Find and click:
+
+`🧪 TEST MINT MOUTH POSE`
+
+### 3. OBSERVE THE REAL BEHAVIOR
+
+Watch the app and terminal/browser console for the entire test.
+
+Determine:
+
+* Does the test progress through all 6 stages?
+* Does it remain responsive?
+* Does `[MOUTH OPEN TEST]` appear only once per stage?
+* Does it stop automatically after the final CLOSED stage?
+* Does the logging stop completely afterward?
+* Does Mint visually change between CLOSED and OPEN stages?
+* At 100%, is there a visibly larger vertical mouth gap?
+
+Do not rely only on source inspection.
+
+### 4. IMPORTANT
+
+If the test behaves correctly:
+
+DO NOT CHANGE ANY CODE.
+
+Report:
+
+`MOUTH TEST LOOP: FIXED`
+
+and provide the observed stage sequence and approximate number of diagnostic logs.
+
+If the test still spams logs, gets stuck, or lags:
+
+DO NOT immediately edit code.
+
+Report exactly what happened and which function/state is still repeating.
+
+### DO NOT TOUCH
+
+Do not modify:
+
+* `applyMintMouthPose()`
+* `UPPER_OPEN_DEG`
+* `LOWER_OPEN_DEG`
+* jaw angles
+* lip axis
+* Mint model/skeleton
+* camera
+* UI
+* Groq
+* TTS
+* audio
+* viseme generation
+* animation system
+
+This step is ONLY to verify the existing fix in the actual running application.

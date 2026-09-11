@@ -1,0 +1,66 @@
+# ZOYA — TINY UI FIX
+
+In `src/ui/SettingsModal.tsx` only.
+
+## Goal
+
+When the Performance → Quality setting is `Auto`, show the actual resolved/effective quality tier underneath it.
+
+Example:
+
+**Auto (Recommended)**
+`Currently using: Low`
+
+or:
+
+**Auto (Recommended)**
+`Currently using: Medium`
+
+or:
+
+**Auto (Recommended)**
+`Currently using: High`
+
+If the user manually selects High/Medium/Low, keep the existing UI behavior. Do not add unnecessary text unless the existing design already supports showing the effective tier.
+
+## IMPORTANT
+
+DO NOT change:
+
+* Auto detection logic
+* quality thresholds
+* renderer
+* pixel ratio
+* antialiasing
+* shadow settings
+* Carlotta VRM
+* textures
+* skeleton
+* relaxed pose
+* procedural idle
+* spring bones
+* lip-sync
+* eyes/lookAt
+* emotions
+* Groq
+* TTS
+* camera
+* OrbitControls
+* settings persistence
+* any other file
+
+Use the existing quality-resolution/state logic already implemented to obtain the effective tier. **Do not duplicate the detection algorithm in the UI.**
+
+Only make the minimum change necessary.
+
+## Validation
+
+Run the existing lint/type check.
+
+Report:
+
+* exactly what changed
+* lint result
+* whether any other files were modified
+
+# END

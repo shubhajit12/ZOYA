@@ -1,0 +1,42 @@
+We found the real lip-sync blocker.
+
+DO NOT change TTS, voicePipeline, audioAnalyser, animation controller, camera, controls, VRM asset, materials, textures, skeleton, or rendering.
+
+Current console proves:
+
+* Gemini TTS request succeeds.
+* TTS audio is received.
+* Audio decodes successfully (4.28s).
+* speaking state transitions talking → idle.
+* But carlottaLipSync.ts logs:
+  `[CarloLipSync] mouth preset 'a' missing — lip-sync idle`
+
+Therefore the immediate task is READ-ONLY diagnosis of Carlotta.vrm's actual expression manager.
+
+Inspect the loaded `/mint/Carlotta.vrm` expressionManager at runtime and determine:
+
+1. What expression presets actually exist.
+2. What expression names are available through the VRM runtime API.
+3. Whether there are any expressions that visibly open/move the mouth.
+4. Whether the asset uses VRM0 preset names, custom expression names, or another naming scheme.
+5. Do NOT assume `a/i/u/e/o` exist just because VRM0 can support them.
+
+Add only DEV-only diagnostic logging if necessary.
+
+The diagnostic should print something like:
+
+[CarloExpressions] available presets: [...]
+[CarloExpressions] available custom expressions: [...]
+
+If the runtime API does not expose a simple preset list, inspect the expressionManager data safely without modifying it.
+
+IMPORTANT:
+
+* No expression values should be changed by this diagnostic.
+* No animation changes.
+* No lip-sync math changes.
+* No new assets/files.
+* No TTS changes.
+* No permanent architecture changes.
+
+After implementing the diagnostic, run lint/build and report exactly what expression names Carlotta.vrm exposes.

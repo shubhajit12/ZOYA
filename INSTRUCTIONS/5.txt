@@ -1,0 +1,99 @@
+Fix ONLY the remaining `runMouthPoseTest()` auto-stop bug in `src/mint/lipSyncController.ts`.
+
+## Confirmed bug
+
+The current test correctly does:
+
+CLOSED → 25% → 50% → 75% → 100% → CLOSED
+
+and the `_mouthPoseLastAppliedPhase` guard has already eliminated the per-frame logging/measurement spam.
+
+However, after reaching the final CLOSED stage, the test starts another cycle forever.
+
+The cause is the ordering inside `runMouthPoseTest()`:
+
+1. Final `open100` sets:
+   `_finishAfterClosed = true`
+   `_mouthPoseTimer = 0`
+   `_mouthPosePhase = "closed"`
+
+2. During the final CLOSED hold, when `_mouthPoseTimer >= HOLD`, the normal phase-advance `if` executes first.
+
+3. It resets the timer and advances:
+   `closed → open25`
+
+4. Therefore the later stop condition never sees `_mouthPoseTimer >= HOLD`.
+
+## Required fix
+
+Change ONLY the ordering/logic in `runMouthPoseTest()` so that:
+
+* If `_mouthPosePhase === "closed"`
+* AND `_finishAfterClosed === true`
+* AND `_mouthPoseTimer >= HOLD`
+
+then the test MUST STOP immediately.
+
+The stop check must happen BEFORE the normal `closed → open25` phase-advance logic.
+
+On stopping:
+
+* Set `_mouthPoseTestActive = false`
+* Set `_sweepActive = false` if that is the existing intended completion behavior
+* Clear/consume `_finishAfterClosed`
+* Keep Mint in the CLOSED pose
+* Do NOT start another cycle
+* Do NOT change any mouth angles
+
+## Preserve everything else
+
+DO NOT modify:
+
+* `applyMintMouthPose()`
+* UPPER_OPEN_DEG = 8
+* LOWER_OPEN_DEG = 8
+* JAW = 4
+* X-axis mouth movement
+* `_mouthPoseLastAppliedPhase`
+* `measureMouthGapCompact()`
+* `postDebug()`
+* Mint model
+* skeleton
+* textures/materials
+* camera
+* zoom/drag rotation
+* lip-sync audio/viseme generation
+* Groq
+* Google TTS
+* UI
+* any unrelated animation code
+
+Do not redesign the test.
+
+## Verification
+
+After the minimal edit:
+
+1. Run:
+   `npm run lint`
+
+2. Run:
+   `npm run build`
+
+3. Inspect `runMouthPoseTest()` and verify the final state machine is:
+
+   CLOSED → 25% → 50% → 75% → 100% → CLOSED → STOP
+
+4. The expected behavior is approximately:
+
+   * one `[MOUTH OPEN TEST]` measurement when entering each stage
+   * exactly one final CLOSED measurement
+   * then no more mouth-test measurements
+   * `_mouthPoseTestActive === false`
+   * no automatic second cycle
+
+5. Do not claim visual pixel verification unless you actually have browser interaction available.
+
+If lint/build fail, fix only errors caused by this minimal change.
+
+Report exactly what was changed and the lint/build results.

@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glow-amber {
+    box-shadow: 0 0 40px rgba(242, 125, 38, 0.15);
+  }
+  .mint-stage {
+    background: radial-gradient(circle at 50% 40%, rgba(242, 125, 38, 0.14) 0%, transparent 70%);
+  }
+  .emotion-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+  .emotion-fill {
+    height: 100%;
+    background: #F27D26;
+    box-shadow: 0 0 10px rgba(242, 125, 38, 0.5);
+    transition: width 0.3s ease;
+  }
+}

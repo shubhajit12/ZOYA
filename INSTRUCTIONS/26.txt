@@ -1,0 +1,170 @@
+# DIAGNOSTIC ONLY — DO NOT MODIFY FILES
+
+Carlotta Phase 1 procedural idle is running successfully, but Carlotta is visibly animating while remaining in a **T-pose**.
+
+We need to determine why the model's normal pose is not established before the procedural idle controller captures its base rotations.
+
+## IMPORTANT
+
+This is READ-ONLY diagnosis.
+
+**DO NOT change any files.**
+
+Do NOT modify:
+
+* Carlotta VRM asset
+* carlottaVrmLoader.ts
+* carlottaIdleController.ts
+* mintRenderer.ts
+* MToon/materials
+* lighting
+* camera
+* OrbitControls/navigation
+* lip-sync
+* eye tracking
+* expressions
+* animation system
+* dependencies
+
+Do NOT fix anything yet.
+
+---
+
+## Investigate the live runtime pipeline
+
+Trace the exact Carlotta load sequence from:
+
+VRM file load
+→ VRM scene creation
+→ VRM humanoid setup
+→ any pose/rest-pose handling
+→ scene insertion
+→ `vrm.update()`
+→ `car­lottaIdleController.init(vrm)`
+→ render loop
+
+Determine the exact order.
+
+### Specifically answer:
+
+1. Is Carlotta's VRM asset itself stored in a T-pose?
+
+2. What are the initial local rotations of these humanoid bones immediately after VRM loading?
+
+```text
+spine
+chest
+neck
+head
+leftShoulder
+rightShoulder
+leftUpperArm
+rightUpperArm
+leftLowerArm
+rightLowerArm
+leftHand
+rightHand
+```
+
+3. What are those rotations immediately BEFORE:
+
+```text
+car­lottaIdleController.init(vrm)
+```
+
+4. What are those rotations immediately AFTER `init(vrm)`?
+
+5. Does any existing code apply a humanoid pose or rotation correction between VRM loading and idle initialization?
+
+6. Does `vrm.update()` alter the upper-body humanoid rotations in a way relevant to this issue?
+
+7. Is there an existing VRM API/helper in the installed `@pixiv/three-vrm@3.5.5` that establishes a proper humanoid pose?
+
+8. Is the T-pose actually the intended runtime pose of this Carlotta VRM, or is the model supposed to appear in a relaxed/default standing pose?
+
+---
+
+## Check for animation sources
+
+Search the current codebase for anything that may already establish Carlotta's body pose.
+
+Look for:
+
+* AnimationMixer
+* AnimationClip
+* VRM humanoid pose APIs
+* bone rotation initialization
+* pose normalization
+* rest pose conversion
+* `humanoid`
+* `getBoneNode`
+* `getRawBoneNode`
+* `resetNormalizedPose`
+* `setPose`
+* `pose`
+* any Carlotta-specific bone rotation code
+
+Do not execute or modify these systems.
+
+---
+
+## Important distinction
+
+We need to determine whether:
+
+### Case A
+
+The VRM asset is inherently T-pose and needs a runtime **initial/default pose**.
+
+OR
+
+### Case B
+
+The existing Zoya code already establishes the correct pose, but our new idle controller initializes **too early** and captures the T-pose.
+
+OR
+
+### Case C
+
+The VRM loader/three-vrm pipeline requires a specific initialization/update step before the pose is visually correct.
+
+OR
+
+### Case D
+
+There is another existing system that owns the Carlotta body pose and the idle controller must integrate after it.
+
+---
+
+## Final report
+
+Do not make changes.
+
+Report:
+
+```text
+T-pose source:
+...
+
+Correct/default pose exists:
+YES / NO / UNKNOWN
+
+Idle controller initializes:
+BEFORE / AFTER / SAME TIME AS pose establishment
+
+Existing pose system:
+...
+
+Relevant three-vrm API:
+...
+
+Required fix direction:
+...
+
+Files that would need modification:
+...
+```
+
+Again:
+
+**READ ONLY. NO FILE CHANGES.**

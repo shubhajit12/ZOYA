@@ -1,0 +1,221 @@
+## PASS 4 — CARLOTTA FACIAL EMOTION EXPRESSIONS
+
+Implement the next incremental animation pass: connect the EXISTING semantic emotion state to Carlotta's VRM facial expression presets.
+
+### CURRENT VERIFIED FACTS
+
+Carlotta.vrm contains VRM0 expression presets, but the installed three-vrm runtime remaps them to VRM1 runtime names:
+
+* `A` → `aa` — lip-sync mouth-open expression
+* `I` → `ih`
+* `U` → `ou`
+* `E` → `ee`
+* `O` → `oh`
+* `Joy` → `happy`
+* `Angry` → `angry`
+* `Sorrow` → `sad`
+* `Fun` → `relaxed`
+* `Neutral` → `neutral`
+* `Blink` → `blink`
+* `Blink_L` → `blinkLeft`
+* `Blink_R` → `blinkRight`
+* Look expressions → `lookUp`, `lookDown`, `lookLeft`, `lookRight`
+
+These runtime names have already been verified against Carlotta.vrm.
+
+### GOAL
+
+When the EXISTING emotion controller says:
+
+* `calm` → neutral/relaxed facial expression
+* `happy` → `happy`
+* `excited` → `happy` with stronger intensity
+* `sad` → `sad`
+* `angry` → `angry`
+
+Carlotta's FACE should visibly express the emotion.
+
+### ARCHITECTURE
+
+Create a small dedicated facial-expression layer.
+
+Suggested file:
+
+`src/mint/carlottaExpressionController.ts`
+
+The controller should operate ONLY on `vrm.expressionManager`.
+
+It must NOT control body bones.
+
+API should be approximately:
+
+```ts
+init(vrm)
+setEmotion(emotion, intensity)
+update(delta)
+reset()
+dispose()
+```
+
+Use the existing emotion semantic values. Do not create a second independent emotion state machine.
+
+### IMPORTANT — LIP-SYNC MUST REMAIN INDEPENDENT
+
+`carlottaLipSync.ts` currently controls runtime expression:
+
+`aa`
+
+DO NOT modify its audio analysis, thresholds, hold logic, smoothing, or lifecycle.
+
+Facial emotion must NOT overwrite `aa`.
+
+If the expression manager allows multiple expression values simultaneously, emotion and lip-sync must coexist naturally.
+
+Do NOT replace `aa` with `happy`, `neutral`, etc. during speech.
+
+### EMOTION MAPPING
+
+Use conservative starting weights.
+
+Suggested mapping:
+
+* calm → `neutral` around 0.25–0.35, optionally `relaxed` around 0.2–0.3
+* happy → `happy` around 0.7
+* excited → `happy` around 0.9
+* sad → `sad` around 0.7
+* angry → `angry` around 0.7
+
+IMPORTANT:
+These are starting values, not permission to create complicated expression blending.
+
+Keep the first implementation simple and easy to tune.
+
+### SMOOTHING
+
+Expression transitions must be smooth.
+
+Requirements:
+
+* no instant facial snapping
+* use delta-time
+* exponential or equivalent frame-rate-independent smoothing
+* target emotion can change while another transition is in progress
+* intensity must be clamped to 0..1
+* invalid emotion must be rejected safely
+* intensity 0 must produce no facial-emotion contribution
+* no per-frame allocations
+
+Use approximately the same emotional transition feel as the existing body emotion layer (~1 second), but DO NOT modify the body emotion controller just to accomplish this.
+
+### EXPRESSION SAFETY
+
+Do NOT control:
+
+* `aa`
+* `ih`
+* `ou`
+* `ee`
+* `oh`
+* blink expressions
+* look expressions
+
+Those belong to other systems.
+
+Do NOT manually manipulate blendshape weights on the mesh.
+
+Use only the VRM expression manager.
+
+Do NOT modify:
+
+* Carlotta.vrm
+* materials
+* textures
+* skeleton
+* camera
+* OrbitControls
+* relaxed pose
+* idle controller
+* behavior controller
+* lip-sync audio path
+* TTS
+* voicePipeline
+* brain/Groq
+* emotion semantics/API
+
+### INITIALIZATION
+
+Integrate the expression controller into the existing Carlotta VRM lifecycle:
+
+VRM load
+→ relaxed pose
+→ base pose capture
+→ animation controller
+→ expression controller
+→ frame updates
+
+Ensure cleanup/reset happens on BOTH existing VRM unload/dispose paths.
+
+Do not create another VRM loader or another render loop.
+
+### UPDATE ORDER
+
+Keep the existing update architecture intact.
+
+The expression controller should update after the VRM has been loaded and before render.
+
+Do not change the established body animation update order unless absolutely required.
+
+### DEV TESTING
+
+Extend the existing DEV-only emotion controls if appropriate, but keep them DEV-only.
+
+The existing emotion buttons:
+
+`Calm | Happy | Excited | Sad | Angry`
+
+should now affect both:
+
+* existing body emotion
+* facial expression
+
+Do NOT add production UI.
+
+### TEST REQUIREMENTS
+
+Create/update headless tests covering:
+
+1. calm
+2. happy
+3. excited
+4. sad
+5. angry
+6. smooth transition between emotions
+7. mid-transition retarget
+8. intensity 0
+9. intensity 0.5
+10. intensity 1
+11. invalid emotion
+12. missing expression manager safety
+13. lip-sync `aa` remains independently writable
+14. reset returns facial expressions to zero
+15. no facial control of blink/look/phoneme expressions
+
+### VALIDATION
+
+Run:
+
+* existing headless animation tests
+* lint
+* build
+* dev server health check
+
+Report:
+
+1. files changed
+2. exact runtime expression names used
+3. test results
+4. confirmation that `aa` lip-sync was not modified
+
+DO NOT claim the facial expressions look good visually until they are tested in the actual browser.
+
+This is an incremental facial-expression pass only.

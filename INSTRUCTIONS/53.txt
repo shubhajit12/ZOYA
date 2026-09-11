@@ -1,0 +1,95 @@
+STOP further Phase 2 work.
+
+Do NOT add new features or modify the gesture recipes yet.
+
+The real Carlotta app now appears to have lost its normal procedural idle animation after the Phase 2 changes.
+
+This is a REGRESSION investigation.
+
+IMPORTANT:
+The headless tests passing does NOT prove the live renderer is correct.
+
+Investigate the actual runtime path:
+
+Carlotta load
+→ idle initialization
+→ animation controller initialization
+→ renderer update loop
+→ carlottaAnimationController.update()
+→ carlottaGestureController.update()
+→ VRM update
+→ render
+
+Compare the current Phase 2 code against the last known-good Phase 1 behavior.
+
+Specifically inspect:
+
+1. `mintRenderer.ts`
+2. `carlottaAnimationController.ts`
+3. `carlottaGestureController.ts`
+4. `carlottaSkillSystem.ts`
+5. Carlotta initialization/order in `carlottaVrmLoader.ts`
+
+Check for:
+
+* idle controller no longer being initialized
+* idle controller no longer being updated
+* animation controller state being changed unexpectedly
+* gesture controller resetting/restoring bones every frame
+* gesture controller writing to bones it should not own
+* `reset()` being called every frame or during initialization
+* `dispatchSkillIntent()` accidentally forcing a state
+* `setAnimationIntent()` changing the normal state unexpectedly
+* update ordering causing the gesture layer to overwrite idle
+* `setBodyHold()` remaining active outside bow
+* initialization happening before the VRM is ready
+* animation controller receiving an unexpected `idle/listening/talking` state
+* any early return preventing the normal animation update
+* any quaternion restoration happening continuously
+* any exception being swallowed in the animation loop
+
+CRITICAL BONE OWNERSHIP:
+
+The existing procedural animation controller must remain the writer for its existing body bones.
+
+The gesture controller should ONLY write its reserved gesture bones, except for the explicitly controlled bow torso-yield mechanism.
+
+Do NOT "fix" this by removing the procedural idle system.
+
+Do NOT rewrite the renderer.
+
+Do NOT change Carlotta's model/skeleton.
+
+Do NOT change lip-sync, expressions, TTS, camera, MToon, textures, or performance settings.
+
+FIRST reproduce the problem in the real app if possible.
+
+Then compare the Phase 1 known-good update order with the current Phase 2 order.
+
+Add temporary DEV-only diagnostics if needed to determine:
+
+* whether animation controller update() is running
+* current state
+* whether idle motion values are changing
+* whether gesture update() is running
+* whether a gesture is actually active
+* whether bodyHold is active
+
+Once the root cause is identified, make the SMALLEST possible fix.
+
+Then verify:
+
+1. Carlotta loads.
+2. Normal idle visibly animates.
+3. Talking still works.
+4. Listening still works.
+5. Emotion still works.
+6. Lip-sync still works.
+7. Gestures still work.
+8. Gesture completion returns to idle.
+9. Bow does not permanently hold the torso.
+10. TypeScript/build/tests pass.
+
+Do not claim the visual behavior is fixed unless it was actually tested in the live app.
+
+Report the exact root cause and exact files changed.

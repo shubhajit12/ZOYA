@@ -1,0 +1,71 @@
+Now DO NOT make any changes yet.
+
+I want you to actively inspect and reproduce the current Mint mouth-test performance bug.
+
+### Step 1 — Start the app
+
+From:
+
+`A:\whitehat-jr\Downloads\ZOYA\zoya-ai-companion-MAIN`
+
+run the normal development server:
+
+`npm run dev`
+
+Wait for Zoya to start successfully.
+
+### Step 2 — Observe the running application
+
+Open the running Zoya app and inspect the Mint mouth-test behavior.
+
+Trigger:
+
+`🧪 TEST MINT MOUTH POSE`
+
+Observe the entire sequence:
+
+`CLOSED → 25% → 50% → 75% → 100% → CLOSED`
+
+Pay particular attention to:
+
+* whether the test advances between stages
+* whether it gets stuck at CLOSED
+* whether `[MOUTH OPEN TEST]` is printed every animation frame
+* whether a timer/state remains active after the test should finish
+* whether the test is accidentally being triggered repeatedly
+* whether `runMouthPoseTest()` continues being called from the render/update loop
+* whether `measureMouthGapCompact()` is being called continuously instead of once per stage
+* whether the console/logging itself is causing the lag
+
+### IMPORTANT
+
+DO NOT edit the code yet.
+
+First reproduce the problem and determine the exact cause from the running application and existing source code.
+
+After observing it, STOP and report:
+
+1. What is causing the infinite `[MOUTH OPEN TEST]` logging?
+2. Which function/state/timer is responsible?
+3. Why does the test remain at `stage=CLOSED`?
+4. Exactly where the repeated call originates.
+5. What minimal fix you recommend.
+
+Do NOT implement the fix until you report the diagnosis.
+
+Do NOT change:
+
+* `applyMintMouthPose()`
+* mouth angles
+* lip axis
+* Mint model
+* skeleton
+* camera
+* UI
+* Groq
+* TTS
+* audio
+* visemes
+* animation system
+
+We are diagnosing first, editing second.

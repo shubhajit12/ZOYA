@@ -1,0 +1,158 @@
+We are optimizing the ZOYA AI companion's Carlotta VRM renderer.
+
+IMPORTANT: Do NOT make performance optimizations yet. First perform a temporary diagnostic only.
+
+Project facts:
+
+* Three.js: 0.185.1
+* @pixiv/three-vrm: 3.5.5
+* Carlotta is loaded as a VRM through VRMLoaderPlugin.
+* Current Carlotta performance is already benchmarked; do NOT ask me to repeat Chrome/Tauri benchmarks.
+* Do NOT change the model, skeleton, textures, camera, OrbitControls, animation controller, lip sync, expression controller, AI provider, TTS, or performance-quality system.
+* Do NOT use Mixamo.
+* Do NOT add AnimationMixer.
+* Do NOT replace MToon with another material yet.
+* Do NOT permanently change rendering behavior.
+
+Relevant file:
+src/mint/carlottaVrmLoader.ts
+
+There is already a function:
+
+function disableMToonShading(model: LoadedCarlottaModel): void
+
+It modifies MToon shadingShiftFactor. Leave that existing function unchanged.
+
+TASK:
+
+1. Inspect the existing carlottaVrmLoader.ts.
+2. Add a DEV-only temporary diagnostic function immediately after disableMToonShading().
+3. The diagnostic must traverse model.vrm.scene and inspect every mesh/material.
+4. Determine how many materials are MToon and report which potentially expensive MToon features are actually present.
+
+At minimum report:
+
+* mesh count
+* material count
+* MToon material count
+* transparent material count
+* alphaTest material count
+* base/color map count
+* normal map count
+* emissive map count
+* shade/shading texture count
+* rim-lighting-related feature count
+* matcap-related feature count
+* outline-related feature count
+
+Use safe runtime property inspection rather than assuming every property exists.
+
+Example diagnostic shape:
+
+function diagnoseCarlottaMaterials(model: LoadedCarlottaModel): void {
+if (!isDevBuild) return;
+
+const stats = {
+meshes: 0,
+materials: 0,
+mtoon: 0,
+transparent: 0,
+alphaTest: 0,
+maps: 0,
+normalMaps: 0,
+emissiveMaps: 0,
+shadeTextures: 0,
+rimLighting: 0,
+matcap: 0,
+outlines: 0,
+};
+
+model.vrm.scene.traverse((obj) => {
+const mesh = obj as THREE.Mesh;
+if (!mesh.isMesh) return;
+
+```
+stats.meshes++;
+
+const materials = Array.isArray(mesh.material)
+  ? mesh.material
+  : [mesh.material];
+
+for (const material of materials) {
+  stats.materials++;
+
+  const mat = material as THREE.Material & Record<string, unknown>;
+
+  if (
+    'shadingShiftFactor' in mat ||
+    'shadingToonyFactor' in mat
+  ) {
+    stats.mtoon++;
+  }
+
+  if (mat.transparent === true) stats.transparent++;
+
+  if (
+    typeof mat.alphaTest === 'number' &&
+    mat.alphaTest > 0
+  ) {
+    stats.alphaTest++;
+  }
+
+  if (mat.map) stats.maps++;
+  if (mat.normalMap) stats.normalMaps++;
+  if (mat.emissiveMap) stats.emissiveMaps++;
+
+  if (mat.shadeTexture || mat.shadingTexture) {
+    stats.shadeTextures++;
+  }
+
+  if (
+    mat.rimLightingMixFactor !== undefined ||
+    mat.rimColor !== undefined
+  ) {
+    stats.rimLighting++;
+  }
+
+  if (
+    mat.matcapTexture !== undefined ||
+    mat.matcapFactor !== undefined
+  ) {
+    stats.matcap++;
+  }
+
+  if (
+    mat.outlineWidthMode !== undefined ||
+    mat.outlineWidthFactor !== undefined
+  ) {
+    stats.outlines++;
+  }
+}
+```
+
+});
+
+console.log('[ZoyaMToonDiagnostic]', stats);
+}
+
+3. Call the diagnostic immediately after the existing:
+
+disableMToonShading(model);
+
+so it becomes:
+
+disableMToonShading(model);
+diagnoseCarlottaMaterials(model);
+
+4. Do NOT make any other code changes.
+5. Do NOT refactor unrelated code.
+6. Do NOT change the diagnostic into a permanent optimization.
+7. Run the existing TypeScript/build check if appropriate.
+8. Report:
+
+   * exactly which file was changed
+   * exactly where the diagnostic was added
+   * the console output from [ZoyaMToonDiagnostic]
+   * whether the build/typecheck passes.
+
+After this diagnostic, STOP. Do not implement optimization yet. We will use the output to decide which MToon feature is actually worth optimizing.

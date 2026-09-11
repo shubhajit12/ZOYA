@@ -1,0 +1,11 @@
+{
+  "name": "ZOYA AI Companion",
+  "description": "A believable, warm, emotionally consistent 3D desktop AI companion named Zoya with Mint 3D model, Gemini brain, TTS, lip sync, and memory.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

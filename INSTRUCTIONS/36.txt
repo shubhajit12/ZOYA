@@ -1,0 +1,631 @@
+TASK: Implement/fix **Pass 3 — Lip-Sync** for the CURRENT Carlotta VRM character.
+
+IMPORTANT:
+Before editing anything, inspect the existing implementation thoroughly.
+
+The goal is to make Carlotta's mouth visibly react naturally to ZOYA's actual spoken audio while preserving the existing procedural body animation and emotion layers.
+
+==================================================
+CURRENT WORKING SYSTEMS — DO NOT BREAK
+======================================
+
+* Carlotta.vrm
+* Carlotta MToon appearance
+* VRM loading/unloading
+* relaxed base pose
+* procedural idle
+* CarlottaAnimationController
+* behavior states:
+
+  * idle
+  * listening
+  * talking
+  * thinking
+* persistent emotions:
+
+  * calm
+  * happy
+  * excited
+  * sad
+  * angry
+* emotion blending
+* OrbitControls
+* camera
+* drag/orbit/pan/zoom
+* Groq brain
+* TTS / voice pipeline
+* memory
+* UI
+* screen/browser/PC control
+* performance-quality system
+* texture-quality system
+* DEV animation testing controls
+* no Mixamo
+* no external animation files
+* no model replacement
+* no skeleton replacement
+* no mesh vertex manipulation
+
+DO NOT modify unrelated systems.
+
+==================================================
+MOST IMPORTANT
+==============
+
+There must be ONLY ONE lip-sync system.
+
+Before creating anything, inspect the repository for:
+
+* existing lip-sync code
+* VRM expression handling
+* mouth/viseme handling
+* TTS audio playback
+* AudioContext
+* AnalyserNode
+* audio amplitude/volume extraction
+* expression manager usage
+* any existing mouth-open logic
+* existing `talking` integration
+
+Search the entire relevant source tree first.
+
+If lip-sync already exists, **reuse/fix it**.
+
+Do NOT create a duplicate lip-sync implementation.
+
+==================================================
+GOAL
+====
+
+During actual ZOYA speech:
+
+TTS audio
+↓
+existing audio playback
+↓
+existing/appropriate audio analysis
+↓
+lip-sync signal
+↓
+Carlotta VRM mouth expression
+
+At the same time:
+
+TTS speech
+↓
+CarlottaAnimationController
+↓
+talking body micro-motion
+
+These are separate systems.
+
+Lip-sync controls the FACE.
+
+Talking behavior controls the BODY.
+
+Do NOT merge them into one animation system.
+
+==================================================
+VRM EXPRESSION RULES
+====================
+
+Inspect the current Carlotta VRM expression capabilities before implementation.
+
+Use the VRM expression manager/system already provided by the loaded VRM.
+
+Do NOT manipulate mesh vertices.
+
+Do NOT add mouth bones.
+
+Do NOT create custom facial geometry.
+
+Do NOT modify the VRM asset.
+
+Do NOT replace expressions/materials.
+
+If Carlotta supports standard VRM expressions such as:
+
+`aa`
+`ih`
+`ou`
+`ee`
+`oh`
+
+or equivalent compatible expressions, use the existing supported expression system.
+
+If the current project already has an expression mapping, preserve it.
+
+==================================================
+AUDIO ANALYSIS
+==============
+
+If amplitude-based lip-sync is already implemented:
+
+inspect it and improve/fix only what is necessary.
+
+If the existing TTS audio pipeline exposes usable PCM/audio data:
+
+prefer using that existing signal.
+
+Do NOT add a second audio playback path.
+
+Do NOT decode/play the same audio twice.
+
+Do NOT introduce unnecessary audio processing.
+
+If an `AnalyserNode` is needed and does not already exist:
+
+use one lightweight analyser connected to the existing playback path.
+
+Do NOT create one analyser per frame.
+
+Cache the analyser and reusable buffers.
+
+==================================================
+MOUTH MOVEMENT
+==============
+
+The mouth should respond to actual speech energy.
+
+Requirements:
+
+* mouth closed during silence
+* mouth opens during speech
+* stronger audio → generally larger mouth opening
+* quieter audio → smaller opening
+* smooth attack
+* smooth release
+* no rapid jitter
+* no constant fully-open mouth
+* no obvious mechanical pulsing
+
+Use smoothing.
+
+Do NOT directly map raw instantaneous amplitude to expression weight.
+
+For example:
+
+smoothedAmplitude → mouthWeight
+
+with separate attack/release smoothing if appropriate.
+
+Keep expression weights clamped to:
+
+`0.0 → 1.0`
+
+but normally stay below maximum.
+
+==================================================
+ANTI-JITTER
+===========
+
+Raw audio amplitude can be noisy.
+
+Do NOT make the mouth follow every tiny waveform fluctuation.
+
+Use lightweight smoothing.
+
+A reasonable starting point:
+
+attack:
+~0.08–0.15 seconds
+
+release:
+~0.12–0.25 seconds
+
+These are starting ranges only.
+
+Tune after inspecting the existing implementation.
+
+The result should look like natural speaking rather than:
+
+OPEN
+CLOSE
+OPEN
+CLOSE
+
+every few milliseconds.
+
+==================================================
+SILENCE DETECTION
+=================
+
+There should be a small effective speech threshold.
+
+Very quiet background/noise should not constantly open the mouth.
+
+When audio falls below the effective threshold:
+
+gradually return mouth weight toward zero.
+
+Do not snap shut.
+
+==================================================
+EXPRESSION DESIGN
+=================
+
+If the existing system only supports a generic mouth-open signal, that is acceptable for this pass.
+
+Do NOT attempt full phoneme recognition unless the project already has the necessary infrastructure.
+
+This pass is about reliable natural speech motion.
+
+If multiple mouth expressions already exist and the existing pipeline supports them safely, you may use them.
+
+Do not invent an unnecessarily complex viseme system.
+
+==================================================
+EMOTION COMPATIBILITY
+=====================
+
+Lip-sync must coexist with persistent emotions.
+
+Example:
+
+Happy + Talking + lip-sync
+
+must produce:
+
+happy body language
++
+talking body micro-motion
++
+mouth movement
+
+Sad + Talking + lip-sync:
+
+sad body language
++
+talking body micro-motion
++
+mouth movement
+
+Emotion must NOT disable lip-sync.
+
+Lip-sync must NOT reset emotion.
+
+==================================================
+BEHAVIOR COMPATIBILITY
+======================
+
+When TTS speech starts:
+
+the existing behavior system should use:
+
+`talking`
+
+if that integration already exists.
+
+If the current talking-state trigger is missing, add the smallest clean integration possible.
+
+Do NOT make lip-sync itself responsible for choosing emotions.
+
+Do NOT make lip-sync directly manipulate body bones.
+
+Do NOT duplicate the behavior controller.
+
+When speech ends:
+
+the existing system should return to its appropriate behavior state.
+
+Preserve existing behavior logic if already implemented.
+
+==================================================
+NO FACE / EYE SIDE EFFECTS
+==========================
+
+Do NOT modify:
+
+* blink system
+* eye tracking
+* eye bones
+* gaze
+* head tracking
+* spring bones
+
+unless inspection proves the existing lip-sync implementation currently conflicts with them.
+
+If an expression manager is shared with blinking/emotions:
+
+compose weights safely rather than overwriting unrelated expressions.
+
+Do NOT break existing blink/expression behavior.
+
+==================================================
+PERFORMANCE
+===========
+
+This must run on low-end hardware.
+
+Do NOT:
+
+* allocate objects every frame
+* create AudioContexts repeatedly
+* create AnalyserNodes repeatedly
+* create buffers every frame
+* traverse the VRM hierarchy every frame
+* add AnimationMixer
+* add animation clips
+* add external animation files
+* add expensive DSP
+
+Cache:
+
+* expression manager/reference
+* analyser
+* reusable audio buffer
+* reusable state/math values
+
+Per-frame work should be very small.
+
+If audio analysis is already event-driven or available from the existing pipeline, prefer that.
+
+==================================================
+LIFECYCLE
+=========
+
+Handle:
+
+* VRM load
+* VRM unload
+* TTS start
+* TTS playback
+* TTS pause if applicable
+* TTS stop
+* TTS completion
+* controller reset
+* app remount/quality remount
+
+When speech stops:
+
+mouth must smoothly return to neutral.
+
+When VRM unloads:
+
+do not retain stale expression-manager references.
+
+When a new VRM loads:
+
+bind the new expression manager cleanly.
+
+Do not leak AudioContexts, analysers, listeners, or animation references.
+
+==================================================
+UPDATE LOOP
+===========
+
+There must remain ONE appropriate render/update path.
+
+Inspect the existing loop before modifying it.
+
+Do not create a second animation loop.
+
+The final system should conceptually be:
+
+audio playback
+↓
+audio analysis
+↓
+lip-sync signal
+
+and separately:
+
+animation controller
+↓
+body animation
+
+and:
+
+VRM update
+↓
+expressions / spring bones / VRM systems
+
+Use the exact order required by the existing project.
+
+Do not blindly reorder the existing VRM update pipeline.
+
+==================================================
+GROQ
+====
+
+Do NOT change Groq.
+
+Do NOT modify the Groq prompt.
+
+Do NOT add emotion selection to Groq.
+
+Do NOT add viseme output to Groq.
+
+The lip-sync signal must come from the actual speech/audio pipeline.
+
+==================================================
+TTS
+===
+
+Do NOT replace the existing TTS provider.
+
+Do NOT change API keys.
+
+Do NOT change voice selection.
+
+Do NOT change audio generation.
+
+Reuse the existing TTS output.
+
+Only integrate with it where necessary to obtain the audio signal for lip-sync.
+
+==================================================
+DEV TESTING
+===========
+
+Do not redesign production UI.
+
+If useful, add only a tiny DEV diagnostic indicator to the existing temporary animation testing mechanism.
+
+Prefer no additional UI if the actual TTS pipeline can be tested directly.
+
+The primary test should be real ZOYA speech.
+
+==================================================
+TEST SEQUENCE
+=============
+
+After implementation:
+
+1. Run:
+
+`npm run lint`
+
+2. Run:
+
+`npm run build`
+
+If npm wrapper/environment fails because of known disk/resource issues, use the same safe fallback validation approach already used in this project and report it accurately.
+
+Then test actual speech.
+
+Test:
+
+A. Short sentence
+B. Long sentence
+C. Quiet speech
+D. Loud speech
+E. Speech with pauses
+F. Multiple consecutive sentences
+G. Speech while emotion = happy
+H. Speech while emotion = sad
+I. Speech while emotion = excited
+J. Speech while emotion = angry
+
+During speech verify:
+
+* mouth visibly moves
+* mouth follows speech timing
+* mouth does not remain permanently open
+* silence closes the mouth smoothly
+* pauses in speech create reduced/closed mouth movement
+* no obvious jitter
+* no expression flicker
+* no blink breakage
+* no eye tracking breakage
+* body talking motion continues
+* emotion remains active
+* no camera changes
+* no OrbitControls changes
+
+==================================================
+IMPORTANT VISUAL TEST
+=====================
+
+Do NOT judge only from code.
+
+Actually watch Carlotta speak.
+
+The desired result is:
+
+speech starts
+→ mouth smoothly begins moving
+
+speech continues
+→ natural varied mouth movement
+
+brief pause
+→ mouth relaxes toward closed
+
+speech resumes
+→ mouth opens again
+
+speech ends
+→ mouth smoothly returns to neutral
+
+It should NOT look like an audio visualizer.
+
+It should NOT look like:
+
+OPEN → CLOSE → OPEN → CLOSE
+
+at a fixed rhythm.
+
+==================================================
+IF FULL VISEMES ARE NOT AVAILABLE
+=================================
+
+Do NOT over-engineer this pass.
+
+A good amplitude-driven mouth-open system is acceptable.
+
+Full phoneme/viseme lip-sync can be a future pass if required.
+
+The priority is:
+
+1. reliable
+2. smooth
+3. lightweight
+4. visually believable
+
+==================================================
+AUTONOMOUS BUG FIXING
+=====================
+
+You may fix bugs directly caused by this lip-sync implementation.
+
+Do NOT refactor unrelated systems.
+
+If an unrelated pre-existing issue is discovered:
+
+report it.
+
+Do not modify it.
+
+==================================================
+FINAL REPORT
+============
+
+Report:
+
+1. Exact files changed
+2. Exact files added
+3. Existing lip-sync implementation found
+4. Whether it was reused, fixed, or extended
+5. Audio signal source
+6. Expression(s) used
+7. Smoothing method
+8. Silence handling
+9. TTS integration point
+10. Body talking integration status
+11. Lifecycle cleanup
+12. Performance considerations
+13. Tests performed
+14. Lint result
+15. Build result
+16. Bugs found
+17. Bugs fixed
+18. Known limitations
+
+Also explicitly confirm:
+
+* Carlotta.vrm unchanged
+* materials unchanged
+* camera unchanged
+* OrbitControls unchanged
+* relaxed pose unchanged
+* idle unchanged
+* behavior animation unchanged except necessary speech integration
+* emotion layer unchanged except necessary coexistence
+* Groq unchanged
+* TTS provider unchanged
+* no external animation files
+* no Mixamo
+* no model replacement
+* no skeleton replacement
+* no mesh vertex manipulation
+
+MOST IMPORTANT:
+
+Lip-sync controls the FACE.
+
+Talking controls the BODY.
+
+Emotion controls the emotional BODY POSTURE.
+
+These systems must coexist rather than replace one another.

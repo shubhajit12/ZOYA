@@ -1,0 +1,196 @@
+I want the zoom interaction to behave like **Sketchfab's 3D model viewer**.
+
+The current custom zoom implementation has gone through several fixes, but stop patching the existing behavior blindly. The actual goal is to reproduce the FEEL and interaction model of Sketchfab-style zoom.
+
+IMPORTANT:
+
+* Inspect the current `src/mint/mintRenderer.ts` implementation first.
+* Keep the fix isolated to `src/mint/mintRenderer.ts` if possible.
+* Do NOT change Mint.
+* Do NOT change Carlotta.
+* Do NOT change camera framing or initial camera position.
+* Do NOT change drag/orbit rotation.
+* Do NOT change model scale/materials/textures.
+* Do NOT touch lip-sync, emotions, animation, eye tracking, Groq, TTS, UI, or dependencies.
+* Preserve the existing once-only `ensureCursorZoom()` listener architecture.
+* Keep OrbitControls' existing zoom-disabled configuration if that is intentional.
+* Do not add another competing camera controller.
+
+TARGET BEHAVIOR — SKETCHFAB STYLE:
+
+1. MOUSE WHEEL / TRACKPAD
+   Scrolling should produce smooth continuous camera dolly movement.
+
+2. CURSOR-CENTERED ZOOM
+   The zoom should be focused around the point underneath the cursor.
+   If the cursor is over Mint's face, zoom toward the face.
+   If the cursor is over the body, zoom toward that body area.
+
+3. IMMEDIATE INPUT
+   Wheel input must affect the zoom immediately.
+   There must be no perceptible input lag.
+
+4. SMOOTH MOTION
+   The camera movement should be smooth and continuous rather than:
+
+   * jumping every wheel event,
+   * easing each wheel event independently,
+   * creating a backlog,
+   * catching up after scrolling stops.
+
+5. NO QUEUE
+   Never maintain a queue of individual zoom animations/intents.
+
+6. NO RUNAWAY ZOOM
+   Respect actual WheelEvent delta magnitude.
+   Correctly handle:
+
+   * pixel wheel events,
+   * line wheel events,
+   * page wheel events,
+   * high-resolution mouse wheels,
+   * trackpads.
+
+   Do not treat every wheel event as one complete notch.
+
+7. CURSOR PIVOT
+   Calculate the cursor pivot from the appropriate current camera state.
+   Avoid stale-camera vs target-camera reference-frame mismatches.
+
+8. CAMERA DOLLY
+   Preserve the camera's orientation while moving camera position and orbit target consistently around the cursor pivot.
+
+9. NATURAL RESPONSE
+   The desired feel is:
+   wheel input → immediate smooth dolly → release wheel → quickly settles.
+
+   It should NOT feel like:
+   wheel input → wait → camera slowly catches up.
+
+10. RAPID SCROLLING
+    If the user rapidly scrolls:
+
+    * zoom remains responsive,
+    * movement remains smooth,
+    * no old input continues after the user changes direction,
+    * reversing direction should reverse naturally without waiting for old animations.
+
+11. ZOOM LIMITS
+    Preserve the existing:
+
+    * minDistance = 0.5
+    * maxDistance = 12
+      unless inspection proves those values are being applied incorrectly.
+      Do not change the configured values merely to alter feel.
+
+12. MODEL SWITCHING
+    Mint → Carlotta → Mint must not leave stale zoom state, velocity, pivot, or targets behind.
+
+IMPORTANT ARCHITECTURAL REQUIREMENT:
+
+Before modifying anything, inspect how Sketchfab-like behavior can be represented using the EXISTING camera + OrbitControls architecture.
+
+Prefer a simple model such as:
+
+* wheel event produces a normalized zoom input,
+* maintain one current zoom velocity/intent rather than a queue,
+* maintain a cursor pivot,
+* smoothly integrate that velocity into camera distance each frame,
+* apply the resulting dolly to both camera and controls.target,
+* use damping/friction only on the zoom velocity,
+* new wheel input immediately changes the velocity.
+
+Do NOT blindly use target-position interpolation if that introduces noticeable latency.
+
+A velocity-based zoom controller may provide a more natural Sketchfab-like feel because:
+
+* wheel input directly changes velocity,
+* the camera starts moving immediately,
+* velocity naturally decays,
+* opposite wheel input cancels/reverses existing velocity,
+* there is no queue,
+* there is no target backlog.
+
+However, choose the implementation based on inspection of the existing code rather than blindly following this suggestion.
+
+CRITICAL:
+The cursor pivot must remain stable during one continuous zoom gesture.
+
+Do not raycast every animation frame.
+
+Raycast only on wheel input when necessary, and reuse the pivot during the resulting smooth motion.
+
+If the cursor moves significantly before a new wheel event, the next wheel event may establish a new pivot.
+
+WHEEL NORMALIZATION:
+Use actual `WheelEvent.deltaY` and `deltaMode`.
+Do not hardcode "one event = one notch."
+
+Normalize the input so high-resolution wheels and trackpads behave naturally.
+
+Avoid excessive clamping that makes trackpad scrolling feel dead.
+
+CAMERA MATH:
+When dollying around pivot P by scale s:
+
+C' = P + s(C-P)
+T' = P + s(T-P)
+
+Ensure camera and controls.target are transformed consistently.
+
+Do not accidentally apply the transformation twice.
+
+Do not modify camera orientation unless required by the existing orbit architecture.
+
+ORBITCONTROLS:
+Audit the actual configuration and update order.
+
+There must be:
+
+* no second zoom system,
+* no competing damping system,
+* no duplicate controls.update(),
+* no OrbitControls zoom fighting our custom zoom.
+
+Keep drag rotation behavior unchanged.
+
+PERFORMANCE:
+The model currently contains a large amount of geometry.
+Avoid unnecessary raycasts and allocations.
+
+Do not introduce per-frame raycasts.
+
+Reuse vectors/objects where appropriate.
+
+MODEL-SWAP CLEANUP:
+Clear any zoom velocity/pivot state when the active model changes.
+
+VALIDATION:
+Run:
+
+* npm run lint / tsc --noEmit
+* npm run build
+
+Then inspect the final diff.
+
+Report:
+
+1. Why the existing implementation does not feel like Sketchfab.
+2. The new zoom architecture.
+3. How wheel input is normalized.
+4. How cursor pivoting works.
+5. How smoothness is achieved without input lag.
+6. How rapid direction changes are handled.
+7. Exact files changed.
+8. Lint result.
+9. Build result.
+
+Do NOT claim it is visually identical to Sketchfab unless actually tested in a browser.
+
+MOST IMPORTANT:
+The goal is NOT "make the current zoom a little smoother."
+
+The goal is:
+**RECREATE A SKETCHFAB-LIKE CURSOR-CENTERED SMOOTH ZOOM INTERACTION.**
+
+If the current target-interpolation approach is fundamentally wrong for that feel, replace it with a simpler velocity-based zoom implementation rather than adding another patch on top of it.

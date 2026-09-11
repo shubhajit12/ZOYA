@@ -1,0 +1,165 @@
+# Soften Harsh Shadows — Isolated Rendering Change
+
+We need to improve how the existing shadows make the 3D character look.
+
+## CRITICAL SCOPE
+
+First inspect the current shadow/lighting implementation.
+
+**Only modify the minimum necessary code for shadow appearance.**
+
+Prefer:
+`src/mint/mintRenderer.ts`
+
+Do NOT modify any other file unless absolutely required. If another file appears necessary, STOP and report it instead of changing it.
+
+## DO NOT TOUCH
+
+The following are LOCKED and must remain exactly as they are:
+
+* Mint model
+* Carlotta model
+* model loading
+* skeleton/bones
+* mesh geometry
+* materials/textures/shaders
+* model scale
+* model transforms
+* camera
+* camera framing
+* OrbitControls
+* left-drag orbit
+* right-drag pan
+* native OrbitControls zoom
+* `zoomToCursor`
+* camera distance limits
+* lip sync
+* mouth system
+* eye tracking
+* emotions
+* procedural animation
+* Groq
+* TTS
+* UI
+* dependencies
+* package files
+
+**Especially do NOT modify the navigation system we just fixed.**
+
+---
+
+# GOAL
+
+The current shadows make the character look uglier than necessary.
+
+We want the existing lighting to look:
+
+* softer
+* less harsh
+* less muddy on the face/body
+* more natural
+* flattering to the character
+* still dimensional
+
+Do NOT completely remove all lighting/shadows unless the current implementation clearly makes that the only sensible minimal fix.
+
+The character should retain some depth and contact/shadowing.
+
+---
+
+# INSPECT FIRST
+
+Find the existing:
+
+* directional lights
+* ambient lights
+* hemisphere lights
+* point lights
+* spot lights
+* shadowMap configuration
+* shadow camera settings
+* shadow bias
+* normalBias
+* shadow radius
+* shadow map size
+* light intensity
+* renderer tone mapping/color-space settings
+
+Determine which existing setting is actually responsible for the harsh appearance.
+
+Do not rewrite the lighting system.
+
+---
+
+# PREFERRED FIX ORDER
+
+Use the smallest appropriate adjustment.
+
+Prefer, in order:
+
+1. Reduce excessively harsh shadow intensity if applicable.
+2. Increase shadow softness using the existing light/shadow settings.
+3. Correct shadow bias/normalBias only if there are visible shadow artifacts.
+4. Adjust the relevant light intensity slightly if shadows are making the model too dark.
+5. Only as a last resort consider disabling a problematic shadow source.
+
+Do NOT randomly change multiple lighting values.
+
+Do NOT change the model's materials to compensate for lighting.
+
+---
+
+# IMPORTANT
+
+Do not make the character flat or completely unlit.
+
+We still want:
+
+* facial depth
+* body depth
+* subtle contact shadows
+* believable lighting
+
+The target is **soft, clean character lighting**, not "no shadows."
+
+---
+
+# VALIDATION
+
+After making the smallest appropriate change:
+
+Run:
+
+`npm run lint`
+
+Then:
+
+`npm run build`
+
+Then inspect:
+
+`git diff -- src/mint/mintRenderer.ts`
+
+Confirm:
+
+* only shadow/lighting-related lines changed
+* navigation code is untouched
+* camera code is untouched
+* model/material code is untouched
+* no dependencies changed
+
+Report:
+
+1. What was causing the harsh appearance.
+2. Exactly what value(s) were changed.
+3. Why those changes soften the appearance.
+4. Confirmation that OrbitControls/navigation was untouched.
+5. Lint result.
+6. Build result.
+7. Any pre-existing warnings.
+
+## HARD RULE
+
+Do NOT change navigation.
+
+The Sketchfab-style navigation is now working correctly and must remain exactly as it is.

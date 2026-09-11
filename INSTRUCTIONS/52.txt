@@ -1,0 +1,228 @@
+PHASE 2 — CARLOTTA GESTURE + ANIMATION COMPOSITION SYSTEM
+
+Phase 1 is complete and verified.
+
+We now need to make Carlotta's animation system significantly richer before implementing web animation acquisition.
+
+CURRENT ARCHITECTURE:
+
+Groq
+→ AnimationIntent
+→ App
+→ MintCanvas
+→ mintRenderer.setAnimationIntent()
+→ CarlottaSkillSystem
+→ existing Carlotta procedural controllers
+
+Current skill system already supports:
+
+* procedural
+* library
+* unavailable
+* retargeter interface/stub
+* acquisition interface/no-I/O
+* DEV diagnostics
+
+IMPORTANT:
+Do NOT undo Phase 1.
+Do NOT rewrite existing controllers.
+Do NOT change Carlotta's model/skeleton.
+Do NOT change renderer architecture unnecessarily.
+
+GOAL:
+
+Add a clean procedural GESTURE layer that can coexist with:
+
+1. Idle
+2. Talking
+3. Listening
+4. Emotion
+5. Facial expressions
+6. Lip-sync
+
+The final composition should conceptually be:
+
+BASE
+idle
++
+STATE
+talking/listening
++
+EMOTION
+happy/sad/angry/etc.
++
+GESTURE
+wave/point/shrug/etc.
++
+FACE
+expressions/lip-sync
+
+CARLOTTA MUST REMAIN STABLE IF ANY LAYER IS MISSING.
+
+GESTURES TO IMPLEMENT FIRST:
+
+* wave
+* greeting
+* goodbye
+* point
+* shrug
+* clap
+* bow
+
+Use procedural motion where practical.
+
+IMPORTANT BONE OWNERSHIP:
+
+The existing Carlotta procedural body controller currently owns its existing body bones.
+
+Do NOT create competing writers for those bones.
+
+The gesture layer should be explicitly isolated to the reserved ARM/gesture bones.
+
+Before implementing, inspect the actual Carlotta humanoid bone availability and determine which arm/hand bones are safe to use.
+
+Do NOT assume bones exist.
+
+Gracefully degrade when a bone is missing.
+
+GESTURE BEHAVIOR:
+
+Gestures should NOT loop forever.
+
+Example:
+
+wave:
+start → raise arm → wave → lower arm → complete
+
+bow:
+start → bow → hold briefly → return → complete
+
+clap:
+start → bring hands together → clap → separate → complete
+
+point:
+start → raise arm → point → hold → return
+
+shrug:
+start → raise shoulders/arms → hold → return
+
+Each gesture needs:
+
+* deterministic timing
+* smooth interpolation
+* easing
+* start/active/recovery phases
+* completion state
+* cancellation support
+* no accumulated quaternion drift
+* no per-frame allocations
+
+GESTURE PRIORITY:
+
+Define clear rules.
+
+Example:
+
+Higher priority:
+explicit gesture
+
+Lower priority:
+idle
+
+Emotion/state layers must not permanently overwrite an active gesture.
+
+After a gesture finishes, the normal idle/talking/listening/emotion state should automatically resume.
+
+INTERRUPTION:
+
+A new explicit gesture should be able to cancel/replace an existing gesture cleanly.
+
+Talking/listening should NOT randomly cancel gestures.
+
+If necessary, use a small priority system such as:
+
+idle < state < emotion < gesture
+
+BUT do not blindly apply this if it conflicts with existing controller ownership. Inspect the current implementation first and choose the safest architecture.
+
+SKILL SYSTEM INTEGRATION:
+
+Existing resolver should evolve so:
+
+resolveSkill("wave")
+→ procedural gesture skill
+
+resolveSkill("greeting")
+→ procedural gesture skill
+
+etc.
+
+Do not change the meaning of existing intents.
+
+If an intent is still unsupported, it should remain explicitly unavailable.
+
+DO NOT ADD WEB ACQUISITION YET.
+
+The web-learning system comes AFTER this layer is stable.
+
+DEV DIAGNOSTICS:
+
+Add useful DEV-only diagnostics such as:
+
+intent=wave
+source=procedural
+gesture=wave
+phase=active
+
+and:
+
+gesture=wave
+phase=complete
+
+Do not add production logging spam.
+
+TESTS:
+
+Add headless tests for:
+
+1. gesture resolution
+2. gesture start
+3. gesture completion
+4. gesture cancellation
+5. gesture replacement
+6. unsupported gesture fallback
+7. missing-bone graceful handling
+8. no-op safety
+9. existing emotion + gesture coexistence
+10. existing talking/listening + gesture coexistence
+
+VALIDATION:
+
+Run:
+
+* TypeScript checks
+* existing build
+* all existing animation/skill tests
+
+Then report:
+
+1. files changed
+2. bone ownership architecture
+3. gesture state machine
+4. priority rules
+5. which gestures are implemented
+6. which remain unavailable
+7. test results
+8. whether Carlotta's existing idle/talking/listening/emotion/lip-sync remain untouched
+
+CRITICAL:
+Do not modify Carlotta's appearance.
+Do not modify MToon settings.
+Do not modify texture quality.
+Do not modify camera.
+Do not modify lip-sync.
+Do not modify TTS.
+Do not modify Groq.
+Do not start another performance optimization pass.
+
+This phase is specifically about creating a clean, composable procedural gesture layer that the future web-learning/retargeting system can plug into.

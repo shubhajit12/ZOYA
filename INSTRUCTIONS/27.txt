@@ -1,0 +1,508 @@
+# TASK: Establish Carlotta's Runtime Relaxed Default Pose
+
+Carlotta currently loads in a hard T-pose because the VRM asset itself contains no relaxed/default standing pose and no animation.
+
+We need to establish a **single, conservative runtime relaxed pose** before the procedural idle controller captures its base pose.
+
+This is NOT the procedural idle task. The existing idle system must remain unchanged except for the minimum initialization ordering required to capture the new relaxed pose.
+
+---
+
+# 🚨 ABSOLUTE SAFETY RULES
+
+Before editing anything, inspect the current implementation.
+
+DO NOT modify:
+
+* Carlotta VRM asset/file
+* textures
+* materials
+* MToon
+* lighting
+* renderer settings
+* camera
+* OrbitControls
+* orbit/pan/zoom behavior
+* lip-sync
+* mouth blendshapes
+* eye tracking/lookAt
+* blinking
+* expressions
+* Groq
+* TTS
+* UI
+* dependencies
+* package versions
+* Mint FBX animation system
+
+DO NOT add Mixamo animations.
+
+DO NOT add an external animation file.
+
+DO NOT replace the skeleton.
+
+Do NOT modify `src/mint/carlottaVrmLoader.ts`.
+
+The current MToon/no-shadow fix is considered LOCKED.
+
+---
+
+# CURRENT FACTS
+
+The Carlotta VRM is:
+
+* VRM 0.x
+* loaded through the existing three-vrm 3.5.5 pipeline
+* inherently a hard T-pose
+* contains no animation clips
+* has no stored relaxed pose
+* humanoid pose APIs are available through `VRMHumanoid`
+
+Relevant installed API:
+
+```text
+vrm.humanoid.setNormalizedPose(...)
+vrm.humanoid.setRawPose(...)
+vrm.humanoid.resetNormalizedPose()
+```
+
+The diagnostic confirmed that `setNormalizedPose()` accepts rest-relative humanoid transforms.
+
+---
+
+# GOAL
+
+At runtime the sequence should become:
+
+```text
+Load Carlotta VRM
+        ↓
+Establish conservative relaxed standing pose
+        ↓
+vrm.update()
+        ↓
+Initialize procedural idle controller
+        ↓
+Idle captures relaxed pose as base
+        ↓
+Procedural idle adds tiny offsets
+```
+
+The final result should be:
+
+**relaxed standing Carlotta + subtle procedural idle**
+
+NOT:
+
+**T-pose + procedural idle**
+
+---
+
+# STEP 1 — INSPECT CURRENT INITIALIZATION
+
+Inspect the current Carlotta loading path and confirm the exact location where:
+
+```text
+car­lottaIdleController.init(vrm)
+```
+
+currently runs.
+
+Do not guess.
+
+The existing reported sequence is:
+
+```text
+loadAsync
+→ extractVrm
+→ replaceActiveModel
+→ idle.init(vrm)
+→ first vrm.update()
+```
+
+Verify this against the current code.
+
+---
+
+# STEP 2 — IMPLEMENT A SMALL RELAXED HUMANOID POSE
+
+Use the installed `vrm.humanoid.setNormalizedPose()` API.
+
+Do NOT manually rotate every raw Object3D bone.
+
+Create a small, clearly named function, for example:
+
+```text
+applyCarlottaRelaxedPose(vrm)
+```
+
+or another appropriate name consistent with the repository.
+
+The function should construct a minimal `VRMPose` containing ONLY the necessary upper-body humanoid bones.
+
+---
+
+# POSE DESIGN
+
+The goal is NOT to make a perfect animation pose.
+
+The goal is simply to turn the hard T-pose into a believable neutral standing pose.
+
+## Shoulders
+
+Bring both shoulders subtly downward/inward from the horizontal T-pose.
+
+Keep the movement conservative.
+
+Do not rotate them dramatically.
+
+## Upper Arms
+
+Move:
+
+```text
+leftUpperArm
+rightUpperArm
+```
+
+from the horizontal T-pose toward a natural resting position beside the torso.
+
+Use mirrored left/right values.
+
+Do not exaggerate.
+
+## Lower Arms / Elbows
+
+Give both elbows a small natural bend.
+
+The arms should not remain perfectly straight.
+
+Keep the bend subtle and symmetrical.
+
+## Hands
+
+Initially leave:
+
+```text
+leftHand
+rightHand
+```
+
+at their existing rest orientation unless inspection proves a small correction is necessary.
+
+Do not manipulate fingers.
+
+## Spine / Chest
+
+Do NOT change spine/chest in the first implementation unless absolutely required to prevent visible deformation.
+
+The procedural idle system will handle tiny posture/breathing offsets later.
+
+## Neck / Head
+
+Do NOT change neck/head.
+
+Preserve their existing rest orientation.
+
+## Hips / Legs
+
+DO NOT modify:
+
+```text
+hips
+leftUpperLeg
+rightUpperLeg
+leftLowerLeg
+rightLowerLeg
+leftFoot
+rightFoot
+leftToes
+rightToes
+```
+
+No IK.
+
+No foot placement.
+
+No locomotion.
+
+## Eyes
+
+DO NOT modify:
+
+```text
+leftEye
+rightEye
+```
+
+Eye tracking owns those.
+
+## Physics / Secondary Bones
+
+DO NOT modify any:
+
+* hair bones
+* skirt bones
+* accessory bones
+* spring bones
+* unmapped bones
+* `!` helper/physics bones
+
+---
+
+# STEP 3 — USE THE CORRECT REST-RELATIVE REPRESENTATION
+
+This is critical.
+
+The pose passed to:
+
+```text
+setNormalizedPose()
+```
+
+must use the correct coordinate convention expected by the installed three-vrm 3.5.5 implementation.
+
+Inspect the installed API/types/source if necessary.
+
+Do NOT guess Euler signs.
+
+Determine the correct quaternion/Euler representation from the actual installed implementation.
+
+If necessary, test the pose numerically or with a temporary isolated diagnostic.
+
+Do NOT modify the project with experimental values until the convention is verified.
+
+---
+
+# STEP 4 — MINIMAL POSE ONLY
+
+Do not create a huge pose containing all 53 humanoid bones.
+
+Only specify the bones required for:
+
+```text
+relaxed arms
+relaxed shoulders
+soft elbows
+```
+
+Everything else should retain its existing/rest pose.
+
+This minimizes the chance of disturbing:
+
+* legs
+* feet
+* head
+* eyes
+* expressions
+* physics
+* other VRM systems
+
+---
+
+# STEP 5 — INITIALIZATION ORDER
+
+After applying the relaxed pose:
+
+```text
+applyCarlottaRelaxedPose(vrm)
+```
+
+allow the humanoid pose to propagate.
+
+Then perform the appropriate existing:
+
+```text
+vrm.update(...)
+```
+
+step once before idle initialization if required by the current runtime behavior.
+
+Then:
+
+```text
+car­lottaIdleController.init(vrm)
+```
+
+The idle controller must capture the **relaxed pose**, not the original T-pose.
+
+Do not rewrite the idle controller's procedural behavior.
+
+---
+
+# STEP 6 — IMPORTANT: DO NOT MAKE IDLE RESPONSIBLE FOR THE POSE
+
+The relaxed pose is a separate initialization state.
+
+Do NOT add logic like:
+
+```text
+if T-pose:
+    move arms down every frame
+```
+
+Do NOT continuously force the arms into position.
+
+The relaxed pose should be established **once**.
+
+After initialization, the procedural idle controller owns only its tiny offsets.
+
+---
+
+# STEP 7 — PRESERVE BASE ROTATION SAFETY
+
+The existing idle controller already captures base quaternions and calculates:
+
+```text
+base × proceduralOffset
+```
+
+Do not replace this system.
+
+After the relaxed pose is established, its captured base must represent the relaxed pose.
+
+No cumulative rotations.
+
+No:
+
+```text
+bone.rotation.x += ...
+```
+
+No frame-by-frame pose resetting.
+
+---
+
+# STEP 8 — DEBUG LOGGING
+
+Add only minimal initialization logging if useful.
+
+For example:
+
+```text
+[CarloPose] relaxed pose applied
+[CarloPose] idle base captured after relaxed pose
+```
+
+Do NOT log every frame.
+
+---
+
+# STEP 9 — VALIDATION
+
+Run:
+
+1. lint
+2. production build
+3. TypeScript validation
+
+Confirm:
+
+* no dependencies changed
+* no package versions changed
+* `carlottaVrmLoader.ts` untouched
+* MToon code untouched
+* renderer configuration untouched
+* camera/navigation untouched
+* lip-sync untouched
+* eye tracking untouched
+* expressions untouched
+* existing idle procedural math unchanged except initialization ordering if necessary
+
+---
+
+# LIVE TEST REQUIREMENTS
+
+After the implementation, run Zoya and inspect Carlotta.
+
+The desired result:
+
+### Standing
+
+```text
+arms naturally down
+elbows slightly bent
+shoulders relaxed
+head/neck unchanged
+legs unchanged
+```
+
+### Idle
+
+Then the existing procedural idle should add:
+
+```text
+subtle breathing
+tiny shoulder movement
+tiny head movement
+small posture variation
+```
+
+The model should remain in the relaxed standing pose.
+
+---
+
+# DO NOT OVER-TUNE
+
+The first live test is ONLY to determine whether the basic relaxed pose is correct.
+
+Do NOT simultaneously adjust:
+
+* idle amplitude
+* breathing speed
+* head movement
+* lighting
+* camera
+* MToon
+* expressions
+
+If the arms are too high/low or elbows are wrong, report the exact issue first.
+
+---
+
+# FINAL REPORT
+
+After implementation report:
+
+```text
+Files changed:
+...
+
+Relaxed pose function:
+...
+
+Humanoid bones intentionally posed:
+...
+
+Pose API used:
+...
+
+Initialization order:
+...
+
+Idle controller changes:
+...
+
+Files intentionally untouched:
+...
+
+Dependencies:
+...
+
+Lint:
+...
+
+Build:
+...
+```
+
+The primary success criterion is:
+
+**Carlotta must no longer be in a T-pose when procedural idle begins.**
+
+Do not implement emotional animations yet.
+Do not implement talking animation yet.
+
+This task is ONLY:
+
+**Carlotta T-pose → conservative relaxed default standing pose.**

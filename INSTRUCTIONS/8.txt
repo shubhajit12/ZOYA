@@ -1,0 +1,24 @@
+Do NOT modify any code.
+
+The mouth-pose test is now logically verified:
+CLOSED → 25% → 50% → 75% → 100% → CLOSED
+and post-test measurement spam is fixed.
+
+Now perform ONLY a runtime/browser visual verification of the existing Mint mouth-pose test.
+
+Check:
+1. Mint starts with mouth closed.
+2. 25% produces a visibly small opening.
+3. 50% produces a visibly larger opening.
+4. 75% produces a visibly larger opening.
+5. 100% produces the maximum intended opening.
+6. Final CLOSED returns to the closed pose.
+7. TEST COMPLETE occurs once.
+8. No measurement-log spam occurs afterward.
+
+DO NOT edit any files.
+DO NOT change calibration.
+DO NOT change runMouthPoseTest().
+DO NOT change the model, skeleton, camera, lip-sync, audio, Groq, TTS, or UI.
+
+Report only the visual/runtime result and any actual visual problem found.

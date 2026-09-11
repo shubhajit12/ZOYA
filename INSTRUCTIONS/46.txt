@@ -1,0 +1,98 @@
+We need to determine why the Carlotta VRM model uses significantly more GPU/has much lower FPS than the previous Mint FBX model.
+
+IMPORTANT:
+
+* DO NOT optimize or modify Carlotta yet.
+* DO NOT change the model, skeleton, textures, materials, camera, OrbitControls, TTS, Groq, lip-sync, expressions, or animation behavior.
+* DO NOT remove visual features.
+* This is a DIAGNOSTIC-ONLY pass.
+
+Current facts:
+
+* Carlotta VRM: ~54 draw calls, ~140,582 triangles, 61 geometries, 32 textures.
+* Carlotta has 392 spring-bone nodes.
+* Chrome Medium test: ~36.2 FPS, measured update 2.52 ms, render 3.37 ms.
+* Chrome Low test: ~21.6 FPS, measured update 1.49 ms, render 3.35 ms.
+* The measured application work therefore does NOT explain the actual 27.6 ms / 46.3 ms frame intervals.
+* Chrome about:gpu shows Intel UHD Graphics Gen11, ANGLE D3D11, 4 hardware threads, 3 GB physical RAM, no discrete GPU.
+* Chrome also reports Intel/MSAA-related workarounds.
+* The previous Mint FBX reportedly used only ~20–30% GPU.
+
+TASK:
+
+1. Inspect the existing Carlotta VRM renderer and determine every potentially expensive GPU-side feature:
+
+   * material/shader types
+   * transparency/alpha blending
+   * texture formats and dimensions
+   * mipmaps
+   * anisotropy
+   * MSAA
+   * shadows
+   * tone mapping
+   * color space
+   * post-processing
+   * skinning
+   * morph targets
+   * draw calls
+   * render targets
+   * pixel ratio
+   * WebGL renderer settings
+
+2. Inspect the actual Carlotta.vrm structure and report:
+
+   * mesh count
+   * submesh count
+   * triangle count
+   * material count
+   * texture count
+   * texture dimensions
+   * texture memory estimate
+   * transparent materials
+   * alpha-tested materials
+   * shader/material types
+   * morph target count
+   * skinned mesh count
+   * spring-bone node count
+
+3. Compare those findings against the old Mint FBX implementation if the FBX/model or its historical renderer configuration is available in the repository.
+
+4. MOST IMPORTANT:
+   Add a DEV-only diagnostic HUD that measures actual frame scheduling:
+
+   RAF interval
+   time before update
+   animation/update time
+   renderer.render() time
+   time after render
+   total frame interval
+   missed-frame/deadline count
+
+   We need to distinguish:
+   A) actual GPU/render cost
+   B) JavaScript/VRM CPU cost
+   C) requestAnimationFrame/browser scheduling stalls
+   D) Chrome compositor/driver stalls.
+
+5. Add a DEV-only renderer diagnostic that reports:
+   renderer.info.render.calls
+   renderer.info.render.triangles
+   renderer.info.memory.geometries
+   renderer.info.memory.textures
+   canvas width/height
+   DPR
+   drawing-buffer width/height.
+
+6. If technically possible without changing production behavior, expose GPU timing using EXT_disjoint_timer_query_webgl2 or the appropriate WebGL extension. If unavailable, report that clearly.
+
+7. Add no speculative optimizations.
+
+8. Run:
+   npm lint
+   npx tsc --noEmit
+   npm run build
+   node --import tsx -e "fetch('http://localhost:3000/api/health').then(r=>r.text()).then(console.log)"
+
+9. Report the results and identify the TOP 3 evidence-backed causes of the difference between Mint FBX and Carlotta VRM.
+
+Do not change rendering quality during this pass.

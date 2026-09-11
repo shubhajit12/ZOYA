@@ -1,0 +1,169 @@
+The cursor scroll zoom is STILL not behaving correctly after the previous fixes.
+
+The user cannot provide a recording or reliably describe the visual symptom, so do NOT ask for a recording or ask the user to diagnose it.
+
+We have already attempted:
+
+1. Direct wheel-event dolly — worked but was very stepped.
+2. Queued exponential smoothing — felt laggy because wheel intents accumulated.
+3. Single-target smoothing — removed the queue but still felt wrong/broken.
+4. Target-space pivot calculation — fixed a real reference-frame mismatch, but the user reports the zoom is STILL NOT FIXED.
+
+Therefore, stop making small speculative tweaks.
+
+Perform a COMPLETE AUDIT of the existing cursor zoom implementation and then implement the simplest robust solution you can derive.
+
+IMPORTANT:
+
+* Prefer ONLY `src/mint/mintRenderer.ts`.
+* Do not modify any other file unless absolutely required.
+* Do not change Mint.
+* Do not change Carlotta.
+* Do not change camera framing.
+* Do not change initial camera position.
+* Do not change drag/orbit rotation.
+* Do not change model scale/materials/textures.
+* Do not touch lip-sync, emotions, animation, eye tracking, Groq, TTS, UI, or dependencies.
+* Preserve the existing `ensureCursorZoom()` once-only listener behavior.
+* Preserve the fact that OrbitControls zoom is disabled if that is the current architecture.
+
+FULL AUDIT:
+
+Trace the actual runtime path from:
+wheel event
+→ wheel delta
+→ cursor NDC
+→ ray construction
+→ model/depth fallback pivot
+→ zoom calculation
+→ camera position
+→ controls.target
+→ controls.update()
+→ render loop.
+
+Then verify every assumption.
+
+SPECIFICALLY CHECK:
+
+1. Wheel delta normalization.
+   Determine whether browser `WheelEvent.deltaMode`, delta magnitude, trackpads, and mouse-wheel detents can cause inconsistent zoom behavior.
+   Do not assume every wheel event represents the same physical amount.
+
+2. Camera/target relationship.
+   Verify that after every zoom:
+
+   * camera position is valid,
+   * controls.target is valid,
+   * camera-target distance is correct,
+   * camera orientation is preserved as intended,
+   * no unintended rotation is introduced.
+
+3. OrbitControls interaction.
+   Inspect the actual OrbitControls configuration and update sequence.
+   Check:
+
+   * enableZoom
+   * enableDamping
+   * dampingFactor
+   * minDistance
+   * maxDistance
+   * controls.target
+   * camera position
+   * controls.update()
+
+   Make sure zoom is NOT being smoothed twice or partially overwritten by OrbitControls.
+
+4. Render-loop ordering.
+   Verify whether zoom is applied:
+
+   * before controls.update()
+   * after controls.update()
+   * before camera.lookAt()
+   * after camera.lookAt()
+   * before rendering.
+
+   Determine the correct ordering for this project's existing architecture.
+
+5. Pivot stability.
+   Verify that the cursor pivot is calculated from the SAME camera state that is being used for the zoom operation.
+   Do not mix:
+
+   * real camera state
+   * target camera state
+   * controls target state
+   * stale previous-frame state.
+
+6. Pivot behavior when moving the mouse.
+   Make sure changing the cursor position between wheel events does not cause unexpected sideways movement or camera swimming.
+
+7. Clamping.
+   Verify minDistance/maxDistance handling mathematically.
+   Ensure clamping does not independently modify camera and target in a way that changes the pivot.
+
+8. Rapid direction changes.
+   Test mentally/simulate:
+   zoom in → zoom out → zoom in → zoom out.
+   There must be no stale target, accumulated velocity, or delayed movement.
+
+9. Rapid wheel events.
+   There must be NO queue.
+   There must be NO backlog.
+   There must be NO old wheel intent continuing after the user stops.
+
+10. Smoothness.
+    The desired behavior is:
+
+* immediate response,
+* smooth movement,
+* no visible jump,
+* no noticeable input lag,
+* no delayed catch-up,
+* no overshoot,
+* no oscillation.
+
+ARCHITECTURAL GUIDANCE:
+
+If the current target-camera approach is unnecessarily complicated or causing the problem, simplify it.
+
+A robust solution may be:
+
+* wheel event determines a desired zoom amount,
+* calculate a single stable cursor pivot,
+* maintain a single zoom state,
+* apply smooth movement toward that state,
+* avoid queues and avoid repeatedly transforming already-smoothed target coordinates in a way that compounds errors.
+
+However, do NOT blindly follow this suggestion. Choose the architecture that is mathematically correct for the existing camera/OrbitControls setup.
+
+IMPORTANT:
+Do not optimize for a pretty simulation or theoretical convergence.
+Optimize for the actual browser interaction.
+
+Also inspect whether the current implementation has any event-prevention/passive-listener issue, browser wheel behavior issue, or interaction with the canvas/OrbitControls that could explain the user's report.
+
+Before changing code, explain internally what is actually wrong.
+Then make the smallest reliable fix.
+
+VALIDATION:
+Run:
+
+* npm run lint / tsc --noEmit
+* npm run build
+
+Then inspect the final git diff.
+
+Report:
+
+1. Exact root cause.
+2. Why the previous three implementations failed.
+3. Exact fix.
+4. Exact files changed.
+5. Lint result.
+6. Build result.
+7. Any remaining limitation that genuinely requires live browser testing.
+
+Do NOT claim the zoom is fixed visually unless you actually have browser access.
+
+MOST IMPORTANT:
+This is the fourth attempt. Do NOT just tune `zoomDampSpeed`.
+Find the underlying runtime/camera-control problem and fix it properly.

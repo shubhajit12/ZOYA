@@ -1,0 +1,89 @@
+We now have the Carlotta MToon diagnostic results:
+
+* 3 meshes
+* 32 MToon materials
+* 32 shade textures
+* 32 rim-lighting features
+* 21 MatCap features
+* 22 outline-enabled materials
+* 19 normal maps
+* 2 emissive maps
+* all 32 materials are transparent
+* npm run lint passes
+* npm run build passes
+
+NEXT TASK: perform ONE controlled MToon outline A/B performance test.
+
+Do NOT optimize anything else yet.
+
+Goal:
+Determine whether disabling Carlotta's MToon outline feature reduces GPU/rendering cost.
+
+Rules:
+
+* Do not modify the VRM asset.
+* Do not modify textures.
+* Do not modify geometry or skeleton.
+* Do not modify camera or OrbitControls.
+* Do not modify lip sync.
+* Do not modify expressions.
+* Do not modify animation.
+* Do not modify spring bones.
+* Do not modify Groq, TTS, or any AI code.
+* Do not modify performanceQuality.ts.
+* Do not disable shade textures, rim lighting, MatCap, normal maps, transparency, or anything else.
+* Only test MToon outlines.
+* Keep the existing disableMToonShading() behavior unchanged.
+* Keep the diagnostic available for now.
+
+First inspect the actual @pixiv/three-vrm 3.5.5 MToon material API/source used by this project and identify the correct runtime property for disabling the MToon outline feature.
+
+Then make the SMALLEST possible temporary DEV-only change that disables outlines on Carlotta's MToon materials.
+
+Important:
+Do not guess property names. Verify the actual three-vrm 3.5.5 API/type/source.
+
+The test should be reversible and isolated.
+
+After implementing it:
+
+1. Run npm run lint.
+2. Run npm run build.
+3. Start the app.
+4. Measure Carlotta at the SAME performance-quality tier and same window size used for the existing benchmark.
+5. Record:
+
+   * FPS
+   * frame time
+   * GPU timer if available
+   * render time
+   * CPU update/VRM time
+   * draw calls
+   * triangles
+6. Compare against the existing Tauri Medium baseline:
+
+45 FPS
+5.95 ms frame
+54 draw calls
+140582 triangles
+GPU 2.02 ms
+CPU update 1.67 ms
+VRM 1.26 ms
+render 4.22 ms
+
+Do NOT chase the "missed" count.
+
+If the outline-disabled result does not produce a meaningful improvement, restore the original outline behavior.
+
+If it does improve performance, leave the change in place but clearly identify exactly what was changed.
+
+Finally report:
+
+* exact file(s) changed
+* exact MToon 3.5.5 property/API used
+* benchmark before vs after
+* lint result
+* build result
+* whether the outline optimization should be kept.
+
+Do not proceed to any other optimization after this test.

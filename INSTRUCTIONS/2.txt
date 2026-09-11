@@ -1,0 +1,76 @@
+There is a performance bug in the existing `🧪 TEST MINT MOUTH POSE` diagnostic.
+
+The test is printing `[MOUTH OPEN TEST]` continuously every animation frame, including repeated:
+
+`stage=CLOSED`
+
+This is causing severe logging spam and lag.
+
+FIX ONLY THE TEST LOOP / DIAGNOSTIC LOGGING.
+
+### Required behavior
+
+The test must run exactly:
+
+`CLOSED → 25% → 50% → 75% → 100% → CLOSED`
+
+with approximately 1 second per stage.
+
+It must then automatically STOP.
+
+After the final CLOSED stage:
+
+* stop the mouth test timer/state
+* stop calling `measureMouthGapCompact()`
+* stop printing `[MOUTH OPEN TEST]`
+* return control to the normal lip-sync update loop
+
+### IMPORTANT
+
+Do NOT change:
+
+* `applyMintMouthPose()`
+* upper `-8° X`
+* lower `+8° X`
+* jaw `4°` cap
+* lip axis
+* viseme generation
+* audio
+* TTS
+* Groq
+* Mint model/skeleton
+* camera
+* UI
+* animation system
+
+Do NOT redesign the mouth system.
+
+### Logging requirement
+
+`[MOUTH OPEN TEST]` should be logged ONCE per stage, not every animation frame.
+
+Expected approximately:
+
+`stage=CLOSED`
+`stage=25%`
+`stage=50%`
+`stage=75%`
+`stage=100%`
+`stage=CLOSED`
+
+Then nothing more.
+
+Do NOT add another continuous interval or animation-frame logger.
+
+### Verification
+
+After the minimal fix:
+
+1. Run `npm run lint`
+2. Run `npm run build`
+
+Both must succeed.
+
+Then report exactly what caused the repeated logging and what minimal change was made.
+
+STOP after that. Do not perform mouth tuning.

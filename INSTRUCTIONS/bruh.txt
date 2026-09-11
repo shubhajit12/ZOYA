@@ -1,0 +1,330 @@
+bro i gave this prompt to claude opus 4.6 but quota finished  - "Use the existing Task "INSTRUCTIONS/53.txt" investigation as your starting point.
+
+The task is ONLY to diagnose and fix the live Carlotta idle regression.
+
+IMPORTANT:
+
+* Do not redesign the animation architecture.
+* Do not add new animation features.
+* Do not add web animation acquisition.
+* Do not modify Carlotta.vrm.
+* Do not modify MToon/texture/camera/lip-sync/TTS/Groq.
+* Do not undo Phase 1 or Phase 2.
+* Make the smallest possible fix.
+
+KNOWN STATE:
+
+Phase 1 was working.
+Phase 2 added:
+
+* carlottaGestureController.ts
+* gesture skill dispatch
+* gesture init/update/reset wiring
+* bow body-yield mechanism
+
+After Phase 2, the LIVE APP no longer visibly shows Carlotta's normal procedural idle animation.
+
+Headless tests passed, but this is a live-runtime regression, so do not treat those tests as proof that idle works.
+
+Previous investigation already verified:
+
+mintRenderer render-loop order:
+lip-sync → expression → vrm.update() → animation controller → gesture controller → render
+
+VRM initialization:
+relaxed pose → vrm.update(0) → animation init → gesture init → lip-sync → expression → texture
+
+LIKELY AREAS:
+
+1. Verify `carlottaAnimationController.ts` init/update paths completely.
+2. Verify the legacy `carlottaIdleController` is actually initialized/updated at runtime.
+3. Trace every caller of:
+
+   * setAnimationIntent()
+   * setState()
+   * setEmotion()
+   * setBodyHold()
+   * reset()
+4. Determine whether `setBodyHold()` can remain active outside a bow.
+5. Determine whether the newly wired Groq AnimationIntent is accidentally forcing state/gesture behavior at inappropriate times.
+6. Verify gesture controller does NOT restore arm/base snapshots every frame.
+7. Verify no gesture initialization/reset path is resetting the body controller.
+8. Verify animation update isn't being skipped by a frame-pacing gate.
+9. Add temporary DEV-only diagnostics if necessary.
+
+MOST IMPORTANT:
+
+Find out whether the idle controller is actually producing changing motion values in the LIVE RENDER LOOP.
+
+Do not merely inspect whether the function exists.
+
+If possible, instrument:
+
+* animation controller initialized?
+* current state?
+* idle update called?
+* idle phase/time changing?
+* bodyHold active?
+* gesture active?
+* gesture update called?
+* number of body-bone writes per frame?
+
+Then identify the exact first point where the known-good Phase 1 behavior diverges.
+
+Once the root cause is proven, make the smallest fix.
+
+VERIFICATION MUST BE BOTH:
+
+A) automated:
+
+* TypeScript
+* build
+* existing tests
+
+B) runtime:
+
+* actually launch the app/browser
+* visually confirm Carlotta's normal idle moves
+
+Do NOT claim "idle fixed" from headless tests alone.
+
+After fixing, verify:
+
+1. Normal idle visibly animates.
+2. Talking still works.
+3. Listening still works.
+4. Emotion still works.
+5. Lip-sync still works.
+6. Gestures still work.
+7. Gesture completion returns to idle.
+8. Bow hold releases correctly.
+9. No animation layer permanently freezes body motion.
+
+FINAL REPORT MUST INCLUDE:
+
+* exact root cause
+* exact fix
+* files changed
+* why Phase 2 caused the regression
+* runtime verification result
+* build/test result
+
+If you cannot reproduce the visual issue, DO NOT guess. Report what was proven and what remains unverified.
+"
+
+
+
+
+and this was the result - "I'll start by reading the task instructions and exploring the codebase to understand the architecture before diagnosing the regression.
+
+Viewed 53.txt:1-96
+Listed directory ZOYA
+Listed directory zoya-ai-companion-MAIN
+Listed directory src
+Listed directory mint
+
+Now let me launch parallel research subagents to read all the critical files simultaneously.
+
+Invoked subagent
+
+Let me also read the key files directly while waiting for the subagents, focusing on the most likely regression areas.
+
+Viewed carlottaAnimationController.ts:1-542
+Viewed carlottaGestureController.ts:1-421
+
+Continuing the investigation. Let me read the remaining critical files.
+
+Viewed mintRenderer.ts:1-800
+Viewed mintRenderer.ts:800-858
+Viewed carlottaIdleController.ts:1-231
+Viewed carlottaVrmLoader.ts:1-304
+
+Now let me read the skill system and search for all callers of critical functions:
+
+Viewed carlottaSkillSystem.ts:1-377
+
+Now let me search for all callers of the critical functions and check the key areas:
+
+Searched for "setAnimationIntent"
+Searched for "setBodyHold"
+Searched for "carlottaIdleController"
+
+**This is the critical finding.** Let me verify my understanding. Let me check how the MintCanvas passes `animationIntent` to the renderer:
+
+Viewed MintCanvas.tsx:170-210
+Viewed App.tsx:75-100
+
+Now let me look at what happens when `setAnimationIntent` is called from the App component — specifically what Groq infers:
+
+Viewed App.tsx:240-300
+
+I now have comprehensive understanding from all four research subagents plus my own direct code review. Let me kill those completed subagents and focus on the root cause analysis.
+
+Killed 4 subagents
+
+Now I have a complete picture. Let me now check the exact `AnimationIntent` types coming from Groq and what happens in `App.tsx` lines 140-170:
+
+Viewed App.tsx:140-175
+Viewed types.ts:1-119
+
+I now have complete understanding. Let me now look at the `gesture controller init` more carefully — specifically, both the animation controller and gesture controller capture base quaternions from the **same bone nodes** for `spine`, `neck`, and `head`. The key question is: **does the gesture controller's `init()` calling `reset()` first restore base quaternions that the animation controller hasn't captured yet, or is the order safe?**
+
+Looking at the init order in `loadCarlottaFromUrl`:
+1. `applyCarlottaRelaxedPose(loaded.vrm)` — sets relaxed pose
+2. `loaded.vrm.update(0)` — propagates to raw bones
+3. `carlottaAnimationController.init(loaded.vrm)` — captures base quaternions from relaxed pose
+4. `carlottaGestureController.init(loaded.vrm)` — calls `this.reset()` first (but bones Map is empty on first init, so no-op for bone restoration), then captures base quaternions
+
+This init order is safe. Let me now look more carefully at what happens when both controllers write to the **same Three.js bone node objects** for `spine`, `neck`, and `head`:
+
+Searched for "bone.node.quaternion.copy(bone.base).multiply"
+Searched for "quaternion.copy"
+Searched for "quaternion"
+
+That's odd. Let me search differently:
+
+Searched for ".quaternion"
+Ran command: `findstr /n "quaternion" src\mint\carlottaGestureController.ts`
+
+Good. Now I understand the critical architecture. Let me now trace the exact issue. Here's what I know:
+
+**Both controllers resolve the same Three.js `Object3D` nodes for `spine`, `neck`, `head`:**
+- `carlottaAnimationController` at line 503: `bone.node.quaternion.copy(bone.base).multiply(_offsetQuat)`
+- `carlottaGestureController` at line 364/384: `bone.node.quaternion.copy(bone.base).multiply(_quat)`
+
+**The render loop order** (mintRenderer.ts lines 613-617):
+1. `carlottaAnimationController.update(delta)` — writes all 6 body bones
+2. `carlottaGestureController.update(delta)` — writes arm+hand bones (and torso during bow)
+
+**When no gesture is active** (`this.active === null`), the gesture controller returns immediately at line 328, so it shouldn't overwrite anything.
+
+**NOW THE KEY INSIGHT**: The gesture controller's `init()` at line 226 calls `this.reset()`. Let's look at `reset()` again carefully:
+
+Lines 305-321:
+```typescript
+public reset(): void {
+    for (const bone of this.bones.values()) {
+      bone.node.quaternion.copy(bone.base);  // <-- RESTORES BASE QUATERNION
+      bone.current.set(0, 0, 0);
+      bone.from.set(0, 0, 0);
+    }
+    this.bones.clear();
+    ...
+}
+```
+
+But on first `init()` call, `this.bones` is empty (from the constructor `private bones = new Map<...>()`), so this reset is a no-op. **This is fine.**
+
+Let me now consider: **Could the gesture controller's base quaternions be stale/different from the animation controller's?** Both capture from the same bone nodes at the same point in time (after relaxed pose). That's fine.
+
+Let me now think about the **actual runtime behavior** more carefully. The key question is: when the gesture controller is in `idle` phase (no active gesture), does it do **anything** to the bones?
+
+Looking at line 328: `if (!this.initialized || !this.active) return;`
+
+When `this.active === null`, it returns immediately. **Zero bone writes.** This is correct.
+
+So the gesture controller, by itself, cannot be causing idle to stop. Let me re-examine the **App.tsx speaking interval** more carefully, because the subagent analysis identified that `App.tsx:153` calls `setAnimationIntent('talking')` every 200ms while speaking:
+
+```typescript
+useEffect(() => {
+    const interval = setInterval(() => {
+      const speaking = voicePipeline.getIsSpeaking();
+      setIsSpeaking(speaking);
+      if (speaking) {
+        setStatus('speaking');
+        setAnimationIntent('talking');
+      } else if (status === 'speaking') {
+        setStatus('idle');
+        setAnimationIntent('idle');
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [status]);
+```
+
+This calls `setAnimationIntent('talking')` → `mintRenderer.setAnimationIntent('talking')` → `dispatchSkillIntent('talking')` → `carlottaAnimationController.setState('talking')`. **This is a behavior intent, not a gesture.** When state='talking', `this.blend` smoothly rises to 1 and the talking recipe kicks in. When not speaking, state='idle' and `this.blend` smoothly goes to 0, showing the idle recipe. This is working as designed.
+
+But wait — let me check something. The **original Phase 1** code might have only used the `carlottaIdleController` singleton, not the `carlottaAnimationController`. Let me verify: **who was calling `carlottaIdleController.init()` and `carlottaIdleController.update()` in the original codebase?**
+
+From my grep results:
+```
+carlottaIdleController is only imported as:
+- carlottaAnimationController.ts:9 (imports computeCarlottaIdleOffset, etc.)
+- carlottaGestureController.ts:3 (imports CARLOTTA_IDLE_MAX_DELTA)
+- mintRenderer.ts:7 (imports applyCarlottaRelaxedPose)
+```
+
+**The `carlottaIdleController` singleton instance is NEVER initialized (`init()`) and NEVER updated (`update()`) anywhere in the codebase!** The singleton `export const carlottaIdleController = new CarlottaIdleController()` at line 230 of `carlottaIdleController.ts` exists but is not imported by anyone.
+
+The idle behavior was always implemented via `computeCarlottaIdleOffset()` being called from within `carlottaAnimationController.update()`. So this is **not** the regression.
+
+Now let me think about what Phase 2 specifically **changed**. The regression is: "after Phase 2, idle animation no longer shows." Phase 2 added:
+1. `carlottaGestureController.ts` — new file
+2. Gesture skill dispatch — new mapping in `carlottaSkillSystem.ts`
+3. Gesture init/update/reset wiring — in `mintRenderer.ts`
+4. Bow body-yield mechanism — `setBodyHold()` in animation controller
+
+Wait — let me check if `setBodyHold` was added as part of Phase 2. If so, the `bodyHold` field defaulting to `false` and the check at line 470-472 were **new code** added in Phase 2. Let me verify that the `bodyHold` check is correctly structured:
+
+```typescript
+// Line 470-472 in carlottaAnimationController.ts
+if (this.bodyHold && (bone.name === 'spine' || bone.name === 'neck' || bone.name === 'head')) {
+    continue;
+}
+```
+
+This should only activate when `bodyHold === true`. Since `bodyHold` defaults to `false` and is only set `true` by `carlottaGestureController.start('bow')`, this shouldn't be the issue under normal idle conditions.
+
+Let me now look at **the actual frame-by-frame execution for arm bones** more carefully. The gesture controller resolves arm bones during `init()` and captures their base quaternions. When no gesture is active, it never touches them. But **the animation controller does NOT write arm bones** (it only writes `spine`, `chest`, `neck`, `head`, `leftShoulder`, `rightShoulder`). So arm bones stay at the relaxed pose quaternion — this is correct.
+
+Now wait — let me reconsider the **exact init sequence** one more time:
+
+```typescript
+// mintRenderer.ts loadCarlottaFromUrl:
+applyCarlottaRelaxedPose(loaded.vrm);  // Sets normalized pose (arms down)
+loaded.vrm.update(0);                   // Propagates to raw bones
+carlottaAnimationController.init(loaded.vrm);  // Captures base quats for 6 body bones
+carlottaGestureController.init(loaded.vrm);    // Calls reset(), captures base quats for 9 bones
+```
+
+The gesture controller's `init()` calls `this.reset()` first. Reset does:
+```typescript
+for (const bone of this.bones.values()) {
+    bone.node.quaternion.copy(bone.base);
+```
+
+On first initialization, `this.bones` is empty, so this loop does nothing. **SAFE.**
+
+But what about **re-initialization?** If `loadCarlottaFromUrl` is called a second time (e.g., quality switch), the gesture controller's `init()` calls `reset()` which restores bones to the **old** base quaternions, which might be different from the current ones. But the animation controller's `init()` runs first and already resets its own state, and then the gesture controller's `reset()` restores arm/torso bones from the previous `init()`'s captures. Then both controllers re-capture from the new VRM. This ordering seems safe.
+
+**OK, I need to stop theorizing and actually try to build and run the app to see the issue firsthand. But first, let me check one more critical thing:**
+
+Does the gesture controller's `init` capture the `spine`, `neck`, `head` base quaternions from the **same bone node object** that the animation controller already captured? Since both controllers resolve bones via `vrm.humanoid.getRawBoneNode()`, they get the **same** Three.js `Object3D` reference. And since the animation controller hasn't started updating yet (we're still in the init phase), the quaternion values should be the relaxed pose.
+
+Wait — actually, there could be a subtle issue. The `carlottaAnimationController.init()` captures `base = node.quaternion.clone()`. Then `carlottaGestureController.init()` also captures `base = node.quaternion.clone()`. Both capture the same quaternion value. **Both `base` values are clones**, so they're independent copies. Good.
+
+Now, during runtime:
+- Frame N: `carlottaAnimationController.update()` runs, writes `spine.quaternion = animBase * idleOffset` 
+- Frame N: `carlottaGestureController.update()` runs — no gesture active → returns immediately
+- The spine bone now has the animation controller's value. ✓
+
+This is correct. The gesture controller in idle does nothing.
+
+**Let me now build and actually run the app to see the issue:**
+
+Ran command: `npx tsc --noEmit 2>&1 | Select-Object -First 50`
+Timed 15 seconds
+
+While waiting for TypeScript compilation, let me also check the existing tests to understand the test infrastructure:
+
+Searched for files: *.test.*
+Searched for files: *.spec.*
+Checked task TypeScript type check" 
+
+
+
+
+
+
+
+BRO CONTINUE AFTER THIS........

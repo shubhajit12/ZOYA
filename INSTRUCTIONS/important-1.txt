@@ -1,0 +1,506 @@
+WE ARE NOW STARTING THE MAJOR ZOYA MODEL MIGRATION:
+
+CURRENT MODEL:
+Mint
+
+NEW MODEL:
+Carlotta
+VRM file:
+E:\MY\ZOYA\test-models\5244609761843871363.vrm
+
+A FULL BACKUP OF THE PROJECT HAS ALREADY BEEN CREATED.
+
+IMPORTANT:
+This is now an intentional migration from Mint → Carlotta.
+
+However, DO NOT blindly rewrite the entire project. First inspect the current architecture and then migrate it systematically.
+
+==================================================
+CORE GOAL
+=========
+
+Replace Mint as Zoya's primary 3D character with Carlotta.
+
+Carlotta must become the main Zoya character while preserving as much existing Zoya functionality as technically possible.
+
+The final Zoya should retain:
+
+* Groq brain
+* existing conversation system
+* existing memory system
+* Google/Gemini TTS pipeline currently used by the project
+* audio-driven lip-sync concept
+* emotional system
+* gradual/persistent emotions
+* talking animation
+* idle animation
+* eye/blink behavior where possible
+* screen sharing
+* PC control
+* chat UI
+* minimized UI
+* built-in browser
+* camera behavior
+* drag rotation
+* zoom
+* existing general Zoya UX
+
+DO NOT redesign unrelated systems.
+
+==================================================
+PHASE 0 — FULL PRE-MIGRATION AUDIT
+==================================
+
+Before editing ANY file:
+
+1. Inspect the current Mint rendering architecture.
+2. Inspect:
+
+   * src/mint/*
+   * mintRenderer
+   * MintCanvas
+   * fbxLoader
+   * lipSyncController
+   * proceduralMint
+   * emotionPose
+   * talking animation
+   * eye tracking
+   * audio analyser
+   * voice pipeline
+   * all model-loading paths
+3. Identify every place where the current Mint FBX is referenced.
+4. Identify every Mint-specific bone name.
+5. Identify every Mint-specific morph target.
+6. Identify every Mint-specific material/shader assumption.
+7. Identify every Mint-specific animation assumption.
+8. Identify every camera/transform assumption.
+9. Identify all existing lip-sync inputs and outputs.
+10. Identify all existing emotion inputs and outputs.
+
+Do NOT edit anything during this audit.
+
+Then inspect:
+
+E:\MY\ZOYA\test-models\5244609761843871363.vrm
+
+Confirm:
+
+* VRM version
+* humanoid structure
+* facial expression system
+* morph targets
+* A/I/U/E/O
+* Blink
+* Blink_L
+* Blink_R
+* Joy
+* Angry
+* Sorrow
+* Fun
+* gaze expressions
+* model scale
+* model orientation
+* materials
+* textures
+* polygon count
+* skeleton
+* available expression names
+
+==================================================
+PHASE 1 — CHOOSE THE NEW ARCHITECTURE
+=====================================
+
+Use the existing architecture wherever possible.
+
+DO NOT attempt to make Carlotta behave like Mint by inventing equivalent facial bones.
+
+Carlotta has facial blendshapes.
+
+Therefore:
+
+Carlotta facial animation should primarily use VRM/glTF morph expressions.
+
+The preferred facial pipeline is:
+
+Audio analyser
+↓
+existing viseme values
+↓
+Carlotta expression mapper
+↓
+A / I / U / E / O morph weights
+↓
+smooth facial deformation
+
+Emotion pipeline:
+
+Zoya/Groq emotion intent
+↓
+existing emotion state
+↓
+Carlotta expression mapper
+↓
+Joy / Angry / Sorrow / Fun / other verified expressions
+
+Blink:
+
+existing eye/blink system
+↓
+Carlotta Blink / Blink_L / Blink_R
+
+DO NOT send raw bone rotations from Groq.
+
+==================================================
+PHASE 2 — VRM LOADING
+=====================
+
+Add proper VRM runtime support only if required.
+
+Use a three-vrm version compatible with the project's installed Three.js version.
+
+Current Three.js version discovered during inspection:
+three@0.185.1
+
+Do NOT blindly install the newest three-vrm.
+
+Determine the compatible version first.
+
+Keep the VRM loader isolated from unrelated systems.
+
+Prefer an architecture like:
+
+Mint FBX loader
++
+Carlotta VRM loader
+
+during migration.
+
+Do not delete the old Mint loader immediately.
+
+==================================================
+PHASE 3 — CARLOTTA RENDERING
+============================
+
+Make Carlotta render correctly first.
+
+Before implementing lip-sync:
+
+VERIFY:
+
+* model appears
+* correct orientation
+* correct scale
+* correct position
+* correct camera framing
+* textures work
+* materials work
+* model is not black
+* model is not invisible
+* model is not inside-out
+* model is not floating incorrectly
+* eyes render
+* hair/accessories render
+* no major missing materials
+
+Preserve the existing Zoya camera interaction:
+
+* drag rotation
+* zoom
+* camera behavior
+
+Do not redesign the camera.
+
+==================================================
+PHASE 4 — FACIAL EXPRESSION TEST
+================================
+
+Create an isolated development/test path for Carlotta expressions.
+
+Test these individually:
+
+CLOSED
+A
+I
+U
+E
+O
+BLINK
+BLINK_L
+BLINK_R
+JOY
+ANGRY
+SORROW
+FUN
+
+Each expression must be:
+
+* visibly applied
+* smoothly interpolated
+* returned to neutral correctly
+
+Do NOT claim success merely because the morph weight changed.
+
+Verify that the actual mesh responds.
+
+==================================================
+PHASE 5 — LIP-SYNC
+==================
+
+Adapt the existing audio analyser rather than replacing it.
+
+Current conceptual input:
+
+{
+mouthOpen,
+mouthWide,
+mouthSmile
+}
+
+Build a Carlotta-specific expression mapper.
+
+Initial mapping may be approximately:
+
+mouthOpen → A/O
+mouthWide → I/E
+rounded/open component → O/U
+mouthSmile → Joy/smile-related expression
+
+BUT:
+
+Do not permanently hardcode arbitrary mappings without testing.
+
+Tune the mapping based on the actual Carlotta face.
+
+Use:
+
+* smooth interpolation
+* attack/release smoothing
+* neutral return
+* no jitter
+* no rapid random expression changes
+
+The mouth must visibly open and close while Zoya speaks.
+
+The animation should NOT simply alternate A/I/U/E/O mechanically.
+
+Use the audio signal to blend the expressions naturally.
+
+==================================================
+PHASE 6 — EMOTION SYSTEM
+========================
+
+Preserve Zoya's existing emotional architecture.
+
+IMPORTANT:
+
+Zoya's emotions must remain gradual and persistent.
+
+DO NOT introduce rapid/random mood switching.
+
+Carlotta expressions should reflect the existing emotional state.
+
+Examples:
+
+happy → Joy
+angry → Angry
+sad → Sorrow
+playful → Fun
+neutral → neutral
+
+Emotion expression and speech lip-sync must be blended rather than fighting each other.
+
+For example:
+
+speech mouth expression
++
+small emotional facial influence
+
+not:
+
+emotion completely overriding speech.
+
+==================================================
+PHASE 7 — EYES / BLINK / GAZE
+=============================
+
+Integrate Carlotta's verified eye/blink capabilities.
+
+Prefer:
+
+Blink
+Blink_L
+Blink_R
+
+and the functional gaze system found during inspection.
+
+Preserve existing Zoya eye behavior where possible.
+
+Do not create unnatural constant eye movement.
+
+==================================================
+PHASE 8 — BODY ANIMATION
+========================
+
+Do NOT immediately rewrite all existing body animation.
+
+First determine which existing animations are model-independent.
+
+Preserve:
+
+* idle
+* breathing
+* talking motion
+* emotional body movement
+
+where compatible.
+
+For Mint-specific bone names that do not exist on Carlotta:
+
+DO NOT blindly map them.
+
+Create safe compatibility mappings only where anatomically appropriate.
+
+If an animation cannot safely transfer, isolate/disable only that specific layer and report it.
+
+Never damage Carlotta's skeleton.
+
+==================================================
+PHASE 9 — REMOVE MINT DEPENDENCIES
+==================================
+
+ONLY after Carlotta is successfully rendering and facial animation works:
+
+Find and remove/disable Mint-specific runtime assumptions.
+
+Examples:
+
+* Mint.fbx hardcoded loading
+* Mint-only bone names
+* Mint-only morph names
+* Mint procedural mouth geometry
+* Mint facial calibration
+* Mint mouth sweep test
+* Mint-specific facial bone fallback
+* Mint-specific shader assumptions
+
+Do NOT delete Mint assets immediately.
+
+Keep them in the backup/legacy area until the migration is confirmed stable.
+
+==================================================
+PHASE 10 — REGRESSION TEST
+==========================
+
+Run:
+
+1. npm run lint
+2. npm run build
+3. TypeScript validation
+4. server startup
+5. health endpoint
+6. application startup
+7. Carlotta model loading
+8. camera interaction
+9. zoom
+10. drag rotation
+11. idle
+12. talking
+13. lip-sync
+14. blink
+15. gaze
+16. happy
+17. sad
+18. angry
+19. surprised/other available expression
+20. emotion persistence
+21. TTS playback
+22. Groq conversation
+23. screen sharing
+24. minimized UI
+25. browser
+26. PC-control paths
+
+==================================================
+CRITICAL SAFETY RULES
+=====================
+
+DO NOT:
+
+* replace Groq
+* replace the brain
+* replace TTS
+* change API keys
+* change conversation architecture unnecessarily
+* change memory architecture
+* change camera design
+* remove drag rotation
+* remove zoom
+* modify unrelated UI
+* modify screen sharing
+* modify browser
+* modify PC control
+* modify unrelated files
+* add Mixamo
+* add external animation files
+* modify the Carlotta VRM asset itself
+* modify model textures
+* modify model skeleton
+* bake/convert the VRM destructively
+
+DO NOT use Mixamo.
+
+DO NOT create a second character system that runs simultaneously in production.
+
+Carlotta should ultimately become the single active production character.
+
+==================================================
+VERY IMPORTANT — ITERATIVE WORKFLOW
+===================================
+
+Work in small verified stages.
+
+After each major stage:
+
+1. run validation
+2. inspect errors
+3. fix only relevant errors
+4. retest
+5. continue
+
+If a change breaks something unrelated, revert that change and choose a safer implementation.
+
+Do NOT make hundreds of speculative changes at once.
+
+==================================================
+FINAL REPORT
+============
+
+At the end report:
+
+1. Files changed
+2. Files added
+3. Files intentionally left untouched
+4. Mint dependencies removed/disabled
+5. Carlotta loading architecture
+6. Carlotta expression architecture
+7. Lip-sync mapping
+8. Emotion mapping
+9. Eye/blink mapping
+10. Body animation compatibility
+11. Camera preservation
+12. Groq preservation
+13. TTS preservation
+14. Test results
+15. Remaining issues
+16. Any known visual issues
+17. Exact next step if anything remains
+
+MOST IMPORTANT:
+
+This is a migration, not a rewrite.
+
+Preserve Zoya's existing behavior wherever technically possible, but replace Mint-specific facial/rendering assumptions with systems appropriate for Carlotta's VRM blendshape-based facial rig.
+
+Start with PHASE 0 audit.
+
+DO NOT MODIFY FILES until the audit is complete and you have identified the migration plan.

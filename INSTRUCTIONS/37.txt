@@ -1,0 +1,138 @@
+Pass 3 visual test failed: Carlotta's mouth is completely static while the talking body animation works.
+
+Claude inspected the 13-second recording frame-by-frame and found:
+
+* mouth region is visually identical throughout
+* no visible mouth opening at any point
+* body/head movement is clearly active
+* captured video audio track was effectively digital silence (~-91 dB)
+
+Do NOT redesign lip-sync and do NOT change thresholds, smoothing, expression mapping, or animation architecture yet.
+
+We need to diagnose the LIVE signal path first.
+
+### Goal
+
+Determine whether `carlottaLipSync.ts` is actually receiving nonzero speech energy from the existing TTS analyser during real browser playback.
+
+### Step 1 — inspect existing audio path
+
+Trace the existing implementation from TTS playback through:
+
+TTS audio
+→ playback source
+→ existing `audioAnalyser`
+→ `getVisemeFrame()`
+→ `carlottaLipSync.ts`
+
+Identify the exact source node that plays the TTS audio and the exact `AnalyserNode` instance being read.
+
+DO NOT create another AudioContext.
+DO NOT create another AnalyserNode.
+DO NOT create another playback path.
+
+### Step 2 — add temporary DEV diagnostics only
+
+Add a DEV-only diagnostic around the existing signal consumed by `carlottaLipSync.ts`.
+
+During actual TTS playback, report enough information to establish:
+
+1. whether `getVisemeFrame()` is being called
+2. the returned `mouthOpen` / energy value
+3. whether the speech threshold is crossed
+4. whether the held energy becomes nonzero
+5. whether the final `"a"` expression weight becomes nonzero
+
+Throttle logging so the console is not spammed every frame. Approximately once every 250–500ms while speech is active is enough.
+
+Also report the relevant analyser state if easily available:
+
+* analyser exists
+* analyser FFT/buffer information
+* source/analyser connection state if the current implementation exposes it safely
+
+Do not add expensive per-frame logging.
+
+### Step 3 — determine the actual failure point
+
+Use the live browser test to determine which case is true:
+
+A. TTS audio has energy → analyser sees energy → lip-sync sees energy → `"a"` weight changes
+B. TTS audio has energy → analyser sees zero
+C. TTS audio has energy → `getVisemeFrame()` sees zero
+D. `getVisemeFrame()` sees energy → lip-sync weight remains zero
+E. `"a"` weight changes → another system immediately overwrites it
+F. `"a"` weight changes and persists → VRM `"a"` has little/no visible effect
+
+Do not guess. Instrument the existing path.
+
+### Step 4 — inspect expression write order
+
+Verify that after:
+
+`expressionManager.setValue("a", weight)`
+
+nothing later in the same frame resets `"a"`.
+
+Do not modify blink, eyes, emotion presets, or any other expression system unless the diagnosis proves one is overwriting `"a"`.
+
+### Step 5 — only fix what the evidence proves
+
+If the analyser connection is missing or points at the wrong playback source, repair that existing connection.
+
+If `getVisemeFrame()` is reading the wrong/stale analyser, fix that reference.
+
+If the analyser signal is valid but the lip-sync controller is consuming it incorrectly, fix only that interface.
+
+If the analyser and lip-sync are both valid but `"a"` is overwritten later, fix the write ordering/minimal conflict.
+
+If everything is valid and `"a"` genuinely has negligible visual effect on Carlotta, report that instead of changing the model.
+
+### Hard rules
+
+DO NOT:
+
+* replace Carlotta.vrm
+* modify the VRM
+* modify MToon materials
+* modify camera
+* modify OrbitControls
+* modify relaxed pose
+* modify idle animation
+* modify behavior animation
+* modify persistent emotion system
+* modify Groq
+* modify TTS provider
+* change API keys
+* add Mixamo
+* add animation files
+* add AnimationMixer
+* add another AudioContext
+* add another AnalyserNode
+* add another playback system
+* manipulate mesh vertices
+* manipulate mouth bones
+* change blink/eyes/springs
+
+Lip-sync must remain facial-expression-only.
+
+Talking body and lip-sync remain independent systems.
+
+### Cleanup
+
+Any diagnostic logging must be DEV-only and production-safe.
+
+After diagnosis/fix:
+
+* `npm run lint`
+* `npm run build`
+* verify health endpoint
+* report exact files changed
+* report the actual signal values observed
+* report whether analyser → lip-sync was connected
+* report whether `"a"` received nonzero weights
+* report whether anything overwrote `"a"`
+
+Do NOT claim the lip-sync works without a real browser speech test.
+
+Most important: **find the signal failure first. Do not tune the lip-sync math blindly.**

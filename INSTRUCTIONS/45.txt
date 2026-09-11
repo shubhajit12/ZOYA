@@ -1,0 +1,526 @@
+# ZOYA PERFORMANCE PASS — CPU/GPU OPTIMIZATION
+
+We are stopping the emotion/posture visual testing temporarily.
+
+Current problem:
+
+* Even at LOW quality, Zoya reaches approximately **100% CPU**
+* GPU usage is approximately **70–85%**
+* This is too expensive for the target low-end hardware.
+
+We need a careful performance investigation and optimization pass.
+
+## HARD RULE
+
+**DO NOT optimize by guessing.**
+
+First inspect and identify the actual expensive per-frame work.
+
+Do not rewrite systems unnecessarily.
+
+Do not modify unrelated functionality.
+
+---
+
+# ABSOLUTE DO-NOT-TOUCH AREAS
+
+Do NOT change:
+
+* Carlotta model
+* VRM
+* skeleton
+* textures/material identity
+* camera
+* OrbitControls behavior
+* Groq/provider
+* TTS
+* audio pipeline
+* lip-sync behavior
+* facial emotion mappings
+* emotion recipes
+* emotion-aware posture behavior
+* existing idle behavior
+* talking behavior
+* listening behavior
+* thinking behavior
+
+Do NOT:
+
+* add Mixamo
+* add animation files
+* add AnimationMixer
+* replace the procedural animation architecture
+* remove existing features
+* introduce visual degradation without measuring it
+
+---
+
+# STEP 1 — PROFILE THE ACTUAL FRAME LOOP
+
+Inspect:
+
+```text
+src/mint/mintRenderer.ts
+src/mint/carlottaAnimationController.ts
+src/mint/carlottaIdleController.ts
+src/mint/carlottaExpressionController.ts
+src/mint/carlottaLipSync.ts
+src/mint/carlottaTextureQuality.ts
+src/mint/MintCanvas.tsx
+```
+
+and any other code directly involved in the Three.js render/update loop.
+
+Identify every operation executed every frame.
+
+Specifically investigate:
+
+### CPU
+
+* requestAnimationFrame loop
+* renderer.render()
+* VRM.update()
+* animation controller update
+* expression controller update
+* lip-sync analyser/update
+* lookAt updates
+* blink updates
+* scene traversal
+* matrix/world-matrix updates
+* quaternion/vector allocations
+* garbage collection pressure
+* repeated property lookups
+* repeated bone searches
+* repeated expression-map lookups
+* expensive conditionals or calculations
+
+### GPU
+
+Investigate:
+
+* renderer pixel ratio
+* canvas drawing resolution
+* render target size
+* number of draw calls
+* triangle count
+* material count
+* texture count
+* texture resolution
+* transparency/alpha-heavy materials
+* shadows
+* postprocessing
+* antialiasing
+* tone mapping
+* color space conversions
+* expensive shader/material features
+* unnecessary scene objects
+
+Do not assume textures are the main problem.
+
+---
+
+# STEP 2 — CHECK THE RENDER RESOLUTION FIRST
+
+Inspect the current renderer configuration.
+
+Determine:
+
+```text
+devicePixelRatio
+renderer.setPixelRatio(...)
+canvas width
+canvas height
+drawing buffer width/height
+```
+
+If LOW quality still renders at full device pixel ratio, determine whether that is a major GPU cost.
+
+The quality tiers should be able to control rendering cost appropriately.
+
+However:
+
+**Do not arbitrarily make LOW blurry.**
+
+Use a sensible capped pixel ratio.
+
+For example, investigate a policy along the lines of:
+
+```text
+HIGH
+→ higher pixel ratio
+
+MEDIUM
+→ moderate capped pixel ratio
+
+LOW
+→ lower capped pixel ratio
+```
+
+Use the existing quality system if possible rather than creating another quality system.
+
+---
+
+# STEP 3 — INVESTIGATE FRAME RATE
+
+Determine whether Zoya currently renders at:
+
+```text
+60 FPS
+```
+
+continuously even when nothing changes.
+
+If the application is unnecessarily rendering at maximum refresh rate, determine whether frame-rate limiting or adaptive rendering could significantly reduce CPU/GPU usage.
+
+Potential strategy:
+
+```text
+HIGH
+→ target ~60 FPS
+
+MEDIUM
+→ target ~45–60 FPS
+
+LOW
+→ target ~30–45 FPS
+```
+
+BUT:
+
+Do not blindly implement this.
+
+First inspect whether the current architecture can safely support it.
+
+Lip-sync and audio playback must remain smooth.
+
+Animation must remain smooth enough.
+
+Camera interaction must remain responsive.
+
+---
+
+# STEP 4 — INVESTIGATE THROTTLING OPPORTUNITIES
+
+Look for work that does not need to run at full frame rate.
+
+Examples:
+
+* expression calculations
+* idle micro-motion calculations
+* non-critical diagnostics
+* expensive scene checks
+* look-at calculations
+* secondary visual updates
+
+Potential architecture:
+
+```text
+60 FPS:
+critical rendering + animation
+
+30 FPS:
+less critical facial/secondary calculations
+
+event-driven:
+settings / quality changes
+```
+
+Do NOT throttle lip-sync in a way that causes visible mouth lag.
+
+Do NOT throttle camera controls.
+
+---
+
+# STEP 5 — ELIMINATE PER-FRAME ALLOCATIONS
+
+Audit all animation/render code for:
+
+```text
+new Vector3(...)
+new Quaternion(...)
+new Euler(...)
+new Matrix4(...)
+new arrays
+new objects
+closures
+temporary objects
+```
+
+inside the frame loop.
+
+Reuse temporary objects where appropriate.
+
+Do NOT create premature abstractions.
+
+Do NOT alter behavior.
+
+Report any remaining allocations that are intentional.
+
+---
+
+# STEP 6 — CHECK VRM UPDATE COST
+
+Inspect the VRM update path.
+
+Determine exactly what:
+
+```text
+vrm.update(delta)
+```
+
+updates every frame.
+
+If there are expensive subsystems that are unnecessary for the current character configuration, determine whether they can safely be disabled or updated less frequently.
+
+Potential areas to inspect:
+
+* lookAt
+* spring bones
+* humanoid
+* expressions
+* meta
+* secondary animation
+* physics-like updates
+
+**Do not disable anything unless verified safe.**
+
+Hair/secondary movement should remain visually intact unless there is a demonstrably expensive optional feature that can be quality-tiered.
+
+---
+
+# STEP 7 — CHECK THREE.JS RENDER COST
+
+Inspect the actual renderer and scene.
+
+Measure/log in DEV:
+
+```text
+FPS
+draw calls
+triangles
+geometries
+textures
+renderer pixel ratio
+canvas drawing-buffer resolution
+```
+
+Use:
+
+```ts
+renderer.info
+```
+
+where appropriate.
+
+Create a DEV-only performance diagnostic if needed.
+
+Do not ship debug overlays in production.
+
+---
+
+# STEP 8 — QUALITY TIERS
+
+Use the existing:
+
+```text
+High
+Medium
+Low
+```
+
+quality architecture.
+
+Do NOT create a second quality-setting system.
+
+The goal should be approximately:
+
+### HIGH
+
+Maximum visual quality.
+
+### MEDIUM
+
+Good quality with reduced rendering cost.
+
+### LOW
+
+Aggressively optimized for low-end hardware while keeping Mint visually recognizable.
+
+LOW may reduce:
+
+* render resolution
+* pixel ratio
+* expensive optional effects
+* update frequency of non-critical systems
+* shadow quality/count if currently enabled
+* other measurable GPU-heavy features
+
+But LOW must NOT:
+
+* destroy the character's face
+* create black textures
+* break transparency
+* break lip-sync
+* break expressions
+* break body animation
+* break camera controls
+
+---
+
+# STEP 9 — BE CAREFUL WITH FPS
+
+Do not assume lower FPS alone solves the problem.
+
+If the application is using:
+
+```text
+100% CPU at 60 FPS
+```
+
+we need to identify why each frame is expensive.
+
+Likewise, if GPU is:
+
+```text
+80% at 60 FPS
+```
+
+determine whether reducing render resolution meaningfully lowers GPU cost.
+
+Measure before/after.
+
+---
+
+# STEP 10 — DEV PERFORMANCE DIAGNOSTIC
+
+If practical, add a DEV-only performance readout:
+
+```text
+FPS
+CPU-side frame timing
+GPU/render timing if available
+draw calls
+triangles
+pixel ratio
+canvas resolution
+```
+
+If actual GPU timing is not available through the browser, clearly report that rather than pretending CPU frame time is GPU time.
+
+The diagnostic must disappear from production builds.
+
+---
+
+# STEP 11 — TEST MATRIX
+
+Test at minimum:
+
+```text
+LOW
+MEDIUM
+HIGH
+```
+
+and compare:
+
+```text
+idle
+talking
+listening
+thinking
+emotion active
+lip-sync active
+camera movement
+```
+
+Record whatever measurements are actually available.
+
+We care about:
+
+```text
+CPU frame time
+FPS
+draw calls
+triangle count
+render resolution
+pixel ratio
+```
+
+---
+
+# STEP 12 — REGRESSION TESTS
+
+Verify:
+
+* idle unchanged
+* talking unchanged
+* listening unchanged
+* thinking unchanged
+* facial expressions unchanged
+* emotion posture unchanged
+* lip-sync unchanged
+* blink unchanged
+* lookAt unchanged
+* camera unchanged
+* OrbitControls unchanged
+* textures unchanged
+* model unchanged
+* no animation files added
+* no Mixamo
+* no new animation system
+
+Run:
+
+```text
+npm run lint
+npm run build
+server bundle/build
+existing tests
+```
+
+---
+
+# CRITICAL REQUIREMENT
+
+Do NOT claim:
+
+> "CPU/GPU usage is fixed"
+
+unless actual runtime measurements were performed.
+
+If browser tooling cannot directly measure GPU utilization, say so.
+
+Distinguish:
+
+```text
+measured CPU/frame time
+measured FPS
+renderer statistics
+estimated GPU pressure
+```
+
+from actual OS-level CPU/GPU utilization.
+
+---
+
+# FINAL REPORT
+
+At completion report:
+
+1. actual performance bottlenecks discovered
+2. files changed
+3. optimizations implemented
+4. before/after measurements
+5. LOW/MEDIUM/HIGH behavior
+6. render resolution/pixel ratio changes
+7. FPS behavior
+8. draw-call/triangle changes if available
+9. per-frame allocation findings
+10. VRM update findings
+11. confirmation that facial expressions remain untouched
+12. confirmation that lip-sync remains untouched
+13. confirmation that body animation remains untouched
+14. build/test results
+15. any remaining bottleneck
+
+**Do not perform unrelated cleanup or refactoring.**

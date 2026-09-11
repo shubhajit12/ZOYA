@@ -1,0 +1,225 @@
+# Completely Remove Carlotta VRM MToon Shadows
+
+The current character is **Carlotta (.vrm)**.
+
+I want the **MToon built-in shadow/shaded areas completely removed**.
+
+This is NOT about Three.js shadow maps.
+
+## STRICT SCOPE
+
+Only modify:
+
+`src/mint/carlottaVrmLoader.ts`
+
+Do not modify any other file.
+
+Do NOT touch:
+
+* Carlotta VRM file
+* geometry
+* skeleton
+* bones
+* textures
+* model transforms
+* expressions/blendshapes
+* spring bones
+* lookAt
+* animation
+* lip sync
+* lighting
+* renderer
+* camera
+* OrbitControls
+* navigation
+* Groq
+* TTS
+* UI
+* dependencies
+* old FBX/Mint pipeline
+
+---
+
+# CURRENT STATE
+
+The previous change added:
+
+`shadingShiftFactor + 0.15`
+
+through `softenMToonShading()`.
+
+That is NOT enough.
+
+I now explicitly want the MToon shaded region effectively **disabled completely**.
+
+Remove/rework the previous `+0.15` softening approach.
+
+Do not keep it as an additional layer.
+
+---
+
+# FIRST INSPECT THE INSTALLED API
+
+The installed version is:
+
+`@pixiv/three-vrm@3.5.5`
+
+Verify the actual MToon material API in the installed node_modules.
+
+We already confirmed that MToon exposes:
+
+* `shadingShiftFactor`
+* `shadingToonyFactor`
+* `giEqualizationFactor`
+* `shadeColorFactor`
+
+Determine the correct native MToon configuration for making the shaded/toon-shadow region completely disappear.
+
+Do NOT guess.
+
+---
+
+# DESIRED RESULT
+
+Carlotta should render with:
+
+**NO MToon shadow/shaded region.**
+
+I want the character to remain fully textured and preserve the original material appearance otherwise, but without the dark toon shadow areas.
+
+Do NOT replace MToon materials.
+
+Do NOT use MeshBasicMaterial.
+
+Do NOT create a custom shader.
+
+Do NOT use ShaderMaterial.
+
+Do NOT modify textures.
+
+---
+
+# IMPORTANT DISTINCTION
+
+Do not confuse:
+
+* Three.js shadow maps
+* MToon's built-in shading/toon shadow
+
+The thing being removed is specifically the **MToon shaded-area effect**.
+
+The current audit already established that normal Three.js shadow maps aren't actually casting shadows in this scene.
+
+---
+
+# IMPLEMENTATION
+
+Use the **least invasive native MToon property/configuration** that completely removes the shaded region.
+
+If the correct native solution requires setting an MToon shading parameter to its documented no-shadow/no-shading configuration, use that.
+
+If `shadingToonyFactor` is the correct control, verify its actual behavior in three-vrm 3.5.5 before changing it.
+
+If `shadingShiftFactor` is the correct control, determine the exact value needed from the installed implementation rather than blindly adding another offset.
+
+If `shadeColorFactor` controls only the shade color rather than whether the shaded region exists, do NOT use it as a fake workaround.
+
+The goal is to **disable the shadow region**, not merely make the shadow color white.
+
+---
+
+# APPLY TO CARLOTTA ONLY
+
+Traverse Carlotta's loaded VRM scene once during load and apply the native setting only to MToon materials.
+
+Keep non-MToon materials untouched.
+
+Do not repeatedly modify the materials every frame.
+
+Do not affect the procedural avatar or old Mint/FBX path.
+
+---
+
+# REMOVE PREVIOUS SOFTENING
+
+Remove the previous:
+
+`MTOON_SHADING_SHIFT_DELTA`
+
+and the old `+0.15` softening behavior if it is no longer needed.
+
+There should be one clear MToon configuration for the final no-shadow result, not stacked adjustments.
+
+---
+
+# EVERYTHING ELSE LOCKED
+
+The following MUST remain unchanged:
+
+### Navigation
+
+* OrbitControls
+* LEFT = ROTATE
+* RIGHT = PAN
+* wheel zoom
+* `zoomToCursor = true`
+* damping
+* distance limits
+* camera position
+* camera target
+
+### Rendering
+
+* lights
+* rim light `0.35`
+* renderer
+* tone mapping
+* color space
+
+### Character
+
+* VRM
+* textures
+* materials themselves
+* skeleton
+* blendshapes
+* spring bones
+* expressions
+* animation
+
+---
+
+# VALIDATION
+
+Run:
+
+`npm run lint`
+
+Then:
+
+`npm run build`
+
+Inspect the final changes.
+
+Confirm:
+
+1. MToon shadow/shaded regions are explicitly disabled/reduced to zero by a native MToon setting.
+2. The previous `+0.15` softening code is removed.
+3. No custom shader was added.
+4. No materials were replaced.
+5. Textures remain intact.
+6. Only Carlotta VRM material configuration changed.
+7. Lighting was untouched.
+8. Navigation was untouched.
+9. Lint passes.
+10. Build passes.
+
+Do NOT claim the visual result was browser-tested unless it actually was.
+
+## HARD RULE
+
+If the installed three-vrm 3.5.5 API does NOT provide a reliable native way to completely eliminate the MToon shaded region, STOP and report the exact available options instead of guessing.
+
+The target is simple:
+
+**Carlotta VRM → native MToon → ZERO visible MToon shadow/shaded areas.**

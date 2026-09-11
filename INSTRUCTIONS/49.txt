@@ -1,0 +1,61 @@
+We are continuing the controlled Carlotta VRM performance investigation.
+
+Previous outline A/B result:
+
+* Baseline Chrome Medium: 40.7 FPS, GPU 4.15 ms, 54 draws, 140582 triangles.
+* Outline-disabled Chrome Medium: 39.1 FPS, GPU 3.38 ms, 32 draws, 72372 triangles.
+* Therefore outline removal reduced rendering work but did NOT improve FPS.
+* Restore the original outline behavior before proceeding. Do not keep the outline optimization.
+* Do not ask me to repeat the outline test.
+
+Current Carlotta MToon diagnostic:
+
+* 32 MToon materials
+* 32 shade textures
+* 32 rim-lighting features
+* 21 MatCap features
+* 22 outline-enabled materials
+* 19 normal maps
+* 2 emissive maps
+* all 32 materials transparent
+
+NEXT TASK:
+Perform ONE controlled A/B test for MToon MatCap only.
+
+First:
+
+1. Restore the original outline behavior exactly.
+2. Inspect the installed @pixiv/three-vrm 3.5.5 source/types and identify the REAL runtime MToon MatCap property/API.
+3. Do not guess property names.
+
+Then:
+4. Create a temporary DEV-only MatCap-disable test.
+5. Disable ONLY MatCap on Carlotta's MToon materials.
+6. Do not modify outlines, shade textures, rim lighting, normal maps, transparency, geometry, skeleton, textures, camera, OrbitControls, animation, expressions, lip sync, spring bones, AI, TTS, or performanceQuality.ts.
+7. Keep disableMToonShading() unchanged.
+8. Keep the existing MToon diagnostic.
+9. Make the change easily reversible.
+
+Important:
+
+* If disabling MatCap requires changing a material property, use the actual three-vrm 3.5.5 API verified from installed source.
+* Do not replace MToon with another material.
+* Do not modify shader source manually.
+* Do not make permanent optimization decisions yet.
+
+Run:
+npm run lint
+npm run build
+
+Then STOP and tell me exactly:
+
+* which file(s) changed
+* how outlines were restored
+* exact three-vrm 3.5.5 MatCap API/property used
+* whether the MatCap test is staged and DEV-only
+* lint result
+* build result
+
+Do NOT claim a performance improvement yet. I will run the actual Chrome benchmark myself.
+
+Do not perform any other optimization.

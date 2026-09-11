@@ -1,0 +1,244 @@
+# Remove Unwanted Visual Shader/Material Effects From Current Carlotta VRM
+
+The CURRENT character is **Carlotta, a `.vrm` model**.
+
+The old Mint FBX model is no longer the active character.
+
+## CRITICAL SCOPE
+
+Inspect the CURRENT Carlotta VRM rendering path first.
+
+Only modify the code responsible for Carlotta's VRM visual/material/shader appearance.
+
+Do NOT modify the old FBX/Mint loading pipeline.
+
+Do NOT modify unrelated rendering code.
+
+Prefer the smallest possible change.
+
+---
+
+# GOAL
+
+I want to remove the visual effects/material treatment that are making the current Carlotta VRM look worse.
+
+I do NOT want a new shader.
+
+I do NOT want a new visual effect.
+
+I want Carlotta to render as close as possible to the **VRM's original intended material appearance**, using the normal Three.js/VRM material pipeline.
+
+---
+
+# FIRST: INSPECT THE ACTUAL CARLOTTA VRM PATH
+
+Find where Carlotta is loaded, likely around:
+
+* `loadCarlottaFromUrl()`
+* `VRMLoaderPlugin`
+* `@pixiv/three-vrm`
+* VRM scene/material processing
+* any material conversion or modification after VRM loading
+
+Inspect the actual current code.
+
+Determine whether any of these are being applied to Carlotta:
+
+* custom ShaderMaterial
+* `onBeforeCompile`
+* custom vertex/fragment shaders
+* material replacement
+* MeshBasicMaterial conversion
+* artificial emission
+* custom rim lighting
+* toon/cel shading
+* custom color multiplication
+* custom roughness/metalness changes
+* custom material uniforms
+* post-processing
+* unnecessary lighting overrides
+
+Do not assume the cause. Identify the actual code responsible.
+
+---
+
+# IMPORTANT: PRESERVE THE VRM
+
+Do NOT replace Carlotta's VRM.
+
+Do NOT modify:
+
+* `.vrm` file
+* VRM skeleton
+* humanoid rig
+* bones
+* blendshapes
+* facial expressions
+* spring bones
+* hair physics
+* textures
+* texture maps
+* model scale
+* model position
+* model rotation
+
+Do NOT convert the VRM to another model format.
+
+---
+
+# MATERIAL RULE
+
+Preserve Carlotta's existing VRM materials and textures.
+
+Do NOT replace all materials with generic:
+
+* MeshBasicMaterial
+* MeshStandardMaterial
+* MeshPhysicalMaterial
+
+unless the existing code explicitly created such replacements as the unwanted effect.
+
+If VRM materials are already valid, let them render normally.
+
+The goal is to **remove unnecessary modifications**, not redesign the material system.
+
+---
+
+# SHADER RULE
+
+If there is a genuine custom shader modification affecting Carlotta:
+
+REMOVE that modification.
+
+Do NOT create a replacement shader.
+
+Do NOT add another shader to compensate.
+
+If there are NO custom shaders, report that clearly and identify the actual visual modification instead.
+
+---
+
+# LIGHTING RULE
+
+Do NOT redesign the lighting system.
+
+Do NOT change:
+
+* light positions
+* light colors
+* light intensities
+* ambient lighting
+* key light
+* fill light
+* rim light
+* renderer exposure
+
+unless inspection proves one of these is directly part of the unwanted Carlotta-specific visual effect.
+
+The recent rim-light change to `0.35` must remain untouched unless it is specifically part of the Carlotta effect being removed.
+
+---
+
+# NAVIGATION LOCK
+
+The recently fixed Sketchfab-style navigation is LOCKED.
+
+Do NOT touch:
+
+* OrbitControls
+* `enableZoom`
+* `zoomToCursor`
+* `enablePan`
+* mouse button mappings
+* damping
+* rotate speed
+* pan speed
+* minDistance
+* maxDistance
+* camera position
+* camera target
+* camera FOV
+* render-loop controls.update()
+
+Navigation is working now.
+
+Do not regress it.
+
+---
+
+# OTHER SYSTEMS LOCKED
+
+Do NOT modify:
+
+* lip sync
+* mouth animation
+* eye tracking
+* emotions
+* procedural animation
+* voice
+* TTS
+* Groq
+* UI
+* model loading behavior
+* model switching behavior
+* dependencies
+
+---
+
+# IMPLEMENTATION
+
+After identifying the actual unwanted Carlotta visual modification:
+
+1. Remove ONLY that modification.
+2. Preserve the VRM's original materials/textures.
+3. Do not introduce replacement shaders.
+4. Do not add new rendering effects.
+5. Keep the change as small as possible.
+
+If the visual issue is caused by a material modification rather than a shader, remove/revert ONLY that modification.
+
+---
+
+# VALIDATION
+
+Run:
+
+`npm run lint`
+
+Then:
+
+`npm run build`
+
+Inspect the final diff.
+
+Confirm:
+
+* Carlotta remains a `.vrm`
+* VRM materials/textures remain intact
+* no FBX code was modified
+* no navigation code was modified
+* no camera code was modified
+* no lip-sync/animation code was modified
+* no dependencies changed
+
+Report:
+
+1. What was actually making Carlotta look bad.
+2. Exact file and lines changed.
+3. Exactly what was removed/reverted.
+4. What material pipeline Carlotta now uses.
+5. Confirmation that the VRM, textures, skeleton, and blendshapes were untouched.
+6. Confirmation that Sketchfab navigation was untouched.
+7. Lint result.
+8. Build result.
+9. Any pre-existing warnings.
+
+## HARD RULE
+
+If you cannot identify an actual Carlotta-specific shader/material effect, **DO NOT make a speculative change**.
+
+Stop and report what is actually controlling Carlotta's appearance.
+
+The target is:
+
+**Current Carlotta VRM → normal/original VRM material rendering, with unwanted custom visual effects removed.**

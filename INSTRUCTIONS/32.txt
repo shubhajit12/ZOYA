@@ -1,0 +1,158 @@
+ZOYA — FIX LOW TEXTURE QUALITY ONLY
+
+Pass 2 texture optimization is complete.
+
+CURRENT RESULT:
+
+* HIGH: not tested on the laptop because it is too heavy.
+* MEDIUM: looks GREAT and must remain unchanged.
+* LOW: BROKEN — approximately half of Carlotta's face becomes black.
+* This is NOT acceptable.
+
+IMPORTANT:
+Do NOT rewrite the texture-quality system from scratch.
+Do NOT change Medium.
+Do NOT change High.
+Do NOT touch Carlotta's VRM asset.
+Do NOT touch camera/navigation.
+Do NOT touch relaxed pose.
+Do NOT touch idle animation.
+Do NOT touch spring bones.
+Do NOT touch materials except where strictly necessary to diagnose/fix the Low texture issue.
+
+FIRST: INSPECT THE EXISTING IMPLEMENTATION.
+
+Focus specifically on:
+src/mint/carlottaTextureQuality.ts
+src/mint/mintRenderer.ts
+
+Determine why Low texture processing can cause part of the face to render black.
+
+Investigate especially:
+
+1. Whether canvas-based resizing is safe for all texture image types used by Carlotta.
+2. Whether any face texture uses transparency/alpha in a way that the canvas resize path breaks.
+3. Whether colorSpace is preserved correctly after changing .image.
+4. Whether premultiplied-alpha behavior can be affected.
+5. Whether texture orientation / flipY is preserved.
+6. Whether the source image is a special format or GPU-upload path that does not behave correctly after canvas resizing.
+7. Whether mipmaps or texture filtering are involved.
+8. Whether the problem comes from replacing .image on the existing THREE.Texture rather than creating a new texture.
+9. Whether the affected face texture is shared with another material.
+10. Whether a particular texture should simply NOT be downscaled.
+
+IMPORTANT DIAGNOSTIC RULE:
+
+Do not assume the entire Low tier is broken.
+
+Identify which specific texture(s) are causing the black face.
+
+If necessary, add a DEV-only diagnostic that reports:
+
+* texture index/name if available
+* material using it
+* original dimensions
+* Low dimensions
+* texture type
+* map type
+
+Do NOT add per-frame logging.
+
+SAFE FIX STRATEGY:
+
+Prefer the smallest safe fix.
+
+Possible acceptable solutions, depending on inspection:
+
+OPTION A:
+Exclude the problematic face texture(s) from Low downscaling while continuing to downscale safe textures.
+
+OPTION B:
+Keep important face/eye textures at 1024px in Low while reducing other textures to 512px.
+
+OPTION C:
+Use a safer resize path for the affected texture type.
+
+OPTION D:
+If runtime .image replacement is fundamentally unsafe for a specific texture, leave that texture at its original resolution rather than risking visual corruption.
+
+DO NOT blindly choose one of these.
+Inspect first and choose the safest solution.
+
+TARGET LOW PROFILE:
+
+Low should still provide meaningful VRAM savings.
+
+Preferred target:
+
+* General textures: up to 512px
+* Important face/eye textures: up to 1024px if necessary for correctness/appearance
+
+However, the exact classification must be based on the actual Carlotta materials/textures found in the project.
+
+VERY IMPORTANT:
+
+MEDIUM IS ALREADY GOOD.
+
+Do NOT modify the Medium cap of 1024px or its behavior unless the inspection proves the shared implementation itself is responsible for the Low-only bug.
+
+If shared code must be changed, verify that Medium remains visually and functionally identical.
+
+HIGH must continue restoring the original textures exactly.
+
+QUALITY SWITCHING MUST REMAIN SAFE:
+
+Verify these logical transitions:
+
+* High → Medium
+* Medium → Low
+* Low → Medium
+* Low → High
+* High → Low
+* Low → High
+
+Ensure:
+
+* no texture corruption
+* no double disposal
+* no stale references
+* no generational quality loss
+* High restores originals
+* Medium remains at its existing quality
+* Low never produces black/missing texture regions
+
+DO NOT modify the original VRM file.
+
+AFTER FIX:
+
+Run:
+
+* lint
+* production build
+
+If possible, run the dev app and visually inspect Carlotta in:
+
+* Medium
+* Low
+
+At minimum, verify the texture logic statically if live visual testing is unavailable.
+
+FINAL RESPONSE MUST REPORT:
+
+1. Root cause of the black face.
+2. Exact files changed.
+3. Exact fix applied.
+4. Low texture strategy after the fix.
+5. Confirmation that Medium was preserved.
+6. Confirmation that High restore behavior was preserved.
+7. Estimated Low texture-memory usage after the fix.
+8. Whether the face now renders correctly.
+9. Lint result.
+10. Build result.
+11. Any remaining texture-related concerns.
+
+STOP AFTER THIS FIX.
+
+Do not start spring-bone optimization.
+Do not start procedural animation.
+Do not make unrelated performance changes.

@@ -1,0 +1,358 @@
+We now have the DEV-only expression capability tester for Carlotta.vrm.
+
+Create the NEXT DEV-ONLY diagnostic pass: a FACIAL EXPRESSION RECIPE COMBINATION TESTER.
+
+GOAL:
+Allow me to manually test combinations of Carlotta's existing facial expression presets at different weights so we can discover the best recipes for:
+
+* calm
+* happy
+* excited
+* sad
+* angry
+
+Do NOT modify the production emotion recipes yet.
+
+IMPORTANT PROJECT CONSTRAINTS:
+
+* Active character is Carlotta.vrm.
+* Do NOT replace or modify the VRM asset.
+* Do NOT modify mesh, materials, textures, skeleton, or model.
+* Do NOT modify camera or OrbitControls.
+* Do NOT modify body animation.
+* Do NOT modify lip-sync math, audio, or TTS.
+* Do NOT modify the production emotion mappings.
+* Do NOT add Mixamo.
+* Do NOT add external animation files.
+* Do NOT use AnimationMixer or animation clips.
+* Do NOT manipulate mesh vertices.
+* Do NOT modify blink/look expressions.
+* `aa` is owned exclusively by the existing lip-sync controller and MUST remain untouched.
+* Everything added in this pass must be DEV-only.
+* Do not remove the existing expression diagnostic functionality unless necessary.
+* Do not create a second competing expression writer outside the existing Carlotta expression controller.
+
+KNOWN RUNTIME FACIAL EXPRESSIONS:
+
+Safe diagnostic facial expressions:
+
+* neutral
+* happy
+* angry
+* sad
+* relaxed
+
+Do NOT expose or control these through the recipe tester:
+
+* aa
+* ih
+* ou
+* ee
+* oh
+* blink
+* blinkLeft
+* blinkRight
+* lookUp
+* lookDown
+* lookLeft
+* lookRight
+
+The recipe tester is specifically for discovering combinations of the five safe facial expressions.
+
+ARCHITECTURE:
+
+Keep the existing Carlotta expression controller as the single expression write path.
+
+Do NOT create another per-frame expression writer.
+
+The recipe tester should feed temporary diagnostic targets into the existing controller, similar to the existing diagnostic override mechanism.
+
+Production behavior must remain completely unchanged whenever no diagnostic recipe is active.
+
+FEATURE 1 — MULTI-EXPRESSION RECIPE API
+
+Add a DEV-only API similar to:
+
+window.__carlottaExpressionRecipe({
+happy: 0.7,
+relaxed: 0.2
+})
+
+The exact TypeScript shape is up to you, but it must:
+
+* accept only the five safe diagnostic expressions
+* accept weights 0..1
+* clamp values to 0..1
+* reject unknown expression names
+* never accept phoneme/blink/look names
+* allow multiple expressions simultaneously
+* allow omitted expressions to be treated as 0
+* preserve the existing lip-sync `aa`
+* preserve blink/look
+* preserve body animation
+* preserve the production emotion state
+* be DEV-only
+
+Also expose:
+
+window.__carlottaExpressionRecipeReset()
+
+This must:
+
+* clear the temporary recipe
+* restore the normal production facial emotion follower
+* NOT change the current body emotion
+* NOT touch `aa`
+* NOT touch blink/look
+* NOT touch body bones
+
+FEATURE 2 — RECIPE INFO
+
+Expose:
+
+window.__carlottaExpressionRecipeInfo()
+
+Return something useful such as:
+
+{
+active: true,
+recipe: {
+happy: 0.7,
+relaxed: 0.2
+}
+}
+
+Also include the currently available safe expressions if useful.
+
+FEATURE 3 — DEV UI
+
+Create a compact DEV-only recipe tester.
+
+Do NOT make a huge panel.
+
+I want a simple interface where I can quickly experiment with combinations.
+
+At minimum provide rows for:
+
+HAPPY
+EXCITED
+SAD
+ANGRY
+RELAXED
+
+Each row should have:
+
+* expression name
+* weight control from 0 to 1
+* easy increment/decrement controls OR a range slider
+* visible numeric weight
+
+There should also be:
+
+* Apply Recipe
+* Reset
+
+IMPORTANT:
+These are NOT the production emotion buttons.
+
+They are simply controls for constructing a temporary expression combination.
+
+Example:
+
+happy    [======----] 0.70
+relaxed  [==--------] 0.20
+angry    [----------] 0.00
+sad      [----------] 0.00
+neutral  [----------] 0.00
+
+[Apply Recipe] [Reset]
+
+Make the UI compact enough that it does not cover Carlotta's face.
+
+Keep the same interaction safety used by the existing DEV controls:
+
+* outer wrapper pointer-events:none
+* controls pointer-events:auto
+* stop pointerdown propagation
+* never interfere with OrbitControls
+
+FEATURE 4 — PRESET QUICK RECIPES
+
+Add a few DEV-only quick-test buttons to make visual experimentation fast.
+
+These are ONLY temporary test recipes and MUST NOT become production mappings.
+
+Examples:
+
+[Happy Test]
+→ happy 0.70
+→ relaxed 0.15
+
+[Strong Happy]
+→ happy 1.00
+→ relaxed 0.20
+
+[Excited Test]
+→ happy 0.85
+→ relaxed 0.10
+
+[Strong Angry]
+→ angry 1.00
+→ relaxed 0.15
+
+[Strong Sad]
+→ sad 1.00
+→ relaxed 0.20
+
+These values are ONLY starting points for manual testing.
+
+Do NOT claim they are correct.
+
+I will visually judge them.
+
+FEATURE 5 — IMPORTANT MIXING BEHAVIOR
+
+The recipe tester must allow multiple expression presets to coexist.
+
+Do NOT normalize them into a total of 1.
+
+For example:
+
+happy = 0.8
+relaxed = 0.2
+
+must remain exactly those independent weights.
+
+Do not automatically reduce one because another increases.
+
+Do not automatically convert the recipe into a single emotion.
+
+FEATURE 6 — PRODUCTION EMOTION RESTORATION
+
+When I click Reset:
+
+1. Remove the diagnostic recipe.
+2. Restore the existing production facial expression follower.
+3. Existing emotion controller state must remain unchanged.
+4. The body emotion must continue exactly where it was.
+5. Facial emotion should resume following that existing state.
+6. `aa` remains exclusively controlled by lip-sync.
+
+FEATURE 7 — SMOOTHING
+
+Keep the existing facial expression smoothing behavior.
+
+Do NOT instantly snap expression weights.
+
+Recipe changes should transition smoothly using the existing expression controller smoothing.
+
+Do not introduce timers.
+
+Use delta-time only.
+
+Do not add per-frame allocations.
+
+FEATURE 8 — DO NOT GUESS THE FINAL RECIPES
+
+This is critical.
+
+Do NOT redesign:
+
+* Happy
+* Excited
+* Sad
+* Angry
+* Calm
+
+in the production emotion controller.
+
+We are intentionally doing manual visual discovery first.
+
+The goal is:
+
+1. Try combinations.
+2. Observe Carlotta.
+3. Find combinations that visually communicate each emotion.
+4. Report the successful combinations back.
+5. THEN implement those as production emotion recipes in a separate pass.
+
+VALIDATION:
+
+Run:
+
+* relevant headless expression tests
+* existing emotion tests
+* existing lip-sync tests
+* lint
+* build
+* dev server health check
+
+Add tests proving:
+
+1. Single-expression recipe works.
+2. Multi-expression recipe works.
+3. Independent weights are preserved.
+4. Values clamp correctly.
+5. Invalid names are rejected.
+6. Forbidden names are rejected.
+7. `aa` remains untouched.
+8. Blink/look remain untouched.
+9. Body emotion remains untouched.
+10. Reset restores the production facial follower.
+11. No diagnostic recipe means production behavior is unchanged.
+12. No body bones are written by the recipe tester.
+13. No per-frame allocations are introduced.
+14. No AnimationMixer/clips/external animation files are introduced.
+15. Production build strips the DEV recipe UI/hooks.
+
+WRITE AUDIT:
+
+Confirm that the recipe tester can only write:
+
+* neutral
+* happy
+* angry
+* sad
+* relaxed
+
+The tester must NEVER write:
+
+* aa
+* ih
+* ou
+* ee
+* oh
+* blink
+* blinkLeft
+* blinkRight
+* lookUp
+* lookDown
+* lookLeft
+* lookRight
+
+DELIVERABLE:
+
+At the end report exactly:
+
+1. Files changed
+2. Recipe API added
+3. DEV UI added
+4. Quick recipes added
+5. Tests passed
+6. `aa` untouched
+7. blink/look untouched
+8. body emotion untouched
+9. production emotion mappings unchanged
+10. production build verified
+
+DO NOT tune the production emotion recipes.
+
+DO NOT change lip-sync.
+
+DO NOT change body animation.
+
+DO NOT change TTS.
+
+DO NOT change the VRM.
+
+This is strictly a temporary DEV recipe-combination discovery tool.

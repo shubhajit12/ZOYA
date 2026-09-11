@@ -1,0 +1,101 @@
+PHASE 3 APPROVAL — INTEGRATE CARLOTTA VRM RENDER PATH ONLY
+
+Phase 2 is approved.
+
+Proceed with PHASE 3 ONLY.
+
+GOAL:
+Actually load and render the Carlotta VRM through the new isolated
+src/mint/carlottaVrmLoader.ts path, while keeping the existing Mint runtime
+available as a fallback.
+
+STRICT RULES:
+- Do NOT remove Mint.
+- Do NOT delete or modify the existing Mint FBX loader.
+- Do NOT modify Groq/brain/provider.
+- Do NOT modify Google/Gemini TTS or the voice pipeline.
+- Do NOT modify memory.
+- Do NOT modify screen sharing.
+- Do NOT modify PC control.
+- Do NOT modify browser/UI behavior except the minimum required to select/render
+  Carlotta.
+- Do NOT change camera position, camera settings, OrbitControls, drag rotation,
+  zoom, pivot behavior, or framing logic.
+- Do NOT use Mixamo.
+- Do NOT add any external animation files.
+- Do NOT modify the Carlotta VRM asset itself.
+- Do NOT modify Mint's lip-sync implementation yet.
+- Do NOT modify emotion animation yet.
+- Do NOT modify body animation yet.
+- Do NOT implement expression mapping yet.
+- Do NOT change the existing audio/TTS pipeline.
+- Keep all changes small and reversible.
+
+IMPLEMENTATION:
+
+1. Inspect the current Mint rendering entry point and determine the smallest
+   clean integration point for selecting Carlotta.
+
+2. Add a Carlotta render/load path using:
+   src/mint/carlottaVrmLoader.ts
+
+3. Load:
+   E:\MY\ZOYA\test-models\5244609761843871363.vrm
+
+   Prefer an existing application asset/public-path mechanism if one exists.
+   Do NOT hardcode an OS-specific development path into production code if
+   the project already has a proper asset URL mechanism.
+
+4. Render the loaded VRM scene using the existing renderer/camera/controls.
+   Preserve the current camera/framing behavior as closely as possible.
+
+5. Make the integration safe:
+   - Existing Mint path must remain available.
+   - Do not delete Mint code.
+   - If necessary, introduce a simple model-selection flag/configuration.
+   - Default may be Carlotta only if this can be done without destroying the
+     Mint fallback.
+   - Do not refactor unrelated systems.
+
+6. Carlotta VRM update loop:
+   Ensure vrm.update(delta) is called every frame after successful loading.
+   Do not create an AnimationMixer or external animation system.
+
+7. Loading lifecycle:
+   - Handle load failure cleanly.
+   - Avoid duplicate VRM loading.
+   - Dispose/unload correctly when replacing the model.
+   - Do not introduce memory leaks.
+
+8. IMPORTANT:
+   Do NOT connect lip-sync, emotions, eye tracking, or procedural animation
+   to Carlotta in this phase.
+   The purpose of Phase 3 is ONLY:
+   "Can Zoya successfully load and render Carlotta through the real application
+   rendering path?"
+
+9. Run validation:
+   - npm run lint
+   - npm run build
+   - Any relevant static/runtime validation available.
+   - If possible, launch the application and verify that Carlotta actually
+     appears in the real Zoya UI.
+
+10. STOP after Phase 3.
+
+REPORT:
+- Exact files changed
+- Exact files added
+- Exact code/config changes
+- How Carlotta is selected
+- How the VRM URL/asset is resolved
+- Whether vrm.update(delta) is running
+- Whether Mint fallback remains intact
+- Whether camera/controls were untouched
+- Validation results
+- Runtime result: Carlotta rendered or exact failure
+- Any warnings/errors
+- Any known issue with scale, position, orientation, materials, lighting,
+  transparency, or rendering
+
+DO NOT PROCEED TO PHASE 4.
