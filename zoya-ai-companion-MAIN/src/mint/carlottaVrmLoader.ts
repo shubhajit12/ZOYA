@@ -199,6 +199,8 @@ function createLoader(): GLTFLoader {
   return loader;
 }
 
+extractVrm
+
 function extractVrm(gltf: GLTF, source: string): LoadedCarlottaModel {
   const vrm = gltf.userData.vrm as VRM | undefined;
   if (!vrm) {
@@ -232,12 +234,26 @@ function logExpressionInventory(vrm: VRM, source: string): void {
   }
 }
 
+/**
+ * Carlotta is authored facing -Z while the existing ZOYA camera presents +Z
+ * as the character-facing direction. Rotate the VRM root once at load time so
+ * the character presents her front to the existing camera. This intentionally
+ * leaves the camera, OrbitControls, local humanoid bone rotations, expressions,
+ * lip-sync, and idle controller untouched. Because the root is rotated before
+ * the procedural gesture layer is initialized, its local-frame bow axes now
+ * correspond to the character's visual front instead of her back.
+ */
+function orientCarlottaForZoya(model: LoadedCarlottaModel): void {
+  model.vrm.scene.rotation.y = Math.PI;
+}
+
 export class CarlottaVRMLoader {
   public async loadVRMFromUrl(url: string): Promise<LoadedCarlottaModel> {
     const loader = createLoader();
     const gltf = await loader.loadAsync(url);
     console.log(`[CarlottaVRM] VRM loaded from: ${url}`);
     const model = extractVrm(gltf, url);
+    orientCarlottaForZoya(model);
     disableMToonShading(model);
     disableMToonMatCapForPerfTest(model);
     diagnoseCarlottaMaterials(model);
@@ -251,6 +267,7 @@ export class CarlottaVRMLoader {
       const gltf = await loader.loadAsync(url);
       console.log(`[CarlottaVRM] Parsed uploaded file: ${file.name}`);
       const model = extractVrm(gltf, file.name);
+      orientCarlottaForZoya(model);
       disableMToonShading(model);
       disableMToonMatCapForPerfTest(model);
       diagnoseCarlottaMaterials(model);
