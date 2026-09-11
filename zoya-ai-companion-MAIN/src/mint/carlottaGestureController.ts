@@ -7,33 +7,24 @@ import { isDevBuild } from './runtimeEnv';
 /**
  * CarlottaGestureController — rebuilt procedural gesture layer.
  *
- * The old implementation tried to describe each gesture as a collection of
- * independent sine/segment formulas. That made the arm motion hard to tune:
- * raising, bending and returning were all entangled in one equation.
+ * Gestures are authored as readable pose keyframes instead of tangled sine
+ * formulas. Each sequence has a preparation, a clear readable pose, motion
+ * beats, and a deliberate return. Keyframes are additive offsets from the
+ * known-good relaxed Carlotta pose captured at init.
  *
- * This version is deliberately pose-driven:
- *   rest -> preparation -> readable pose -> motion beats -> recovery
+ * No animation clips, AnimationMixer, external animation files, skeleton
+ * replacement, mesh edits, or per-frame allocations. The existing idle/body
+ * controller remains the source of the base pose; this layer only adds its
+ * gesture offsets. Bow is the only gesture allowed to own torso bones.
  *
- * Every gesture is a small, deterministic sequence of local-space pose
- * keyframes. The keyframes are offsets from the relaxed Carlotta pose captured
- * at init, so the existing idle controller remains the source of the base pose.
- * No animation clips, AnimationMixer, external files, skeleton replacement,
- * mesh edits, or per-frame object creation are introduced.
- *
- * Carlotta's loader rotates the VRM root 180 degrees, making her visual front
- * +Z. The relaxed arm convention is retained: right arm down is -Z, left arm
- * down is +Z; right forward elbow swing is -Y and left is +Y; forward bow is
- * negative X.
+ * The loader rotates Carlotta's root 180 degrees, making her visual front +Z.
+ * Existing local-frame conventions are retained: right arm down is -Z, left
+ * arm down is +Z, right forward elbow swing is -Y, left is +Y, and forward
+ * bow pitch is -X.
  */
 
 export type CarlottaGestureName =
-  | 'wave'
-  | 'greeting'
-  | 'goodbye'
-  | 'point'
-  | 'shrug'
-  | 'clap'
-  | 'bow';
+  | 'wave' | 'greeting' | 'goodbye' | 'point' | 'shrug' | 'clap' | 'bow';
 
 export function isValidCarlottaGestureName(value: unknown): value is CarlottaGestureName {
   return (
@@ -45,12 +36,8 @@ export function isValidCarlottaGestureName(value: unknown): value is CarlottaGes
 export type GesturePhase = 'idle' | 'active' | 'recovering';
 
 type ArmBoneName =
-  | 'leftUpperArm'
-  | 'leftLowerArm'
-  | 'leftHand'
-  | 'rightUpperArm'
-  | 'rightLowerArm'
-  | 'rightHand';
+  | 'leftUpperArm' | 'leftLowerArm' | 'leftHand'
+  | 'rightUpperArm' | 'rightLowerArm' | 'rightHand';
 type TorsoBoneName = 'spine' | 'neck' | 'head';
 type GestureBoneName = ArmBoneName | TorsoBoneName;
 
@@ -105,12 +92,7 @@ function key(time: number, p: Pose): Keyframe {
   return { time, pose: p };
 }
 
-/*
- * Values below are OFFSETS from the known-good relaxed pose, not absolute
- * skeleton rotations. This is important because the relaxed pose already
- * puts both upper arms in their natural hanging orientation.
- */
-
+/* Additive offsets from the relaxed pose. */
 const WAVE: readonly Keyframe[] = [
   key(0.00, pose()),
   key(0.38, pose([0, 0, 1.05], [0, -0.18, 0])),
@@ -217,6 +199,7 @@ interface ControlledBone {
   current: THREE.Vector3;
   from: THREE.Vector3;
   target: THREE.Vector3;
+  sampled: THREE.Vector3;
 }
 
 function smoothstep(x: number): number {
@@ -251,6 +234,7 @@ export class CarlottaGestureController {
         current: new THREE.Vector3(),
         from: new THREE.Vector3(),
         target: new THREE.Vector3(),
+        sampled: new THREE.Vector3(),
       });
     }
     this.initialized = this.bones.size > 0;
@@ -268,7 +252,6 @@ export class CarlottaGestureController {
     const def = GESTURES[name];
     for (const required of def.required) if (!this.bones.has(required)) return false;
 
-    /* Replace/crossfade from the exact currently displayed gesture pose. */
     for (const bone of this.bones.values()) bone.from.copy(bone.current);
     this.active = name;
     this.phase = 'active';
@@ -300,7 +283,11 @@ export class CarlottaGestureController {
     carlottaAnimationController.setBodyHold(false);
   }
 
-  private sample(def: GestureDef, t: number, out: Map<GestureBoneName, THREE.Vector3>): void {
+  private poseValue(p: Pose, name: GestureBoneName): [number, number, number] | undefined {
+    return p[name as keyof Pose] as [number, number, number] | undefined;
+  }
+
+  private sample(def: GestureDef, t: number): void {
     const frames = def.keyframes;
     let a = frames[0];
     let b = frames[frames.length - 1];
@@ -317,23 +304,15 @@ export class CarlottaGestureController {
     for (const bone of this.bones.values()) {
       const av = this.poseValue(a.pose, bone.name);
       const bv = this.poseValue(b.pose, bone.name);
-      if (!av && !bv) continue;
       const ax = av ? av[0] : 0; const ay = av ? av[1] : 0; const az = av ? av[2] : 0;
       const bx = bv ? bv[0] : 0; const by = bv ? bv[1] : 0; const bz = bv ? bv[2] : 0;
-      let v = out.get(bone.name);
-      if (!v) {
-        v = new THREE.Vector3();
-        out.set(bone.name, v);
-      }
-      v.set(ax + (bx - ax) * w, ay + (by - ay) * w, az + (bz - az) * w);
+      bone.sampled.set(
+        ax + (bx - ax) * w,
+        ay + (by - ay) * w,
+        az + (bz - az) * w,
+      );
     }
   }
-
-  private poseValue(p: Pose, name: GestureBoneName): [number, number, number] | undefined {
-    return p[name as keyof Pose] as [number, number, number] | undefined;
-  }
-
-  private readonly sampled = new Map<GestureBoneName, THREE.Vector3>();
 
   public update(delta: number): void {
     if (isDevBuild()) {
@@ -349,18 +328,12 @@ export class CarlottaGestureController {
 
     if (this.phase === 'active') {
       this.time += dt;
-      const blend = smoothstep(Math.min(1, this.blendT += dt / START_BLEND));
-      this.sampled.clear();
-      this.sample(def, Math.min(this.time, def.duration), this.sampled);
+      this.blendT = Math.min(1, this.blendT + dt / START_BLEND);
+      const blend = smoothstep(this.blendT);
+      this.sample(def, Math.min(this.time, def.duration));
 
       for (const bone of this.bones.values()) {
-        const target = this.sampled.get(bone.name);
-        if (!target) {
-          if (bone.current.lengthSq() > 0) bone.current.multiplyScalar(1 - blend);
-          continue;
-        }
-        bone.target.copy(target);
-        bone.current.lerpVectors(bone.from, bone.target, blend);
+        bone.current.lerpVectors(bone.from, bone.sampled, blend);
         _euler.set(bone.current.x, bone.current.y, bone.current.z);
         _quat.setFromEuler(_euler);
         bone.node.quaternion.copy(bone.base).multiply(_quat);
