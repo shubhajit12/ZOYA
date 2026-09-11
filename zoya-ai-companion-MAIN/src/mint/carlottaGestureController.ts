@@ -20,7 +20,7 @@ import { isDevBuild } from './runtimeEnv';
  * The loader rotates Carlotta's root 180 degrees, making her visual front +Z.
  * Existing local-frame conventions are retained: right arm down is -Z, left
  * arm down is +Z, right forward elbow swing is -Y, left is +Y, and forward
- * bow pitch is -X.
+ * bow pitch is +X for the current front-facing Carlotta rig.
  */
 
 export type CarlottaGestureName =
@@ -133,13 +133,20 @@ const GOODBYE: readonly Keyframe[] = [
   key(3.80, pose()),
 ];
 
+/*
+ * Carlotta's front-facing rig uses the opposite upper-arm Y direction from
+ * the old point pose. The old values drove the arm behind her after the root
+ * was rotated to the confirmed front-facing orientation. Keep the gesture
+ * shape the same, but mirror the directional Y components so the pointing
+ * arm travels toward the viewer/front (+Z).
+ */
 const POINT: readonly Keyframe[] = [
   key(0.00, pose()),
-  key(0.38, pose([0, -0.36, 0.42], [0, -0.05, 0])),
-  key(0.78, pose([0, -0.82, 0.78], [0, -0.10, 0], [0, -0.10, 0])),
-  key(1.20, pose([0, -1.00, 0.94], [0, -0.16, 0], [0, -0.18, 0])),
-  key(1.60, pose([0, -1.00, 0.94], [0, -0.16, 0], [0, -0.18, 0])),
-  key(1.90, pose([0, -0.62, 0.58], [0, -0.08, 0])),
+  key(0.38, pose([0, 0.36, 0.42], [0, 0.05, 0])),
+  key(0.78, pose([0, 0.82, 0.78], [0, 0.10, 0], [0, 0.10, 0])),
+  key(1.20, pose([0, 1.00, 0.94], [0, 0.16, 0], [0, 0.18, 0])),
+  key(1.60, pose([0, 1.00, 0.94], [0, 0.16, 0], [0, 0.18, 0])),
+  key(1.90, pose([0, 0.62, 0.58], [0, 0.08, 0])),
   key(2.15, pose()),
 ];
 
@@ -164,13 +171,19 @@ const CLAP: readonly Keyframe[] = [
   key(2.70, pose()),
 ];
 
+/*
+ * The current front-facing Carlotta rig bends toward +X for a forward bow.
+ * The previous -X pitch visibly folded her toward the rear after the root
+ * orientation fix. Only the torso pitch direction is inverted here; timing,
+ * depth, and arm preparation remain unchanged.
+ */
 const BOW: readonly Keyframe[] = [
   key(0.00, pose()),
-  key(0.35, pose(undefined, undefined, undefined, undefined, undefined, undefined, -0.10, -0.04, -0.03)),
-  key(0.72, pose([-0.06, 0, 0], undefined, undefined, [-0.06, 0, 0], undefined, undefined, -0.34, -0.12, -0.08)),
-  key(1.12, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
-  key(1.50, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
-  key(1.85, pose([-0.05, 0, 0], undefined, undefined, [-0.05, 0, 0], undefined, undefined, -0.28, -0.10, -0.06)),
+  key(0.35, pose(undefined, undefined, undefined, undefined, undefined, undefined, 0.10, 0.04, 0.03)),
+  key(0.72, pose([0.06, 0, 0], undefined, undefined, [0.06, 0, 0], undefined, undefined, 0.34, 0.12, 0.08)),
+  key(1.12, pose([0.10, 0, 0], undefined, undefined, [0.10, 0, 0], undefined, undefined, 0.48, 0.16, 0.10)),
+  key(1.50, pose([0.10, 0, 0], undefined, undefined, [0.10, 0, 0], undefined, undefined, 0.48, 0.16, 0.10)),
+  key(1.85, pose([0.05, 0, 0], undefined, undefined, [0.05, 0, 0], undefined, undefined, 0.28, 0.10, 0.06)),
   key(2.30, pose()),
 ];
 
@@ -224,7 +237,7 @@ export class CarlottaGestureController {
     for (const name of wanted) {
       const node = vrm.humanoid.getRawBoneNode(name);
       if (!node) {
-        console.warn(`[CarloGesture] bone "${name}" missing — gestures needing it will refuse`);
+        console.warn(`[CarloGesture] bone \"${name}\" missing — gestures needing it will refuse`);
         continue;
       }
       this.bones.set(name, {
