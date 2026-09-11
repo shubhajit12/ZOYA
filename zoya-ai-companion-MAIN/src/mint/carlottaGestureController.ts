@@ -5,27 +5,25 @@ import { carlottaAnimationController } from './carlottaAnimationController';
 import { isDevBuild } from './runtimeEnv';
 
 /**
- * CarlottaGestureController — procedural one-shot gesture layer (Phase 2).
+ * CarlottaGestureController — rebuilt procedural gesture layer.
  *
- * Owns ONLY reserved arm/hand bones (plus spine/neck/head during `bow`,
- * via an explicit yield flag on the body controller — never simultaneously).
- * Body, emotion, expression, and lip-sync systems are otherwise untouched.
+ * The old implementation tried to describe each gesture as a collection of
+ * independent sine/segment formulas. That made the arm motion hard to tune:
+ * raising, bending and returning were all entangled in one equation.
  *
- * Guarantees:
- * - Gestures are one-shot with deterministic timing: start → active →
- *   recovery → complete. Never loop.
- * - Every frame derives `quaternion = base * offset` (base captured AFTER
- *   the relaxed pose); a start/replace snapshot blends in, so no snapping.
- * - Cancellation/replacement blends back through a short recovery.
- * - Missing bones fail `start()` gracefully (false, nothing touched).
- * - Zero per-frame allocation (module scratch + fixed instance fields,
- *   bones resolved once at init).
- * - Frame-rate independent (delta-clamped clock, exponential blends).
+ * This version is deliberately pose-driven:
+ *   rest -> preparation -> readable pose -> motion beats -> recovery
  *
- * Carlotta's VRM root is oriented 180° at load so her visual front is +Z.
- * The relaxed-pose local frames are therefore used directly here: right arm
- * down is -Z, left arm down is +Z; right-arm forward swing uses -Y and
- * left-arm forward swing uses +Y; forward bow pitch is -X.
+ * Every gesture is a small, deterministic sequence of local-space pose
+ * keyframes. The keyframes are offsets from the relaxed Carlotta pose captured
+ * at init, so the existing idle controller remains the source of the base pose.
+ * No animation clips, AnimationMixer, external files, skeleton replacement,
+ * mesh edits, or per-frame object creation are introduced.
+ *
+ * Carlotta's loader rotates the VRM root 180 degrees, making her visual front
+ * +Z. The relaxed arm convention is retained: right arm down is -Z, left arm
+ * down is +Z; right forward elbow swing is -Y and left is +Y; forward bow is
+ * negative X.
  */
 
 export type CarlottaGestureName =
@@ -39,13 +37,8 @@ export type CarlottaGestureName =
 
 export function isValidCarlottaGestureName(value: unknown): value is CarlottaGestureName {
   return (
-    value === 'wave' ||
-    value === 'greeting' ||
-    value === 'goodbye' ||
-    value === 'point' ||
-    value === 'shrug' ||
-    value === 'clap' ||
-    value === 'bow'
+    value === 'wave' || value === 'greeting' || value === 'goodbye' ||
+    value === 'point' || value === 'shrug' || value === 'clap' || value === 'bow'
   );
 }
 
@@ -58,147 +51,178 @@ type ArmBoneName =
   | 'rightUpperArm'
   | 'rightLowerArm'
   | 'rightHand';
-
 type TorsoBoneName = 'spine' | 'neck' | 'head';
 type GestureBoneName = ArmBoneName | TorsoBoneName;
 
 const ARM_BONES: ArmBoneName[] = [
-  'leftUpperArm',
-  'leftLowerArm',
-  'leftHand',
-  'rightUpperArm',
-  'rightLowerArm',
-  'rightHand',
+  'leftUpperArm', 'leftLowerArm', 'leftHand',
+  'rightUpperArm', 'rightLowerArm', 'rightHand',
 ];
-
 const TORSO_BONES: TorsoBoneName[] = ['spine', 'neck', 'head'];
-
-function ss(a: number, b: number, x: number): number {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-}
-
-function seg(t: number, a: number, b: number, c: number, d: number): number {
-  return ss(a, b, t) * (1 - ss(c, d, t));
-}
 
 const _euler = new THREE.Euler();
 const _quat = new THREE.Quaternion();
 
-interface ControlledBone {
-  name: GestureBoneName;
-  node: THREE.Object3D;
-  base: THREE.Quaternion;
-  from: THREE.Euler;
-  current: THREE.Euler;
+interface Pose {
+  leftUpperArm?: [number, number, number];
+  leftLowerArm?: [number, number, number];
+  leftHand?: [number, number, number];
+  rightUpperArm?: [number, number, number];
+  rightLowerArm?: [number, number, number];
+  rightHand?: [number, number, number];
+  spine?: [number, number, number];
+  neck?: [number, number, number];
+  head?: [number, number, number];
+}
+
+interface Keyframe {
+  time: number;
+  pose: Pose;
 }
 
 interface GestureDef {
   duration: number;
   writesTorso: boolean;
-  eval: (t: number, out: Map<GestureBoneName, THREE.Euler>) => void;
+  keyframes: readonly Keyframe[];
+  required: readonly GestureBoneName[];
 }
 
-const _evalOut = new Map<GestureBoneName, THREE.Euler>();
-
-function put(out: Map<GestureBoneName, THREE.Euler>, name: GestureBoneName, x: number, y: number, z: number): void {
-  let e = out.get(name);
-  if (!e) {
-    e = new THREE.Euler();
-    out.set(name, e);
-  }
-  e.set(x, y, z);
+function pose(
+  rightUpperArm?: [number, number, number],
+  rightLowerArm?: [number, number, number],
+  rightHand?: [number, number, number],
+  leftUpperArm?: [number, number, number],
+  leftLowerArm?: [number, number, number],
+  leftHand?: [number, number, number],
+  spine?: [number, number, number],
+  neck?: [number, number, number],
+  head?: [number, number, number],
+): Pose {
+  return { rightUpperArm, rightLowerArm, rightHand, leftUpperArm, leftLowerArm, leftHand, spine, neck, head };
 }
 
-/** Right arm raises clearly above horizontal, then wrist/forearm waves. */
-function evalWave(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
-  const raise = seg(t, 0, 0.45, 2.9, 3.4);
-  const env = seg(t, 0.45, 0.75, 2.65, 3.0);
-  const wave = Math.sin((t - 0.65) * Math.PI * 2 * 1.45);
-  put(out, 'rightUpperArm', 0, 0, 1.55 * raise);
-  put(out, 'rightLowerArm', 0, -0.48 + wave * 0.55 * env, 0);
-  put(out, 'rightHand', 0, 0, 0.2 * wave * env);
+function key(time: number, p: Pose): Keyframe {
+  return { time, pose: p };
 }
 
-function evalGreeting(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
-  const raise = seg(t, 0, 0.4, 1.7, 2.15);
-  const env = seg(t, 0.4, 0.6, 1.45, 1.75);
-  const sway = Math.sin((t - 0.45) * Math.PI * 2 * 0.9);
-  put(out, 'rightUpperArm', 0, 0, 1.42 * raise);
-  put(out, 'rightLowerArm', 0, -0.42 + sway * 0.5 * env, 0);
-  put(out, 'rightHand', 0, 0, 0.13 * sway * env);
-}
+/*
+ * Values below are OFFSETS from the known-good relaxed pose, not absolute
+ * skeleton rotations. This is important because the relaxed pose already
+ * puts both upper arms in their natural hanging orientation.
+ */
 
-function evalGoodbye(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
-  const raise = seg(t, 0, 0.5, 3.2, 3.8);
-  const env = seg(t, 0.5, 0.8, 3.0, 3.35);
-  const wave = Math.sin((t - 0.65) * Math.PI * 2 * 1.35);
-  put(out, 'rightUpperArm', 0, 0, 1.55 * raise);
-  put(out, 'rightLowerArm', 0, -0.5 + wave * 0.52 * env, 0);
-  put(out, 'rightHand', 0, 0, 0.18 * wave * env);
-}
+const WAVE: readonly Keyframe[] = [
+  key(0.00, pose()),
+  key(0.38, pose([0, 0, 1.05], [0, -0.18, 0])),
+  key(0.72, pose([0, 0, 1.52], [0, -0.55, 0])),
+  key(1.05, pose([0, 0, 1.52], [0, -0.22, 0], [0, 0, 0.10])),
+  key(1.38, pose([0, 0, 1.52], [0, -0.68, 0], [0, 0, -0.16])),
+  key(1.70, pose([0, 0, 1.52], [0, -0.20, 0], [0, 0, 0.16])),
+  key(2.02, pose([0, 0, 1.52], [0, -0.68, 0], [0, 0, -0.16])),
+  key(2.34, pose([0, 0, 1.52], [0, -0.20, 0], [0, 0, 0.16])),
+  key(2.68, pose([0, 0, 1.40], [0, -0.38, 0], [0, 0, 0.08])),
+  key(3.02, pose([0, 0, 0.85], [0, -0.16, 0])),
+  key(3.40, pose()),
+];
 
-/** Point forward with the whole arm instead of twisting only the forearm. */
-function evalPoint(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
-  const e = seg(t, 0, 0.45, 1.65, 2.15);
-  put(out, 'rightUpperArm', -0.16 * e, -1.05 * e, 0.92 * e);
-  put(out, 'rightLowerArm', 0, -0.12 * e, 0);
-  put(out, 'rightHand', 0, -0.2 * e, 0);
-}
+const GREETING: readonly Keyframe[] = [
+  key(0.00, pose()),
+  key(0.35, pose([0, 0, 1.00], [0, -0.18, 0])),
+  key(0.65, pose([0, 0, 1.46], [0, -0.48, 0])),
+  key(0.95, pose([0, 0, 1.46], [0, -0.16, 0], [0, 0, 0.10])),
+  key(1.25, pose([0, 0, 1.46], [0, -0.54, 0], [0, 0, -0.10])),
+  key(1.55, pose([0, 0, 1.46], [0, -0.16, 0], [0, 0, 0.10])),
+  key(1.80, pose([0, 0, 1.20], [0, -0.30, 0])),
+  key(2.15, pose()),
+];
 
-function evalShrug(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
-  const e = seg(t, 0, 0.35, 1.2, 1.6);
-  put(out, 'leftUpperArm', 0, 0, -0.78 * e);
-  put(out, 'rightUpperArm', 0, 0, 0.78 * e);
-  put(out, 'leftLowerArm', 0, 0.25 * e, 0);
-  put(out, 'rightLowerArm', 0, -0.25 * e, 0);
-}
+const GOODBYE: readonly Keyframe[] = [
+  key(0.00, pose()),
+  key(0.45, pose([0, 0, 1.10], [0, -0.20, 0])),
+  key(0.78, pose([0, 0, 1.55], [0, -0.52, 0])),
+  key(1.05, pose([0, 0, 1.55], [0, -0.18, 0], [0, 0, 0.12])),
+  key(1.35, pose([0, 0, 1.55], [0, -0.70, 0], [0, 0, -0.18])),
+  key(1.68, pose([0, 0, 1.55], [0, -0.18, 0], [0, 0, 0.18])),
+  key(2.01, pose([0, 0, 1.55], [0, -0.70, 0], [0, 0, -0.18])),
+  key(2.34, pose([0, 0, 1.55], [0, -0.18, 0], [0, 0, 0.18])),
+  key(2.67, pose([0, 0, 1.55], [0, -0.70, 0], [0, 0, -0.18])),
+  key(3.00, pose([0, 0, 1.55], [0, -0.24, 0], [0, 0, 0.10])),
+  key(3.35, pose([0, 0, 1.08], [0, -0.16, 0])),
+  key(3.80, pose()),
+];
 
-/** Bring both forearms together in front of the chest for a readable clap. */
-function evalClap(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
-  const e = seg(t, 0, 0.55, 2.15, 2.7);
-  const pulse = 0.78 + 0.22 * Math.sin((t - 0.55) * Math.PI * 2 * 1.6);
-  const p = e * pulse;
-  put(out, 'leftUpperArm', 0, 0.42 * p, -0.98 * p);
-  put(out, 'rightUpperArm', 0, -0.42 * p, 0.98 * p);
-  put(out, 'leftLowerArm', 0, 1.0 * p, 0);
-  put(out, 'rightLowerArm', 0, -1.0 * p, 0);
-  put(out, 'leftHand', 0, 0, -0.18 * p);
-  put(out, 'rightHand', 0, 0, 0.18 * p);
-}
+const POINT: readonly Keyframe[] = [
+  key(0.00, pose()),
+  key(0.38, pose([0, -0.36, 0.42], [0, -0.05, 0])),
+  key(0.78, pose([0, -0.82, 0.78], [0, -0.10, 0], [0, -0.10, 0])),
+  key(1.20, pose([0, -1.00, 0.94], [0, -0.16, 0], [0, -0.18, 0])),
+  key(1.60, pose([0, -1.00, 0.94], [0, -0.16, 0], [0, -0.18, 0])),
+  key(1.90, pose([0, -0.62, 0.58], [0, -0.08, 0])),
+  key(2.15, pose()),
+];
 
-/** Forward bow: negative X pitches the torso toward Carlotta's +Z front. */
-function evalBow(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
-  const b = seg(t, 0, 0.65, 1.6, 2.3);
-  put(out, 'spine', -0.42 * b, 0, 0);
-  put(out, 'neck', -0.16 * b, 0, 0);
-  put(out, 'head', -0.12 * b, 0, 0);
-  put(out, 'leftUpperArm', -0.12 * b, 0, 0);
-  put(out, 'rightUpperArm', -0.12 * b, 0, 0);
-}
+const SHRUG: readonly Keyframe[] = [
+  key(0.00, pose()),
+  key(0.25, pose([0, 0, 0.28], undefined, undefined, [0, 0, -0.28])),
+  key(0.55, pose([0, 0, 0.72], [0, -0.12, 0], undefined, [0, 0, -0.72], [0, 0.12, 0])),
+  key(0.90, pose([0, 0, 0.72], [0, -0.18, 0], undefined, [0, 0, -0.72], [0, 0.18, 0])),
+  key(1.20, pose([0, 0, 0.48], [0, -0.08, 0], undefined, [0, 0, -0.48], [0, 0.08, 0])),
+  key(1.60, pose()),
+];
+
+const CLAP: readonly Keyframe[] = [
+  key(0.00, pose()),
+  key(0.30, pose([0, -0.22, 0.42], [0, -0.25, 0], undefined, [0, 0.22, -0.42], [0, 0.25, 0])),
+  key(0.70, pose([0, -0.48, 0.92], [0, -0.72, 0], [0, 0, 0.12], [0, 0.48, -0.92], [0, 0.72, 0], [0, 0, -0.12])),
+  key(1.05, pose([0, -0.42, 0.84], [0, -0.90, 0], [0, 0, 0.08], [0, 0.42, -0.84], [0, 0.90, 0], [0, 0, -0.08])),
+  key(1.32, pose([0, -0.50, 0.96], [0, -0.98, 0], [0, 0, 0.13], [0, 0.50, -0.96], [0, 0.98, 0], [0, 0, -0.13])),
+  key(1.62, pose([0, -0.42, 0.84], [0, -0.90, 0], [0, 0, 0.08], [0, 0.42, -0.84], [0, 0.90, 0], [0, 0, -0.08])),
+  key(1.90, pose([0, -0.50, 0.96], [0, -0.98, 0], [0, 0, 0.13], [0, 0.50, -0.96], [0, 0.98, 0], [0, 0, -0.13])),
+  key(2.20, pose([0, -0.30, 0.58], [0, -0.42, 0], undefined, [0, 0.30, -0.58], [0, 0.42, 0])),
+  key(2.70, pose()),
+];
+
+const BOW: readonly Keyframe[] = [
+  key(0.00, pose()),
+  key(0.35, pose(undefined, undefined, undefined, undefined, undefined, undefined, -0.10, -0.04, -0.03)),
+  key(0.72, pose([-0.06, 0, 0], undefined, undefined, [-0.06, 0, 0], undefined, undefined, -0.34, -0.12, -0.08)),
+  key(1.12, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
+  key(1.50, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
+  key(1.85, pose([-0.05, 0, 0], undefined, undefined, [-0.05, 0, 0], undefined, undefined, -0.28, -0.10, -0.06)),
+  key(2.30, pose()),
+];
+
+const REQUIRE_ARM_RIGHT: readonly GestureBoneName[] = ['rightUpperArm', 'rightLowerArm', 'rightHand'];
+const REQUIRE_SHRUG: readonly GestureBoneName[] = ['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm'];
+const REQUIRE_CLAP: readonly GestureBoneName[] = ['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm', 'leftHand', 'rightHand'];
+const REQUIRE_BOW: readonly GestureBoneName[] = ['spine', 'neck', 'head', 'leftUpperArm', 'rightUpperArm'];
 
 const GESTURES: Record<CarlottaGestureName, GestureDef> = {
-  wave: { duration: 3.4, writesTorso: false, eval: evalWave },
-  greeting: { duration: 2.15, writesTorso: false, eval: evalGreeting },
-  goodbye: { duration: 3.8, writesTorso: false, eval: evalGoodbye },
-  point: { duration: 2.15, writesTorso: false, eval: evalPoint },
-  shrug: { duration: 1.6, writesTorso: false, eval: evalShrug },
-  clap: { duration: 2.7, writesTorso: false, eval: evalClap },
-  bow: { duration: 2.3, writesTorso: true, eval: evalBow },
+  wave: { duration: 3.4, writesTorso: false, keyframes: WAVE, required: REQUIRE_ARM_RIGHT },
+  greeting: { duration: 2.15, writesTorso: false, keyframes: GREETING, required: REQUIRE_ARM_RIGHT },
+  goodbye: { duration: 3.8, writesTorso: false, keyframes: GOODBYE, required: REQUIRE_ARM_RIGHT },
+  point: { duration: 2.15, writesTorso: false, keyframes: POINT, required: REQUIRE_ARM_RIGHT },
+  shrug: { duration: 1.6, writesTorso: false, keyframes: SHRUG, required: REQUIRE_SHRUG },
+  clap: { duration: 2.7, writesTorso: false, keyframes: CLAP, required: REQUIRE_CLAP },
+  bow: { duration: 2.3, writesTorso: true, keyframes: BOW, required: REQUIRE_BOW },
 };
 
-const GESTURE_REQUIREMENTS: Record<CarlottaGestureName, GestureBoneName[]> = {
-  wave: ['rightUpperArm', 'rightLowerArm', 'rightHand'],
-  greeting: ['rightUpperArm', 'rightLowerArm', 'rightHand'],
-  goodbye: ['rightUpperArm', 'rightLowerArm', 'rightHand'],
-  point: ['rightUpperArm', 'rightLowerArm', 'rightHand'],
-  shrug: ['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm'],
-  clap: ['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm', 'leftHand', 'rightHand'],
-  bow: ['spine', 'neck', 'head', 'leftUpperArm', 'rightUpperArm'],
-};
+const START_BLEND = 0.16;
+const RECOVER_BLEND = 0.32;
 
-const START_BLEND = 0.25;
-const RECOVER_BLEND = 0.4;
+interface ControlledBone {
+  name: GestureBoneName;
+  node: THREE.Object3D;
+  base: THREE.Quaternion;
+  current: THREE.Vector3;
+  from: THREE.Vector3;
+  target: THREE.Vector3;
+}
+
+function smoothstep(x: number): number {
+  const t = Math.max(0, Math.min(1, x));
+  return t * t * (3 - 2 * t);
+}
 
 export class CarlottaGestureController {
   private bones = new Map<GestureBoneName, ControlledBone>();
@@ -209,7 +233,7 @@ export class CarlottaGestureController {
   private blendT = 1;
   private recoverT = 1;
   private completed: CarlottaGestureName | null = null;
-  private owned = new Set<GestureBoneName>();
+  private diagAcc = 0;
 
   public init(vrm: VRM): void {
     this.reset();
@@ -224,12 +248,13 @@ export class CarlottaGestureController {
         name,
         node,
         base: node.quaternion.clone(),
-        from: new THREE.Euler(),
-        current: new THREE.Euler(),
+        current: new THREE.Vector3(),
+        from: new THREE.Vector3(),
+        target: new THREE.Vector3(),
       });
     }
     this.initialized = this.bones.size > 0;
-    console.log(`[CarloGesture] controller initialized (${this.bones.size}/${wanted.length} bones)`);
+    console.log(`[CarloGesture] rebuilt controller initialized (${this.bones.size}/${wanted.length} bones)`);
     this.registerDevHooks();
   }
 
@@ -239,19 +264,17 @@ export class CarlottaGestureController {
   public getCompleted(): CarlottaGestureName | null { return this.completed; }
 
   public start(name: CarlottaGestureName): boolean {
-    if (!isValidCarlottaGestureName(name)) return false;
-    if (!this.initialized) return false;
-    const required = GESTURE_REQUIREMENTS[name];
-    for (const bone of required) {
-      if (!this.bones.has(bone)) return false;
-    }
+    if (!isValidCarlottaGestureName(name) || !this.initialized) return false;
+    const def = GESTURES[name];
+    for (const required of def.required) if (!this.bones.has(required)) return false;
+
+    /* Replace/crossfade from the exact currently displayed gesture pose. */
     for (const bone of this.bones.values()) bone.from.copy(bone.current);
     this.active = name;
     this.phase = 'active';
     this.time = 0;
     this.blendT = 0;
     this.completed = null;
-    const def = GESTURES[name];
     carlottaAnimationController.setBodyHold(def.writesTorso);
     if (isDevBuild()) console.info(`[CarloGesture] start=${name} phase=active`);
     return true;
@@ -265,11 +288,7 @@ export class CarlottaGestureController {
   }
 
   public reset(): void {
-    for (const bone of this.bones.values()) {
-      bone.node.quaternion.copy(bone.base);
-      bone.current.set(0, 0, 0);
-      bone.from.set(0, 0, 0);
-    }
+    for (const bone of this.bones.values()) bone.node.quaternion.copy(bone.base);
     this.bones.clear();
     this.initialized = false;
     this.active = null;
@@ -278,57 +297,75 @@ export class CarlottaGestureController {
     this.blendT = 1;
     this.recoverT = 1;
     this.completed = null;
-    this.owned.clear();
     carlottaAnimationController.setBodyHold(false);
   }
 
-  private diagAcc = 0;
+  private sample(def: GestureDef, t: number, out: Map<GestureBoneName, THREE.Vector3>): void {
+    const frames = def.keyframes;
+    let a = frames[0];
+    let b = frames[frames.length - 1];
+    for (let i = 1; i < frames.length; i += 1) {
+      if (t <= frames[i].time) {
+        b = frames[i];
+        a = frames[i - 1];
+        break;
+      }
+    }
+    const span = Math.max(0.0001, b.time - a.time);
+    const w = smoothstep((t - a.time) / span);
+
+    for (const bone of this.bones.values()) {
+      const av = this.poseValue(a.pose, bone.name);
+      const bv = this.poseValue(b.pose, bone.name);
+      if (!av && !bv) continue;
+      const ax = av ? av[0] : 0; const ay = av ? av[1] : 0; const az = av ? av[2] : 0;
+      const bx = bv ? bv[0] : 0; const by = bv ? bv[1] : 0; const bz = bv ? bv[2] : 0;
+      let v = out.get(bone.name);
+      if (!v) {
+        v = new THREE.Vector3();
+        out.set(bone.name, v);
+      }
+      v.set(ax + (bx - ax) * w, ay + (by - ay) * w, az + (bz - az) * w);
+    }
+  }
+
+  private poseValue(p: Pose, name: GestureBoneName): [number, number, number] | undefined {
+    return p[name as keyof Pose] as [number, number, number] | undefined;
+  }
+
+  private readonly sampled = new Map<GestureBoneName, THREE.Vector3>();
 
   public update(delta: number): void {
     if (isDevBuild()) {
       this.diagAcc += delta;
       if (this.diagAcc >= 2) {
         this.diagAcc = 0;
-        console.info(`[CarloGestDiag] init=${this.initialized} active=${this.active} phase=${this.phase} owned=${this.owned.size} bones=${this.bones.size}`);
+        console.info(`[CarloGestDiag] init=${this.initialized} active=${this.active} phase=${this.phase} bones=${this.bones.size}`);
       }
     }
     if (!this.initialized || !this.active) return;
-    const def = GESTURES[this.active];
     const dt = Math.max(0, Math.min(delta, CARLOTTA_IDLE_MAX_DELTA));
+    const def = GESTURES[this.active];
 
     if (this.phase === 'active') {
       this.time += dt;
-      if (this.blendT < 1) this.blendT = Math.min(1, this.blendT + dt / START_BLEND);
-      const w = ss(0, 1, this.blendT);
-      _evalOut.clear();
-      def.eval(Math.min(this.time, def.duration), _evalOut);
+      const blend = smoothstep(Math.min(1, this.blendT += dt / START_BLEND));
+      this.sampled.clear();
+      this.sample(def, Math.min(this.time, def.duration), this.sampled);
+
       for (const bone of this.bones.values()) {
-        const target = _evalOut.get(bone.name);
-        if (target) {
-          bone.current.set(
-            bone.from.x * (1 - w) + target.x * w,
-            bone.from.y * (1 - w) + target.y * w,
-            bone.from.z * (1 - w) + target.z * w,
-          );
-          this.owned.add(bone.name);
-        } else if (this.owned.has(bone.name)) {
-          bone.current.set(
-            bone.from.x * (1 - w),
-            bone.from.y * (1 - w),
-            bone.from.z * (1 - w),
-          );
-          if (Math.abs(bone.current.x) + Math.abs(bone.current.y) + Math.abs(bone.current.z) < 0.0005) {
-            bone.current.set(0, 0, 0);
-            this.owned.delete(bone.name);
-            continue;
-          }
-        } else {
+        const target = this.sampled.get(bone.name);
+        if (!target) {
+          if (bone.current.lengthSq() > 0) bone.current.multiplyScalar(1 - blend);
           continue;
         }
-        _euler.copy(bone.current);
+        bone.target.copy(target);
+        bone.current.lerpVectors(bone.from, bone.target, blend);
+        _euler.set(bone.current.x, bone.current.y, bone.current.z);
         _quat.setFromEuler(_euler);
         bone.node.quaternion.copy(bone.base).multiply(_quat);
       }
+
       if (this.time >= def.duration) {
         this.phase = 'recovering';
         this.recoverT = 0;
@@ -338,20 +375,19 @@ export class CarlottaGestureController {
     }
 
     this.recoverT = Math.min(1, this.recoverT + dt / RECOVER_BLEND);
-    const w = 1 - ss(0, 1, this.recoverT);
+    const w = 1 - smoothstep(this.recoverT);
     for (const bone of this.bones.values()) {
-      if (!this.owned.has(bone.name)) continue;
-      bone.current.set(bone.from.x * w, bone.from.y * w, bone.from.z * w);
-      _euler.copy(bone.current);
+      bone.current.copy(bone.from).multiplyScalar(w);
+      _euler.set(bone.current.x, bone.current.y, bone.current.z);
       _quat.setFromEuler(_euler);
       bone.node.quaternion.copy(bone.base).multiply(_quat);
     }
+
     if (this.recoverT >= 1) {
       const done = this.active;
       this.active = null;
       this.phase = 'idle';
       this.completed = done;
-      this.owned.clear();
       for (const bone of this.bones.values()) bone.current.set(0, 0, 0);
       carlottaAnimationController.setBodyHold(false);
     }
@@ -372,7 +408,7 @@ export class CarlottaGestureController {
       } => ({ active: this.active, phase: this.phase, completed: this.completed });
       w.__carlottaGestureCancel = (): void => this.cancel();
     } catch {
-      /* non-browser runtimes: hooks unavailable */
+      /* non-browser runtime */
     }
   }
 }
