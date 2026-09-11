@@ -199,8 +199,6 @@ function createLoader(): GLTFLoader {
   return loader;
 }
 
-extractVrm
-
 function extractVrm(gltf: GLTF, source: string): LoadedCarlottaModel {
   const vrm = gltf.userData.vrm as VRM | undefined;
   if (!vrm) {
