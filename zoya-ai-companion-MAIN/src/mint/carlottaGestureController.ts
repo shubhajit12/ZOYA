@@ -7,12 +7,10 @@ import { isDevBuild } from './runtimeEnv';
 /**
  * Carlotta gesture system — Phase 1 spatial pose solver.
  *
- * No guessed Euler gesture angles are used here. The loader owns the 180°
- * scene correction; this controller works from the loaded skeleton's actual
- * world-space rest pose.
- *
- * Bring-up is intentionally limited to POINT. The remaining gesture names
- * stay in the public API but are not synthesized until this solver is proven.
+ * Gestures are solved from the loaded skeleton's calibrated rest pose rather
+ * than guessed Euler angles. Point is the first diagnostic gesture; other
+ * gesture names remain in the API but are intentionally disabled until the
+ * spatial solver is proven.
  */
 
 export type CarlottaGestureName = 'wave' | 'greeting' | 'goodbye' | 'point' | 'shrug' | 'clap' | 'bow';
@@ -22,7 +20,16 @@ export function isValidCarlottaGestureName(value: unknown): value is CarlottaGes
 export type GesturePhase = 'idle' | 'active' | 'recovering';
 
 type BoneName = 'leftUpperArm' | 'leftLowerArm' | 'leftHand' | 'rightUpperArm' | 'rightLowerArm' | 'rightHand' | 'spine' | 'neck' | 'head';
-type BoneState = { name: BoneName; node: THREE.Object3D; base: THREE.Quaternion; current: THREE.Quaternion; from: THREE.Quaternion; target: THREE.Quaternion; restDirection: THREE.Vector3; };
+type BoneState = {
+  name: BoneName;
+  node: THREE.Object3D;
+  base: THREE.Quaternion;
+  restWorld: THREE.Quaternion;
+  current: THREE.Quaternion;
+  from: THREE.Quaternion;
+  target: THREE.Quaternion;
+  restDirection: THREE.Vector3;
+};
 
 const POINT_DURATION = 2.15;
 const START_BLEND = 0.18;
@@ -37,10 +44,8 @@ const _v5 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
 const _q0 = new THREE.Quaternion();
 const _q1 = new THREE.Quaternion();
-const _q2 = new THREE.Quaternion();
 const _parentWorld = new THREE.Quaternion();
 const _parentInv = new THREE.Quaternion();
-const _restWorld = new THREE.Quaternion();
 const _targetWorld = new THREE.Quaternion();
 const _targetLocal = new THREE.Quaternion();
 
@@ -64,8 +69,7 @@ function captureRestDirection(node: THREE.Object3D, child: THREE.Object3D | null
     const direction = _v1.sub(_v0);
     if (direction.lengthSq() > 1e-8) return direction.normalize().clone();
   }
-  // Terminal-hand fallback only. The arm solver never depends on an assumed
-  // anatomical axis.
+  // Terminal-hand fallback only. The arm solver never assumes an anatomical axis.
   return _v2.set(0, 0, 1).applyQuaternion(baseWorld).normalize().clone();
 }
 
@@ -94,13 +98,23 @@ export class CarlottaGestureController {
       const node = vrm.humanoid.getRawBoneNode(name);
       if (!node) { console.warn(`[CarloGesture] missing bone: ${name}`); continue; }
       node.updateMatrixWorld(true);
-      node.getWorldQuaternion(_restWorld);
+      const base = node.quaternion.clone();
+      const restWorld = node.getWorldQuaternion(new THREE.Quaternion());
       const child = childMap[name] ? vrm.humanoid.getRawBoneNode(childMap[name]!) ?? null : null;
-      const restDirection = captureRestDirection(node, child, _restWorld);
-      this.bones.set(name, { name, node, base: node.quaternion.clone(), current: new THREE.Quaternion(), from: new THREE.Quaternion(), target: new THREE.Quaternion(), restDirection });
+      const restDirection = captureRestDirection(node, child, restWorld);
+      this.bones.set(name, {
+        name,
+        node,
+        base,
+        restWorld,
+        current: base.clone(),
+        from: base.clone(),
+        target: base.clone(),
+        restDirection,
+      });
     }
 
-    this.initialized = this.bones.size > 0;
+    this.initialized = this.bones.has('rightUpperArm') && this.bones.has('rightLowerArm');
     this.active = null;
     this.phase = 'idle';
     this.completed = null;
@@ -120,7 +134,7 @@ export class CarlottaGestureController {
       finalWorldRight: [-1, 0, 0],
       shoulder: shoulder?.toArray(),
       elbow: elbow?.toArray(),
-      solver: 'rest-direction + 2-bone world-space target',
+      solver: 'fixed rest pose + sequential 2-bone world-space target',
     });
   }
 
@@ -130,12 +144,11 @@ export class CarlottaGestureController {
   public getCompleted(): CarlottaGestureName | null { return this.completed; }
 
   public start(name: CarlottaGestureName): boolean {
-    // Only Point is enabled while the new solver is being validated.
     if (!this.initialized || name !== 'point') return false;
-    if (!this.bones.has('rightUpperArm') || !this.bones.has('rightLowerArm')) return false;
 
     for (const bone of this.bones.values()) {
-      bone.from.copy(bone.current);
+      bone.from.copy(bone.node.quaternion);
+      bone.current.copy(bone.node.quaternion);
       bone.target.copy(bone.base);
     }
 
@@ -213,23 +226,32 @@ export class CarlottaGestureController {
     const height = Math.sqrt(Math.max(0, a * a - along * along));
     const desiredElbow = _v2.copy(shoulder).addScaledVector(toTarget, along).addScaledVector(planeUp, height);
 
-    this.setWorldDirectionTarget(upper, upper.restDirection, _v3.subVectors(desiredElbow, shoulder).normalize());
-    this.setWorldDirectionTarget(lower, lower.restDirection, _v5.subVectors(this.pointTarget, desiredElbow).normalize());
+    // Solve/apply the upper arm first so the lower arm's local target is
+    // calculated against the new parent world orientation, not the old one.
+    this.setWorldDirectionTarget(upper, desiredElbow.clone().sub(shoulder).normalize());
+    upper.node.quaternion.copy(upper.target);
+    upper.node.updateMatrixWorld(true);
 
-    // Terminal hand: align its measured rest direction with the pointing ray.
+    this.setWorldDirectionTarget(lower, this.pointTarget.clone().sub(desiredElbow).normalize());
+
     if (hand) {
-      hand.node.getWorldQuaternion(_restWorld);
+      hand.node.updateMatrixWorld(true);
+      hand.node.getWorldQuaternion(_q1);
       _q0.setFromUnitVectors(hand.restDirection, toTarget);
-      _targetWorld.copy(_q0).multiply(_restWorld);
+      _targetWorld.copy(_q0).multiply(hand.restWorld);
       worldToLocalTarget(hand.node, _targetWorld, _targetLocal);
       hand.target.copy(_targetLocal);
     }
+
+    // Restore the visible starting pose immediately; update() performs the
+    // smooth blend from the captured pose into the solved target.
+    upper.node.quaternion.copy(upper.from);
+    upper.node.updateMatrixWorld(true);
   }
 
-  private setWorldDirectionTarget(bone: BoneState, restDirection: THREE.Vector3, desiredDirection: THREE.Vector3): void {
-    bone.node.getWorldQuaternion(_restWorld);
-    _q0.setFromUnitVectors(restDirection, desiredDirection);
-    _targetWorld.copy(_q0).multiply(_restWorld);
+  private setWorldDirectionTarget(bone: BoneState, desiredDirection: THREE.Vector3): void {
+    _q0.setFromUnitVectors(bone.restDirection, desiredDirection);
+    _targetWorld.copy(_q0).multiply(bone.restWorld);
     worldToLocalTarget(bone.node, _targetWorld, _targetLocal);
     bone.target.copy(_targetLocal);
   }
