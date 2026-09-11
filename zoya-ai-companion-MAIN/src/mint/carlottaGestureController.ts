@@ -5,22 +5,22 @@ import { carlottaAnimationController } from './carlottaAnimationController';
 import { isDevBuild } from './runtimeEnv';
 
 /**
- * CarlottaGestureController — rebuilt procedural gesture layer.
+ * CarlottaGestureController — procedural gesture layer.
  *
- * Gestures are authored as readable pose keyframes instead of tangled sine
- * formulas. Each sequence has a preparation, a clear readable pose, motion
- * beats, and a deliberate return. Keyframes are additive offsets from the
- * known-good relaxed Carlotta pose captured at init.
+ * Important coordinate rule:
+ * Carlotta's VRM scene is rotated 180 degrees around Y by the loader so the
+ * visual front is the side facing ZOYA's camera. Humanoid bone rotations are
+ * still LOCAL rotations, so changing the scene/root rotation does not change
+ * the signs of the local bone axes. The final world direction is therefore:
  *
- * No animation clips, AnimationMixer, external animation files, skeleton
- * replacement, mesh edits, or per-frame allocations. The existing idle/body
- * controller remains the source of the base pose; this layer only adds its
- * gesture offsets. Bow is the only gesture allowed to own torso bones.
+ *   world = rootRotation * boneRest * gestureOffset
  *
- * The loader rotates Carlotta's root 180 degrees, making her visual front +Z.
- * Existing local-frame conventions are retained: right arm down is -Z, left
- * arm down is +Z, right forward elbow swing is -Y, left is +Y, and forward
- * bow pitch is +X for the current front-facing Carlotta rig.
+ * Gesture directions below are authored from that actual transform chain,
+ * rather than assuming the local axes themselves were rotated by the loader.
+ * This is the root cause of the old point/bow gestures going behind Carlotta.
+ *
+ * No AnimationMixer, clips, external files, skeleton replacement, mesh edits,
+ * or per-frame allocations are introduced.
  */
 
 export type CarlottaGestureName =
@@ -41,11 +41,11 @@ type ArmBoneName =
 type TorsoBoneName = 'spine' | 'neck' | 'head';
 type GestureBoneName = ArmBoneName | TorsoBoneName;
 
-const ARM_BONES: ArmBoneName[] = [
+const ARM_BONES: readonly ArmBoneName[] = [
   'leftUpperArm', 'leftLowerArm', 'leftHand',
   'rightUpperArm', 'rightLowerArm', 'rightHand',
 ];
-const TORSO_BONES: TorsoBoneName[] = ['spine', 'neck', 'head'];
+const TORSO_BONES: readonly TorsoBoneName[] = ['spine', 'neck', 'head'];
 
 const _euler = new THREE.Euler();
 const _quat = new THREE.Quaternion();
@@ -92,9 +92,8 @@ function key(time: number, p: Pose): Keyframe {
   return { time, pose: p };
 }
 
-/* Additive offsets from the relaxed pose. */
 const WAVE: readonly Keyframe[] = [
-  key(0.00, pose()),
+  key(0, pose()),
   key(0.38, pose([0, 0, 1.05], [0, -0.18, 0])),
   key(0.72, pose([0, 0, 1.52], [0, -0.55, 0])),
   key(1.05, pose([0, 0, 1.52], [0, -0.22, 0], [0, 0, 0.10])),
@@ -108,7 +107,7 @@ const WAVE: readonly Keyframe[] = [
 ];
 
 const GREETING: readonly Keyframe[] = [
-  key(0.00, pose()),
+  key(0, pose()),
   key(0.35, pose([0, 0, 1.00], [0, -0.18, 0])),
   key(0.65, pose([0, 0, 1.46], [0, -0.48, 0])),
   key(0.95, pose([0, 0, 1.46], [0, -0.16, 0], [0, 0, 0.10])),
@@ -119,7 +118,7 @@ const GREETING: readonly Keyframe[] = [
 ];
 
 const GOODBYE: readonly Keyframe[] = [
-  key(0.00, pose()),
+  key(0, pose()),
   key(0.45, pose([0, 0, 1.10], [0, -0.20, 0])),
   key(0.78, pose([0, 0, 1.55], [0, -0.52, 0])),
   key(1.05, pose([0, 0, 1.55], [0, -0.18, 0], [0, 0, 0.12])),
@@ -134,24 +133,25 @@ const GOODBYE: readonly Keyframe[] = [
 ];
 
 /*
- * Carlotta's front-facing rig uses the opposite upper-arm Y direction from
- * the old point pose. The old values drove the arm behind her after the root
- * was rotated to the confirmed front-facing orientation. Keep the gesture
- * shape the same, but mirror the directional Y components so the pointing
- * arm travels toward the viewer/front (+Z).
+ * Point is deliberately derived from the relaxed right-upper-arm pose.
+ * The relaxed pose is -68 degrees around local Z. With the loader's 180
+ * degree scene rotation, the local offset that points the upper-arm axis
+ * toward the camera/front is approximately X=-68 degrees, Y=+90 degrees.
+ * This replaces the old "flip the Y sign" guess, which only moved the arm
+ * partway and could still leave it aimed toward the rear.
  */
 const POINT: readonly Keyframe[] = [
-  key(0.00, pose()),
-  key(0.38, pose([0, 0.36, 0.42], [0, 0.05, 0])),
-  key(0.78, pose([0, 0.82, 0.78], [0, 0.10, 0], [0, 0.10, 0])),
-  key(1.20, pose([0, 1.00, 0.94], [0, 0.16, 0], [0, 0.18, 0])),
-  key(1.60, pose([0, 1.00, 0.94], [0, 0.16, 0], [0, 0.18, 0])),
-  key(1.90, pose([0, 0.62, 0.58], [0, 0.08, 0])),
+  key(0, pose()),
+  key(0.32, pose([-0.40, 0.55, 0.00], [0, 0.05, 0])),
+  key(0.68, pose([-0.86, 1.18, 0.00], [0, 0.10, 0])),
+  key(1.00, pose([-1.187, 1.571, 0.00], [0, 0.16, 0], [0, 0.10, 0])),
+  key(1.45, pose([-1.187, 1.571, 0.00], [0, 0.16, 0], [0, 0.10, 0])),
+  key(1.78, pose([-0.82, 1.10, 0.00], [0, 0.08, 0])),
   key(2.15, pose()),
 ];
 
 const SHRUG: readonly Keyframe[] = [
-  key(0.00, pose()),
+  key(0, pose()),
   key(0.25, pose([0, 0, 0.28], undefined, undefined, [0, 0, -0.28])),
   key(0.55, pose([0, 0, 0.72], [0, -0.12, 0], undefined, [0, 0, -0.72], [0, 0.12, 0])),
   key(0.90, pose([0, 0, 0.72], [0, -0.18, 0], undefined, [0, 0, -0.72], [0, 0.18, 0])),
@@ -160,7 +160,7 @@ const SHRUG: readonly Keyframe[] = [
 ];
 
 const CLAP: readonly Keyframe[] = [
-  key(0.00, pose()),
+  key(0, pose()),
   key(0.30, pose([0, -0.22, 0.42], [0, -0.25, 0], undefined, [0, 0.22, -0.42], [0, 0.25, 0])),
   key(0.70, pose([0, -0.48, 0.92], [0, -0.72, 0], [0, 0, 0.12], [0, 0.48, -0.92], [0, 0.72, 0], [0, 0, -0.12])),
   key(1.05, pose([0, -0.42, 0.84], [0, -0.90, 0], [0, 0, 0.08], [0, 0.42, -0.84], [0, 0.90, 0], [0, 0, -0.08])),
@@ -171,19 +171,14 @@ const CLAP: readonly Keyframe[] = [
   key(2.70, pose()),
 ];
 
-/*
- * The current front-facing Carlotta rig bends toward +X for a forward bow.
- * The previous -X pitch visibly folded her toward the rear after the root
- * orientation fix. Only the torso pitch direction is inverted here; timing,
- * depth, and arm preparation remain unchanged.
- */
+/* Root rotation maps local +Z to world -Z, so a forward bow uses -X. */
 const BOW: readonly Keyframe[] = [
-  key(0.00, pose()),
-  key(0.35, pose(undefined, undefined, undefined, undefined, undefined, undefined, 0.10, 0.04, 0.03)),
-  key(0.72, pose([0.06, 0, 0], undefined, undefined, [0.06, 0, 0], undefined, undefined, 0.34, 0.12, 0.08)),
-  key(1.12, pose([0.10, 0, 0], undefined, undefined, [0.10, 0, 0], undefined, undefined, 0.48, 0.16, 0.10)),
-  key(1.50, pose([0.10, 0, 0], undefined, undefined, [0.10, 0, 0], undefined, undefined, 0.48, 0.16, 0.10)),
-  key(1.85, pose([0.05, 0, 0], undefined, undefined, [0.05, 0, 0], undefined, undefined, 0.28, 0.10, 0.06)),
+  key(0, pose()),
+  key(0.35, pose(undefined, undefined, undefined, undefined, undefined, undefined, -0.10, -0.04, -0.03)),
+  key(0.72, pose([-0.06, 0, 0], undefined, undefined, [-0.06, 0, 0], undefined, undefined, -0.34, -0.12, -0.08)),
+  key(1.12, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
+  key(1.50, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
+  key(1.85, pose([-0.05, 0, 0], undefined, undefined, [-0.05, 0, 0], undefined, undefined, -0.28, -0.10, -0.06)),
   key(2.30, pose()),
 ];
 
@@ -211,7 +206,6 @@ interface ControlledBone {
   base: THREE.Quaternion;
   current: THREE.Vector3;
   from: THREE.Vector3;
-  target: THREE.Vector3;
   sampled: THREE.Vector3;
 }
 
@@ -233,11 +227,11 @@ export class CarlottaGestureController {
 
   public init(vrm: VRM): void {
     this.reset();
-    const wanted: GestureBoneName[] = [...ARM_BONES, ...TORSO_BONES];
+    const wanted: readonly GestureBoneName[] = [...ARM_BONES, ...TORSO_BONES];
     for (const name of wanted) {
       const node = vrm.humanoid.getRawBoneNode(name);
       if (!node) {
-        console.warn(`[CarloGesture] bone \"${name}\" missing — gestures needing it will refuse`);
+        console.warn(`[CarloGesture] bone "${name}" missing — gestures needing it will refuse`);
         continue;
       }
       this.bones.set(name, {
@@ -246,12 +240,11 @@ export class CarlottaGestureController {
         base: node.quaternion.clone(),
         current: new THREE.Vector3(),
         from: new THREE.Vector3(),
-        target: new THREE.Vector3(),
         sampled: new THREE.Vector3(),
       });
     }
     this.initialized = this.bones.size > 0;
-    console.log(`[CarloGesture] rebuilt controller initialized (${this.bones.size}/${wanted.length} bones)`);
+    console.log(`[CarloGesture] root-aware controller initialized (${this.bones.size}/${wanted.length} bones)`);
     this.registerDevHooks();
   }
 
@@ -263,13 +256,15 @@ export class CarlottaGestureController {
   public start(name: CarlottaGestureName): boolean {
     if (!isValidCarlottaGestureName(name) || !this.initialized) return false;
     const def = GESTURES[name];
-    for (const required of def.required) if (!this.bones.has(required)) return false;
-
+    for (const required of def.required) {
+      if (!this.bones.has(required)) return false;
+    }
     for (const bone of this.bones.values()) bone.from.copy(bone.current);
     this.active = name;
     this.phase = 'active';
     this.time = 0;
     this.blendT = 0;
+    this.recoverT = 1;
     this.completed = null;
     carlottaAnimationController.setBodyHold(def.writesTorso);
     if (isDevBuild()) console.info(`[CarloGesture] start=${name} phase=active`);
@@ -317,8 +312,12 @@ export class CarlottaGestureController {
     for (const bone of this.bones.values()) {
       const av = this.poseValue(a.pose, bone.name);
       const bv = this.poseValue(b.pose, bone.name);
-      const ax = av ? av[0] : 0; const ay = av ? av[1] : 0; const az = av ? av[2] : 0;
-      const bx = bv ? bv[0] : 0; const by = bv ? bv[1] : 0; const bz = bv ? bv[2] : 0;
+      const ax = av ? av[0] : 0;
+      const ay = av ? av[1] : 0;
+      const az = av ? av[2] : 0;
+      const bx = bv ? bv[0] : 0;
+      const by = bv ? bv[1] : 0;
+      const bz = bv ? bv[2] : 0;
       bone.sampled.set(
         ax + (bx - ax) * w,
         ay + (by - ay) * w,
@@ -336,6 +335,7 @@ export class CarlottaGestureController {
       }
     }
     if (!this.initialized || !this.active) return;
+
     const dt = Math.max(0, Math.min(delta, CARLOTTA_IDLE_MAX_DELTA));
     const def = GESTURES[this.active];
 
