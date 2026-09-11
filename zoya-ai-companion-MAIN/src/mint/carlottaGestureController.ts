@@ -7,20 +7,17 @@ import { isDevBuild } from './runtimeEnv';
 /**
  * CarlottaGestureController — procedural gesture layer.
  *
- * Important coordinate rule:
- * Carlotta's VRM scene is rotated 180 degrees around Y by the loader so the
- * visual front is the side facing ZOYA's camera. Humanoid bone rotations are
- * still LOCAL rotations, so changing the scene/root rotation does not change
- * the signs of the local bone axes. The final world direction is therefore:
+ * The VRM scene is rotated 180° around Y by the loader so Carlotta faces the
+ * existing ZOYA camera. Gesture offsets are LOCAL bone rotations. Therefore
+ * gesture code must not guess that a particular Euler sign means "forward".
  *
- *   world = rootRotation * boneRest * gestureOffset
+ * Point and bow use a small init-time calibration against the actual VRM
+ * hierarchy/rest pose. The calibration converts desired WORLD-space motion
+ * into each bone's LOCAL delta quaternion. This makes the gestures invariant
+ * to the model's root orientation and bone rest rotations.
  *
- * Gesture directions below are authored from that actual transform chain,
- * rather than assuming the local axes themselves were rotated by the loader.
- * This is the root cause of the old point/bow gestures going behind Carlotta.
- *
- * No AnimationMixer, clips, external files, skeleton replacement, mesh edits,
- * or per-frame allocations are introduced.
+ * No AnimationMixer, clips, external animation files, skeleton replacement,
+ * mesh edits, or per-frame allocations are introduced.
  */
 
 export type CarlottaGestureName =
@@ -49,6 +46,18 @@ const TORSO_BONES: readonly TorsoBoneName[] = ['spine', 'neck', 'head'];
 
 const _euler = new THREE.Euler();
 const _quat = new THREE.Quaternion();
+const _restWorld = new THREE.Quaternion();
+const _parentWorld = new THREE.Quaternion();
+const _parentInv = new THREE.Quaternion();
+const _targetWorld = new THREE.Quaternion();
+const _targetLocal = new THREE.Quaternion();
+const _deltaWorld = new THREE.Quaternion();
+const _direction = new THREE.Vector3();
+const _childPosition = new THREE.Vector3();
+const _bonePosition = new THREE.Vector3();
+const _forward = new THREE.Vector3(0, 0, 1);
+const _worldUp = new THREE.Vector3(0, 1, 0);
+const _worldX = new THREE.Vector3(1, 0, 0);
 
 interface Pose {
   leftUpperArm?: [number, number, number];
@@ -132,21 +141,13 @@ const GOODBYE: readonly Keyframe[] = [
   key(3.80, pose()),
 ];
 
-/*
- * Point is deliberately derived from the relaxed right-upper-arm pose.
- * The relaxed pose is -68 degrees around local Z. With the loader's 180
- * degree scene rotation, the local offset that points the upper-arm axis
- * toward the camera/front is approximately X=-68 degrees, Y=+90 degrees.
- * This replaces the old "flip the Y sign" guess, which only moved the arm
- * partway and could still leave it aimed toward the rear.
- */
 const POINT: readonly Keyframe[] = [
   key(0, pose()),
-  key(0.32, pose([-0.40, 0.55, 0.00], [0, 0.05, 0])),
-  key(0.68, pose([-0.86, 1.18, 0.00], [0, 0.10, 0])),
-  key(1.00, pose([-1.187, 1.571, 0.00], [0, 0.16, 0], [0, 0.10, 0])),
-  key(1.45, pose([-1.187, 1.571, 0.00], [0, 0.16, 0], [0, 0.10, 0])),
-  key(1.78, pose([-0.82, 1.10, 0.00], [0, 0.08, 0])),
+  key(0.32, pose()),
+  key(0.68, pose()),
+  key(1.00, pose()),
+  key(1.45, pose()),
+  key(1.78, pose()),
   key(2.15, pose()),
 ];
 
@@ -171,14 +172,13 @@ const CLAP: readonly Keyframe[] = [
   key(2.70, pose()),
 ];
 
-/* Root rotation maps local +Z to world -Z, so a forward bow uses -X. */
 const BOW: readonly Keyframe[] = [
   key(0, pose()),
-  key(0.35, pose(undefined, undefined, undefined, undefined, undefined, undefined, -0.10, -0.04, -0.03)),
-  key(0.72, pose([-0.06, 0, 0], undefined, undefined, [-0.06, 0, 0], undefined, undefined, -0.34, -0.12, -0.08)),
-  key(1.12, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
-  key(1.50, pose([-0.10, 0, 0], undefined, undefined, [-0.10, 0, 0], undefined, undefined, -0.48, -0.16, -0.10)),
-  key(1.85, pose([-0.05, 0, 0], undefined, undefined, [-0.05, 0, 0], undefined, undefined, -0.28, -0.10, -0.06)),
+  key(0.35, pose()),
+  key(0.72, pose()),
+  key(1.12, pose()),
+  key(1.50, pose()),
+  key(1.85, pose()),
   key(2.30, pose()),
 ];
 
@@ -224,6 +224,8 @@ export class CarlottaGestureController {
   private recoverT = 1;
   private completed: CarlottaGestureName | null = null;
   private diagAcc = 0;
+  private pointOffsets = new Map<GestureBoneName, THREE.Euler>();
+  private bowOffsets = new Map<GestureBoneName, THREE.Euler>();
 
   public init(vrm: VRM): void {
     this.reset();
@@ -244,7 +246,8 @@ export class CarlottaGestureController {
       });
     }
     this.initialized = this.bones.size > 0;
-    console.log(`[CarloGesture] root-aware controller initialized (${this.bones.size}/${wanted.length} bones)`);
+    this.calibrateWorldDirections();
+    console.log(`[CarloGesture] calibrated controller initialized (${this.bones.size}/${wanted.length} bones)`);
     this.registerDevHooks();
   }
 
@@ -252,6 +255,79 @@ export class CarlottaGestureController {
   public getActive(): CarlottaGestureName | null { return this.active; }
   public getPhase(): GesturePhase { return this.phase; }
   public getCompleted(): CarlottaGestureName | null { return this.completed; }
+
+  private calibrateWorldDirections(): void {
+    this.pointOffsets.clear();
+    this.bowOffsets.clear();
+
+    const pointNames: readonly GestureBoneName[] = ['rightUpperArm', 'rightLowerArm', 'rightHand'];
+    for (const name of pointNames) {
+      const bone = this.bones.get(name);
+      if (!bone) continue;
+      const childName = name === 'rightUpperArm' ? 'rightLowerArm' : name === 'rightLowerArm' ? 'rightHand' : null;
+      const child = childName ? this.bones.get(childName)?.node : null;
+      if (!child) continue;
+
+      bone.node.getWorldPosition(_bonePosition);
+      child.getWorldPosition(_childPosition);
+      _direction.subVectors(_childPosition, _bonePosition).normalize();
+      if (_direction.lengthSq() < 0.000001) continue;
+
+      bone.node.getWorldQuaternion(_restWorld);
+      _deltaWorld.setFromUnitVectors(_direction, _forward);
+      _targetWorld.copy(_deltaWorld).multiply(_restWorld);
+      this.worldTargetToLocalOffset(bone.node, bone.base, _targetWorld, this.pointOffsets, name);
+    }
+
+    const bowNames: readonly GestureBoneName[] = ['spine', 'neck', 'head'];
+    for (const name of bowNames) {
+      const bone = this.bones.get(name);
+      if (!bone) continue;
+      bone.node.getWorldQuaternion(_restWorld);
+      _quat.setFromAxisAngle(_worldX, 0.44);
+      _targetWorld.copy(_quat).multiply(_restWorld);
+      this.worldTargetToLocalOffset(bone.node, bone.base, _targetWorld, this.bowOffsets, name);
+    }
+
+    // Small forward-facing arm contribution during the bow. It is also
+    // computed from the actual rest pose rather than a guessed Euler sign.
+    for (const name of ['leftUpperArm', 'rightUpperArm'] as const) {
+      const bone = this.bones.get(name);
+      if (!bone) continue;
+      bone.node.getWorldQuaternion(_restWorld);
+      _quat.setFromAxisAngle(_worldX, 0.10);
+      _targetWorld.copy(_quat).multiply(_restWorld);
+      this.worldTargetToLocalOffset(bone.node, bone.base, _targetWorld, this.bowOffsets, name);
+    }
+
+    if (isDevBuild()) {
+      console.info('[CarloGestureCalibration] point offsets calibrated from bone-child world axes; bow calibrated around world X (+forward)');
+    }
+  }
+
+  private worldTargetToLocalOffset(
+    node: THREE.Object3D,
+    base: THREE.Quaternion,
+    targetWorld: THREE.Quaternion,
+    out: Map<GestureBoneName, THREE.Euler>,
+    name: GestureBoneName,
+  ): void {
+    if (node.parent) {
+      node.parent.getWorldQuaternion(_parentWorld);
+      _parentInv.copy(_parentWorld).invert();
+    } else {
+      _parentInv.identity();
+    }
+    _targetLocal.copy(_parentInv).multiply(targetWorld);
+    _quat.copy(base).invert().multiply(_targetLocal);
+    _euler.setFromQuaternion(_quat, 'XYZ');
+    let stored = out.get(name);
+    if (!stored) {
+      stored = new THREE.Euler();
+      out.set(name, stored);
+    }
+    stored.copy(_euler);
+  }
 
   public start(name: CarlottaGestureName): boolean {
     if (!isValidCarlottaGestureName(name) || !this.initialized) return false;
@@ -281,6 +357,8 @@ export class CarlottaGestureController {
   public reset(): void {
     for (const bone of this.bones.values()) bone.node.quaternion.copy(bone.base);
     this.bones.clear();
+    this.pointOffsets.clear();
+    this.bowOffsets.clear();
     this.initialized = false;
     this.active = null;
     this.phase = 'idle';
@@ -310,6 +388,24 @@ export class CarlottaGestureController {
     const w = smoothstep((t - a.time) / span);
 
     for (const bone of this.bones.values()) {
+      if (this.active === 'point') {
+        const offset = this.pointOffsets.get(bone.name);
+        if (offset) {
+          const e = this.pointEnvelope(t);
+          bone.sampled.set(offset.x * e, offset.y * e, offset.z * e);
+          continue;
+        }
+      }
+
+      if (this.active === 'bow') {
+        const offset = this.bowOffsets.get(bone.name);
+        if (offset) {
+          const e = this.bowEnvelope(t);
+          bone.sampled.set(offset.x * e, offset.y * e, offset.z * e);
+          continue;
+        }
+      }
+
       const av = this.poseValue(a.pose, bone.name);
       const bv = this.poseValue(b.pose, bone.name);
       const ax = av ? av[0] : 0;
@@ -324,6 +420,20 @@ export class CarlottaGestureController {
         az + (bz - az) * w,
       );
     }
+  }
+
+  private pointEnvelope(t: number): number {
+    if (t < 0.32) return smoothstep(t / 0.32);
+    if (t < 1.45) return 1;
+    if (t < 2.15) return 1 - smoothstep((t - 1.45) / 0.70);
+    return 0;
+  }
+
+  private bowEnvelope(t: number): number {
+    if (t < 0.72) return smoothstep(t / 0.72);
+    if (t < 1.50) return 1;
+    if (t < 2.30) return 1 - smoothstep((t - 1.50) / 0.80);
+    return 0;
   }
 
   public update(delta: number): void {
