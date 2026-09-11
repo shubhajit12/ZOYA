@@ -94,7 +94,6 @@ function put(out: Map<GestureBoneName, THREE.Euler>, name: GestureBoneName, x: n
   e.set(x, y, z);
 }
 
-/** Right arm is relaxed at roughly -68° Z; positive Z raises it. */
 function evalWave(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
   const raise = seg(t, 0, 0.45, 2.9, 3.4);
   const env = seg(t, 0.45, 0.7, 2.7, 3.0);
@@ -129,7 +128,6 @@ function evalPoint(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
   put(out, 'rightHand', 0, -0.14 * e, 0);
 }
 
-/** A real shrug needs a large, simultaneous shoulder/arm lift, not just a tiny twitch. */
 function evalShrug(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
   const e = seg(t, 0, 0.32, 1.15, 1.55);
   const settle = Math.sin(t * Math.PI * 2 * 1.2) * 0.04 * e;
@@ -139,14 +137,11 @@ function evalShrug(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
   put(out, 'rightLowerArm', 0, -0.20 * e, 0);
 }
 
-/** Clap now alternates between OPEN and CLOSED instead of staying almost fully closed. */
 function evalClap(t: number, out: Map<GestureBoneName, THREE.Euler>): void {
   const e = seg(t, 0, 0.35, 2.15, 2.6);
   const cycle = Math.sin((t - 0.35) * Math.PI * 2 * 1.75);
   const close = 0.5 + 0.5 * cycle;
   const open = 1 - close;
-  // Upper arms lift and move inward/outward. Forearms mirror that motion.
-  const upper = 0.28 + 0.72 * close;
   const fore = 0.22 + 0.78 * close;
   put(out, 'leftUpperArm', 0, (0.22 * open + 0.78 * close) * e, -0.18 * e);
   put(out, 'rightUpperArm', 0, -(0.22 * open + 0.78 * close) * e, 0.18 * e);
