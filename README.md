@@ -6,10 +6,10 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Code commit:** `64fc8d4e66691794b77b2de5ac37a38ef638c010`  
-**Exact commit message:** `Rebuild Carlotta gesture system around character-space pose solving`
+**Code commit:** `1cff773ff6e4bfc1f512efca3864adfc16d95751`  
+**Exact commit message:** `Polish Carlotta gesture rebuild recovery path`
 
-> **Important:** This is the current gesture-rebuild code commit. The README update itself is a separate commit and does not change the gesture solver.
+> **Important:** This is the latest code commit for the new Carlotta gesture rebuild. The README update itself is a separate commit and does not change the gesture solver.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
