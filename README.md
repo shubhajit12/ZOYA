@@ -8,11 +8,11 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `d293abfa5808e6ef9b985e33ff19069584f04021`  
-**Exact commit message:** `Fix companion transparent document surface`
+**Latest code commit:** `821434fb9e7ef1e32f6685081561f7862017eb8a`  
+**Exact commit message:** `Lower companion window to taskbar`
 
-**Previous code commit:** `0fe1d89886a74af6f2708bd41ea7f983750d57e4`  
-**Exact commit message:** `Remove unsupported Tauri redirection bitmap API`
+**Previous code commit:** `fae1efa0ff75d9293f687393f14f1f39b0f3885d`  
+**Exact commit message:** `Fix Carlotta companion sit pose and leg swing`
 
 **README update commit:** this README synchronization commit follows the code commit above.
 
@@ -28,9 +28,9 @@
 - **Companion startup:** waits for Carlotta VRM to finish loading, then explicitly starts the companion arrival motion
 - **Native minimize:** the Windows title-bar minimize action is routed into the same desktop-companion flow instead of simply minimizing the main ZOYA window
 - **Native minimize implementation:** uses Tauri's `Manager` trait in the setup polling scope so `get_webview_window` and related window APIs compile correctly
-- **Companion rendering:** the companion document explicitly forces the HTML/body surface transparent so the transparent Tauri/WebView2 window does not fall back to a solid page background behind Carlotta
-- **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned near the bottom-right desktop/taskbar area
+- **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned against the bottom edge of the desktop/taskbar area
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
+- **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
 - **Minimized chat widget:** remains separate; Carlotta is not embedded into it
 - **Camera / OrbitControls:** normal ZOYA camera behavior remains protected; companion uses separate framing and disables OrbitControls
@@ -43,7 +43,8 @@
 3. **CODE COMMIT** `f4e6222085087d66f1843761bb6568ba7eb85ef1` — `Route native window minimize into desktop companion`
 4. **CODE COMMIT** `c9490114d375f21315970eb11e13c4ed9463e019` — `Fix Tauri Manager trait import for native minimize`
 5. **CODE COMMIT** `0fe1d89886a74af6f2708bd41ea7f983750d57e4` — `Remove unsupported Tauri redirection bitmap API`
-6. **CODE COMMIT** `d293abfa5808e6ef9b985e33ff19069584f04021` — `Fix companion transparent document surface`
+6. **CODE COMMIT** `fae1efa0ff75d9293f687393f14f1f39b0f3885d` — `Fix Carlotta companion sit pose and leg swing`
+7. **CODE COMMIT** `821434fb9e7ef1e32f6685081561f7862017eb8a` — `Lower companion window to taskbar`
 
 ## ✨ What ZOYA Is
 
@@ -132,13 +133,15 @@ Tauri creates compact companion window
       ↓
 Transparent + always-on-top + skip-taskbar
       ↓
-Position near bottom-right/taskbar area
+Position against the bottom desktop/taskbar edge
       ↓
 Wait for Carlotta VRM
       ↓
 Carlotta jump
       ↓
 Carlotta sits
+      ↓
+Legs swing naturally while seated
       ↓
 Companion idle / talking / reacting
       ↓
