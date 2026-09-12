@@ -5,6 +5,8 @@ import { tauriBridge } from './native/tauriBridge';
 import { carlottaCompanionController } from './mint/carlottaCompanionController';
 import { carlottaGestureController } from './mint/carlottaGestureController';
 
+const COMPANION_MODEL_Y_OFFSET_PX = 90;
+
 /** Standalone UI used only by the real Tauri desktop companion window. */
 export default function CompanionApp() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -74,7 +76,11 @@ export default function CompanionApp() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
-      <div ref={hostRef} className="absolute inset-0 bg-transparent" />
+      <div
+        ref={hostRef}
+        className="absolute inset-0 bg-transparent"
+        style={{ transform: `translateY(${COMPANION_MODEL_Y_OFFSET_PX}px)` }}
+      />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
         <button
           type="button"
