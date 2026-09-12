@@ -1,39 +1,46 @@
 import * as THREE from 'three';
 import type { VRM } from '@pixiv/three-vrm';
 import { CARLOTTA_IDLE_MAX_DELTA } from './carlottaIdleController';
-import { carlottaAnimationController } from './carlottaAnimationController';
 import { isDevBuild } from './runtimeEnv';
 
 /**
- * Carlotta gesture system — Phase 1 spatial pose solver.
+ * Carlotta Gesture Controller — clean procedural gesture foundation.
  *
- * Gestures are solved from the loaded skeleton's calibrated rest pose rather
- * than guessed Euler angles. Point is the first diagnostic gesture; other
- * gesture names remain in the API but are intentionally disabled until the
- * spatial solver is proven.
+ * Design rules:
+ * - Gestures are authored as character-space spatial targets, never guessed
+ *   Euler angles.
+ * - The character frame is derived from the loaded VRM scene, including ZOYA's
+ *   existing 180° root correction. No orientation sign-flips are hard-coded.
+ * - The controller snapshots the actual pose when a gesture starts, solves a
+ *   target pose, blends into it, then returns to that exact starting pose.
+ * - Point is the only gesture enabled during solver validation. The remaining
+ *   names stay in the public API but are deliberately not synthesized yet.
+ * - The normal idle controller remains completely independent and untouched.
  */
 
 export type CarlottaGestureName = 'wave' | 'greeting' | 'goodbye' | 'point' | 'shrug' | 'clap' | 'bow';
+
 export function isValidCarlottaGestureName(value: unknown): value is CarlottaGestureName {
   return value === 'wave' || value === 'greeting' || value === 'goodbye' || value === 'point' || value === 'shrug' || value === 'clap' || value === 'bow';
 }
-export type GesturePhase = 'idle' | 'active' | 'recovering';
 
-type BoneName = 'leftUpperArm' | 'leftLowerArm' | 'leftHand' | 'rightUpperArm' | 'rightLowerArm' | 'rightHand' | 'spine' | 'neck' | 'head';
+export type GesturePhase = 'idle' | 'active' | 'recovering';
+type BoneName = 'rightUpperArm' | 'rightLowerArm' | 'rightHand';
+
 type BoneState = {
   name: BoneName;
   node: THREE.Object3D;
-  base: THREE.Quaternion;
+  restLocal: THREE.Quaternion;
   restWorld: THREE.Quaternion;
-  current: THREE.Quaternion;
+  restDirection: THREE.Vector3;
   from: THREE.Quaternion;
   target: THREE.Quaternion;
-  restDirection: THREE.Vector3;
 };
 
-const POINT_DURATION = 2.15;
-const START_BLEND = 0.18;
-const RECOVER_BLEND = 0.32;
+const POINT_DURATION = 1.65;
+const START_BLEND_SECONDS = 0.22;
+const RECOVER_BLEND_SECONDS = 0.28;
+const EPSILON = 1e-8;
 
 const _v0 = new THREE.Vector3();
 const _v1 = new THREE.Vector3();
@@ -42,35 +49,44 @@ const _v3 = new THREE.Vector3();
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
+const _v7 = new THREE.Vector3();
 const _q0 = new THREE.Quaternion();
 const _q1 = new THREE.Quaternion();
-const _parentWorld = new THREE.Quaternion();
-const _parentInv = new THREE.Quaternion();
-const _targetWorld = new THREE.Quaternion();
-const _targetLocal = new THREE.Quaternion();
+const _q2 = new THREE.Quaternion();
+const _q3 = new THREE.Quaternion();
 
-function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
-function smoothstep(v: number): number { const t = clamp01(v); return t * t * (3 - 2 * t); }
-
-function worldToLocalTarget(node: THREE.Object3D, targetWorld: THREE.Quaternion, out: THREE.Quaternion): void {
-  if (node.parent) {
-    node.parent.getWorldQuaternion(_parentWorld);
-    _parentInv.copy(_parentWorld).invert();
-    out.copy(_parentInv).multiply(targetWorld);
-  } else {
-    out.copy(targetWorld);
-  }
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
-function captureRestDirection(node: THREE.Object3D, child: THREE.Object3D | null, baseWorld: THREE.Quaternion): THREE.Vector3 {
+function smoothstep(value: number): number {
+  const t = clamp01(value);
+  return t * t * (3 - 2 * t);
+}
+
+/** Convert a desired world rotation to the bone's current local space. */
+function worldToLocal(node: THREE.Object3D, world: THREE.Quaternion, out: THREE.Quaternion): void {
+  if (!node.parent) {
+    out.copy(world);
+    return;
+  }
+  node.parent.getWorldQuaternion(_q0);
+  _q0.invert();
+  out.copy(_q0).multiply(world).normalize();
+}
+
+/**
+ * Measure the bone's real rest direction from its child. This avoids assuming
+ * that an arm points along +X, +Y, or +Z in the source skeleton.
+ */
+function captureRestDirection(node: THREE.Object3D, child: THREE.Object3D | null, restWorld: THREE.Quaternion): THREE.Vector3 {
   node.getWorldPosition(_v0);
   if (child) {
     child.getWorldPosition(_v1);
-    const direction = _v1.sub(_v0);
-    if (direction.lengthSq() > 1e-8) return direction.normalize().clone();
+    _v1.sub(_v0);
+    if (_v1.lengthSq() > EPSILON) return _v1.normalize().clone();
   }
-  // Terminal-hand fallback only. The arm solver never assumes an anatomical axis.
-  return _v2.set(0, 0, 1).applyQuaternion(baseWorld).normalize().clone();
+  return _v2.set(0, 1, 0).applyQuaternion(restWorld).normalize().clone();
 }
 
 export class CarlottaGestureController {
@@ -78,63 +94,75 @@ export class CarlottaGestureController {
   private initialized = false;
   private active: CarlottaGestureName | null = null;
   private phase: GesturePhase = 'idle';
-  private time = 0;
-  private blend = 1;
-  private recover = 1;
+  private elapsed = 0;
+  private recovery = 1;
   private completed: CarlottaGestureName | null = null;
-  private diagAcc = 0;
-  private pointTarget = new THREE.Vector3();
+  private diagnosticsElapsed = 0;
+
+  // Character-space basis transformed through the actual loaded VRM root.
+  // Local +Z is the authored forward direction; the loader's existing 180°
+  // Y correction therefore automatically becomes part of this frame.
+  private forward = new THREE.Vector3();
+  private right = new THREE.Vector3();
+  private up = new THREE.Vector3(0, 1, 0);
+
+  private target = new THREE.Vector3();
+  private shoulder = new THREE.Vector3();
+  private elbowTarget = new THREE.Vector3();
+  private pointDirection = new THREE.Vector3();
 
   public init(vrm: VRM): void {
     this.reset();
-    const names: readonly BoneName[] = ['leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'spine', 'neck', 'head'];
-    const childMap: Partial<Record<BoneName, BoneName>> = {
-      rightUpperArm: 'rightLowerArm', rightLowerArm: 'rightHand',
-      leftUpperArm: 'leftLowerArm', leftLowerArm: 'leftHand',
-      spine: 'neck', neck: 'head',
-    };
 
-    for (const name of names) {
-      const node = vrm.humanoid.getRawBoneNode(name);
-      if (!node) { console.warn(`[CarloGesture] missing bone: ${name}`); continue; }
-      node.updateMatrixWorld(true);
-      const base = node.quaternion.clone();
-      const restWorld = node.getWorldQuaternion(new THREE.Quaternion());
-      const child = childMap[name] ? vrm.humanoid.getRawBoneNode(childMap[name]!) ?? null : null;
-      const restDirection = captureRestDirection(node, child, restWorld);
-      this.bones.set(name, {
-        name,
-        node,
-        base,
-        restWorld,
-        current: base.clone(),
-        from: base.clone(),
-        target: base.clone(),
-        restDirection,
-      });
-    }
+    const upper = vrm.humanoid.getRawBoneNode('rightUpperArm');
+    const lower = vrm.humanoid.getRawBoneNode('rightLowerArm');
+    const hand = vrm.humanoid.getRawBoneNode('rightHand');
 
-    this.initialized = this.bones.has('rightUpperArm') && this.bones.has('rightLowerArm');
+    if (upper) this.captureBone('rightUpperArm', upper, lower);
+    else console.warn('[CarloGesture] missing bone: rightUpperArm');
+    if (lower) this.captureBone('rightLowerArm', lower, hand);
+    else console.warn('[CarloGesture] missing bone: rightLowerArm');
+    if (hand) this.captureBone('rightHand', hand, null);
+    else console.warn('[CarloGesture] missing bone: rightHand');
+
+    // Derive the character frame from the actual loaded scene. Do not use
+    // world +Z as "forward": Carlotta's loader intentionally rotates the VRM
+    // root 180° around Y so the existing camera sees her front.
+    vrm.scene.updateMatrixWorld(true);
+    vrm.scene.getWorldQuaternion(_q1);
+    this.forward.set(0, 0, 1).applyQuaternion(_q1).normalize();
+    this.right.set(1, 0, 0).applyQuaternion(_q1).normalize();
+    this.up.set(0, 1, 0).applyQuaternion(_q1).normalize();
+
+    this.initialized = !!upper && !!lower;
     this.active = null;
     this.phase = 'idle';
     this.completed = null;
-    this.logCalibration(vrm.scene);
-    this.registerDevHooks();
+    this.recovery = 1;
+
+    if (isDevBuild()) {
+      console.info('[CarloGestureCalibration] clean spatial gesture solver ready', {
+        forward: this.forward.toArray(),
+        right: this.right.toArray(),
+        up: this.up.toArray(),
+        bones: Array.from(this.bones.keys()),
+        enabled: ['point'],
+      });
+    }
   }
 
-  private logCalibration(root: THREE.Object3D): void {
-    if (!isDevBuild()) return;
-    root.updateMatrixWorld(true);
-    const upper = this.bones.get('rightUpperArm');
-    const lower = this.bones.get('rightLowerArm');
-    const shoulder = upper ? upper.node.getWorldPosition(_v0).clone() : null;
-    const elbow = lower ? lower.node.getWorldPosition(_v1).clone() : null;
-    console.info('[CarloGestureCalibration] spatial solver ready', {
-      finalWorldForward: [0, 0, 1],
-      finalWorldRight: [-1, 0, 0],
-      shoulder: shoulder?.toArray(),
-      elbow: elbow?.toArray(),
-      solver: 'fixed rest pose + sequential 2-bone world-space target',
+  private captureBone(name: BoneName, node: THREE.Object3D, child: THREE.Object3D | null): void {
+    node.updateMatrixWorld(true);
+    const restLocal = node.quaternion.clone();
+    const restWorld = node.getWorldQuaternion(new THREE.Quaternion());
+    this.bones.set(name, {
+      name,
+      node,
+      restLocal,
+      restWorld,
+      restDirection: captureRestDirection(node, child, restWorld),
+      from: restLocal.clone(),
+      target: restLocal.clone(),
     });
   }
 
@@ -143,176 +171,186 @@ export class CarlottaGestureController {
   public getPhase(): GesturePhase { return this.phase; }
   public getCompleted(): CarlottaGestureName | null { return this.completed; }
 
+  /** Start a supported gesture from the character's actual current pose. */
   public start(name: CarlottaGestureName): boolean {
-    if (!this.initialized || name !== 'point') return false;
+    if (!this.initialized || name !== 'point' || this.active) return false;
 
     for (const bone of this.bones.values()) {
       bone.from.copy(bone.node.quaternion);
-      bone.current.copy(bone.node.quaternion);
-      bone.target.copy(bone.base);
+      bone.target.copy(bone.node.quaternion);
     }
 
-    this.active = 'point';
+    this.active = name;
     this.phase = 'active';
-    this.time = 0;
-    this.blend = 0;
-    this.recover = 1;
+    this.elapsed = 0;
+    this.recovery = 1;
     this.completed = null;
-    carlottaAnimationController.setBodyHold(false);
-    this.computePointPose();
-    if (isDevBuild()) console.info('[CarloGesture] POINT spatial solver started');
+
+    this.solvePointTarget();
+    if (isDevBuild()) console.info('[CarloGesture] POINT started from current pose');
     return true;
   }
 
+  /** Cancel the active gesture and recover to its exact captured start pose. */
   public cancel(): void {
     if (!this.active || this.phase !== 'active') return;
-    for (const bone of this.bones.values()) bone.from.copy(bone.current);
     this.phase = 'recovering';
-    this.recover = 0;
-    carlottaAnimationController.setBodyHold(false);
+    this.recovery = 0;
   }
 
   public reset(): void {
-    for (const bone of this.bones.values()) bone.node.quaternion.copy(bone.base);
+    for (const bone of this.bones.values()) bone.node.quaternion.copy(bone.restLocal);
     this.bones.clear();
     this.initialized = false;
     this.active = null;
     this.phase = 'idle';
-    this.time = 0;
-    this.blend = 1;
-    this.recover = 1;
+    this.elapsed = 0;
+    this.recovery = 1;
     this.completed = null;
-    this.diagAcc = 0;
+    this.diagnosticsElapsed = 0;
+    this.target.set(0, 0, 0);
+    this.shoulder.set(0, 0, 0);
+    this.elbowTarget.set(0, 0, 0);
+    this.pointDirection.set(0, 0, 0);
   }
 
-  private computePointPose(): void {
+  /** Build the Point pose entirely from measured skeleton geometry. */
+  private solvePointTarget(): void {
     const upper = this.bones.get('rightUpperArm');
     const lower = this.bones.get('rightLowerArm');
+    const hand = this.bones.get('rightHand');
     if (!upper || !lower) return;
 
-    upper.node.getWorldPosition(_v2);
-    lower.node.getWorldPosition(_v3);
-    const shoulder = _v4.copy(_v2);
-    const elbow = _v5.copy(_v3);
-    const hand = this.bones.get('rightHand');
-    const wrist = hand ? hand.node.getWorldPosition(_v6) : elbow.clone().add(_v0.set(0, 0, 0.45));
+    upper.node.getWorldPosition(this.shoulder);
+    lower.node.getWorldPosition(_v0);
+    const wrist = hand ? hand.node.getWorldPosition(_v1) : _v0;
 
-    const upperLength = Math.max(shoulder.distanceTo(elbow), 0.05);
-    const lowerLength = Math.max(elbow.distanceTo(wrist), 0.05);
+    const upperLength = Math.max(this.shoulder.distanceTo(_v0), 0.05);
+    const lowerLength = Math.max(_v0.distanceTo(wrist), 0.05);
 
-    const forward = _v0.set(0, 0, 1);
-    const right = _v1.set(-1, 0, 0);
-    const up = _v2.set(0, 1, 0);
-    this.pointTarget.copy(shoulder)
-      .addScaledVector(forward, upperLength + lowerLength * 0.82)
-      .addScaledVector(right, upperLength * 0.16)
-      .addScaledVector(up, upperLength * 0.10);
+    // A target in front of the character, slightly outward and upward. The
+    // direction is character-space, so root orientation is handled once.
+    this.target.copy(this.shoulder)
+      .addScaledVector(this.forward, upperLength + lowerLength * 0.90)
+      .addScaledVector(this.right, upperLength * 0.18)
+      .addScaledVector(this.up, upperLength * 0.10);
 
-    const fromShoulder = _v3.subVectors(this.pointTarget, shoulder);
+    const fromShoulder = _v2.subVectors(this.target, this.shoulder);
     const distance = fromShoulder.length();
     const maxReach = Math.max(0.05, upperLength + lowerLength - 0.01);
-    if (distance > maxReach) this.pointTarget.copy(shoulder).addScaledVector(fromShoulder.normalize(), maxReach);
+    if (distance > maxReach) this.target.copy(this.shoulder).addScaledVector(fromShoulder.normalize(), maxReach);
 
-    const toTarget = _v4.subVectors(this.pointTarget, shoulder).normalize();
-    const planeSide = _v5.crossVectors(toTarget, up);
-    if (planeSide.lengthSq() < 1e-8) planeSide.set(1, 0, 0);
-    planeSide.normalize();
-    const planeUp = _v6.crossVectors(planeSide, toTarget).normalize();
+    this.pointDirection.subVectors(this.target, this.shoulder).normalize();
 
-    const d = Math.max(0.001, shoulder.distanceTo(this.pointTarget));
+    // Pick a stable bend plane. Prefer character-up, projected perpendicular
+    // to the pointing ray, which gives a natural elbow lift without assuming
+    // the source arm's local axes.
+    const planeUp = _v3.copy(this.up).addScaledVector(this.pointDirection, -this.up.dot(this.pointDirection));
+    if (planeUp.lengthSq() < EPSILON) planeUp.copy(this.right);
+    planeUp.normalize();
+
+    const distanceSafe = Math.max(distance, 0.001);
     const a = upperLength;
     const b = lowerLength;
-    const along = (a * a - b * b + d * d) / (2 * d);
+    const along = Math.max(-a, Math.min(a, (a * a - b * b + distanceSafe * distanceSafe) / (2 * distanceSafe)));
     const height = Math.sqrt(Math.max(0, a * a - along * along));
-    const desiredElbow = _v2.copy(shoulder).addScaledVector(toTarget, along).addScaledVector(planeUp, height);
+    this.elbowTarget.copy(this.shoulder)
+      .addScaledVector(this.pointDirection, along)
+      .addScaledVector(planeUp, height);
 
-    // Solve/apply the upper arm first so the lower arm's local target is
-    // calculated against the new parent world orientation, not the old one.
-    this.setWorldDirectionTarget(upper, desiredElbow.clone().sub(shoulder).normalize());
+    // Sequential solve: the lower arm's local target is computed only after
+    // the upper arm's new parent transform has been applied.
+    this.solveBoneToward(upper, this.elbowTarget, this.shoulder);
     upper.node.quaternion.copy(upper.target);
     upper.node.updateMatrixWorld(true);
 
-    this.setWorldDirectionTarget(lower, this.pointTarget.clone().sub(desiredElbow).normalize());
+    this.solveBoneToward(lower, this.target, this.elbowTarget);
 
     if (hand) {
-      hand.node.updateMatrixWorld(true);
-      hand.node.getWorldQuaternion(_q1);
-      _q0.setFromUnitVectors(hand.restDirection, toTarget);
-      _targetWorld.copy(_q0).multiply(hand.restWorld);
-      worldToLocalTarget(hand.node, _targetWorld, _targetLocal);
-      hand.target.copy(_targetLocal);
+      // Align the measured rest hand direction with the final pointing ray.
+      _q0.setFromUnitVectors(hand.restDirection, this.pointDirection);
+      _q2.copy(_q0).multiply(hand.restWorld).normalize();
+      worldToLocal(hand.node, _q2, hand.target);
     }
 
-    // Restore the visible starting pose immediately; update() performs the
-    // smooth blend from the captured pose into the solved target.
+    // Never leave the temporary upper-arm solve visible. update() owns all
+    // visible blending from the captured start pose.
     upper.node.quaternion.copy(upper.from);
     upper.node.updateMatrixWorld(true);
   }
 
-  private setWorldDirectionTarget(bone: BoneState, desiredDirection: THREE.Vector3): void {
-    _q0.setFromUnitVectors(bone.restDirection, desiredDirection);
-    _targetWorld.copy(_q0).multiply(bone.restWorld);
-    worldToLocalTarget(bone.node, _targetWorld, _targetLocal);
-    bone.target.copy(_targetLocal);
+  /** Solve a bone so its measured rest direction points from start to end. */
+  private solveBoneToward(bone: BoneState, end: THREE.Vector3, start: THREE.Vector3): void {
+    _v4.subVectors(end, start);
+    if (_v4.lengthSq() < EPSILON) {
+      bone.target.copy(bone.from);
+      return;
+    }
+    _v4.normalize();
+    _q0.setFromUnitVectors(bone.restDirection, _v4);
+    _q1.copy(_q0).multiply(bone.restWorld).normalize();
+    worldToLocal(bone.node, _q1, bone.target);
   }
 
   public update(delta: number): void {
-    if (!this.initialized) return;
+    if (!this.initialized || !this.active) return;
     const dt = Math.min(Math.max(delta, 0), CARLOTTA_IDLE_MAX_DELTA);
 
     if (this.phase === 'active' && this.active === 'point') {
-      this.time += dt;
-      this.blend = Math.min(1, this.blend + dt / START_BLEND);
-      const t = clamp01(this.time / POINT_DURATION);
-      const approach = smoothstep(Math.min(1, t / 0.30));
-      const release = t > 0.72 ? smoothstep((t - 0.72) / 0.28) : 0;
-      const weight = approach * (1 - release) * this.blend;
+      this.elapsed += dt;
+      const activation = smoothstep(this.elapsed / START_BLEND_SECONDS);
+      const progress = clamp01(this.elapsed / POINT_DURATION);
+      const weight = activation * (1 - smoothstep((progress - 0.72) / 0.28));
 
       for (const bone of this.bones.values()) {
-        _q0.copy(bone.from).slerp(bone.target, weight);
-        bone.current.copy(_q0);
-        bone.node.quaternion.copy(_q0);
+        _q3.copy(bone.from).slerp(bone.target, weight);
+        bone.node.quaternion.copy(_q3);
       }
 
-      if (this.time >= POINT_DURATION) {
+      if (this.elapsed >= POINT_DURATION) {
         this.phase = 'recovering';
-        this.recover = 0;
-        for (const bone of this.bones.values()) bone.from.copy(bone.current);
-        if (isDevBuild()) console.info('[CarloGesture] POINT active -> recovering');
+        this.recovery = 0;
+        for (const bone of this.bones.values()) bone.from.copy(bone.node.quaternion);
+        if (isDevBuild()) console.info('[CarloGesture] POINT -> recovering');
       }
     } else if (this.phase === 'recovering') {
-      this.recover = Math.min(1, this.recover + dt / RECOVER_BLEND);
-      const weight = smoothstep(this.recover);
+      this.recovery = Math.min(1, this.recovery + dt / RECOVER_BLEND_SECONDS);
+      const weight = smoothstep(this.recovery);
       for (const bone of this.bones.values()) {
-        _q0.copy(bone.from).slerp(bone.base, weight);
-        bone.current.copy(_q0);
-        bone.node.quaternion.copy(_q0);
+        _q3.copy(bone.from).slerp(bone.from === bone.target ? bone.restLocal : bone.from, 0);
+        _q3.copy(bone.from).slerp(bone.restLocal, weight);
+        bone.node.quaternion.copy(_q3);
       }
-      if (this.recover >= 1) {
-        for (const bone of this.bones.values()) {
-          bone.node.quaternion.copy(bone.base);
-          bone.current.copy(bone.base);
-          bone.from.copy(bone.base);
-          bone.target.copy(bone.base);
-        }
+
+      if (this.recovery >= 1) {
         const finished = this.active;
+        for (const bone of this.bones.values()) {
+          bone.node.quaternion.copy(bone.restLocal);
+          bone.from.copy(bone.restLocal);
+          bone.target.copy(bone.restLocal);
+        }
         this.active = null;
         this.phase = 'idle';
         this.completed = finished;
-        carlottaAnimationController.setBodyHold(false);
         if (isDevBuild()) console.info(`[CarloGesture] complete=${finished}`);
       }
     }
 
     if (isDevBuild()) {
-      this.diagAcc += dt;
-      if (this.diagAcc >= 1) {
-        this.diagAcc = 0;
-        console.info('[CarloGestureDiagnostics]', { active: this.active, phase: this.phase, pointTarget: this.pointTarget.toArray() });
+      this.diagnosticsElapsed += dt;
+      if (this.diagnosticsElapsed >= 1) {
+        this.diagnosticsElapsed = 0;
+        console.info('[CarloGestureDiagnostics]', {
+          active: this.active,
+          phase: this.phase,
+          target: this.target.toArray(),
+          pointDirection: this.pointDirection.toArray(),
+        });
       }
     }
   }
 
+  /** Kept as a compatibility no-op for existing renderer/dev wiring. */
   private registerDevHooks(): void {}
 }
 
