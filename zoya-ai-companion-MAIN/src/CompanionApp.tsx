@@ -96,7 +96,7 @@ export default function CompanionApp() {
           title="Return to ZOYA"
           className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg"
         >
-          <RotateCcw className="w-4 h-4" />
+          <X className="w-4 h-4" />
         </button>
       </div>
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-[10px] text-white/70 whitespace-nowrap">
