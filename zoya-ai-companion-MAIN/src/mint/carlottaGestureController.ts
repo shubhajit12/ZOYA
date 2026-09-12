@@ -13,8 +13,7 @@ import { isDevBuild } from './runtimeEnv';
  *   existing 180° root correction. No orientation sign-flips are hard-coded.
  * - The controller snapshots the actual pose when a gesture starts, solves a
  *   target pose, blends into it, then returns to that exact starting pose.
- * - Point is the only gesture enabled during solver validation. The remaining
- *   names stay in the public API but are deliberately not synthesized yet.
+ * - Point is the diagnostic spatial gesture while the solver is being proven.
  * - The normal idle controller remains completely independent and untouched.
  */
 
@@ -47,8 +46,6 @@ const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
 const _v4 = new THREE.Vector3();
-const _v5 = new THREE.Vector3();
-const _v6 = new THREE.Vector3();
 const _q0 = new THREE.Quaternion();
 const _q1 = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
@@ -63,7 +60,6 @@ function smoothstep(value: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** Convert a desired world rotation to the bone's current local space. */
 function worldToLocal(node: THREE.Object3D, world: THREE.Quaternion, out: THREE.Quaternion): void {
   if (!node.parent) {
     out.copy(world);
@@ -74,10 +70,6 @@ function worldToLocal(node: THREE.Object3D, world: THREE.Quaternion, out: THREE.
   out.copy(_q0).multiply(world).normalize();
 }
 
-/**
- * Measure the bone's real rest direction from its child. This avoids assuming
- * that an arm points along +X, +Y, or +Z in the source skeleton.
- */
 function captureRestDirection(node: THREE.Object3D, child: THREE.Object3D | null, restWorld: THREE.Quaternion): THREE.Vector3 {
   node.getWorldPosition(_v0);
   if (child) {
@@ -98,9 +90,6 @@ export class CarlottaGestureController {
   private completed: CarlottaGestureName | null = null;
   private diagnosticsElapsed = 0;
 
-  // Character-space basis transformed through the actual loaded VRM root.
-  // Local +Z is the authored forward direction; the loader's existing 180°
-  // Y correction therefore automatically becomes part of this frame.
   private forward = new THREE.Vector3();
   private right = new THREE.Vector3();
   private up = new THREE.Vector3(0, 1, 0);
@@ -124,9 +113,6 @@ export class CarlottaGestureController {
     if (hand) this.captureBone('rightHand', hand, null);
     else console.warn('[CarloGesture] missing bone: rightHand');
 
-    // Derive the character frame from the actual loaded scene. Do not use
-    // world +Z as "forward": Carlotta's loader intentionally rotates the VRM
-    // root 180° around Y so the existing camera sees her front.
     vrm.scene.updateMatrixWorld(true);
     vrm.scene.getWorldQuaternion(_q1);
     this.forward.set(0, 0, 1).applyQuaternion(_q1).normalize();
@@ -138,6 +124,8 @@ export class CarlottaGestureController {
     this.phase = 'idle';
     this.completed = null;
     this.recovery = 1;
+
+    this.registerDevHooks();
 
     if (isDevBuild()) {
       console.info('[CarloGestureCalibration] clean spatial gesture solver ready', {
@@ -170,7 +158,6 @@ export class CarlottaGestureController {
   public getPhase(): GesturePhase { return this.phase; }
   public getCompleted(): CarlottaGestureName | null { return this.completed; }
 
-  /** Start a supported gesture from Carlotta's actual current pose. */
   public start(name: CarlottaGestureName): boolean {
     if (!this.initialized || name !== 'point' || this.active) return false;
 
@@ -190,7 +177,6 @@ export class CarlottaGestureController {
     return true;
   }
 
-  /** Cancel the active gesture and recover to its captured start pose. */
   public cancel(): void {
     if (!this.active || this.phase !== 'active') return;
     this.phase = 'recovering';
@@ -213,7 +199,6 @@ export class CarlottaGestureController {
     this.pointDirection.set(0, 0, 0);
   }
 
-  /** Build the Point pose entirely from measured skeleton geometry. */
   private solvePointTarget(): void {
     const upper = this.bones.get('rightUpperArm');
     const lower = this.bones.get('rightLowerArm');
@@ -227,7 +212,6 @@ export class CarlottaGestureController {
     const upperLength = Math.max(this.shoulder.distanceTo(_v0), 0.05);
     const lowerLength = Math.max(_v0.distanceTo(wrist), 0.05);
 
-    // Target is defined relative to Carlotta's actual character frame.
     this.target.copy(this.shoulder)
       .addScaledVector(this.forward, upperLength + lowerLength * 0.90)
       .addScaledVector(this.right, upperLength * 0.18)
@@ -240,8 +224,6 @@ export class CarlottaGestureController {
 
     this.pointDirection.subVectors(this.target, this.shoulder).normalize();
 
-    // Stable elbow plane: character-up projected perpendicular to the target
-    // ray, with character-right as a degenerate fallback.
     const planeUp = _v3.copy(this.up).addScaledVector(this.pointDirection, -this.up.dot(this.pointDirection));
     if (planeUp.lengthSq() < EPSILON) planeUp.copy(this.right);
     planeUp.normalize();
@@ -255,8 +237,6 @@ export class CarlottaGestureController {
       .addScaledVector(this.pointDirection, along)
       .addScaledVector(planeUp, height);
 
-    // Solve upper first, apply it temporarily, then solve lower against the
-    // updated parent transform. This is the core of the new articulated solver.
     this.solveBoneToward(upper, this.elbowTarget, this.shoulder);
     upper.node.quaternion.copy(upper.target);
     upper.node.updateMatrixWorld(true);
@@ -269,12 +249,10 @@ export class CarlottaGestureController {
       worldToLocal(hand.node, _q2, hand.target);
     }
 
-    // Do not expose the temporary solve; update() owns the visible blend.
     upper.node.quaternion.copy(upper.from);
     upper.node.updateMatrixWorld(true);
   }
 
-  /** Solve a bone so its measured rest direction points from start to end. */
   private solveBoneToward(bone: BoneState, end: THREE.Vector3, start: THREE.Vector3): void {
     _v4.subVectors(end, start);
     if (_v4.lengthSq() < EPSILON) {
@@ -345,8 +323,23 @@ export class CarlottaGestureController {
     }
   }
 
-  /** Kept as a compatibility no-op for existing renderer/dev wiring. */
-  private registerDevHooks(): void {}
+  /** Restore the DEV hooks expected by the existing MintCanvas test controls. */
+  private registerDevHooks(): void {
+    if (!isDevBuild()) return;
+    try {
+      const w = window as unknown as Record<string, unknown>;
+      w.__carlottaGestureStart = (name: unknown): boolean =>
+        isValidCarlottaGestureName(name) && this.start(name);
+      w.__carlottaGestureInfo = (): { active: CarlottaGestureName | null; phase: GesturePhase; completed: CarlottaGestureName | null } => ({
+        active: this.active,
+        phase: this.phase,
+        completed: this.completed,
+      });
+      w.__carlottaGestureCancel = (): void => this.cancel();
+    } catch {
+      /* non-browser runtime */
+    }
+  }
 }
 
 export const carlottaGestureController = new CarlottaGestureController();
