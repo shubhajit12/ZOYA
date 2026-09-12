@@ -61,7 +61,7 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
         let scale = monitor.scale_factor();
         let width = 330.0_f64;
         let height = 390.0_f64;
-        let margin = 18.0_f64;
+        let margin = 2.0_f64;
         let x = (screen.width as f64 / scale - width - margin).max(0.0);
         let y = (screen.height as f64 / scale - height - margin).max(0.0);
 
