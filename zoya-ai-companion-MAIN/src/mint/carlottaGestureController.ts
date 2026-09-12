@@ -115,7 +115,13 @@ export class CarlottaGestureController {
 
     vrm.scene.updateMatrixWorld(true);
     vrm.scene.getWorldQuaternion(_q1);
-    this.forward.set(0, 0, 1).applyQuaternion(_q1).normalize();
+
+    // Carlotta's VRM source faces -Z. ZOYA already applies the 180° Y root
+    // correction when loading her, so the model's actual character-forward
+    // axis is the root-transformed -Z axis (not +Z). Using +Z here sends the
+    // IK target behind the character and produces the sideways/backward arm
+    // seen in the previous Point diagnostic.
+    this.forward.set(0, 0, -1).applyQuaternion(_q1).normalize();
     this.right.set(1, 0, 0).applyQuaternion(_q1).normalize();
     this.up.set(0, 1, 0).applyQuaternion(_q1).normalize();
 
