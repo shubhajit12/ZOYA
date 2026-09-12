@@ -49,7 +49,6 @@ const _v3 = new THREE.Vector3();
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
-const _v7 = new THREE.Vector3();
 const _q0 = new THREE.Quaternion();
 const _q1 = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
@@ -171,7 +170,7 @@ export class CarlottaGestureController {
   public getPhase(): GesturePhase { return this.phase; }
   public getCompleted(): CarlottaGestureName | null { return this.completed; }
 
-  /** Start a supported gesture from the character's actual current pose. */
+  /** Start a supported gesture from Carlotta's actual current pose. */
   public start(name: CarlottaGestureName): boolean {
     if (!this.initialized || name !== 'point' || this.active) return false;
 
@@ -191,7 +190,7 @@ export class CarlottaGestureController {
     return true;
   }
 
-  /** Cancel the active gesture and recover to its exact captured start pose. */
+  /** Cancel the active gesture and recover to its captured start pose. */
   public cancel(): void {
     if (!this.active || this.phase !== 'active') return;
     this.phase = 'recovering';
@@ -228,8 +227,7 @@ export class CarlottaGestureController {
     const upperLength = Math.max(this.shoulder.distanceTo(_v0), 0.05);
     const lowerLength = Math.max(_v0.distanceTo(wrist), 0.05);
 
-    // A target in front of the character, slightly outward and upward. The
-    // direction is character-space, so root orientation is handled once.
+    // Target is defined relative to Carlotta's actual character frame.
     this.target.copy(this.shoulder)
       .addScaledVector(this.forward, upperLength + lowerLength * 0.90)
       .addScaledVector(this.right, upperLength * 0.18)
@@ -242,9 +240,8 @@ export class CarlottaGestureController {
 
     this.pointDirection.subVectors(this.target, this.shoulder).normalize();
 
-    // Pick a stable bend plane. Prefer character-up, projected perpendicular
-    // to the pointing ray, which gives a natural elbow lift without assuming
-    // the source arm's local axes.
+    // Stable elbow plane: character-up projected perpendicular to the target
+    // ray, with character-right as a degenerate fallback.
     const planeUp = _v3.copy(this.up).addScaledVector(this.pointDirection, -this.up.dot(this.pointDirection));
     if (planeUp.lengthSq() < EPSILON) planeUp.copy(this.right);
     planeUp.normalize();
@@ -258,8 +255,8 @@ export class CarlottaGestureController {
       .addScaledVector(this.pointDirection, along)
       .addScaledVector(planeUp, height);
 
-    // Sequential solve: the lower arm's local target is computed only after
-    // the upper arm's new parent transform has been applied.
+    // Solve upper first, apply it temporarily, then solve lower against the
+    // updated parent transform. This is the core of the new articulated solver.
     this.solveBoneToward(upper, this.elbowTarget, this.shoulder);
     upper.node.quaternion.copy(upper.target);
     upper.node.updateMatrixWorld(true);
@@ -267,14 +264,12 @@ export class CarlottaGestureController {
     this.solveBoneToward(lower, this.target, this.elbowTarget);
 
     if (hand) {
-      // Align the measured rest hand direction with the final pointing ray.
       _q0.setFromUnitVectors(hand.restDirection, this.pointDirection);
       _q2.copy(_q0).multiply(hand.restWorld).normalize();
       worldToLocal(hand.node, _q2, hand.target);
     }
 
-    // Never leave the temporary upper-arm solve visible. update() owns all
-    // visible blending from the captured start pose.
+    // Do not expose the temporary solve; update() owns the visible blend.
     upper.node.quaternion.copy(upper.from);
     upper.node.updateMatrixWorld(true);
   }
@@ -300,7 +295,8 @@ export class CarlottaGestureController {
       this.elapsed += dt;
       const activation = smoothstep(this.elapsed / START_BLEND_SECONDS);
       const progress = clamp01(this.elapsed / POINT_DURATION);
-      const weight = activation * (1 - smoothstep((progress - 0.72) / 0.28));
+      const release = smoothstep((progress - 0.72) / 0.28);
+      const weight = activation * (1 - release);
 
       for (const bone of this.bones.values()) {
         _q3.copy(bone.from).slerp(bone.target, weight);
@@ -317,7 +313,6 @@ export class CarlottaGestureController {
       this.recovery = Math.min(1, this.recovery + dt / RECOVER_BLEND_SECONDS);
       const weight = smoothstep(this.recovery);
       for (const bone of this.bones.values()) {
-        _q3.copy(bone.from).slerp(bone.from === bone.target ? bone.restLocal : bone.from, 0);
         _q3.copy(bone.from).slerp(bone.restLocal, weight);
         bone.node.quaternion.copy(_q3);
       }
