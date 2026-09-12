@@ -45,6 +45,38 @@ pub fn run() {
         .expect("error while running zoya tauri application");
 }
 
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct WinRect {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+}
+
+#[cfg(target_os = "windows")]
+#[link(name = "user32")]
+extern "system" {
+    fn FindWindowW(class_name: *const u16, window_name: *const u16) -> *mut std::ffi::c_void;
+    fn GetWindowRect(hwnd: *mut std::ffi::c_void, rect: *mut WinRect) -> i32;
+}
+
+#[cfg(target_os = "windows")]
+fn get_windows_taskbar_rect() -> Option<WinRect> {
+    // Shell_TrayWnd is the real Windows taskbar window class. This follows the
+    // same native approach as FindWindowW("Shell_TrayWnd", NULL) rather than
+    // guessing the taskbar height or assuming it is at the bottom of the screen.
+    let class_name: Vec<u16> = "Shell_TrayWnd".encode_utf16().chain(std::iter::once(0)).collect();
+    let hwnd = unsafe { FindWindowW(class_name.as_ptr(), std::ptr::null()) };
+    if hwnd.is_null() {
+        return None;
+    }
+
+    let mut rect = WinRect { left: 0, top: 0, right: 0, bottom: 0 };
+    let ok = unsafe { GetWindowRect(hwnd, &mut rect) } != 0;
+    ok.then_some(rect)
+}
+
 #[tauri::command]
 fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
     use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
@@ -63,14 +95,52 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
         let height = 390.0_f64;
         let margin = 2.0_f64;
 
-        // Use the monitor's work area instead of the raw screen size. Windows'
-        // work area ends at the taskbar edge, so the companion window's bottom
-        // lands exactly on the visible desktop/taskbar boundary rather than
-        // being positioned behind the taskbar.
-        let x = ((work_area.position.x as f64 + work_area.size.width as f64) / scale - width - margin)
-            .max(0.0);
-        let y = ((work_area.position.y as f64 + work_area.size.height as f64) / scale - height - margin)
-            .max(0.0);
+        // Prefer the actual Windows taskbar rectangle. This handles a taskbar
+        // placed on the bottom, top, left, or right without hard-coded offsets.
+        // Fall back to Tauri's monitor work area if the Shell_TrayWnd lookup is
+        // unavailable (for example, a non-Windows build).
+        #[cfg(target_os = "windows")]
+        let position = if let Some(taskbar) = get_windows_taskbar_rect() {
+            let taskbar_left = taskbar.left as f64 / scale;
+            let taskbar_top = taskbar.top as f64 / scale;
+            let taskbar_right = taskbar.right as f64 / scale;
+            let taskbar_bottom = taskbar.bottom as f64 / scale;
+
+            let work_left = work_area.position.x as f64 / scale;
+            let work_top = work_area.position.y as f64 / scale;
+            let work_right = (work_area.position.x + work_area.size.width as i32) as f64 / scale;
+            let work_bottom = (work_area.position.y + work_area.size.height as i32) as f64 / scale;
+
+            let taskbar_is_horizontal = (taskbar_right - taskbar_left) > (taskbar_bottom - taskbar_top);
+            if taskbar_is_horizontal {
+                let x = (taskbar_right - width - margin).max(work_left);
+                let y = if taskbar_top > work_top {
+                    taskbar_top - height - margin
+                } else {
+                    taskbar_bottom + margin
+                };
+                (x.min(work_right - width), y.max(work_top))
+            } else {
+                let x = if taskbar_left > work_left {
+                    taskbar_left - width - margin
+                } else {
+                    taskbar_right + margin
+                };
+                let y = (taskbar_bottom - height - margin).max(work_top);
+                (x.max(work_left), y.min(work_bottom - height))
+            }
+        } else {
+            (
+                ((work_area.position.x as f64 + work_area.size.width as f64) / scale - width - margin).max(0.0),
+                ((work_area.position.y as f64 + work_area.size.height as f64) / scale - height - margin).max(0.0),
+            )
+        };
+
+        #[cfg(not(target_os = "windows"))]
+        let position = (
+            ((work_area.position.x as f64 + work_area.size.width as f64) / scale - width - margin).max(0.0),
+            ((work_area.position.y as f64 + work_area.size.height as f64) / scale - height - margin).max(0.0),
+        );
 
         let url = if cfg!(debug_assertions) {
             WebviewUrl::External("http://localhost:3000/?companion=1".parse().expect("valid ZOYA dev URL"))
@@ -81,7 +151,7 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
         WebviewWindowBuilder::new(&app, "companion", url)
             .title("ZOYA Companion")
             .inner_size(width, height)
-            .position(x, y)
+            .position(position.0, position.1)
             .resizable(false)
             .decorations(false)
             .transparent(true)
