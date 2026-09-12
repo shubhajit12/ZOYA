@@ -8,11 +8,11 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `02fef3d55b8f6621a16ea274e3a5d8236cca915d`  
-**Exact commit message:** `Use Windows taskbar coordinates for companion positioning`
+**Latest code commit:** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b`  
+**Exact commit message:** `Fix companion DPI-safe taskbar anchoring`
 
-**Previous code commit:** `adc5254d099497c6f9b84a072f2ca0d2c922a3ce`  
-**Exact commit message:** `Position companion against Windows taskbar work area`
+**Previous code commit:** `02fef3d55b8f6621a16ea274e3a5d8236cca915d`  
+**Exact commit message:** `Use Windows taskbar coordinates for companion positioning`
 
 **README update commit:** this README synchronization commit follows the code commit above.
 
@@ -28,7 +28,8 @@
 - **Companion startup:** waits for Carlotta VRM to finish loading, then explicitly starts the companion arrival motion
 - **Native minimize:** the Windows title-bar minimize action is routed into the same desktop-companion flow instead of simply minimizing the main ZOYA window
 - **Native minimize implementation:** uses Tauri's `Manager` trait in the setup polling scope so `get_webview_window` and related window APIs compile correctly
-- **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned using the actual Windows `Shell_TrayWnd` taskbar rectangle when available, with Tauri's monitor work area as a safe fallback
+- **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned against the monitor work area with the native Windows `Shell_TrayWnd` rectangle used to determine the taskbar edge; this avoids mixing DPI-virtualized taskbar coordinates directly with Tauri logical coordinates
+- **Companion placement diagnostics:** native logs record the logical target position, scale factor, actual physical outer position, actual physical inner size, and detected taskbar edge
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
@@ -47,6 +48,7 @@
 7. **CODE COMMIT** `821434fb9e7ef1e32f6685081561f7862017eb8a` — `Lower companion window to taskbar`
 8. **CODE COMMIT** `adc5254d099497c6f9b84a072f2ca0d2c922a3ce` — `Position companion against Windows taskbar work area`
 9. **CODE COMMIT** `02fef3d55b8f6621a16ea274e3a5d8236cca915d` — `Use Windows taskbar coordinates for companion positioning`
+10. **CODE COMMIT** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b` — `Fix companion DPI-safe taskbar anchoring`
 
 ## ✨ What ZOYA Is
 
@@ -136,6 +138,8 @@ Tauri creates compact companion window
 Transparent + always-on-top + skip-taskbar
       ↓
 Read Windows Shell_TrayWnd taskbar rectangle
+      ↓
+Use Tauri work area as the DPI-safe coordinate anchor
       ↓
 Place companion against the real taskbar boundary
       ↓
