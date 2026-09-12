@@ -8,11 +8,11 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `29a6d67fbdec12e88aa7d59e17828bedc5908e5e`  
-**Exact commit message:** `Lower Carlotta inside companion window`
+**Latest code commit:** `f16cb4added6a5c8d5fb04054c1a6eb456197405`  
+**Exact commit message:** `Tune Carlotta companion grounding from screenshot`
 
-**Previous code commit:** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b`  
-**Exact commit message:** `Fix companion DPI-safe taskbar anchoring`
+**Previous code commit:** `29a6d67fbdec12e88aa7d59e17828bedc5908e5e`  
+**Exact commit message:** `Lower Carlotta inside companion window`
 
 **README update commit:** this README synchronization commit follows the code commit above.
 
@@ -51,6 +51,7 @@
 9. **CODE COMMIT** `02fef3d55b8f6621a16ea274e3a5d8236cca915d` — `Use Windows taskbar coordinates for companion positioning`
 10. **CODE COMMIT** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b` — `Fix companion DPI-safe taskbar anchoring`
 11. **CODE COMMIT** `29a6d67fbdec12e88aa7d59e17828bedc5908e5e` — `Lower Carlotta inside companion window`
+12. **CODE COMMIT** `f16cb4added6a5c8d5fb04054c1a6eb456197405` — `Tune Carlotta companion grounding from screenshot`
 
 ## ✨ What ZOYA Is
 
