@@ -78,6 +78,10 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
             .resizable(false)
             .decorations(false)
             .transparent(true)
+            // Windows/WebView2 can paint a transparent secondary WebView white
+            // before its first composited frame. Disable the redirection bitmap
+            // so the desktop-pet window can stay transparent while WebGL renders.
+            .no_redirection_bitmap(true)
             .always_on_top(true)
             .skip_taskbar(true)
             .shadow(false)
