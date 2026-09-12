@@ -6,22 +6,23 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Code commit:** `1cff773ff6e4bfc1f512efca3864adfc16d95751`  
-**Exact commit message:** `Polish Carlotta gesture rebuild recovery path`
+**Latest code commit:** `c2c44fc8597ab07a40d33b2b1773c38bc435ac29`  
+**Exact commit message:** `Restore Carlotta gesture dev trigger hooks`
 
-> **Important:** This is the latest code commit for the new Carlotta gesture rebuild. The README update itself is a separate commit and does not change the gesture solver.
+> **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
 - **Animation architecture:** clean character-space spatial pose-solving system
 - **Currently validating:** **Point** gesture
-- **Other gestures:** intentionally disabled until Point is proven
+- **Gesture trigger path:** restored and connected to the rebuilt controller
+- **Other gestures:** foundation exists, but each gesture must be visually validated before being considered complete
 - **Bow:** next after Point validation
 - **Idle:** preserved and intentionally untouched
 - **Camera / OrbitControls:** untouched
 - **MToon / textures / performance settings:** untouched
 
-> ⚠️ For gesture testing, make sure you are running the code commit shown above. Do not accidentally test an older gesture commit.
+> ⚠️ For gesture testing, make sure you are running the exact latest code commit shown above. The README commit itself is not the code commit.
 
 ---
 
@@ -75,14 +76,13 @@ The new system:
 - Derives Carlotta's forward/right/up frame from the actual loaded VRM root
 - Automatically respects the existing 180° root orientation correction
 - Measures real bone directions from the loaded skeleton
-- Solves Point from spatial shoulder → elbow → hand targets
-- Applies the upper-arm solve before solving the lower arm
-- Starts from the actual pose instead of an identity quaternion
-- Blends into the gesture and recovers smoothly
+- Uses spatial pose targets rather than relying on guessed world-axis Euler signs
+- Starts from the actual live pose
+- Blends into gestures and recovers smoothly
 - Keeps the normal idle controller separate
-- Avoids hard-coded Euler sign corrections
+- Preserves deterministic gesture lifecycle and safe cancellation
 
-Only **Point** is enabled during validation. Once Point is physically correct, the same pose infrastructure will be expanded to the other gestures.
+The rebuilt gesture trigger path is now connected again. Point remains the first diagnostic gesture; the remaining gestures will be visually validated and polished one at a time on this foundation.
 
 ### Procedural Gesture Roadmap
 
@@ -214,9 +214,10 @@ The following are deliberately protected unless a task specifically targets them
 
 1. Make one targeted animation change.
 2. Commit it with a clear commit message.
-3. Run the exact code commit locally.
-4. Validate the visible result.
-5. Only then move to the next gesture.
+3. **Immediately update this README's Current Code Commit section with the exact new code commit SHA and exact commit message.**
+4. Run the exact code commit locally.
+5. Validate the visible result.
+6. Only then move to the next gesture.
 
 This makes it easy to identify exactly which commit introduced a change or regression.
 
