@@ -68,7 +68,6 @@ export class CarlottaGestureController {
     if (neck) this.captureBone('neck', neck, head); else console.warn('[CarloGesture] missing bone: neck');
     if (head) this.captureBone('head', head, null); else console.warn('[CarloGesture] missing bone: head');
     vrm.scene.updateMatrixWorld(true); vrm.scene.getWorldQuaternion(_q1);
-    // Carlotta's VRM source faces -Z; ZOYA already applies the existing 180° Y root correction.
     this.forward.set(0, 0, -1).applyQuaternion(_q1).normalize();
     this.right.set(1, 0, 0).applyQuaternion(_q1).normalize();
     this.up.set(0, 1, 0).applyQuaternion(_q1).normalize();
@@ -121,11 +120,10 @@ export class CarlottaGestureController {
     const along = Math.max(-a, Math.min(a, (a * a - b * b + distanceSafe * distanceSafe) / (2 * distanceSafe))); const height = Math.sqrt(Math.max(0, a * a - along * along));
     this.elbowTarget.copy(this.shoulder).addScaledVector(this.pointDirection, along).addScaledVector(planeUp, height);
     this.solveBoneToward(upper, this.elbowTarget, this.shoulder); upper.node.quaternion.copy(upper.target); upper.node.updateMatrixWorld(true); this.solveBoneToward(lower, this.target, this.elbowTarget);
-    if (hand) { _q0.setFromUnitVectors(hand.restDirection, this.pointDirection); _q2.copy(_q0).multiply(hand.restWorld).normalize(); worldToLocal(hand.node, _q2, hand.target); }
+    // Do not apply an independent wrist rotation. The previous hand-direction alignment used a fallback hand axis that does not describe Carlotta's palm/finger orientation, causing the wrist to fold backward.
     upper.node.quaternion.copy(upper.from); upper.node.updateMatrixWorld(true);
   }
 
-  /** Bow is a calibrated spatial torso bend; hips and legs are untouched. */
   private solveBowTarget(): void {
     const spine = this.bones.get('spine'), chest = this.bones.get('chest'), neck = this.bones.get('neck'), head = this.bones.get('head');
     if (!spine && !chest) return;
@@ -135,7 +133,6 @@ export class CarlottaGestureController {
     if (head) this.applyWorldAxisBend(head, -fullBend * 0.10);
   }
 
-  /** Wave raises the right arm spatially, then sweeps the wrist and hand smoothly side-to-side. */
   private solveWaveTarget(time: number): void {
     const upper = this.bones.get('rightUpperArm'), lower = this.bones.get('rightLowerArm'), hand = this.bones.get('rightHand');
     if (!upper || !lower) return;
@@ -145,11 +142,7 @@ export class CarlottaGestureController {
     const waveTime = Math.max(0, time - 0.38);
     const waveEnvelope = smoothstep(waveTime / 0.18) * (1 - smoothstep((time - (WAVE_DURATION - 0.40)) / 0.40));
     const sweep = Math.sin(waveTime * Math.PI * 3.0) * upperLength * 0.13 * waveEnvelope;
-    this.target.copy(this.shoulder)
-      .addScaledVector(this.right, upperLength * (1.00 + 0.04 * preparation))
-      .addScaledVector(this.up, upperLength * (1.12 + 0.04 * preparation))
-      .addScaledVector(this.forward, lowerLength * 0.18)
-      .addScaledVector(this.right, sweep);
+    this.target.copy(this.shoulder).addScaledVector(this.right, upperLength * (1.00 + 0.04 * preparation)).addScaledVector(this.up, upperLength * (1.12 + 0.04 * preparation)).addScaledVector(this.forward, lowerLength * 0.18).addScaledVector(this.right, sweep);
     const fromShoulder = _v2.subVectors(this.target, this.shoulder); const rawDistance = fromShoulder.length(); const maxReach = Math.max(0.05, upperLength + lowerLength - 0.01); const distance = Math.min(rawDistance, maxReach);
     if (rawDistance > distance) this.target.copy(this.shoulder).addScaledVector(fromShoulder.normalize(), distance);
     const direction = this.pointDirection.subVectors(this.target, this.shoulder).normalize();
@@ -158,10 +151,7 @@ export class CarlottaGestureController {
     const along = Math.max(-a, Math.min(a, (a * a - b * b + safeDistance * safeDistance) / (2 * safeDistance))); const height = Math.sqrt(Math.max(0, a * a - along * along));
     this.elbowTarget.copy(this.shoulder).addScaledVector(direction, along).addScaledVector(planeUp, height);
     this.solveBoneToward(upper, this.elbowTarget, this.shoulder); upper.node.quaternion.copy(upper.target); upper.node.updateMatrixWorld(true); this.solveBoneToward(lower, this.target, this.elbowTarget);
-    if (hand) {
-      const handWave = Math.sin(waveTime * Math.PI * 3.0 + Math.PI * 0.20) * 0.55 * waveEnvelope;
-      _q0.setFromAxisAngle(this.forward, handWave); _q2.copy(_q0).multiply(hand.restWorld).normalize(); worldToLocal(hand.node, _q2, hand.target);
-    }
+    // Keep the hand at its calibrated rest orientation; the lower arm carries the wrist naturally through the articulated chain.
     upper.node.quaternion.copy(upper.from); upper.node.updateMatrixWorld(true);
   }
 
