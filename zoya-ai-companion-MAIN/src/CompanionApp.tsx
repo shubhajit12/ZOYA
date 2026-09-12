@@ -13,6 +13,16 @@ export default function CompanionApp() {
   const [phase, setPhase] = useState('jumping');
 
   useEffect(() => {
+    // A transparent Tauri/WebView2 companion must also have a transparent
+    // document surface. Tailwind's normal page surface can otherwise leave
+    // the native transparent window looking like a solid white rectangle.
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlBackground = html.style.background;
+    const previousBodyBackground = body.style.background;
+    html.style.background = 'transparent';
+    body.style.background = 'transparent';
+
     if (!hostRef.current) return;
     const renderer = new MintRenderer();
     rendererRef.current = renderer;
@@ -52,6 +62,8 @@ export default function CompanionApp() {
       window.removeEventListener('resize', onResize);
       renderer.unmount();
       rendererRef.current = null;
+      html.style.background = previousHtmlBackground;
+      body.style.background = previousBodyBackground;
     };
   }, []);
 
@@ -62,7 +74,7 @@ export default function CompanionApp() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
-      <div ref={hostRef} className="absolute inset-0" />
+      <div ref={hostRef} className="absolute inset-0 bg-transparent" />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
         <button
           type="button"
