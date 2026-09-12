@@ -8,8 +8,8 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `0e04f48069ac94625c248e25b06acb4bdeadb8bc`  
-**Exact commit message:** `Fix Carlotta Wave arm and hand blend weights`
+**Latest code commit:** `aa13de718c69c7ddd5063f1e5f955be8230ba784`  
+**Exact commit message:** `Fix Carlotta Wave shoulder ownership root cause`
 
 > **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
@@ -18,14 +18,15 @@
 - **Animation architecture:** clean character-space spatial pose-solving system
 - **Point:** **working correctly — visually validated by user**
 - **Bow:** **working correctly — visually validated**
-- **Wave:** **blend-weight decoupling fix applied; awaiting visual re-validation**
-- **Wave diagnosis:** the active-phase release weight was being applied identically to the upper arm, lower arm, and hand; the new implementation keeps the raised arm bones pinned after activation while the hand uses its own wave envelope
+- **Wave:** **shoulder-ownership root-cause fix applied; awaiting visual re-validation**
+- **Wave root cause:** the idle/behavior animation layer writes `rightShoulder` every frame, and the gesture controller previously did not own that parent bone. Because the shoulder is above `rightUpperArm` in the hierarchy, its idle rotation could move the entire raised arm even when the upper/lower arm targets were pinned.
+- **Wave fix:** the gesture controller now temporarily owns `rightShoulder` during Wave, pins it through the active phase, and returns it during Wave recovery. Point and Bow explicitly skip that shoulder so their validated behavior is untouched.
 - **Wave hand axis:** derived from Carlotta's character-up direction projected perpendicular to the forearm, then converted into the hand's local frame so the motion behaves like a visible palm swing rather than forearm-axis twisting
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
 - **Hand/wrist handling:** Point no longer uses the problematic fallback hand-axis alignment
 - **Other gestures:** not yet implemented/validated on the rebuilt system
-- **Idle:** preserved and intentionally untouched
+- **Idle:** preserved; Wave now deliberately takes temporary ownership of the right shoulder while active
 - **Camera / OrbitControls:** untouched
 - **MToon / textures / performance settings:** untouched
 
@@ -89,13 +90,13 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-The rebuilt trigger path is connected. Point and Bow established the spatial foundation. Wave now caches the raised arm/forearm pose once, keeps those arm bones pinned for the active phase, and confines the oscillation to a hand-local palm-swing axis with its own blend envelope.
+The rebuilt trigger path is connected. Point and Bow established the spatial foundation. Wave now takes temporary ownership of the shoulder-parented arm chain, keeps the shoulder/upper-arm/lower-arm pose fixed for the active phase, and confines the oscillation to a hand-local palm-swing axis with its own blend envelope.
 
 ### Procedural Gesture Roadmap
 
 1. ✅ **Point** — working correctly and visually validated by user
 2. ✅ **Bow** — working correctly and visually validated
-3. 🧪 **Wave** — arm/hand blend-weight decoupling fix applied; awaiting visual re-validation
+3. 🧪 **Wave** — shoulder ownership root-cause fix applied; awaiting visual re-validation
 4. **Greeting**
 5. **Goodbye**
 6. **Shrug**
