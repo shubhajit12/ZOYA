@@ -155,8 +155,13 @@ export class CarlottaGestureController {
     upper.node.quaternion.copy(upper.from); upper.node.updateMatrixWorld(true);
     if (hand) {
       this.waveHandBase.copy(hand.from);
+      // A wave is a palm swing, not forearm twist. Project character-up onto the
+      // plane perpendicular to the forearm, then express that world axis in hand-local space.
+      const waveWorldAxis = _v4.copy(this.up).addScaledVector(lower.restDirection, -this.up.dot(lower.restDirection));
+      if (waveWorldAxis.lengthSq() < EPSILON) waveWorldAxis.copy(this.right).addScaledVector(lower.restDirection, -this.right.dot(lower.restDirection));
+      waveWorldAxis.normalize();
       _q0.copy(hand.restWorld).invert();
-      this.waveHandAxis.copy(lower.restDirection).applyQuaternion(_q0).normalize();
+      this.waveHandAxis.copy(waveWorldAxis).applyQuaternion(_q0).normalize();
       if (this.waveHandAxis.lengthSq() < EPSILON) this.waveHandAxis.set(1, 0, 0);
       hand.target.copy(this.waveHandBase);
     }
