@@ -9,7 +9,7 @@
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
 **Latest code commit:** `e458eb5f436395e91ebed88759e19f41d36eb63c`  
-**Exact commit message:** `Fix Carlotta Wave to freeze arm and isolate hand motion`
+**Exact commit message:** `Fix Carlotta Wave to use palm-swing axis`
 
 > **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
