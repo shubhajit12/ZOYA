@@ -8,19 +8,20 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `158b0ce77ee2eb4911239fa425652beaf11a08aa`  
-**Exact commit message:** `Implement Carlotta Wave spatial arm gesture`
+**Latest code commit:** `5c2e17b909732ce53fae6bffed46a948f26d7b2e`  
+**Exact commit message:** `Fix Carlotta wrist orientation in Point and Wave`
 
 > **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
 - **Animation architecture:** clean character-space spatial pose-solving system
-- **Point:** **working correctly — validated**
+- **Point:** **wrist-orientation fix applied; awaiting visual re-validation**
 - **Bow:** **working correctly — visually validated**
-- **Wave:** **implemented, awaiting live visual validation**
+- **Wave:** **wrist-orientation fix applied; awaiting visual re-validation**
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
+- **Hand/wrist handling:** independent wrist rotations were removed from Point and Wave because the previous fallback hand-axis alignment could fold Carlotta's wrist backward
 - **Other gestures:** not yet implemented/validated on the rebuilt system
 - **Idle:** preserved and intentionally untouched
 - **Camera / OrbitControls:** untouched
@@ -86,13 +87,13 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-The rebuilt trigger path is connected. Point is the validated spatial foundation. Bow is now visually validated using the same character-space convention. Wave is the next gesture awaiting live validation.
+The rebuilt trigger path is connected. Point and Bow established the spatial foundation. The latest fix removes the problematic independent wrist rotations from Point and Wave so the articulated lower arm naturally carries the wrist.
 
 ### Procedural Gesture Roadmap
 
-1. ✅ **Point** — working correctly and visually validated
+1. 🧪 **Point** — wrist-orientation fix applied; awaiting visual re-validation
 2. ✅ **Bow** — working correctly and visually validated
-3. 🧪 **Wave** — implemented; awaiting visual validation
+3. 🧪 **Wave** — wrist-orientation fix applied; awaiting visual re-validation
 4. **Greeting**
 5. **Goodbye**
 6. **Shrug**
@@ -156,7 +157,8 @@ Performance work is kept separate from the animation architecture so gesture exp
 
 ### Near term
 
-- Validate spatial **Wave** visually
+- Re-validate corrected **Point** wrist/hand orientation
+- Re-validate corrected **Wave** wrist/hand orientation
 - Implement/rebuild **Greeting**
 - Implement/rebuild **Goodbye**
 - Implement/rebuild **Shrug**
