@@ -4,10 +4,12 @@
 
 > A desktop AI companion with a persistent 3D character, conversational intelligence, expressive behavior, voice, lip-sync, and a growing procedural animation system.
 
-## 📌 CURRENT COMMIT — CHECK THIS FIRST
+## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Commit:** `cc86b1437b6dc6727c19fffb4655068da0e840dd`  
-**Commit message:** `Fix Carlotta spatial gesture pose solving`
+**Code commit:** `cc86b1437b6dc6727c19fffb4655068da0e840dd`  
+**Exact commit message:** `Fix Carlotta point solver activation and rest-pose blending`
+
+> **Important:** This is the actual Git commit message on GitHub. The README update itself is a separate commit and does not change the gesture code.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
@@ -18,7 +20,7 @@
 - **Camera / OrbitControls:** untouched
 - **MToon / textures / performance settings:** untouched
 
-> ⚠️ For testing, make sure you are running the commit shown above. Do not accidentally test an older gesture commit.
+> ⚠️ For gesture testing, make sure you are running the code commit shown above. Do not accidentally test an older gesture commit.
 
 ---
 
@@ -178,7 +180,7 @@ The following are deliberately protected unless a task specifically targets them
 
 1. Make one targeted animation change.
 2. Commit it with a clear commit message.
-3. Run the exact commit locally.
+3. Run the exact code commit locally.
 4. Validate the visible result.
 5. Only then move to the next gesture.
 
@@ -192,13 +194,14 @@ ZOYA
 ├── Groq conversation layer
 ├── Express API
 ├── Tauri desktop shell
-└── Carlotta VRM
-    ├── Idle controller
-    ├── Animation controller
-    ├── Gesture controller
-    ├── Spatial pose solver
-    ├── Expression controller
-    └── Lip-sync controller
+└── ZOYA-MAIN
+    └── Carlotta VRM
+        ├── Idle controller
+        ├── Animation controller
+        ├── Gesture controller
+        ├── Spatial pose solver
+        ├── Expression controller
+        └── Lip-sync controller
 ```
 
 ## 🎯 Project Goal
