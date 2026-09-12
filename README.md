@@ -8,11 +8,11 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `adc5254d099497c6f9b84a072f2ca0d2c922a3ce`  
-**Exact commit message:** `Position companion against Windows taskbar work area`
+**Latest code commit:** `02fef3d55b8f6621a16ea274e3a5d8236cca915d`  
+**Exact commit message:** `Use Windows taskbar coordinates for companion positioning`
 
-**Previous code commit:** `821434fb9e7ef1e32f6685081561f7862017eb8a`  
-**Exact commit message:** `Lower companion window to taskbar`
+**Previous code commit:** `adc5254d099497c6f9b84a072f2ca0d2c922a3ce`  
+**Exact commit message:** `Position companion against Windows taskbar work area`
 
 **README update commit:** this README synchronization commit follows the code commit above.
 
@@ -28,7 +28,7 @@
 - **Companion startup:** waits for Carlotta VRM to finish loading, then explicitly starts the companion arrival motion
 - **Native minimize:** the Windows title-bar minimize action is routed into the same desktop-companion flow instead of simply minimizing the main ZOYA window
 - **Native minimize implementation:** uses Tauri's `Manager` trait in the setup polling scope so `get_webview_window` and related window APIs compile correctly
-- **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned from the monitor work area so its bottom aligns with the visible desktop/taskbar boundary
+- **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned using the actual Windows `Shell_TrayWnd` taskbar rectangle when available, with Tauri's monitor work area as a safe fallback
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
@@ -46,6 +46,7 @@
 6. **CODE COMMIT** `fae1efa0ff75d9293f687393f14f1f39b0f3885d` — `Fix Carlotta companion sit pose and leg swing`
 7. **CODE COMMIT** `821434fb9e7ef1e32f6685081561f7862017eb8a` — `Lower companion window to taskbar`
 8. **CODE COMMIT** `adc5254d099497c6f9b84a072f2ca0d2c922a3ce` — `Position companion against Windows taskbar work area`
+9. **CODE COMMIT** `02fef3d55b8f6621a16ea274e3a5d8236cca915d` — `Use Windows taskbar coordinates for companion positioning`
 
 ## ✨ What ZOYA Is
 
@@ -134,7 +135,9 @@ Tauri creates compact companion window
       ↓
 Transparent + always-on-top + skip-taskbar
       ↓
-Use monitor work area / taskbar boundary for placement
+Read Windows Shell_TrayWnd taskbar rectangle
+      ↓
+Place companion against the real taskbar boundary
       ↓
 Wait for Carlotta VRM
       ↓
