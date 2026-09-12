@@ -3,6 +3,7 @@ import { RotateCcw, X } from 'lucide-react';
 import { MintRenderer } from './mint/mintRenderer';
 import { tauriBridge } from './native/tauriBridge';
 import { carlottaCompanionController } from './mint/carlottaCompanionController';
+import { carlottaGestureController } from './mint/carlottaGestureController';
 
 /** Standalone UI used only by the real Tauri desktop companion window. */
 export default function CompanionApp() {
@@ -17,7 +18,23 @@ export default function CompanionApp() {
     rendererRef.current = renderer;
     renderer.setCompanionMode(true);
     renderer.mount(hostRef.current, 'low');
-    setReady(true);
+
+    let startAttempts = 0;
+    const startTimer = window.setInterval(() => {
+      startAttempts += 1;
+      if (!rendererRef.current) return;
+      if (rendererRef.current.getIsVrmLoaded()) {
+        // The normal app has a startup Bow. The companion has its own
+        // arrival animation, so cancel that upper-body gesture here.
+        carlottaGestureController.cancel();
+        renderer.setCompanionMode(true);
+        carlottaCompanionController.enter();
+        setReady(true);
+        window.clearInterval(startTimer);
+      } else if (startAttempts >= 100) {
+        window.clearInterval(startTimer);
+      }
+    }, 100);
 
     const phaseTimer = window.setInterval(() => {
       setPhase(carlottaCompanionController.getPhase());
@@ -30,6 +47,7 @@ export default function CompanionApp() {
     window.addEventListener('resize', onResize);
 
     return () => {
+      window.clearInterval(startTimer);
       window.clearInterval(phaseTimer);
       window.removeEventListener('resize', onResize);
       renderer.unmount();
@@ -64,7 +82,7 @@ export default function CompanionApp() {
         </button>
       </div>
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-[10px] text-white/70 whitespace-nowrap">
-        {ready ? (phase === 'sitting' ? 'ZOYA is sitting nearby' : 'ZOYA is arriving…') : 'Starting companion…'}
+        {ready ? (phase === 'sitting' ? 'ZOYA is sitting nearby' : phase === 'standing' ? 'ZOYA is returning…' : 'ZOYA is arriving…') : 'Starting companion…'}
       </div>
     </div>
   );
