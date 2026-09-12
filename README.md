@@ -8,8 +8,8 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `e458eb5f436395e91ebed88759e19f41d36eb63c`  
-**Exact commit message:** `Fix Carlotta Wave to use palm-swing axis`
+**Latest code commit:** `0e04f48069ac94625c248e25b06acb4bdeadb8bc`  
+**Exact commit message:** `Fix Carlotta Wave arm and hand blend weights`
 
 > **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
@@ -18,9 +18,9 @@
 - **Animation architecture:** clean character-space spatial pose-solving system
 - **Point:** **working correctly — visually validated by user**
 - **Bow:** **working correctly — visually validated**
-- **Wave:** **new arm-freeze/hand-isolation fix applied; awaiting visual re-validation**
-- **Wave diagnosis:** video analysis showed the upper arm, forearm, and hand were swinging together; the new implementation caches the raised upper/lower-arm targets once at Wave start and applies the sinusoidal beat only to the hand's local rotation
-- **Wave hand axis:** derived from Carlotta's captured forearm direction and converted into the hand's local frame rather than using an arbitrary world/Euler axis
+- **Wave:** **blend-weight decoupling fix applied; awaiting visual re-validation**
+- **Wave diagnosis:** the active-phase release weight was being applied identically to the upper arm, lower arm, and hand; the new implementation keeps the raised arm bones pinned after activation while the hand uses its own wave envelope
+- **Wave hand axis:** derived from Carlotta's character-up direction projected perpendicular to the forearm, then converted into the hand's local frame so the motion behaves like a visible palm swing rather than forearm-axis twisting
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
 - **Hand/wrist handling:** Point no longer uses the problematic fallback hand-axis alignment
@@ -89,13 +89,13 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-The rebuilt trigger path is connected. Point and Bow established the spatial foundation. Wave now caches the raised arm/forearm pose once and confines its oscillation to a local hand rotation, preventing the whole arm chain from swinging with the wave beat.
+The rebuilt trigger path is connected. Point and Bow established the spatial foundation. Wave now caches the raised arm/forearm pose once, keeps those arm bones pinned for the active phase, and confines the oscillation to a hand-local palm-swing axis with its own blend envelope.
 
 ### Procedural Gesture Roadmap
 
 1. ✅ **Point** — working correctly and visually validated by user
 2. ✅ **Bow** — working correctly and visually validated
-3. 🧪 **Wave** — arm freeze + hand isolation fix applied; awaiting visual re-validation
+3. 🧪 **Wave** — arm/hand blend-weight decoupling fix applied; awaiting visual re-validation
 4. **Greeting**
 5. **Goodbye**
 6. **Shrug**
