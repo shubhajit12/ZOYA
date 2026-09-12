@@ -8,8 +8,8 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `c2c44fc8597ab07a40d33b2b1773c38bc435ac29`  
-**Exact commit message:** `Restore Carlotta gesture dev trigger hooks`
+**Latest code commit:** `4d1ae64e0cbc9fb94bcd005bb254450e82338e79`  
+**Exact commit message:** `Fix Carlotta Point character-forward IK direction`
 
 > **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
@@ -18,6 +18,7 @@
 - **Animation architecture:** clean character-space spatial pose-solving system
 - **Currently validating:** **Point** gesture
 - **Gesture trigger path:** restored and connected to the rebuilt controller
+- **Point solver:** corrected to use Carlotta's actual character-forward axis after the existing 180° root correction
 - **Other gestures:** foundation exists, but each gesture must be visually validated before being considered complete
 - **Bow:** next after Point validation
 - **Idle:** preserved and intentionally untouched
@@ -84,7 +85,7 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-The rebuilt gesture trigger path is now connected again. Point remains the first diagnostic gesture; the remaining gestures will be visually validated and polished one at a time on this foundation.
+The rebuilt gesture trigger path is connected again. The Point solver now uses Carlotta's actual forward axis after the existing root correction; Point remains the first diagnostic gesture. The remaining gestures will be visually validated and polished one at a time on this foundation.
 
 ### Procedural Gesture Roadmap
 
