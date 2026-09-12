@@ -8,11 +8,11 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b`  
-**Exact commit message:** `Fix companion DPI-safe taskbar anchoring`
+**Latest code commit:** `29a6d67fbdec12e88aa7d59e17828bedc5908e5e`  
+**Exact commit message:** `Lower Carlotta inside companion window`
 
-**Previous code commit:** `02fef3d55b8f6621a16ea274e3a5d8236cca915d`  
-**Exact commit message:** `Use Windows taskbar coordinates for companion positioning`
+**Previous code commit:** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b`  
+**Exact commit message:** `Fix companion DPI-safe taskbar anchoring`
 
 **README update commit:** this README synchronization commit follows the code commit above.
 
@@ -32,6 +32,7 @@
 - **Companion placement diagnostics:** native logs record the logical target position, scale factor, actual physical outer position, actual physical inner size, and detected taskbar edge
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
+- **Companion model grounding:** the Carlotta render surface is lowered independently inside the already-correctly-positioned companion window so the character sits visually against the taskbar instead of floating above it
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
 - **Minimized chat widget:** remains separate; Carlotta is not embedded into it
 - **Camera / OrbitControls:** normal ZOYA camera behavior remains protected; companion uses separate framing and disables OrbitControls
@@ -49,6 +50,7 @@
 8. **CODE COMMIT** `adc5254d099497c6f9b84a072f2ca0d2c922a3ce` — `Position companion against Windows taskbar work area`
 9. **CODE COMMIT** `02fef3d55b8f6621a16ea274e3a5d8236cca915d` — `Use Windows taskbar coordinates for companion positioning`
 10. **CODE COMMIT** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b` — `Fix companion DPI-safe taskbar anchoring`
+11. **CODE COMMIT** `29a6d67fbdec12e88aa7d59e17828bedc5908e5e` — `Lower Carlotta inside companion window`
 
 ## ✨ What ZOYA Is
 
@@ -150,6 +152,8 @@ Carlotta jump
 Carlotta sits
       ↓
 Legs swing naturally while seated
+      ↓
+Lower the Carlotta render surface inside the companion window
       ↓
 Companion idle / talking / reacting
       ↓
