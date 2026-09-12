@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { EmotionalState } from '../types';
 import { getEmotionMeta } from '../emotions/emotionEngine';
+import { tauriBridge } from '../native/tauriBridge';
 
 interface NavbarProps {
   userName: string;
@@ -32,9 +33,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const meta = getEmotionMeta(emotionalState.currentEmotion);
 
+  const handleCompanionMinimize = async () => {
+    onMinimize();
+    await tauriBridge.enterCompanion();
+  };
+
   return (
     <header className="w-full h-16 bg-[#050506]/90 backdrop-blur-xl border-b border-white/5 px-6 flex items-center justify-between z-20 shadow-lg">
-      {/* Brand & Companion Info */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full border border-orange-500/50 flex items-center justify-center">
@@ -50,7 +55,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Emotion & Mood Indicator */}
         <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full glass border text-xs transition-all ${meta.badgeBg} ${meta.badgeBorder}`}>
           <span className="text-sm">{meta.emoji}</span>
           <span className={`font-semibold ${meta.badgeText}`}>{meta.label}</span>
@@ -60,10 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Connection & Action Controls */}
       <div className="flex items-center gap-4 sm:gap-6">
         <div className="flex items-center gap-2">
-          {/* Screen Share Toggle */}
           <button
             onClick={onToggleScreenShare}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
@@ -77,7 +79,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden md:inline">{isScreenSharing ? 'Screen Live' : 'Share Screen'}</span>
           </button>
 
-          {/* Built-in Browser */}
           <button
             onClick={onOpenBrowser}
             className="w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-300 hover:text-orange-400 hover:bg-white/10 transition-colors"
@@ -86,7 +87,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Globe className="w-4 h-4" />
           </button>
 
-          {/* Memory Store */}
           <button
             onClick={onOpenMemory}
             className="w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-300 hover:text-orange-400 hover:bg-white/10 transition-colors"
@@ -95,7 +95,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Brain className="w-4 h-4" />
           </button>
 
-          {/* Settings */}
           <button
             onClick={onOpenSettings}
             className="w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-300 hover:text-orange-400 hover:bg-white/10 transition-colors"
@@ -106,11 +105,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="w-[1px] h-6 bg-white/10 mx-1" />
 
-          {/* Desktop Window Minimize */}
           <button
-            onClick={onMinimize}
+            onClick={handleCompanionMinimize}
             className="w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Minimize Desktop Companion"
+            title="Send ZOYA to desktop companion"
           >
             <Minimize2 className="w-4 h-4" />
           </button>
