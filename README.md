@@ -8,19 +8,19 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `4d1ae64e0cbc9fb94bcd005bb254450e82338e79`  
-**Exact commit message:** `Fix Carlotta Point character-forward IK direction`
+**Latest code commit:** `78bb9646461aec9f5ff0a51108560734d1f066e1`  
+**Exact commit message:** `Implement Carlotta Bow spatial torso gesture`
 
 > **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
 - **Animation architecture:** clean character-space spatial pose-solving system
-- **Currently validating:** **Point** gesture
+- **Point:** **working correctly — validated**
+- **Bow:** **implemented, awaiting live visual validation**
 - **Gesture trigger path:** restored and connected to the rebuilt controller
-- **Point solver:** corrected to use Carlotta's actual character-forward axis after the existing 180° root correction
-- **Other gestures:** foundation exists, but each gesture must be visually validated before being considered complete
-- **Bow:** next after Point validation
+- **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
+- **Other gestures:** not yet implemented/validated on the rebuilt system
 - **Idle:** preserved and intentionally untouched
 - **Camera / OrbitControls:** untouched
 - **MToon / textures / performance settings:** untouched
@@ -85,12 +85,12 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-The rebuilt gesture trigger path is connected again. The Point solver now uses Carlotta's actual forward axis after the existing root correction; Point remains the first diagnostic gesture. The remaining gestures will be visually validated and polished one at a time on this foundation.
+The rebuilt trigger path is connected. Point is the validated spatial foundation. Bow now uses the same character-space convention and calibrated torso rest orientations; it has not yet been visually validated.
 
 ### Procedural Gesture Roadmap
 
-1. 🔧 **Point** — current diagnostic gesture
-2. ⏭️ **Bow** — spatial torso/forward movement
+1. ✅ **Point** — working correctly and visually validated
+2. 🧪 **Bow** — implemented; awaiting visual validation
 3. **Wave**
 4. **Greeting**
 5. **Goodbye**
@@ -155,9 +155,12 @@ Performance work is kept separate from the animation architecture so gesture exp
 
 ### Near term
 
-- Prove spatial **Point** gesture
-- Implement spatial **Bow**
-- Rebuild remaining gestures on the same pose solver
+- Validate spatial **Bow** visually
+- Implement/rebuild **Wave**
+- Implement/rebuild **Greeting**
+- Implement/rebuild **Goodbye**
+- Implement/rebuild **Shrug**
+- Implement/rebuild **Clap**
 - Improve gesture/idle blending
 - Expand animation intent vocabulary
 - Add better developer diagnostics for animation skills
