@@ -8,8 +8,8 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `4e3420dce234a6430d8bb3166b2d890679a292ea`  
-**Exact commit message:** `Implement Carlotta minimized companion mode`
+**Latest code commit:** `f42026e5cb75519eb278d2ec857800c8e24ae3a5`  
+**Exact commit message:** `Remove dropped Carlotta Wave gesture`
 
 > **Important:** Wave development has been dropped. The latest code removes the Wave gesture from the active Carlotta gesture controller. The validated Point and Bow remain intact.
 
@@ -20,7 +20,6 @@
 - **Bow:** **working correctly — visually validated**
 - **Wave:** **removed — no longer part of the active gesture system or roadmap**
 - **Startup Bow:** **implemented — automatically starts once after Carlotta finishes loading**
-- **Minimized companion:** **implemented — minimized mode now keeps Carlotta alive in a compact stage, animates her down into a seated/taskbar-like position, and keeps the existing chat controls available**
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
 - **Hand/wrist handling:** Point no longer uses the problematic fallback hand-axis alignment
@@ -29,7 +28,7 @@
 - **Camera / OrbitControls:** untouched
 - **MToon / textures / performance settings:** untouched
 
-> ⚠️ The minimized companion currently uses the browser/app's minimized view. A literal Windows taskbar-overlap companion window requires the native Tauri window layer and is a later native-shell step.
+> ⚠️ For gesture testing, make sure you are running the exact latest code commit shown above. The README commit itself is not the code commit.
 
 ---
 
@@ -104,19 +103,6 @@ Point and Bow established the validated spatial foundation. Wave experimentation
 ### Startup Animation
 
 After the Carlotta VRM finishes loading and the character is ready, ZOYA automatically plays the validated **Bow** animation once as her startup greeting. After the Bow completes, Carlotta returns to her normal procedural idle.
-
-### Minimized Companion
-
-When ZOYA's existing minimized view is activated, the app now switches from the full character workspace to a compact live Carlotta companion. The companion:
-
-- resets into a fresh compact renderer/camera view
-- remains fully animated rather than becoming a static image
-- visually drops/jumps down into a bottom companion position
-- continues normal idle/talking behavior
-- keeps the minimized chat controls available
-- restores to the normal ZOYA view through the existing restore control
-
-The current localhost/browser implementation keeps the companion inside the application viewport. True Windows-taskbar positioning and a native always-on-top companion window are reserved for the Tauri desktop layer.
 
 ### Gesture Design Rules
 
@@ -203,7 +189,7 @@ Performance work is kept separate from the animation architecture so gesture exp
 - Skill quality validation before activation
 - A growing reusable animation library
 - Lightweight in-app browsing experience
-- Native Windows taskbar/desktop companion window for minimized mode
+- Minimized/taskbar companion mode with character reactions
 - More believable social behavior and environmental awareness
 - **Deeper game interaction and gameplay assistance, including Minecraft**
 
