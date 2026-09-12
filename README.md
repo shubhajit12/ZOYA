@@ -8,10 +8,10 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `6b88d20883106f3c18d40d803ad5c9a44414edba`  
-**Exact commit message:** `Harden companion window URL setup`
+**Latest code commit:** `7df170f29611faba6e63d486a02729d7d43deac2`  
+**Exact commit message:** `Restore main ZOYA workspace after companion exit`
 
-**README update commit:** this README synchronization commit follows the code commits below.
+**README update commit:** this README synchronization commit follows the code commit above.
 
 > **Important:** Wave development has been dropped. The validated Point and Bow remain intact. The new desktop-companion work is separate from the existing minimized chat widget.
 
@@ -22,10 +22,10 @@
 - **Bow:** **working correctly — visually validated**
 - **Wave:** **removed — no longer part of the active gesture system or roadmap**
 - **Startup Bow:** **implemented — automatically starts once after Carlotta finishes loading in normal ZOYA mode**
-- **Desktop companion:** **implemented as a separate Tauri window**
+- **Desktop companion:** **implemented as a separate Tauri window; companion-exit restoration is now synchronized with the main React workspace**
 - **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned near the bottom-right desktop/taskbar area
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
-- **Main window:** hidden while companion mode is active and restored from the companion controls
+- **Main window:** hidden while companion mode is active and restored from the companion controls; the normal 3D workspace is remounted after restore
 - **Minimized chat widget:** remains separate; Carlotta is not embedded into it
 - **Camera / OrbitControls:** normal ZOYA camera behavior remains protected; companion uses separate framing and disables OrbitControls
 - **MToon / textures / performance settings:** preserved
@@ -37,9 +37,10 @@
 3. **CODE COMMIT** `ba7c30bf534054a44a43426180316beef29ccfd0` — `Add Tauri companion window bridge`
 4. **CODE COMMIT** `84441d21ec8a392676e9ba46d650c529cbd5888a` — `Integrate Carlotta companion motion into renderer`
 5. **CODE COMMIT** `c38b1f8f9c134ec0a32bdc7a729977c8c2b528ad` — `Add standalone Tauri companion UI`
-6. **CODE COMMIT** `338c849c93d8f378d2eb40f6b8f98ecd4ab85647` — `Route Tauri companion window to standalone UI`
+6. **CODE COMMIT** `338c849c93d8f378e6b8f6b8f98ecd4ab85647` — `Route Tauri companion window to standalone UI`
 7. **CODE COMMIT** `15d428bdba25bd7a399430bcb16256f18c4ebad9` — `Launch real Tauri companion from minimize control`
 8. **CODE COMMIT** `6b88d20883106f3c18d40d803ad5c9a44414edba` — `Harden companion window URL setup`
+9. **CODE COMMIT** `7df170f29611faba6e63d486a02729d7d43deac2` — `Restore main ZOYA workspace after companion exit`
 
 ---
 
@@ -141,6 +142,8 @@ Restore control
 Companion closes
       ↓
 Main ZOYA window returns
+      ↓
+Normal 3D workspace remounts
 ```
 
 The companion has its own renderer framing and does not modify the normal ZOYA camera/OrbitControls configuration. The existing minimized chat widget remains a normal chat UI and does not contain Carlotta.
