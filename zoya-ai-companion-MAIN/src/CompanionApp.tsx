@@ -5,9 +5,10 @@ import { tauriBridge } from './native/tauriBridge';
 import { carlottaCompanionController } from './mint/carlottaCompanionController';
 import { carlottaGestureController } from './mint/carlottaGestureController';
 
-// Screenshot-based companion grounding: keep Carlotta near the bottom of the
-// correctly positioned native window while leaving the status pill untouched.
-const COMPANION_MODEL_Y_OFFSET_PX = 150;
+// Companion-only world-space offset for Carlotta's actual 3D model.
+// This moves the model inside the scene without moving the native window,
+// renderer surface, or companion controls.
+const COMPANION_MODEL_Y_OFFSET = -0.7;
 
 /** Standalone UI used only by the real Tauri desktop companion window. */
 export default function CompanionApp() {
@@ -38,6 +39,13 @@ export default function CompanionApp() {
       startAttempts += 1;
       if (!rendererRef.current) return;
       if (rendererRef.current.getIsVrmLoaded()) {
+        // Move Carlotta's actual loaded 3D scene downward in world space.
+        // The native companion window and its renderer surface stay fixed.
+        const modelGroup = (renderer as unknown as {
+          activeModelGroup: { position: { y: number } } | null;
+        }).activeModelGroup;
+        if (modelGroup) modelGroup.position.y = COMPANION_MODEL_Y_OFFSET;
+
         // The normal app has a startup Bow. The companion has its own
         // arrival animation, so cancel that upper-body gesture here.
         carlottaGestureController.cancel();
@@ -81,7 +89,6 @@ export default function CompanionApp() {
       <div
         ref={hostRef}
         className="absolute inset-0 bg-transparent"
-        style={{ transform: `translateY(${COMPANION_MODEL_Y_OFFSET_PX}px)` }}
       />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
         <button
