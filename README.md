@@ -8,11 +8,11 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `c9490114d375f21315970eb11e13c4ed9463e019`  
-**Exact commit message:** `Fix Tauri Manager trait import for native minimize`
+**Latest code commit:** `da6f2f3c32519dc211793b5ca4ee567753d5bf9c`  
+**Exact commit message:** `Fix transparent companion WebView2 rendering`
 
-**Previous code commit:** `f4e6222085087d66f1843761bb6568ba7eb85ef1`  
-**Exact commit message:** `Route native window minimize into desktop companion`
+**Previous code commit:** `c9490114d375f21315970eb11e13c4ed9463e019`  
+**Exact commit message:** `Fix Tauri Manager trait import for native minimize`
 
 **README update commit:** this README synchronization commit follows the code commit above.
 
@@ -28,6 +28,7 @@
 - **Companion startup:** waits for Carlotta VRM to finish loading, then explicitly starts the companion arrival motion
 - **Native minimize:** the Windows title-bar minimize action is routed into the same desktop-companion flow instead of simply minimizing the main ZOYA window
 - **Native minimize implementation:** uses Tauri's `Manager` trait in the setup polling scope so `get_webview_window` and related window APIs compile correctly
+- **Companion rendering:** transparent WebView2 composition now uses Windows `WS_EX_NOREDIRECTIONBITMAP` through Tauri's `no_redirection_bitmap` window option to prevent the transparent companion from rendering as a white surface before WebGL content appears
 - **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned near the bottom-right desktop/taskbar area
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
@@ -41,6 +42,7 @@
 2. **CODE COMMIT** `1c23e33028c73b39e6231e3226b435d63be521af` — `Reload main window after companion restore`
 3. **CODE COMMIT** `f4e6222085087d66f1843761bb6568ba7eb85ef1` — `Route native window minimize into desktop companion`
 4. **CODE COMMIT** `c9490114d375f21315970eb11e13c4ed9463e019` — `Fix Tauri Manager trait import for native minimize`
+5. **CODE COMMIT** `da6f2f3c32519dc211793b5ca4ee567753d5bf9c` — `Fix transparent companion WebView2 rendering`
 
 ## ✨ What ZOYA Is
 
