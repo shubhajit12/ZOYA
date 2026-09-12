@@ -3,6 +3,8 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![enter_companion, exit_companion])
         .setup(|app| {
+            use tauri::Manager;
+
             println!("ZOYA Desktop Native Engine initialized");
 
             // Windows' native minimize button is not exposed as a Tauri WindowEvent.
