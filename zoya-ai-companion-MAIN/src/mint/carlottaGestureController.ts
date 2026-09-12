@@ -191,10 +191,21 @@ export class CarlottaGestureController {
     const dt = Math.min(Math.max(delta, 0), CARLOTTA_IDLE_MAX_DELTA);
     if (this.phase === 'active') {
       this.elapsed += dt;
-      if (this.active === 'wave') this.updateWaveHandTarget(this.elapsed);
-      const duration = this.active === 'bow' ? BOW_DURATION : this.active === 'wave' ? WAVE_DURATION : POINT_DURATION;
-      const activation = smoothstep(this.elapsed / START_BLEND_SECONDS); const progress = clamp01(this.elapsed / duration); const release = smoothstep((progress - 0.72) / 0.28); const weight = activation * (1 - release);
-      for (const bone of this.bones.values()) { _q3.copy(bone.from).slerp(bone.target, weight); bone.node.quaternion.copy(_q3); }
+      const isWave = this.active === 'wave';
+      if (isWave) this.updateWaveHandTarget(this.elapsed);
+      const duration = this.active === 'bow' ? BOW_DURATION : isWave ? WAVE_DURATION : POINT_DURATION;
+      const activation = smoothstep(this.elapsed / START_BLEND_SECONDS);
+      const progress = clamp01(this.elapsed / duration);
+      const release = smoothstep((progress - 0.72) / 0.28);
+      const weight = activation * (1 - release);
+      const waveTime = Math.max(0, this.elapsed - 0.38);
+      const waveHandWeight = smoothstep(waveTime / 0.18) * (1 - smoothstep((this.elapsed - (WAVE_DURATION - 0.40)) / 0.40));
+      for (const bone of this.bones.values()) {
+        let boneWeight = weight;
+        if (isWave && (bone.name === 'rightUpperArm' || bone.name === 'rightLowerArm')) boneWeight = activation;
+        else if (isWave && bone.name === 'rightHand') boneWeight = waveHandWeight;
+        _q3.copy(bone.from).slerp(bone.target, boneWeight); bone.node.quaternion.copy(_q3);
+      }
       if (this.elapsed >= duration) { this.phase = 'recovering'; this.recovery = 0; for (const bone of this.bones.values()) bone.from.copy(bone.node.quaternion); if (isDevBuild()) console.info(`[CarloGesture] ${this.active.toUpperCase()} -> recovering`); }
     } else if (this.phase === 'recovering') {
       this.recovery = Math.min(1, this.recovery + dt / RECOVER_BLEND_SECONDS); const weight = smoothstep(this.recovery);
