@@ -11,22 +11,20 @@
 **Latest code commit:** `aa13de718c69c7ddd5063f1e5f955be8230ba784`  
 **Exact commit message:** `Fix Carlotta Wave shoulder ownership root cause`
 
-> **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
+> **Important:** Wave development has now been dropped. The commit above remains the latest code commit; this README update records the new animation direction.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
 - **Animation architecture:** clean character-space spatial pose-solving system
 - **Point:** **working correctly — visually validated by user**
 - **Bow:** **working correctly — visually validated**
-- **Wave:** **shoulder-ownership root-cause fix applied; awaiting visual re-validation**
-- **Wave root cause:** the idle/behavior animation layer writes `rightShoulder` every frame, and the gesture controller previously did not own that parent bone. Because the shoulder is above `rightUpperArm` in the hierarchy, its idle rotation could move the entire raised arm even when the upper/lower arm targets were pinned.
-- **Wave fix:** the gesture controller now temporarily owns `rightShoulder` during Wave, pins it through the active phase, and returns it during Wave recovery. Point and Bow explicitly skip that shoulder so their validated behavior is untouched.
-- **Wave hand axis:** derived from Carlotta's character-up direction projected perpendicular to the forearm, then converted into the hand's local frame so the motion behaves like a visible palm swing rather than forearm-axis twisting
+- **Wave:** **dropped — no longer part of the animation roadmap**
+- **Next animation behavior:** after Carlotta finishes loading, she will perform the validated Bow animation once, then return to normal idle
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
 - **Hand/wrist handling:** Point no longer uses the problematic fallback hand-axis alignment
 - **Other gestures:** not yet implemented/validated on the rebuilt system
-- **Idle:** preserved; Wave now deliberately takes temporary ownership of the right shoulder while active
+- **Idle:** preserved as the normal post-gesture state
 - **Camera / OrbitControls:** untouched
 - **MToon / textures / performance settings:** untouched
 
@@ -90,17 +88,21 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-The rebuilt trigger path is connected. Point and Bow established the spatial foundation. Wave now takes temporary ownership of the shoulder-parented arm chain, keeps the shoulder/upper-arm/lower-arm pose fixed for the active phase, and confines the oscillation to a hand-local palm-swing axis with its own blend envelope.
+Point and Bow established the validated spatial foundation. Wave experimentation has been discontinued rather than carried forward.
 
 ### Procedural Gesture Roadmap
 
 1. ✅ **Point** — working correctly and visually validated by user
 2. ✅ **Bow** — working correctly and visually validated
-3. 🧪 **Wave** — shoulder ownership root-cause fix applied; awaiting visual re-validation
+3. ❌ **Wave** — dropped
 4. **Greeting**
 5. **Goodbye**
 6. **Shrug**
 7. **Clap**
+
+### Startup Animation
+
+After the Carlotta VRM finishes loading and the character is ready, ZOYA will play the validated **Bow** animation once as her startup greeting. After the Bow completes, Carlotta returns to her normal procedural idle.
 
 ### Gesture Design Rules
 
@@ -160,7 +162,6 @@ Performance work is kept separate from the animation architecture so gesture exp
 
 ### Near term
 
-- **Re-validate corrected Wave arm/wrist behavior**
 - Implement/rebuild **Greeting**
 - Implement/rebuild **Goodbye**
 - Implement/rebuild **Shrug**
