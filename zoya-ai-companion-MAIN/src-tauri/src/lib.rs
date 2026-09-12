@@ -2,8 +2,41 @@
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![enter_companion, exit_companion])
-        .setup(|_app| {
+        .setup(|app| {
             println!("ZOYA Desktop Native Engine initialized");
+
+            // Windows' native minimize button is not exposed as a Tauri WindowEvent.
+            // Poll the main window's minimized state so the real OS minimize action
+            // enters the same desktop-companion flow as the in-app button.
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_millis(150));
+
+                let Some(main) = app_handle.get_webview_window("main") else {
+                    break;
+                };
+
+                if app_handle.get_webview_window("companion").is_some() {
+                    continue;
+                }
+
+                match main.is_minimized() {
+                    Ok(true) => {
+                        if let Err(err) = main.unminimize() {
+                            eprintln!("[ZOYA] Failed to restore minimized main window: {err}");
+                            continue;
+                        }
+                        if let Err(err) = enter_companion(app_handle.clone()) {
+                            eprintln!("[ZOYA] Failed to enter desktop companion: {err}");
+                        }
+                    }
+                    Ok(false) => {}
+                    Err(err) => {
+                        eprintln!("[ZOYA] Failed to read main minimized state: {err}");
+                    }
+                }
+            });
+
             Ok(())
         })
         .run(tauri::generate_context!())
