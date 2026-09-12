@@ -9,7 +9,7 @@ export function isValidCarlottaGestureName(value: unknown): value is CarlottaGes
   return value === 'wave' || value === 'greeting' || value === 'goodbye' || value === 'point' || value === 'shrug' || value === 'clap' || value === 'bow';
 }
 export type GesturePhase = 'idle' | 'active' | 'recovering';
-type BoneName = 'rightUpperArm' | 'rightLowerArm' | 'rightHand' | 'spine' | 'chest' | 'neck' | 'head';
+type BoneName = 'rightShoulder' | 'rightUpperArm' | 'rightLowerArm' | 'rightHand' | 'spine' | 'chest' | 'neck' | 'head';
 type BoneState = { name: BoneName; node: THREE.Object3D; restLocal: THREE.Quaternion; restWorld: THREE.Quaternion; restDirection: THREE.Vector3; from: THREE.Quaternion; target: THREE.Quaternion };
 
 const POINT_DURATION = 1.65;
@@ -57,6 +57,7 @@ export class CarlottaGestureController {
 
   public init(vrm: VRM): void {
     this.reset();
+    const shoulder = vrm.humanoid.getRawBoneNode('rightShoulder');
     const upper = vrm.humanoid.getRawBoneNode('rightUpperArm');
     const lower = vrm.humanoid.getRawBoneNode('rightLowerArm');
     const hand = vrm.humanoid.getRawBoneNode('rightHand');
@@ -64,6 +65,7 @@ export class CarlottaGestureController {
     const chest = vrm.humanoid.getRawBoneNode('chest');
     const neck = vrm.humanoid.getRawBoneNode('neck');
     const head = vrm.humanoid.getRawBoneNode('head');
+    if (shoulder) this.captureBone('rightShoulder', shoulder, upper); else console.warn('[CarloGesture] missing bone: rightShoulder');
     if (upper) this.captureBone('rightUpperArm', upper, lower); else console.warn('[CarloGesture] missing bone: rightUpperArm');
     if (lower) this.captureBone('rightLowerArm', lower, hand); else console.warn('[CarloGesture] missing bone: rightLowerArm');
     if (hand) this.captureBone('rightHand', hand, null); else console.warn('[CarloGesture] missing bone: rightHand');
@@ -201,16 +203,17 @@ export class CarlottaGestureController {
       const waveTime = Math.max(0, this.elapsed - 0.38);
       const waveHandWeight = smoothstep(waveTime / 0.18) * (1 - smoothstep((this.elapsed - (WAVE_DURATION - 0.40)) / 0.40));
       for (const bone of this.bones.values()) {
+        if (bone.name === 'rightShoulder' && !isWave) continue;
         let boneWeight = weight;
-        if (isWave && (bone.name === 'rightUpperArm' || bone.name === 'rightLowerArm')) boneWeight = activation;
+        if (isWave && (bone.name === 'rightShoulder' || bone.name === 'rightUpperArm' || bone.name === 'rightLowerArm')) boneWeight = activation;
         else if (isWave && bone.name === 'rightHand') boneWeight = waveHandWeight;
         _q3.copy(bone.from).slerp(bone.target, boneWeight); bone.node.quaternion.copy(_q3);
       }
       if (this.elapsed >= duration) { this.phase = 'recovering'; this.recovery = 0; for (const bone of this.bones.values()) bone.from.copy(bone.node.quaternion); if (isDevBuild()) console.info(`[CarloGesture] ${this.active.toUpperCase()} -> recovering`); }
     } else if (this.phase === 'recovering') {
       this.recovery = Math.min(1, this.recovery + dt / RECOVER_BLEND_SECONDS); const weight = smoothstep(this.recovery);
-      for (const bone of this.bones.values()) { _q3.copy(bone.from).slerp(bone.restLocal, weight); bone.node.quaternion.copy(_q3); }
-      if (this.recovery >= 1) { const finished = this.active; for (const bone of this.bones.values()) { bone.node.quaternion.copy(bone.restLocal); bone.from.copy(bone.restLocal); bone.target.copy(bone.restLocal); } this.active = null; this.phase = 'idle'; this.completed = finished; if (isDevBuild()) console.info(`[CarloGesture] complete=${finished}`); }
+      for (const bone of this.bones.values()) { if (bone.name === 'rightShoulder' && this.active !== 'wave') continue; _q3.copy(bone.from).slerp(bone.restLocal, weight); bone.node.quaternion.copy(_q3); }
+      if (this.recovery >= 1) { const finished = this.active; for (const bone of this.bones.values()) { if (bone.name === 'rightShoulder' && finished !== 'wave') continue; bone.node.quaternion.copy(bone.restLocal); bone.from.copy(bone.restLocal); bone.target.copy(bone.restLocal); } this.active = null; this.phase = 'idle'; this.completed = finished; if (isDevBuild()) console.info(`[CarloGesture] complete=${finished}`); }
     }
     if (isDevBuild()) { this.diagnosticsElapsed += dt; if (this.diagnosticsElapsed >= 1) { this.diagnosticsElapsed = 0; console.info('[CarloGestureDiagnostics]', { active: this.active, phase: this.phase, target: this.target.toArray(), pointDirection: this.pointDirection.toArray() }); } }
   }
