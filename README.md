@@ -8,11 +8,11 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `f16cb4added6a5c8d5fb04054c1a6eb456197405`  
-**Exact commit message:** `Tune Carlotta companion grounding from screenshot`
+**Latest code commit:** `13375e7bd81f0c347a676602b2d684394e5939dc`  
+**Exact commit message:** `Lower Carlotta model inside companion scene`
 
-**Previous code commit:** `29a6d67fbdec12e88aa7d59e17828bedc5908e5e`  
-**Exact commit message:** `Lower Carlotta inside companion window`
+**Previous code commit:** `f16cb4added6a5c8d5fb04054c1a6eb456197405`  
+**Exact commit message:** `Tune Carlotta companion grounding from screenshot`
 
 **README update commit:** this README synchronization commit follows the code commit above.
 
@@ -32,7 +32,7 @@
 - **Companion placement diagnostics:** native logs record the logical target position, scale factor, actual physical outer position, actual physical inner size, and detected taskbar edge
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
-- **Companion model grounding:** the Carlotta render surface is lowered independently inside the already-correctly-positioned companion window so the character sits visually against the taskbar instead of floating above it
+- **Companion model grounding:** Carlotta's actual 3D scene is lowered in world space inside the already-correctly-positioned companion window; the renderer surface and companion controls are not shifted
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
 - **Minimized chat widget:** remains separate; Carlotta is not embedded into it
 - **Camera / OrbitControls:** normal ZOYA camera behavior remains protected; companion uses separate framing and disables OrbitControls
@@ -52,6 +52,7 @@
 10. **CODE COMMIT** `75bd192ba8bd89630a0291bcaef673fbd7e9e07b` — `Fix companion DPI-safe taskbar anchoring`
 11. **CODE COMMIT** `29a6d67fbdec12e88aa7d59e17828bedc5908e5e` — `Lower Carlotta inside companion window`
 12. **CODE COMMIT** `f16cb4added6a5c8d5fb04054c1a6eb456197405` — `Tune Carlotta companion grounding from screenshot`
+13. **CODE COMMIT** `13375e7bd81f0c347a676602b2d684394e5939dc` — `Lower Carlotta model inside companion scene`
 
 ## ✨ What ZOYA Is
 
@@ -154,7 +155,7 @@ Carlotta sits
       ↓
 Legs swing naturally while seated
       ↓
-Lower the Carlotta render surface inside the companion window
+Lower the actual Carlotta 3D model inside the companion scene
       ↓
 Companion idle / talking / reacting
       ↓
