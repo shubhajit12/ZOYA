@@ -17,8 +17,9 @@ type Bone = {
 
 const JUMP_DURATION = 0.72;
 const STAND_DURATION = 0.65;
-const SIT_BLEND = 0.5;
-const EPS = 1e-8;
+const SIT_DROP = 0.22;
+const LEG_SWING_AMPLITUDE = 0.24;
+const LEG_SWING_SPEED = 2.6;
 
 const _q0 = new THREE.Quaternion();
 const _q1 = new THREE.Quaternion();
@@ -103,23 +104,23 @@ export class CarlottaCompanionController {
       if (p >= 1) {
         this.phase = 'sitting';
         this.elapsed = 0;
-        this.applySitPose(1);
+        this.applySitPose(1, 0);
       }
       return;
     }
 
     if (this.phase === 'sitting') {
       this.root.position.x = this.rootBaseX;
-      this.root.position.y = this.rootBaseY - 0.13;
+      this.root.position.y = this.rootBaseY - SIT_DROP;
       this.root.position.z = this.rootBaseZ;
-      this.applySitPose(1);
+      this.applySitPose(1, this.elapsed);
       return;
     }
 
     if (this.phase === 'standing') {
       const p = smooth(this.elapsed / STAND_DURATION);
-      this.root.position.y = this.rootBaseY - 0.13 * (1 - p);
-      this.applySitPose(1 - p);
+      this.root.position.y = this.rootBaseY - SIT_DROP * (1 - p);
+      this.applySitPose(1 - p, 0);
       if (p >= 1) {
         this.restoreStandingPose();
         this.phase = 'idle';
@@ -148,15 +149,19 @@ export class CarlottaCompanionController {
     }
   }
 
-  private applySitPose(weight: number): void {
+  private applySitPose(weight: number, time: number): void {
     const w = clamp01(weight);
-    // Character-space axes: thighs fold forward, knees fold back under the body.
+    const swing = Math.sin(time * LEG_SWING_SPEED * Math.PI * 2) * LEG_SWING_AMPLITUDE * w;
+
+    // Stable seated base: thighs fold and shins angle forward into a relaxed seat.
+    // The small opposite-phase shin motion creates a natural dangling-leg swing
+    // instead of a frozen or jittery lower body.
     this.applyWorldRotation('leftUpperLeg', this.right, -1.10 * w);
     this.applyWorldRotation('rightUpperLeg', this.right, -1.10 * w);
-    this.applyWorldRotation('leftLowerLeg', this.right, 1.85 * w);
-    this.applyWorldRotation('rightLowerLeg', this.right, 1.85 * w);
-    this.applyWorldRotation('leftFoot', this.right, -0.75 * w);
-    this.applyWorldRotation('rightFoot', this.right, -0.75 * w);
+    this.applyWorldRotation('leftLowerLeg', this.right, (1.85 + swing) * w);
+    this.applyWorldRotation('rightLowerLeg', this.right, (1.85 - swing) * w);
+    this.applyWorldRotation('leftFoot', this.right, (-0.75 - swing * 0.45) * w);
+    this.applyWorldRotation('rightFoot', this.right, (-0.75 + swing * 0.45) * w);
     this.applyWorldRotation('hips', this.right, 0.08 * w);
   }
 
