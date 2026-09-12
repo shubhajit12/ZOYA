@@ -66,6 +66,7 @@ fn exit_companion(app: tauri::AppHandle) -> Result<(), String> {
     }
     if let Some(main) = app.get_webview_window("main") {
         main.show().map_err(|e| e.to_string())?;
+        main.eval("window.location.reload()").map_err(|e| e.to_string())?;
         main.set_focus().map_err(|e| e.to_string())?;
     }
     Ok(())
