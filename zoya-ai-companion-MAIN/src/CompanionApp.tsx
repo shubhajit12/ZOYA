@@ -5,6 +5,8 @@ import { tauriBridge } from './native/tauriBridge';
 import { carlottaCompanionController } from './mint/carlottaCompanionController';
 import { carlottaGestureController } from './mint/carlottaGestureController';
 
+// Screenshot-based companion grounding: keep Carlotta near the bottom of the
+// correctly positioned native window while leaving the status pill untouched.
 const COMPANION_MODEL_Y_OFFSET_PX = 150;
 
 /** Standalone UI used only by the real Tauri desktop companion window. */
