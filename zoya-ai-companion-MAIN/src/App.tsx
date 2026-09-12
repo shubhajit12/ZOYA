@@ -93,6 +93,17 @@ export default function App() {
   const [showConfirmDeleteProfile, setShowConfirmDeleteProfile] = useState<boolean>(false);
   const [showConfirmClearChat, setShowConfirmClearChat] = useState<boolean>(false);
 
+  // The native companion hides this main webview. When it restores the
+  // window, remount the normal main workspace so MintCanvas is recreated and
+  // Carlotta loads again instead of leaving the old minimized chat widget up.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') setIsMinimized(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   // Save settings & chat history
   useEffect(() => {
     try {
@@ -161,7 +172,6 @@ export default function App() {
   }, [status]);
 
   const handleSendMessage = async (text: string) => {
-    // 1. Interrupt any previous speech
     voicePipeline.interruptSpeech();
     setAnimationIntent('listening');
 
@@ -176,7 +186,6 @@ export default function App() {
     setStatus('thinking');
     setErrorMessage(null);
 
-    // 2. Check for PC Command intent
     const pcCmd = pcControlService.parseCommand(text);
     if (pcCmd) {
       if (pcCmd.isDangerous) {
@@ -188,7 +197,6 @@ export default function App() {
       }
     }
 
-    // 3. Handle explicit user memory commands
     if (text.toLowerCase().startsWith('remember that ') || text.toLowerCase().startsWith('remember ')) {
       const memText = text.replace(/^remember\s+(that\s+)?/i, '').trim();
       if (memText) {
@@ -199,11 +207,9 @@ export default function App() {
       memoryStore.forgetByKeyword(forgetText);
     }
 
-    // 4. Record user event without destroying Zoya's current emotion
     const updatedState = emotionEngine.recordUserEvent(`User: ${text.slice(0, 40)}`);
     setEmotionalState(updatedState);
 
-    // 5. Gather memories context
     const relevantMemories = memoryStore.getRelevantMemories(text, 3).map((m) => m.content);
 
     try {
@@ -218,7 +224,6 @@ export default function App() {
       let isFirstChunk = true;
       let fullTextAcc = '';
 
-      // Append initial placeholder message for Zoya with active continuous emotion
       setMessages((prev) => [
         ...prev,
         {
@@ -248,19 +253,16 @@ export default function App() {
 
           fullTextAcc += chunkDelta;
 
-          // Update message text dynamically in UI
           setMessages((prev) =>
             prev.map((m) => (m.id === zoyaMsgId ? { ...m, text: fullTextAcc } : m))
           );
 
-          // Push text chunk to VoicePipeline
           voicePipeline.pushStreamChunk(chunkDelta);
         },
         (finalText, inferredEmotion) => {
           const tStreamDone = performance.now() - t0;
           console.log(`[Zoya Perf] Brain stream completed: +${tStreamDone.toFixed(1)}ms`);
 
-          // Apply believable, persistent emotion change
           const newEmotionState = emotionEngine.updateEmotion(
             inferredEmotion.emotion,
             inferredEmotion.intensity,
@@ -268,7 +270,6 @@ export default function App() {
           );
           setEmotionalState(newEmotionState);
 
-          // Update the message bubble with the finalized emotion
           setMessages((prev) =>
             prev.map((m) =>
               m.id === zoyaMsgId
@@ -282,10 +283,8 @@ export default function App() {
             )
           );
 
-          // Signal end of stream input to voice pipeline with finalized text
           voicePipeline.endSpeechStream(finalText);
 
-          // Drive Mint's body animation from conversation context
           if (inferredEmotion.animation) {
             setAnimationIntent(inferredEmotion.animation);
           }
@@ -357,7 +356,6 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen bg-[#050506] text-slate-200 flex flex-col font-sans overflow-hidden select-none">
-      {/* Top Navbar */}
       <Navbar
         userName={settings.userName}
         emotionalState={emotionalState}
@@ -369,7 +367,6 @@ export default function App() {
         onMinimize={() => setIsMinimized(true)}
       />
 
-      {/* Main Workspace Layout */}
       {isMinimized ? (
         <MinimizedWidget
           emotionalState={emotionalState}
@@ -382,7 +379,6 @@ export default function App() {
         />
       ) : (
         <main className="flex-1 w-full h-[calc(100vh-4rem)] flex flex-col md:flex-row p-6 gap-6 overflow-hidden">
-          {/* Left / Primary Panel: Real Mint 3D Canvas */}
           <section className="w-full md:w-1/2 h-[45%] md:h-full flex flex-col">
             <MintCanvas
               currentEmotion={emotionalState.currentEmotion}
@@ -394,7 +390,6 @@ export default function App() {
             />
           </section>
 
-          {/* Right Panel: Chat Stream & Interactive Features */}
           <section className="w-full md:w-1/2 h-[55%] md:h-full flex flex-col glass rounded-3xl border border-white/10 overflow-hidden shadow-2xl glow-amber">
             {showBrowser ? (
               <BuiltInBrowser
@@ -435,7 +430,6 @@ export default function App() {
         </main>
       )}
 
-      {/* Modals & Dialog Overlays */}
       {showOnboarding && (
         <OnboardingModal
           onComplete={(name, groqApiKey, geminiApiKey) => {
@@ -469,7 +463,6 @@ export default function App() {
         />
       )}
 
-      {/* Confirmation Dialog for Profile Deletion */}
       {showConfirmDeleteProfile && (
         <ActionConfirmModal
           title="Delete your Zoya profile?"
@@ -482,7 +475,6 @@ export default function App() {
         />
       )}
 
-      {/* Confirmation Dialog for Clear Chat */}
       {showConfirmClearChat && (
         <ActionConfirmModal
           title="Clear this conversation?"
