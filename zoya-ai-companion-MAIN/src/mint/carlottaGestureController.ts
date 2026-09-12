@@ -125,7 +125,6 @@ export class CarlottaGestureController {
     const along = Math.max(-a, Math.min(a, (a * a - b * b + distanceSafe * distanceSafe) / (2 * distanceSafe))); const height = Math.sqrt(Math.max(0, a * a - along * along));
     this.elbowTarget.copy(this.shoulder).addScaledVector(this.pointDirection, along).addScaledVector(planeUp, height);
     this.solveBoneToward(upper, this.elbowTarget, this.shoulder); upper.node.quaternion.copy(upper.target); upper.node.updateMatrixWorld(true); this.solveBoneToward(lower, this.target, this.elbowTarget);
-    // Do not apply an independent wrist rotation. The previous hand-direction alignment used a fallback hand axis that does not describe Carlotta's palm/finger orientation, causing the wrist to fold backward.
     upper.node.quaternion.copy(upper.from); upper.node.updateMatrixWorld(true);
   }
 
@@ -143,46 +142,19 @@ export class CarlottaGestureController {
     if (!upper || !lower) return;
     upper.node.getWorldPosition(this.shoulder); lower.node.getWorldPosition(_v0); const wrist = hand ? hand.node.getWorldPosition(_v1) : _v0;
     const upperLength = Math.max(this.shoulder.distanceTo(_v0), 0.05), lowerLength = Math.max(_v0.distanceTo(wrist), 0.05);
-
-    // Build the raised-arm pose ONCE when Wave starts. The old implementation rebuilt the
-    // IK chain every frame from the live shoulder/parent transforms, allowing the wave
-    // oscillator and parent blending to feed back into the arm. During the wave phase the
-    // upper arm and forearm must be immutable gesture targets.
-    this.target.copy(this.shoulder)
-      .addScaledVector(this.right, upperLength)
-      .addScaledVector(this.up, upperLength * 1.12)
-      .addScaledVector(this.forward, lowerLength * 0.18);
-
-    const fromShoulder = _v2.subVectors(this.target, this.shoulder);
-    const rawDistance = fromShoulder.length();
-    const maxReach = Math.max(0.05, upperLength + lowerLength - 0.01);
-    const distance = Math.min(rawDistance, maxReach);
+    this.target.copy(this.shoulder).addScaledVector(this.right, upperLength).addScaledVector(this.up, upperLength * 1.12).addScaledVector(this.forward, lowerLength * 0.18);
+    const fromShoulder = _v2.subVectors(this.target, this.shoulder); const rawDistance = fromShoulder.length(); const maxReach = Math.max(0.05, upperLength + lowerLength - 0.01); const distance = Math.min(rawDistance, maxReach);
     if (rawDistance > distance) this.target.copy(this.shoulder).addScaledVector(fromShoulder.normalize(), distance);
-
     const direction = this.pointDirection.subVectors(this.target, this.shoulder).normalize();
-    const planeUp = _v3.copy(this.up).addScaledVector(direction, -this.up.dot(direction));
-    if (planeUp.lengthSq() < EPSILON) planeUp.copy(this.forward);
-    planeUp.normalize();
-
+    const planeUp = _v3.copy(this.up).addScaledVector(direction, -this.up.dot(direction)); if (planeUp.lengthSq() < EPSILON) planeUp.copy(this.forward); planeUp.normalize();
     const a = upperLength, b = lowerLength, safeDistance = Math.max(distance, 0.001);
-    const along = Math.max(-a, Math.min(a, (a * a - b * b + safeDistance * safeDistance) / (2 * safeDistance)));
-    const height = Math.sqrt(Math.max(0, a * a - along * along));
+    const along = Math.max(-a, Math.min(a, (a * a - b * b + safeDistance * safeDistance) / (2 * safeDistance))); const height = Math.sqrt(Math.max(0, a * a - along * along));
     this.elbowTarget.copy(this.shoulder).addScaledVector(direction, along).addScaledVector(planeUp, height);
-
-    this.solveBoneToward(upper, this.elbowTarget, this.shoulder);
-    upper.node.quaternion.copy(upper.target);
-    upper.node.updateMatrixWorld(true);
-    this.solveBoneToward(lower, this.target, this.elbowTarget);
-
-    this.waveUpperTarget.copy(upper.target);
-    this.waveLowerTarget.copy(lower.target);
-    upper.node.quaternion.copy(upper.from);
-    upper.node.updateMatrixWorld(true);
-
+    this.solveBoneToward(upper, this.elbowTarget, this.shoulder); upper.node.quaternion.copy(upper.target); upper.node.updateMatrixWorld(true); this.solveBoneToward(lower, this.target, this.elbowTarget);
+    this.waveUpperTarget.copy(upper.target); this.waveLowerTarget.copy(lower.target);
+    upper.node.quaternion.copy(upper.from); upper.node.updateMatrixWorld(true);
     if (hand) {
       this.waveHandBase.copy(hand.from);
-      // Derive the wrist-wave axis from the actual forearm direction in Carlotta's
-      // captured rest frame. This avoids inventing a world/Euler axis for the hand.
       _q0.copy(hand.restWorld).invert();
       this.waveHandAxis.copy(lower.restDirection).applyQuaternion(_q0).normalize();
       if (this.waveHandAxis.lengthSq() < EPSILON) this.waveHandAxis.set(1, 0, 0);
@@ -200,8 +172,6 @@ export class CarlottaGestureController {
     const waveEnvelope = smoothstep(waveTime / 0.18) * (1 - smoothstep((time - (WAVE_DURATION - 0.40)) / 0.40));
     const handWave = Math.sin(waveTime * Math.PI * 3.0) * THREE.MathUtils.degToRad(16) * waveEnvelope;
     _q0.setFromAxisAngle(this.waveHandAxis, handWave);
-    // This is a LOCAL hand rotation: post-multiply the captured starting hand pose.
-    // The parent arm targets never receive the sinusoidal term.
     hand.target.copy(this.waveHandBase).multiply(_q0).normalize();
   }
 
@@ -229,7 +199,6 @@ export class CarlottaGestureController {
     if (isDevBuild()) { this.diagnosticsElapsed += dt; if (this.diagnosticsElapsed >= 1) { this.diagnosticsElapsed = 0; console.info('[CarloGestureDiagnostics]', { active: this.active, phase: this.phase, target: this.target.toArray(), pointDirection: this.pointDirection.toArray() }); } }
   }
 
-  /** Restore the DEV hooks expected by the existing MintCanvas test controls. */
   private registerDevHooks(): void {
     if (!isDevBuild()) return;
     try {
