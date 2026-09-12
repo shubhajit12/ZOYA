@@ -169,6 +169,7 @@ Performance work is kept separate from the animation architecture so gesture exp
 - Multilingual speech and text
 - Screen sharing
 - Voice-controlled computer actions such as opening websites/apps
+- **Minecraft gameplay support — allow Carlotta/Zoya to play Minecraft with the user through future computer-control/gameplay capabilities**
 
 ### Long term
 
@@ -179,6 +180,21 @@ Performance work is kept separate from the animation architecture so gesture exp
 - Lightweight in-app browsing experience
 - Minimized/taskbar companion mode with character reactions
 - More believable social behavior and environmental awareness
+- **Deeper game interaction and gameplay assistance, including Minecraft**
+
+## 🎮 Future Game Interaction
+
+One of ZOYA's longer-term goals is for Carlotta to become an actual interactive companion inside games — not just talk about them.
+
+A future version could be able to:
+
+- **Play Minecraft with the user**
+- Understand game-related voice commands
+- Perform computer/game actions through controlled interfaces
+- React conversationally to what is happening in-game
+- Eventually cooperate with the user during gameplay
+
+This is a future capability and is not currently implemented.
 
 ## 🔒 Animation Safety Rules
 
