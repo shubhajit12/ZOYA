@@ -8,20 +8,20 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `5c2e17b909732ce53fae6bffed46a948f26d7b2e`  
-**Exact commit message:** `Fix Carlotta wrist orientation in Point and Wave`
+**Latest code commit:** `8d3b916ba7940d2fe3e223da5d2e48bcfc6df30b`  
+**Exact commit message:** `Fix Carlotta Wave to isolate wrist motion`
 
 > **Important:** This is the latest code commit. The README update itself is a separate commit and does not change the gesture solver.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
 - **Animation architecture:** clean character-space spatial pose-solving system
-- **Point:** **wrist-orientation fix applied; awaiting visual re-validation**
+- **Point:** **working correctly — visually validated by user**
 - **Bow:** **working correctly — visually validated**
-- **Wave:** **wrist-orientation fix applied; awaiting visual re-validation**
+- **Wave:** **arm/wrist motion was isolated so the raised arm holds while the hand performs the wave; awaiting visual re-validation**
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
-- **Hand/wrist handling:** independent wrist rotations were removed from Point and Wave because the previous fallback hand-axis alignment could fold Carlotta's wrist backward
+- **Hand/wrist handling:** Point no longer uses the problematic fallback hand-axis alignment; Wave now keeps the arm target fixed and applies its wave beat only to the calibrated `rightHand` local rotation
 - **Other gestures:** not yet implemented/validated on the rebuilt system
 - **Idle:** preserved and intentionally untouched
 - **Camera / OrbitControls:** untouched
@@ -87,13 +87,13 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-The rebuilt trigger path is connected. Point and Bow established the spatial foundation. The latest fix removes the problematic independent wrist rotations from Point and Wave so the articulated lower arm naturally carries the wrist.
+The rebuilt trigger path is connected. Point and Bow established the spatial foundation. Wave now uses a fixed raised-arm IK target and a local calibrated hand rotation for the wave beat, preventing the whole arm from swinging with the hand target.
 
 ### Procedural Gesture Roadmap
 
-1. 🧪 **Point** — wrist-orientation fix applied; awaiting visual re-validation
+1. ✅ **Point** — working correctly and visually validated by user
 2. ✅ **Bow** — working correctly and visually validated
-3. 🧪 **Wave** — wrist-orientation fix applied; awaiting visual re-validation
+3. 🧪 **Wave** — arm/wrist isolation fix applied; awaiting visual re-validation
 4. **Greeting**
 5. **Goodbye**
 6. **Shrug**
@@ -157,8 +157,7 @@ Performance work is kept separate from the animation architecture so gesture exp
 
 ### Near term
 
-- Re-validate corrected **Point** wrist/hand orientation
-- Re-validate corrected **Wave** wrist/hand orientation
+- Re-validate corrected **Wave** arm/wrist behavior
 - Implement/rebuild **Greeting**
 - Implement/rebuild **Goodbye**
 - Implement/rebuild **Shrug**
