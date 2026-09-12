@@ -141,8 +141,14 @@ export class CarlottaGestureController {
     const preparation = smoothstep(time / 0.38);
     const waveTime = Math.max(0, time - 0.38);
     const waveEnvelope = smoothstep(waveTime / 0.18) * (1 - smoothstep((time - (WAVE_DURATION - 0.40)) / 0.40));
-    const sweep = Math.sin(waveTime * Math.PI * 3.0) * upperLength * 0.13 * waveEnvelope;
-    this.target.copy(this.shoulder).addScaledVector(this.right, upperLength * (1.00 + 0.04 * preparation)).addScaledVector(this.up, upperLength * (1.12 + 0.04 * preparation)).addScaledVector(this.forward, lowerLength * 0.18).addScaledVector(this.right, sweep);
+
+    // Hold the raised arm in a fixed spatial pose. The previous Wave moved the IK target
+    // left/right every frame, so the upper arm and forearm were forced to rotate with it.
+    this.target.copy(this.shoulder)
+      .addScaledVector(this.right, upperLength * (1.00 + 0.04 * preparation))
+      .addScaledVector(this.up, upperLength * (1.12 + 0.04 * preparation))
+      .addScaledVector(this.forward, lowerLength * 0.18);
+
     const fromShoulder = _v2.subVectors(this.target, this.shoulder); const rawDistance = fromShoulder.length(); const maxReach = Math.max(0.05, upperLength + lowerLength - 0.01); const distance = Math.min(rawDistance, maxReach);
     if (rawDistance > distance) this.target.copy(this.shoulder).addScaledVector(fromShoulder.normalize(), distance);
     const direction = this.pointDirection.subVectors(this.target, this.shoulder).normalize();
@@ -151,7 +157,15 @@ export class CarlottaGestureController {
     const along = Math.max(-a, Math.min(a, (a * a - b * b + safeDistance * safeDistance) / (2 * safeDistance))); const height = Math.sqrt(Math.max(0, a * a - along * along));
     this.elbowTarget.copy(this.shoulder).addScaledVector(direction, along).addScaledVector(planeUp, height);
     this.solveBoneToward(upper, this.elbowTarget, this.shoulder); upper.node.quaternion.copy(upper.target); upper.node.updateMatrixWorld(true); this.solveBoneToward(lower, this.target, this.elbowTarget);
-    // Keep the hand at its calibrated rest orientation; the lower arm carries the wrist naturally through the articulated chain.
+
+    if (hand) {
+      // Carlotta's rightHand has no child bone, so do not invent a world-space palm axis.
+      // Apply the wave around the hand bone's calibrated local X axis instead. This keeps
+      // the arm/forearm stationary while only the wrist/hand supplies the wave beat.
+      const handWave = Math.sin(waveTime * Math.PI * 3.0) * THREE.MathUtils.degToRad(16) * waveEnvelope;
+      _q0.setFromAxisAngle(_v4.set(1, 0, 0), handWave);
+      hand.target.copy(hand.restLocal).premultiply(_q0).normalize();
+    }
     upper.node.quaternion.copy(upper.from); upper.node.updateMatrixWorld(true);
   }
 
