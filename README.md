@@ -8,13 +8,13 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `1c23e33028c73b39e6231e3226b435d63be521af`  
+**Latest code commit:** `f4e6222085087d66f1843761bb6568ba7eb85ef1`  
+**Exact commit message:** `Route native window minimize into desktop companion`
+
+**Previous code commit:** `1c23e33028c73b39e6231e3226b435d63be521af`  
 **Exact commit message:** `Reload main window after companion restore`
 
-**Previous code commit:** `242dc6155f6b10cae14e2012f09873fcd3e3189b`  
-**Exact commit message:** `Make companion motion start after Carlotta loads`
-
-**README update commit:** this README synchronization commit follows the code commits above.
+**README update commit:** this README synchronization commit follows the code commit above.
 
 > **Important:** Wave development has been dropped. The validated Point and Bow remain intact. The new desktop-companion work is separate from the existing minimized chat widget.
 
@@ -26,6 +26,7 @@
 - **Startup Bow:** **normal ZOYA mode only**; the desktop companion cancels it so the companion arrival animation is not mixed with the startup greeting
 - **Desktop companion:** **implemented as a separate Tauri window**
 - **Companion startup:** waits for Carlotta VRM to finish loading, then explicitly starts the companion arrival motion
+- **Native minimize:** the Windows title-bar minimize action is routed into the same desktop-companion flow instead of simply minimizing the main ZOYA window
 - **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned near the bottom-right desktop/taskbar area
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
@@ -37,6 +38,7 @@
 
 1. **CODE COMMIT** `242dc6155f6b10cae14e2012f09873fcd3e3189b` — `Make companion motion start after Carlotta loads`
 2. **CODE COMMIT** `1c23e33028c73b39e6231e3226b435d63be521af` — `Reload main window after companion restore`
+3. **CODE COMMIT** `f4e6222085087d66f1843761bb6568ba7eb85ef1` — `Route native window minimize into desktop companion`
 
 ## ✨ What ZOYA Is
 
@@ -115,7 +117,11 @@ The real taskbar companion is implemented at the Tauri desktop layer rather than
 ```text
 ZOYA Main Window
       ↓
-Minimize / Companion button
+Native Minimize / Companion button
+      ↓
+Tauri detects the main window minimize request
+      ↓
+Main window is restored internally and then hidden
       ↓
 Tauri creates compact companion window
       ↓
