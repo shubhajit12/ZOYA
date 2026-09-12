@@ -12,7 +12,7 @@ pub fn run() {
 
 #[tauri::command]
 fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
-    use tauri::{Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder};
+    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
     if let Some(existing) = app.get_webview_window("companion") {
         existing.show().map_err(|e| e.to_string())?;
@@ -31,7 +31,7 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
         let y = (screen.height as f64 / scale - height - margin).max(0.0);
 
         let url = if cfg!(debug_assertions) {
-            WebviewUrl::External("http://localhost:3000/?companion=1".parse().map_err(|e| e.to_string())?)
+            WebviewUrl::External("http://localhost:3000/?companion=1".parse().expect("valid ZOYA dev URL"))
         } else {
             WebviewUrl::App("index.html?companion=1".into())
         };
