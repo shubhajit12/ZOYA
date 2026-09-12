@@ -8,17 +8,17 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `8669d8a77bb30bbf96c9bb73b5d73ecf272c5525`  
-**Exact commit message:** `Trigger validated Bow on Carlotta model load`
+**Latest code commit:** `f42026e5cb75519eb278d2ec857800c8e24ae3a5`  
+**Exact commit message:** `Remove dropped Carlotta Wave gesture`
 
-> **Important:** Wave development has been dropped. The latest code now triggers the validated Bow once after Carlotta finishes loading, then returns to normal idle.
+> **Important:** Wave development has been dropped. The latest code removes the Wave gesture from the active Carlotta gesture controller. The validated Point and Bow remain intact.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
 - **Animation architecture:** clean character-space spatial pose-solving system
 - **Point:** **working correctly — visually validated by user**
 - **Bow:** **working correctly — visually validated**
-- **Wave:** **dropped — no longer part of the animation roadmap**
+- **Wave:** **removed — no longer part of the active gesture system or roadmap**
 - **Startup Bow:** **implemented — automatically starts once after Carlotta finishes loading**
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
@@ -88,13 +88,13 @@ The new system:
 - Keeps the normal idle controller separate
 - Preserves deterministic gesture lifecycle and safe cancellation
 
-Point and Bow established the validated spatial foundation. Wave experimentation has been discontinued rather than carried forward.
+Point and Bow established the validated spatial foundation. Wave experimentation has been discontinued and its implementation has been removed.
 
 ### Procedural Gesture Roadmap
 
 1. ✅ **Point** — working correctly and visually validated by user
 2. ✅ **Bow** — working correctly and visually validated
-3. ❌ **Wave** — dropped
+3. ❌ **Wave** — removed
 4. **Greeting**
 5. **Goodbye**
 6. **Shrug**
