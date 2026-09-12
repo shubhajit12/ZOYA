@@ -95,45 +95,57 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
         let height = 390.0_f64;
         let margin = 2.0_f64;
 
-        // Prefer the actual Windows taskbar rectangle. This handles a taskbar
-        // placed on the bottom, top, left, or right without hard-coded offsets.
-        // Fall back to Tauri's monitor work area if the Shell_TrayWnd lookup is
-        // unavailable (for example, a non-Windows build).
+        // Tauri's monitor work area is already the desktop region excluding the
+        // taskbar. Use it as the coordinate anchor and use the native taskbar
+        // rectangle only to determine which edge the taskbar occupies. This is
+        // important because GetWindowRect is DPI-virtualized on Windows; using
+        // its raw coordinates directly with Tauri logical coordinates can create
+        // a large position error on scaled displays.
         #[cfg(target_os = "windows")]
-        let position = if let Some(taskbar) = get_windows_taskbar_rect() {
-            let taskbar_left = taskbar.left as f64 / scale;
-            let taskbar_top = taskbar.top as f64 / scale;
-            let taskbar_right = taskbar.right as f64 / scale;
-            let taskbar_bottom = taskbar.bottom as f64 / scale;
+        let taskbar_edge = get_windows_taskbar_rect().map(|taskbar| {
+            let work_left = work_area.position.x;
+            let work_top = work_area.position.y;
+            let work_right = work_area.position.x + work_area.size.width as i32;
+            let work_bottom = work_area.position.y + work_area.size.height as i32;
 
+            if taskbar.top >= work_bottom {
+                "bottom"
+            } else if taskbar.bottom <= work_top {
+                "top"
+            } else if taskbar.left >= work_right {
+                "right"
+            } else if taskbar.right <= work_left {
+                "left"
+            } else {
+                "bottom"
+            }
+        }).unwrap_or("bottom");
+
+        #[cfg(target_os = "windows")]
+        let position = {
             let work_left = work_area.position.x as f64 / scale;
             let work_top = work_area.position.y as f64 / scale;
-            let work_right = (work_area.position.x + work_area.size.width as i32) as f64 / scale;
-            let work_bottom = (work_area.position.y + work_area.size.height as i32) as f64 / scale;
+            let work_right = (work_area.position.x as f64 + work_area.size.width as f64) / scale;
+            let work_bottom = (work_area.position.y as f64 + work_area.size.height as f64) / scale;
 
-            let taskbar_is_horizontal = (taskbar_right - taskbar_left) > (taskbar_bottom - taskbar_top);
-            if taskbar_is_horizontal {
-                let x = (taskbar_right - width - margin).max(work_left);
-                let y = if taskbar_top > work_top {
-                    taskbar_top - height - margin
-                } else {
-                    taskbar_bottom + margin
-                };
-                (x.min(work_right - width), y.max(work_top))
-            } else {
-                let x = if taskbar_left > work_left {
-                    taskbar_left - width - margin
-                } else {
-                    taskbar_right + margin
-                };
-                let y = (taskbar_bottom - height - margin).max(work_top);
-                (x.max(work_left), y.min(work_bottom - height))
+            match taskbar_edge {
+                "top" => (
+                    (work_right - width - margin).max(work_left),
+                    work_top + margin,
+                ),
+                "left" => (
+                    work_left + margin,
+                    (work_bottom - height - margin).max(work_top),
+                ),
+                "right" => (
+                    (work_right - width - margin).max(work_left),
+                    (work_bottom - height - margin).max(work_top),
+                ),
+                _ => (
+                    (work_right - width - margin).max(work_left),
+                    (work_bottom - height - margin).max(work_top),
+                ),
             }
-        } else {
-            (
-                ((work_area.position.x as f64 + work_area.size.width as f64) / scale - width - margin).max(0.0),
-                ((work_area.position.y as f64 + work_area.size.height as f64) / scale - height - margin).max(0.0),
-            )
         };
 
         #[cfg(not(target_os = "windows"))]
@@ -148,7 +160,7 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
             WebviewUrl::App("index.html?companion=1".into())
         };
 
-        WebviewWindowBuilder::new(&app, "companion", url)
+        let companion = WebviewWindowBuilder::new(&app, "companion", url)
             .title("ZOYA Companion")
             .inner_size(width, height)
             .position(position.0, position.1)
@@ -161,6 +173,22 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
             .visible(true)
             .build()
             .map_err(|e| e.to_string())?;
+
+        // Keep a physical measurement in the native log so any remaining DPI
+        // mismatch can be diagnosed from the actual window rather than guessed.
+        if let (Ok(actual_position), Ok(actual_size)) = (companion.outer_position(), companion.inner_size()) {
+            println!(
+                "[ZOYA] Companion placement: logical=({:.1},{:.1}) scale={:.2} physical_outer=({}, {}) physical_inner=({},{}) taskbar_edge={}",
+                position.0,
+                position.1,
+                scale,
+                actual_position.x,
+                actual_position.y,
+                actual_size.width,
+                actual_size.height,
+                taskbar_edge,
+            );
+        }
     }
 
     if let Some(main) = app.get_webview_window("main") {
