@@ -8,10 +8,10 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `aa13de718c69c7ddd5063f1e5f955be8230ba784`  
-**Exact commit message:** `Fix Carlotta Wave shoulder ownership root cause`
+**Latest code commit:** `8669d8a77bb30bbf96c9bb73b5d73ecf272c5525`  
+**Exact commit message:** `Trigger validated Bow on Carlotta model load`
 
-> **Important:** Wave development has now been dropped. The commit above remains the latest code commit; this README update records the new animation direction.
+> **Important:** Wave development has been dropped. The latest code now triggers the validated Bow once after Carlotta finishes loading, then returns to normal idle.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
@@ -19,7 +19,7 @@
 - **Point:** **working correctly — visually validated by user**
 - **Bow:** **working correctly — visually validated**
 - **Wave:** **dropped — no longer part of the animation roadmap**
-- **Next animation behavior:** after Carlotta finishes loading, she will perform the validated Bow animation once, then return to normal idle
+- **Startup Bow:** **implemented — automatically starts once after Carlotta finishes loading**
 - **Gesture trigger path:** restored and connected to the rebuilt controller
 - **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
 - **Hand/wrist handling:** Point no longer uses the problematic fallback hand-axis alignment
@@ -102,7 +102,7 @@ Point and Bow established the validated spatial foundation. Wave experimentation
 
 ### Startup Animation
 
-After the Carlotta VRM finishes loading and the character is ready, ZOYA will play the validated **Bow** animation once as her startup greeting. After the Bow completes, Carlotta returns to her normal procedural idle.
+After the Carlotta VRM finishes loading and the character is ready, ZOYA automatically plays the validated **Bow** animation once as her startup greeting. After the Bow completes, Carlotta returns to her normal procedural idle.
 
 ### Gesture Design Rules
 
