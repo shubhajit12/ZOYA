@@ -6,16 +6,17 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Code commit:** `cc86b1437b6dc6727c19fffb4655068da0e840dd`  
-**Exact commit message:** `Fix Carlotta point solver activation and rest-pose blending`
+**Code commit:** `64fc8d4e66691794b77b2de5ac37a38ef638c010`  
+**Exact commit message:** `Rebuild Carlotta gesture system around character-space pose solving`
 
-> **Important:** This is the actual Git commit message on GitHub. The README update itself is a separate commit and does not change the gesture code.
+> **Important:** This is the current gesture-rebuild code commit. The README update itself is a separate commit and does not change the gesture solver.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
-- **Animation architecture:** spatial pose-solving system
+- **Animation architecture:** clean character-space spatial pose-solving system
 - **Currently validating:** **Point** gesture
-- **Bow:** planned next after Point is proven
+- **Other gestures:** intentionally disabled until Point is proven
+- **Bow:** next after Point validation
 - **Idle:** preserved and intentionally untouched
 - **Camera / OrbitControls:** untouched
 - **MToon / textures / performance settings:** untouched
@@ -65,9 +66,27 @@ ZOYA's animation architecture is designed as:
 
 The controller owns bone transforms. AI intents never directly manipulate bones.
 
+### Current Gesture Rebuild
+
+The previous experimental gesture solver has been replaced with a clean foundation built around **character-space pose solving**.
+
+The new system:
+
+- Derives Carlotta's forward/right/up frame from the actual loaded VRM root
+- Automatically respects the existing 180° root orientation correction
+- Measures real bone directions from the loaded skeleton
+- Solves Point from spatial shoulder → elbow → hand targets
+- Applies the upper-arm solve before solving the lower arm
+- Starts from the actual pose instead of an identity quaternion
+- Blends into the gesture and recovers smoothly
+- Keeps the normal idle controller separate
+- Avoids hard-coded Euler sign corrections
+
+Only **Point** is enabled during validation. Once Point is physically correct, the same pose infrastructure will be expanded to the other gestures.
+
 ### Procedural Gesture Roadmap
 
-1. 🔧 **Point** — current diagnostic gesture; spatial target solving
+1. 🔧 **Point** — current diagnostic gesture
 2. ⏭️ **Bow** — spatial torso/forward movement
 3. **Wave**
 4. **Greeting**
@@ -75,17 +94,16 @@ The controller owns bone transforms. AI intents never directly manipulate bones.
 6. **Shrug**
 7. **Clap**
 
-The system is intentionally being validated one gesture at a time. This avoids repeating the previous backwards-direction problems caused by hard-coded Euler-angle assumptions.
-
 ### Gesture Design Rules
 
-- Spatial targets instead of guessed Euler rotations
-- Rest-pose calibration from the actual loaded skeleton
-- World-space target solving
+- Character-space spatial targets instead of guessed Euler rotations
+- Calibration from the actual loaded skeleton
+- Root-aware forward/right/up frame
+- Sequential pose solving for articulated limbs
 - Smooth start / active / recovery lifecycle
 - Snapshot-based blending
 - Gesture ownership separated from the normal idle controller
-- Missing bones are handled safely
+- Missing bones handled safely
 - No `AnimationMixer` requirement
 - No mesh vertex manipulation
 - No skeleton replacement
@@ -199,7 +217,7 @@ ZOYA
         ├── Idle controller
         ├── Animation controller
         ├── Gesture controller
-        ├── Spatial pose solver
+        ├── Character-space pose solver
         ├── Expression controller
         └── Lip-sync controller
 ```
