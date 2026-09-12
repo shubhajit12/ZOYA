@@ -57,13 +57,20 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
             .primary_monitor()
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "No primary monitor available".to_string())?;
-        let screen = monitor.size();
+        let work_area = monitor.work_area();
         let scale = monitor.scale_factor();
         let width = 330.0_f64;
         let height = 390.0_f64;
         let margin = 2.0_f64;
-        let x = (screen.width as f64 / scale - width - margin).max(0.0);
-        let y = (screen.height as f64 / scale - height - margin).max(0.0);
+
+        // Use the monitor's work area instead of the raw screen size. Windows'
+        // work area ends at the taskbar edge, so the companion window's bottom
+        // lands exactly on the visible desktop/taskbar boundary rather than
+        // being positioned behind the taskbar.
+        let x = ((work_area.position.x as f64 + work_area.size.width as f64) / scale - width - margin)
+            .max(0.0);
+        let y = ((work_area.position.y as f64 + work_area.size.height as f64) / scale - height - margin)
+            .max(0.0);
 
         let url = if cfg!(debug_assertions) {
             WebviewUrl::External("http://localhost:3000/?companion=1".parse().expect("valid ZOYA dev URL"))
