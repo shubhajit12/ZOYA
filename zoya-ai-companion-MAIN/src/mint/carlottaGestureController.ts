@@ -50,6 +50,10 @@ export class CarlottaGestureController {
   private shoulder = new THREE.Vector3();
   private elbowTarget = new THREE.Vector3();
   private pointDirection = new THREE.Vector3();
+  private waveUpperTarget = new THREE.Quaternion();
+  private waveLowerTarget = new THREE.Quaternion();
+  private waveHandBase = new THREE.Quaternion();
+  private waveHandAxis = new THREE.Vector3(1, 0, 0);
 
   public init(vrm: VRM): void {
     this.reset();
@@ -95,7 +99,7 @@ export class CarlottaGestureController {
     this.active = name; this.phase = 'active'; this.elapsed = 0; this.recovery = 1; this.completed = null;
     if (name === 'point') this.solvePointTarget();
     else if (name === 'bow') this.solveBowTarget();
-    else this.solveWaveTarget(0);
+    else this.solveWaveTarget();
     if (isDevBuild()) console.info(`[CarloGesture] ${name.toUpperCase()} started from current pose`);
     return true;
   }
@@ -104,6 +108,7 @@ export class CarlottaGestureController {
     for (const bone of this.bones.values()) bone.node.quaternion.copy(bone.restLocal);
     this.bones.clear(); this.initialized = false; this.active = null; this.phase = 'idle'; this.elapsed = 0; this.recovery = 1; this.completed = null; this.diagnosticsElapsed = 0;
     this.target.set(0, 0, 0); this.shoulder.set(0, 0, 0); this.elbowTarget.set(0, 0, 0); this.pointDirection.set(0, 0, 0);
+    this.waveUpperTarget.identity(); this.waveLowerTarget.identity(); this.waveHandBase.identity(); this.waveHandAxis.set(1, 0, 0);
   }
 
   private solvePointTarget(): void {
@@ -133,40 +138,71 @@ export class CarlottaGestureController {
     if (head) this.applyWorldAxisBend(head, -fullBend * 0.10);
   }
 
-  private solveWaveTarget(time: number): void {
+  private solveWaveTarget(): void {
     const upper = this.bones.get('rightUpperArm'), lower = this.bones.get('rightLowerArm'), hand = this.bones.get('rightHand');
     if (!upper || !lower) return;
     upper.node.getWorldPosition(this.shoulder); lower.node.getWorldPosition(_v0); const wrist = hand ? hand.node.getWorldPosition(_v1) : _v0;
     const upperLength = Math.max(this.shoulder.distanceTo(_v0), 0.05), lowerLength = Math.max(_v0.distanceTo(wrist), 0.05);
-    const preparation = smoothstep(time / 0.38);
-    const waveTime = Math.max(0, time - 0.38);
-    const waveEnvelope = smoothstep(waveTime / 0.18) * (1 - smoothstep((time - (WAVE_DURATION - 0.40)) / 0.40));
 
-    // Hold the raised arm in a fixed spatial pose. The previous Wave moved the IK target
-    // left/right every frame, so the upper arm and forearm were forced to rotate with it.
+    // Build the raised-arm pose ONCE when Wave starts. The old implementation rebuilt the
+    // IK chain every frame from the live shoulder/parent transforms, allowing the wave
+    // oscillator and parent blending to feed back into the arm. During the wave phase the
+    // upper arm and forearm must be immutable gesture targets.
     this.target.copy(this.shoulder)
-      .addScaledVector(this.right, upperLength * (1.00 + 0.04 * preparation))
-      .addScaledVector(this.up, upperLength * (1.12 + 0.04 * preparation))
+      .addScaledVector(this.right, upperLength)
+      .addScaledVector(this.up, upperLength * 1.12)
       .addScaledVector(this.forward, lowerLength * 0.18);
 
-    const fromShoulder = _v2.subVectors(this.target, this.shoulder); const rawDistance = fromShoulder.length(); const maxReach = Math.max(0.05, upperLength + lowerLength - 0.01); const distance = Math.min(rawDistance, maxReach);
+    const fromShoulder = _v2.subVectors(this.target, this.shoulder);
+    const rawDistance = fromShoulder.length();
+    const maxReach = Math.max(0.05, upperLength + lowerLength - 0.01);
+    const distance = Math.min(rawDistance, maxReach);
     if (rawDistance > distance) this.target.copy(this.shoulder).addScaledVector(fromShoulder.normalize(), distance);
+
     const direction = this.pointDirection.subVectors(this.target, this.shoulder).normalize();
-    const planeUp = _v3.copy(this.up).addScaledVector(direction, -this.up.dot(direction)); if (planeUp.lengthSq() < EPSILON) planeUp.copy(this.forward); planeUp.normalize();
+    const planeUp = _v3.copy(this.up).addScaledVector(direction, -this.up.dot(direction));
+    if (planeUp.lengthSq() < EPSILON) planeUp.copy(this.forward);
+    planeUp.normalize();
+
     const a = upperLength, b = lowerLength, safeDistance = Math.max(distance, 0.001);
-    const along = Math.max(-a, Math.min(a, (a * a - b * b + safeDistance * safeDistance) / (2 * safeDistance))); const height = Math.sqrt(Math.max(0, a * a - along * along));
+    const along = Math.max(-a, Math.min(a, (a * a - b * b + safeDistance * safeDistance) / (2 * safeDistance)));
+    const height = Math.sqrt(Math.max(0, a * a - along * along));
     this.elbowTarget.copy(this.shoulder).addScaledVector(direction, along).addScaledVector(planeUp, height);
-    this.solveBoneToward(upper, this.elbowTarget, this.shoulder); upper.node.quaternion.copy(upper.target); upper.node.updateMatrixWorld(true); this.solveBoneToward(lower, this.target, this.elbowTarget);
+
+    this.solveBoneToward(upper, this.elbowTarget, this.shoulder);
+    upper.node.quaternion.copy(upper.target);
+    upper.node.updateMatrixWorld(true);
+    this.solveBoneToward(lower, this.target, this.elbowTarget);
+
+    this.waveUpperTarget.copy(upper.target);
+    this.waveLowerTarget.copy(lower.target);
+    upper.node.quaternion.copy(upper.from);
+    upper.node.updateMatrixWorld(true);
 
     if (hand) {
-      // Carlotta's rightHand has no child bone, so do not invent a world-space palm axis.
-      // Apply the wave around the hand bone's calibrated local X axis instead. This keeps
-      // the arm/forearm stationary while only the wrist/hand supplies the wave beat.
-      const handWave = Math.sin(waveTime * Math.PI * 3.0) * THREE.MathUtils.degToRad(16) * waveEnvelope;
-      _q0.setFromAxisAngle(_v4.set(1, 0, 0), handWave);
-      hand.target.copy(hand.restLocal).premultiply(_q0).normalize();
+      this.waveHandBase.copy(hand.from);
+      // Derive the wrist-wave axis from the actual forearm direction in Carlotta's
+      // captured rest frame. This avoids inventing a world/Euler axis for the hand.
+      _q0.copy(hand.restWorld).invert();
+      this.waveHandAxis.copy(lower.restDirection).applyQuaternion(_q0).normalize();
+      if (this.waveHandAxis.lengthSq() < EPSILON) this.waveHandAxis.set(1, 0, 0);
+      hand.target.copy(this.waveHandBase);
     }
-    upper.node.quaternion.copy(upper.from); upper.node.updateMatrixWorld(true);
+  }
+
+  private updateWaveHandTarget(time: number): void {
+    const upper = this.bones.get('rightUpperArm'), lower = this.bones.get('rightLowerArm'), hand = this.bones.get('rightHand');
+    if (!upper || !lower) return;
+    upper.target.copy(this.waveUpperTarget);
+    lower.target.copy(this.waveLowerTarget);
+    if (!hand) return;
+    const waveTime = Math.max(0, time - 0.38);
+    const waveEnvelope = smoothstep(waveTime / 0.18) * (1 - smoothstep((time - (WAVE_DURATION - 0.40)) / 0.40));
+    const handWave = Math.sin(waveTime * Math.PI * 3.0) * THREE.MathUtils.degToRad(16) * waveEnvelope;
+    _q0.setFromAxisAngle(this.waveHandAxis, handWave);
+    // This is a LOCAL hand rotation: post-multiply the captured starting hand pose.
+    // The parent arm targets never receive the sinusoidal term.
+    hand.target.copy(this.waveHandBase).multiply(_q0).normalize();
   }
 
   private applyWorldAxisBend(bone: BoneState, angle: number): void { _q0.setFromAxisAngle(this.right, angle); _q1.copy(_q0).multiply(bone.restWorld).normalize(); worldToLocal(bone.node, _q1, bone.target); }
@@ -180,7 +216,7 @@ export class CarlottaGestureController {
     const dt = Math.min(Math.max(delta, 0), CARLOTTA_IDLE_MAX_DELTA);
     if (this.phase === 'active') {
       this.elapsed += dt;
-      if (this.active === 'wave') this.solveWaveTarget(this.elapsed);
+      if (this.active === 'wave') this.updateWaveHandTarget(this.elapsed);
       const duration = this.active === 'bow' ? BOW_DURATION : this.active === 'wave' ? WAVE_DURATION : POINT_DURATION;
       const activation = smoothstep(this.elapsed / START_BLEND_SECONDS); const progress = clamp01(this.elapsed / duration); const release = smoothstep((progress - 0.72) / 0.28); const weight = activation * (1 - release);
       for (const bone of this.bones.values()) { _q3.copy(bone.from).slerp(bone.target, weight); bone.node.quaternion.copy(_q3); }
