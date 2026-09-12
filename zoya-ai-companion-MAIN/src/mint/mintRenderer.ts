@@ -7,6 +7,7 @@ import { carlottaVrmLoader, LoadedCarlottaModel } from './carlottaVrmLoader';
 import { applyCarlottaRelaxedPose } from './carlottaIdleController';
 import { carlottaAnimationController } from './carlottaAnimationController';
 import { carlottaGestureController } from './carlottaGestureController';
+import { carlottaCompanionController } from './carlottaCompanionController';
 import { dispatchSkillIntent, registerSkillDevHooks } from './carlottaSkillSystem';
 import { carlottaExpressionController } from './carlottaExpressionController';
 import { carlottaLipSync } from './carlottaLipSync';
@@ -77,6 +78,7 @@ export class MintRenderer {
   private devGpuTimeMs = -1;
   private gpuTimerSupported = false;
   private _dbSize = new THREE.Vector2();
+  private companionMode = false;
 
   constructor() {
     this.scene = new THREE.Scene();
@@ -94,6 +96,29 @@ export class MintRenderer {
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     this.camera.position.set(0, 0.5, 4.5);
     this.initProceduralAvatar();
+  }
+
+  public setCompanionMode(enabled: boolean): void {
+    this.companionMode = enabled;
+    if (this.controls) this.controls.enabled = !enabled;
+    if (enabled) {
+      this.camera.position.set(0, 0.72, 3.35);
+      this.camera.lookAt(0, 0.55, 0);
+      this.camera.updateProjectionMatrix();
+      if (this.vrmAvatar) carlottaCompanionController.enter();
+    } else {
+      this.camera.position.set(0, 0.5, 4.5);
+      if (this.controls) {
+        this.controls.target.set(0, 0.3, 0);
+        this.controls.enabled = true;
+        this.controls.update();
+      }
+      if (this.vrmAvatar) carlottaCompanionController.exit();
+    }
+  }
+
+  public exitCompanionMotion(): void {
+    if (this.vrmAvatar) carlottaCompanionController.exit();
   }
 
   private initProceduralAvatar() {
@@ -124,10 +149,11 @@ export class MintRenderer {
       loaded.vrm.update(0);
       carlottaAnimationController.init(loaded.vrm);
       carlottaGestureController.init(loaded.vrm);
-      // Show Carlotta's validated Bow once immediately after the model is fully initialized.
       carlottaGestureController.start('bow');
       carlottaLipSync.bind(loaded.vrm);
       carlottaExpressionController.init(loaded.vrm);
+      carlottaCompanionController.init(loaded.vrm);
+      if (this.companionMode) carlottaCompanionController.enter();
       console.log('[CarloPose] idle base captured after relaxed pose');
       applyCarlottaTextureQuality(loaded.vrm, this.effectiveQuality);
       console.log('[MintRenderer] Carlotta VRM active (Mint fallback available)');
@@ -192,7 +218,6 @@ export class MintRenderer {
           const gl = this.renderer.getContext();
           this.gpuTimerQueryExt = gl.getExtension('EXT_disjoint_timer_query_webgl2') || gl.getExtension('EXT_disjoint_timer_query');
           this.gpuTimerSupported = !!this.gpuTimerQueryExt;
-          console.info(this.gpuTimerSupported ? '[ZoyaPerf] WebGL GPU Timer Query supported and enabled' : '[ZoyaPerf] WebGL GPU Timer Query (EXT_disjoint_timer_query) not supported on this device/browser');
         } catch { this.gpuTimerSupported = false; }
       }
       this.camera.aspect = width / height;
@@ -213,6 +238,11 @@ export class MintRenderer {
       this.controls.maxPolarAngle = Math.PI * 0.85;
       this.controls.target.set(0, 0.3, 0);
       this.controls.update();
+      if (this.companionMode) {
+        this.controls.enabled = false;
+        this.camera.position.set(0, 0.72, 3.35);
+        this.camera.lookAt(0, 0.55, 0);
+      }
       this.startRenderLoop();
       if (DEFAULT_MODEL === 'carlotta') this.autoLoadCarlotta().then((ok) => { if (!ok) this.autoLoadFbx(); }); else this.autoLoadFbx();
       return true;
@@ -227,6 +257,7 @@ export class MintRenderer {
     if (this.vrmAvatar) {
       carlottaAnimationController.reset();
       carlottaGestureController.reset();
+      carlottaCompanionController.reset();
       carlottaExpressionController.reset();
       carlottaLipSync.reset();
       carlottaVrmLoader.dispose(this.vrmAvatar);
@@ -275,6 +306,7 @@ export class MintRenderer {
         if (this.activeModelGroup === this.vrmAvatar.vrm.scene) this.scene.remove(this.activeModelGroup);
         carlottaAnimationController.reset();
         carlottaGestureController.reset();
+        carlottaCompanionController.reset();
         carlottaExpressionController.reset();
         carlottaLipSync.reset();
         carlottaVrmLoader.dispose(this.vrmAvatar);
@@ -391,6 +423,8 @@ export class MintRenderer {
         const t4 = isDevBuild() ? performance.now() : 0;
         carlottaGestureController.update(delta);
         const t5 = isDevBuild() ? performance.now() : 0;
+        carlottaCompanionController.update(delta);
+        const t6 = isDevBuild() ? performance.now() : 0;
         if (isDevBuild()) {
           const EMA = 0.05;
           this.devLipMs += ((t1 - t0) - this.devLipMs) * EMA;
@@ -398,7 +432,7 @@ export class MintRenderer {
           if (didUpdateVrm) this.devVrmMs += ((t3 - t2) - this.devVrmMs) * EMA;
           this.devAnimMs += ((t4 - t3) - this.devAnimMs) * EMA;
           this.devGestMs += ((t5 - t4) - this.devGestMs) * EMA;
-          this.devUpdateMs += ((t5 - t0) - this.devUpdateMs) * EMA;
+          this.devUpdateMs += ((t6 - t0) - this.devUpdateMs) * EMA;
         }
       } else if (this.fbxAvatar) {
         const MIN_SPEAKING_HOLD = 1.0;
@@ -479,19 +513,40 @@ export class MintRenderer {
   };
 
   public getPerfStats(): {
-    tier: EffectivePerformanceQuality; targetFps: number; springBoneUpdateFps: number; fps: number; frameMs: number; pixelRatio: number; devicePixelRatio: number; canvasWidth: number; canvasHeight: number; drawingBufferWidth: number; drawingBufferHeight: number; drawCalls: number; triangles: number; geometries: number; textures: number; programs: number; vrmMs: number; animMs: number; gestMs: number; exprMs: number; lipMs: number; renderMs: number; updateMs: number; rafIntervalMs: number; timeBeforeUpdateMs: number; timeAfterRenderMs: number; totalFrameIntervalMs: number; missedFrames: number; gpuTimeMs: number; gpuTimerSupported: boolean;
+    tier: EffectivePerformanceQuality; targetFps: number; springBoneUpdateFps: number; fps: number; frameMs: number; pixelRatio: number; devicePixelRatio: number; drawingBufferWidth: number; drawingBufferHeight: number; canvasWidth: number; canvasHeight: number; drawCalls: number; triangles: number; geometries: number; textures: number; rafIntervalMs: number; timeBeforeUpdateMs: number; timeAfterRenderMs: number; totalFrameIntervalMs: number; missedFrames: number; gpuTimeMs: number; gpuTimerSupported: boolean; updateMs: number; lipMs: number; exprMs: number; vrmMs: number; animMs: number; gestMs: number; renderMs: number;
   } {
     const info = this.renderer?.info;
-    if (this.renderer) this.renderer.getDrawingBufferSize(this._dbSize);
-    const dom = this.renderer?.domElement;
+    const size = this.renderer ? this.renderer.getDrawingBufferSize(this._dbSize) : this._dbSize.set(0, 0);
     return {
-      tier: this.effectiveQuality, targetFps: this.framePacer.getTargetFps(), springBoneUpdateFps: this.springBoneUpdateFps,
-      fps: Math.round(this.perfFpsEma * 10) / 10, frameMs: Math.round(this.perfFrameMsEma * 100) / 100,
-      pixelRatio: this.renderer ? this.renderer.getPixelRatio() : 0, devicePixelRatio: typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1,
-      canvasWidth: dom ? dom.clientWidth : 0, canvasHeight: dom ? dom.clientHeight : 0, drawingBufferWidth: this._dbSize.x, drawingBufferHeight: this._dbSize.y,
-      drawCalls: info ? info.render.calls : 0, triangles: info ? info.render.triangles : 0, geometries: info ? info.memory.geometries : 0, textures: info ? info.memory.textures : 0, programs: info ? info.programs.length : 0,
-      vrmMs: Math.round(this.devVrmMs * 1000) / 1000, animMs: Math.round(this.devAnimMs * 1000) / 1000, gestMs: Math.round(this.devGestMs * 1000) / 1000, exprMs: Math.round(this.devExprMs * 1000) / 1000, lipMs: Math.round(this.devLipMs * 1000) / 1000, renderMs: Math.round(this.devRenderMs * 1000) / 1000, updateMs: Math.round(this.devUpdateMs * 1000) / 1000,
-      rafIntervalMs: Math.round(this.devRafIntervalMs * 100) / 100, timeBeforeUpdateMs: Math.round(this.devTimeBeforeUpdateMs * 1000) / 1000, timeAfterRenderMs: Math.round(this.devTimeAfterRenderMs * 1000) / 1000, totalFrameIntervalMs: Math.round(this.devTotalFrameIntervalMs * 100) / 100, missedFrames: this.devMissedFrames, gpuTimeMs: Math.round(this.devGpuTimeMs * 100) / 100, gpuTimerSupported: this.gpuTimerSupported,
+      tier: this.effectiveQuality,
+      targetFps: this.framePacer.getTargetFps(),
+      springBoneUpdateFps: this.springBoneUpdateFps,
+      fps: Math.round(this.perfFpsEma * 10) / 10,
+      frameMs: Math.round(this.perfFrameMsEma * 100) / 100,
+      pixelRatio: this.renderer?.getPixelRatio() ?? 0,
+      devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 0,
+      drawingBufferWidth: size.x,
+      drawingBufferHeight: size.y,
+      canvasWidth: this.renderer?.domElement.clientWidth ?? 0,
+      canvasHeight: this.renderer?.domElement.clientHeight ?? 0,
+      drawCalls: info?.render.calls ?? 0,
+      triangles: info?.render.triangles ?? 0,
+      geometries: info?.memory.geometries ?? 0,
+      textures: info?.memory.textures ?? 0,
+      rafIntervalMs: this.devRafIntervalMs,
+      timeBeforeUpdateMs: this.devTimeBeforeUpdateMs,
+      timeAfterRenderMs: this.devTimeAfterRenderMs,
+      totalFrameIntervalMs: this.devTotalFrameIntervalMs,
+      missedFrames: this.devMissedFrames,
+      gpuTimeMs: this.devGpuTimeMs,
+      gpuTimerSupported: this.gpuTimerSupported,
+      updateMs: this.devUpdateMs,
+      lipMs: this.devLipMs,
+      exprMs: this.devExprMs,
+      vrmMs: this.devVrmMs,
+      animMs: this.devAnimMs,
+      gestMs: this.devGestMs,
+      renderMs: this.devRenderMs,
     };
   }
 }
