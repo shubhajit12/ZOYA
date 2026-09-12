@@ -8,10 +8,12 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `f42026e5cb75519eb278d2ec857800c8e24ae3a5`  
-**Exact commit message:** `Remove dropped Carlotta Wave gesture`
+**Latest code commit:** `6b88d20883106f3c18d40d803ad5c9a44414edba`  
+**Exact commit message:** `Harden companion window URL setup`
 
-> **Important:** Wave development has been dropped. The latest code removes the Wave gesture from the active Carlotta gesture controller. The validated Point and Bow remain intact.
+**README update commit:** this README synchronization commit follows the code commits below.
+
+> **Important:** Wave development has been dropped. The validated Point and Bow remain intact. The new desktop-companion work is separate from the existing minimized chat widget.
 
 ### Current animation validation state
 - **Character:** `Carlotta.vrm`
@@ -19,16 +21,25 @@
 - **Point:** **working correctly — visually validated by user**
 - **Bow:** **working correctly — visually validated**
 - **Wave:** **removed — no longer part of the active gesture system or roadmap**
-- **Startup Bow:** **implemented — automatically starts once after Carlotta finishes loading**
-- **Gesture trigger path:** restored and connected to the rebuilt controller
-- **Point solver:** uses Carlotta's actual character-forward axis after the existing 180° root correction
-- **Hand/wrist handling:** Point no longer uses the problematic fallback hand-axis alignment
-- **Other gestures:** not yet implemented/validated on the rebuilt system
-- **Idle:** preserved as the normal post-gesture state
-- **Camera / OrbitControls:** untouched
-- **MToon / textures / performance settings:** untouched
+- **Startup Bow:** **implemented — automatically starts once after Carlotta finishes loading in normal ZOYA mode**
+- **Desktop companion:** **implemented as a separate Tauri window**
+- **Companion window:** transparent, compact, always-on-top, hidden from the taskbar, positioned near the bottom-right desktop/taskbar area
+- **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
+- **Main window:** hidden while companion mode is active and restored from the companion controls
+- **Minimized chat widget:** remains separate; Carlotta is not embedded into it
+- **Camera / OrbitControls:** normal ZOYA camera behavior remains protected; companion uses separate framing and disables OrbitControls
+- **MToon / textures / performance settings:** preserved
 
-> ⚠️ For gesture testing, make sure you are running the exact latest code commit shown above. The README commit itself is not the code commit.
+### Exact desktop-companion code commits
+
+1. **CODE COMMIT** `3589d6902ac7f396186967419eb035808307d33b` — `Implement Carlotta desktop companion motion`
+2. **CODE COMMIT** `085a4cded16bdd0c1648733ed6c43d0e5600bcf6` — `Implement Tauri desktop companion window`
+3. **CODE COMMIT** `ba7c30bf534054a44a43426180316beef29ccfd0` — `Add Tauri companion window bridge`
+4. **CODE COMMIT** `84441d21ec8a392676e9ba46d650c529cbd5888a` — `Integrate Carlotta companion motion into renderer`
+5. **CODE COMMIT** `c38b1f8f9c134ec0a32bdc7a729977c8c2b528ad` — `Add standalone Tauri companion UI`
+6. **CODE COMMIT** `338c849c93d8f378d2eb40f6b8f98ecd4ab85647` — `Route Tauri companion window to standalone UI`
+7. **CODE COMMIT** `15d428bdba25bd7a399430bcb16256f18c4ebad9` — `Launch real Tauri companion from minimize control`
+8. **CODE COMMIT** `6b88d20883106f3c18d40d803ad5c9a44414edba` — `Harden companion window URL setup`
 
 ---
 
@@ -102,7 +113,37 @@ Point and Bow established the validated spatial foundation. Wave experimentation
 
 ### Startup Animation
 
-After the Carlotta VRM finishes loading and the character is ready, ZOYA automatically plays the validated **Bow** animation once as her startup greeting. After the Bow completes, Carlotta returns to her normal procedural idle.
+After the Carlotta VRM finishes loading and the character is ready, ZOYA automatically plays the validated **Bow** animation once as her startup greeting in normal mode. After the Bow completes, Carlotta returns to her normal procedural idle.
+
+### Desktop Companion
+
+The real taskbar companion is now implemented at the Tauri desktop layer rather than inside the minimized chat widget.
+
+```text
+ZOYA Main Window
+      ↓
+Minimize / Companion button
+      ↓
+Tauri creates compact companion window
+      ↓
+Transparent + always-on-top + skip-taskbar
+      ↓
+Position near bottom-right/taskbar area
+      ↓
+Carlotta jump
+      ↓
+Carlotta sits
+      ↓
+Companion idle / talking / reacting
+      ↓
+Restore control
+      ↓
+Companion closes
+      ↓
+Main ZOYA window returns
+```
+
+The companion has its own renderer framing and does not modify the normal ZOYA camera/OrbitControls configuration. The existing minimized chat widget remains a normal chat UI and does not contain Carlotta.
 
 ### Gesture Design Rules
 
@@ -155,6 +196,7 @@ Emotion changes are intended to be gradual and continuous rather than randomly c
 - Carlotta texture-quality controls
 - Spring-bone throttling support
 - Performance diagnostics for CPU/GPU/render timing
+- Dedicated desktop companion window architecture
 
 Performance work is kept separate from the animation architecture so gesture experiments do not silently change rendering behavior.
 
@@ -162,13 +204,14 @@ Performance work is kept separate from the animation architecture so gesture exp
 
 ### Near term
 
+- Validate the new Tauri companion on the Windows desktop
+- Tune companion taskbar offset and visual scale from real testing
+- Validate jump → sit transition on Carlotta's actual skeleton
+- Add richer companion reactions while preserving the protected idle/gesture layers
 - Implement/rebuild **Greeting**
 - Implement/rebuild **Goodbye**
 - Implement/rebuild **Shrug**
 - Implement/rebuild **Clap**
-- Improve gesture/idle blending
-- Expand animation intent vocabulary
-- Add better developer diagnostics for animation skills
 
 ### Mid term
 
@@ -189,7 +232,7 @@ Performance work is kept separate from the animation architecture so gesture exp
 - Skill quality validation before activation
 - A growing reusable animation library
 - Lightweight in-app browsing experience
-- Minimized/taskbar companion mode with character reactions
+- Richer taskbar/desktop companion behavior
 - More believable social behavior and environmental awareness
 - **Deeper game interaction and gameplay assistance, including Minecraft**
 
@@ -220,17 +263,18 @@ The following are deliberately protected unless a task specifically targets them
 - TTS
 - Lip-sync
 - Performance configuration
+- **Wave remains dropped and must not be resurrected**
 
 ## 🧪 Current Development Workflow
 
-1. Make one targeted animation change.
+1. Make one targeted animation/companion change.
 2. Commit it with a clear commit message.
-3. **Immediately update this README's Current Code Commit section with the exact new code commit SHA and exact commit message.**
+3. **Immediately synchronize this README with the exact new code commit SHA and exact commit message.**
 4. Run the exact code commit locally.
 5. Validate the visible result.
-6. Only then move to the next gesture.
+6. Only then move to the next change.
 
-This makes it easy to identify exactly which commit introduced a change or regression.
+For the companion specifically, GitHub is the primary development workspace and the local PC is used for pulling/running/testing.
 
 ## 📂 Core Architecture
 
@@ -240,11 +284,14 @@ ZOYA
 ├── Groq conversation layer
 ├── Express API
 ├── Tauri desktop shell
-└── ZOYA-MAIN
+│   ├── Main ZOYA window
+│   └── Separate companion window
+└── zoya-ai-companion-MAIN
     └── Carlotta VRM
         ├── Idle controller
         ├── Animation controller
         ├── Gesture controller
+        ├── Companion motion controller
         ├── Character-space pose solver
         ├── Expression controller
         └── Lip-sync controller
