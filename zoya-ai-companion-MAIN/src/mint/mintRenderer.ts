@@ -325,9 +325,9 @@ export class MintRenderer {
       if (this.activeModelGroup) this.scene.remove(this.activeModelGroup);
       this.fbxAvatar = loaded;
       this.proceduralAvatar = null;
+      this.activeModelId = 'mint';
       this.activeModelGroup = loaded.group;
       this.scene.add(this.activeModelGroup);
-      this.activeModelId = 'mint';
       this.isFbxLoaded = true;
       this.animController.discoverBones(loaded.group);
       this.initEyeTracking();
@@ -336,93 +336,226 @@ export class MintRenderer {
       if (this.lipSync.getMode() === 'none') this.lipSync.initBones(this.animController.getBoneMap());
       console.log(`[MintRenderer] Lip sync mode: ${this.lipSync.getMode()}`);
       return true;
-    } catch (err) {
-      console.warn('[MintRenderer] FBX file load failed:', err);
-      return false;
-    }
+    } catch { return false; }
   }
 
-  private initEyeTracking() {
-    if (!this.renderer) return;
-    this.eyeTracker = new EyeTracker(this.renderer.domElement);
-    this.eyeTracker.setModel(this.fbxAvatar?.group ?? null);
+  public getIsFbxLoaded() { return this.isFbxLoaded; }
+  public getIsVrmLoaded() { return this.isVrmLoaded; }
+  public getActiveModelId(): ActiveModelId | null { return this.activeModelId; }
+  public getActiveAvatarType() {
+    if (this.vrmAvatar) return 'Carlotta (VRM)';
+    if (this.fbxAvatar) return 'Mint.fbx (Game Model)';
+    if (this.proceduralAvatar) return 'Procedural Mint';
+    return 'None';
   }
-
-  public setEmotion(emotion: EmotionType, intensity = 0.45) {
+  public setEmotion(emotion: EmotionType, intensity: number = 0.5) {
     this.currentEmotion = emotion;
     this.currentEmotionIntensity = intensity;
-    if (this.vrmAvatar) carlottaExpressionController.setEmotion(emotion, intensity);
+    this.animController.setEmotion(emotion, intensity);
+  }
+  public setAnimationIntent(intent: AnimationIntent) {
+    this.animController.setIntent(intent);
+    registerSkillDevHooks();
+    dispatchSkillIntent(intent);
+  }
+  public setSpeaking(isSpeaking: boolean) {
+    this.animController.setSpeaking(isSpeaking);
+    this.appSpeaking = isSpeaking;
+    const current = carlottaAnimationController.getState();
+    if (isSpeaking && current === 'idle') carlottaAnimationController.setState('talking');
+    else if (!isSpeaking && current === 'talking') carlottaAnimationController.setState('idle');
   }
 
-  public getEmotion(): EmotionType { return this.currentEmotion; }
-  public getEmotionIntensity(): number { return this.currentEmotionIntensity; }
-
-  public setSpeaking(speaking: boolean) {
-    this.appSpeaking = speaking;
+  private initEyeTracking(): void {
+    if (!this.renderer) return;
+    const canvas = this.renderer.domElement;
+    this.eyeTracker = new EyeTracker(this.camera);
+    this.eyeTracker.init(this.animController.getBoneMap());
+    canvas.addEventListener('mousemove', (e: MouseEvent) => { const rect = canvas.getBoundingClientRect(); this.mouseX = e.clientX - rect.left; this.mouseY = e.clientY - rect.top; });
+    canvas.addEventListener('mouseenter', () => { this.mouseOnCanvas = true; });
+    canvas.addEventListener('mouseleave', () => { this.mouseOnCanvas = false; const rect = canvas.getBoundingClientRect(); this.mouseX = rect.width / 2; this.mouseY = rect.height / 2; });
   }
 
-  public getCamera(): THREE.PerspectiveCamera { return this.camera; }
-  public getActiveModel(): THREE.Object3D | null { return this.activeModelGroup; }
-  public isCarlottaLoaded(): boolean { return this.isVrmLoaded; }
-  public isSpeaking(): boolean { return this.appSpeaking; }
-
-  public setPerformanceQuality(profile: QualityProfile, effective: EffectivePerformanceQuality) {
-    this.applyRenderQuality(profile, effective);
-  }
-
-  public setMousePosition(x: number, y: number, onCanvas: boolean) {
-    this.mouseX = x;
-    this.mouseY = y;
-    this.mouseOnCanvas = onCanvas;
-  }
-
-  public dispose() {
-    this.unmount();
-    this.eyeTracker?.dispose();
-    this.eyeTracker = null;
-  }
-
-  private startRenderLoop() {
-    const render = (timestamp: number) => {
-      this.animationFrameId = requestAnimationFrame(render);
-      const dt = this.clock.getDelta();
-      this.framePacer.update(dt);
-      if (!this.renderer) return;
-      if (this.vrmAvatar) {
-        const t0 = performance.now();
-        this.vrmAvatar.vrm.update(dt);
-        this.devVrmMs = performance.now() - t0;
-        const t1 = performance.now();
-        carlottaAnimationController.update(dt);
-        this.devAnimMs = performance.now() - t1;
-        const t2 = performance.now();
-        carlottaGestureController.update(dt);
-        this.devGestMs = performance.now() - t2;
-        const t3 = performance.now();
-        carlottaExpressionController.update(dt);
-        this.devExprMs = performance.now() - t3;
-        const t4 = performance.now();
-        carlottaLipSync.update(dt);
-        this.devLipMs = performance.now() - t4;
-        const t5 = performance.now();
-        carlottaCompanionController.update(dt);
-        this.devGestMs += performance.now() - t5;
+  private startRenderLoop = () => {
+    const loop = (rafTimestamp: number) => {
+      let tLoopStart = 0;
+      if (isDevBuild()) {
+        tLoopStart = performance.now();
+        if (this.lastRafTimestamp > 0) {
+          const rafDiff = rafTimestamp - this.lastRafTimestamp;
+          if (rafDiff > 0 && rafDiff < 500) this.devRafIntervalMs += (rafDiff - this.devRafIntervalMs) * 0.05;
+        }
+        this.lastRafTimestamp = rafTimestamp;
+        if (this.lastFrameEndTimestamp > 0) {
+          const totalDiff = tLoopStart - this.lastFrameEndTimestamp;
+          if (totalDiff > 0 && totalDiff < 500) this.devTotalFrameIntervalMs += (totalDiff - this.devTotalFrameIntervalMs) * 0.05;
+        }
       }
-      if (this.fbxAvatar && !this.vrmAvatar) {
-        this.eyeTracker?.update(dt);
-        this.animController.update(dt);
-        this.lipSync?.update(dt);
+      const rawDelta = this.clock.getDelta();
+      const pacing = this.framePacer.accumulate(rawDelta);
+      if (!pacing.render) {
+        if (isDevBuild()) this.lastFrameEndTimestamp = performance.now();
+        this.animationFrameId = requestAnimationFrame(loop);
+        return;
       }
-      const t6 = performance.now();
-      this.renderer.render(this.scene, this.camera);
-      this.devRenderMs = performance.now() - t6;
-      this.devUpdateMs = this.devVrmMs + this.devAnimMs + this.devGestMs + this.devExprMs + this.devLipMs;
-      if (this.renderer.info.render) {
-        const info = this.renderer.info.render;
-        this._dbSize.copy(this.renderer.getDrawingBufferSize(new THREE.Vector2()));
+      const frameStart = performance.now();
+      if (isDevBuild()) {
+        const timeBeforeUpdate = frameStart - tLoopStart;
+        this.devTimeBeforeUpdateMs += (timeBeforeUpdate - this.devTimeBeforeUpdateMs) * 0.05;
       }
-      this.lastRafTimestamp = timestamp;
+      const delta = pacing.dt;
+      if (this.controls) this.controls.update();
+      const viseme = audioAnalyser.getVisemeFrame();
+      if (this.proceduralAvatar) {
+        this.proceduralAvatar.updateExpression(this.currentEmotion, this.currentEmotionIntensity, viseme, delta);
+      } else if (this.vrmAvatar) {
+        const t0 = isDevBuild() ? performance.now() : 0;
+        carlottaLipSync.update(viseme, delta, this.appSpeaking);
+        const t1 = isDevBuild() ? performance.now() : 0;
+        carlottaExpressionController.update(delta);
+        const t2 = isDevBuild() ? performance.now() : 0;
+        let didUpdateVrm = false;
+        if (this.springBoneUpdateFps <= 0) { carlottaVrmLoader.update(this.vrmAvatar, delta); didUpdateVrm = true; }
+        else {
+          const sbInterval = 1 / this.springBoneUpdateFps;
+          this.sbAcc += delta;
+          if (this.sbAcc >= sbInterval) {
+            const sbDt = Math.min(this.sbAcc, sbInterval * 4);
+            this.sbAcc -= sbDt;
+            if (this.sbAcc > sbInterval * 4) this.sbAcc = 0;
+            carlottaVrmLoader.update(this.vrmAvatar, sbDt);
+            didUpdateVrm = true;
+          }
+        }
+        const t3 = isDevBuild() ? performance.now() : 0;
+        carlottaAnimationController.update(delta);
+        const t4 = isDevBuild() ? performance.now() : 0;
+        carlottaGestureController.update(delta);
+        const t5 = isDevBuild() ? performance.now() : 0;
+        carlottaCompanionController.update(delta);
+        const t6 = isDevBuild() ? performance.now() : 0;
+        if (isDevBuild()) {
+          const EMA = 0.05;
+          this.devLipMs += ((t1 - t0) - this.devLipMs) * EMA;
+          this.devExprMs += ((t2 - t1) - this.devExprMs) * EMA;
+          if (didUpdateVrm) this.devVrmMs += ((t3 - t2) - this.devVrmMs) * EMA;
+          this.devAnimMs += ((t4 - t3) - this.devAnimMs) * EMA;
+          this.devGestMs += ((t5 - t4) - this.devGestMs) * EMA;
+          this.devUpdateMs += ((t6 - t0) - this.devUpdateMs) * EMA;
+        }
+      } else if (this.fbxAvatar) {
+        const MIN_SPEAKING_HOLD = 1.0;
+        const rawDetected = viseme.mouthOpen > 0.02;
+        if (rawDetected) { this._lipsyncSpeaking = true; this._speakingHoldTimer = MIN_SPEAKING_HOLD; }
+        else if (this._speakingHoldTimer > 0) { this._speakingHoldTimer -= delta; this._lipsyncSpeaking = true; }
+        else this._lipsyncSpeaking = false;
+        const isSpeaking = this._lipsyncSpeaking;
+        this.animController.setSpeaking(isSpeaking);
+        this.animController.update(delta);
+        if (this.lipSync) this.lipSync.update(viseme, delta, isSpeaking);
+        const intensity = Math.min(Math.max(this.currentEmotionIntensity, 0.1), 1.0);
+        const emotion = this.currentEmotion;
+        const lerpFactor = Math.min(delta * 8.0, 0.35);
+        this.fbxAvatar.morphTargets.forEach(({ mesh, dictionary }) => {
+          if (!mesh.morphTargetInfluences) return;
+          Object.keys(dictionary).forEach((key) => {
+            const idx = dictionary[key]; const lk = key.toLowerCase(); let tw = 0;
+            if (emotion === 'happy' || emotion === 'excited' || emotion === 'amused' || emotion === 'playful') {
+              if (lk.includes('joy') || lk.includes('happy') || lk.includes('smile') || lk.includes('fun') || lk.includes('cheerful')) tw = Math.max(tw, 0.85 * intensity);
+              if (lk.includes('eyesquint') || lk.includes('eyeblink') || lk.includes('eye_smile')) tw = Math.max(tw, 0.35 * intensity);
+            } else if (emotion === 'sad' || emotion === 'concerned') {
+              if (lk.includes('sorrow') || lk.includes('sad') || lk.includes('frown') || lk.includes('cry') || lk.includes('grief')) tw = Math.max(tw, 0.8 * intensity);
+              if (lk.includes('browdown') || lk.includes('browinnerup')) tw = Math.max(tw, 0.7 * intensity);
+            } else if (emotion === 'angry') {
+              if (lk.includes('angry') || lk.includes('anger') || lk.includes('rage') || lk.includes('fury')) tw = Math.max(tw, 0.85 * intensity);
+              if (lk.includes('browdown')) tw = Math.max(tw, 0.75 * intensity);
+            } else if (emotion === 'surprised') {
+              if (lk.includes('surprise') || lk.includes('surprised') || lk.includes('shock') || lk.includes('astounded')) tw = Math.max(tw, 0.9 * intensity);
+              if (lk.includes('eyewide') || lk.includes('browup') || lk.includes('eye_wide')) tw = Math.max(tw, 0.8 * intensity);
+            } else if (emotion === 'shy' || emotion === 'embarrassed' || emotion === 'affectionate') {
+              if (lk.includes('blush') || lk.includes('shy') || lk.includes('embarrassed') || lk.includes('redcheek')) tw = Math.max(tw, 0.9 * intensity);
+              if (lk.includes('smile') || lk.includes('joy')) tw = Math.max(tw, 0.5 * intensity);
+            }
+            if (tw > 0) { const cw = mesh.morphTargetInfluences[idx] || 0; mesh.morphTargetInfluences[idx] = THREE.MathUtils.lerp(cw, tw, lerpFactor); }
+          });
+        });
+        if (this.eyeTracker && this.renderer) {
+          const rect = this.renderer.domElement.getBoundingClientRect();
+          this.eyeTracker.update(delta, this.mouseX, this.mouseY, rect.width, rect.height);
+        }
+        this.diagTimer += delta;
+        if (this.diagTimer > 5.0) { this.diagTimer = 0; if (this.activeModelGroup) { this.animController.runDiagnostics(); this.animController.checkWorldTransform(this.activeModelGroup); } }
+      }
+      const tRenderStart = isDevBuild() ? performance.now() : 0;
+      let glContext: any = null;
+      if (isDevBuild() && this.gpuTimerSupported && this.renderer) {
+        try {
+          glContext = this.renderer.getContext(); const ext = this.gpuTimerQueryExt;
+          if (this.gpuTimerQuery) {
+            const available = glContext.getQueryParameter(this.gpuTimerQuery, glContext.QUERY_RESULT_AVAILABLE);
+            const disjoint = glContext.getParameter(ext.GPU_DISJOINT_EXT);
+            if (available && !disjoint) { const timeElapsedNano = glContext.getQueryParameter(this.gpuTimerQuery, glContext.QUERY_RESULT); this.devGpuTimeMs = timeElapsedNano / 1000000; }
+          }
+          if (!this.gpuTimerQuery) this.gpuTimerQuery = glContext.createQuery();
+          if (this.gpuTimerQuery) glContext.beginQuery(ext.TIME_ELAPSED_EXT, this.gpuTimerQuery);
+        } catch { this.gpuTimerSupported = false; }
+      }
+      if (this.renderer) { try { this.renderer.render(this.scene, this.camera); } catch {} }
+      if (isDevBuild() && this.gpuTimerSupported && glContext && this.gpuTimerQuery) { try { glContext.endQuery(this.gpuTimerQueryExt.TIME_ELAPSED_EXT); } catch {} }
+      const tRenderEnd = isDevBuild() ? performance.now() : 0;
+      if (isDevBuild()) this.devRenderMs += ((tRenderEnd - tRenderStart) - this.devRenderMs) * 0.05;
+      const frameMs = performance.now() - frameStart;
+      this.perfFrameMsEma += (frameMs - this.perfFrameMsEma) * 0.05;
+      if (delta > 0.0001) this.perfFpsEma += (1 / delta - this.perfFpsEma) * 0.05;
+      if (isDevBuild()) {
+        const tFrameFinish = performance.now();
+        const timeAfterRender = tFrameFinish - tRenderEnd;
+        this.devTimeAfterRenderMs += (timeAfterRender - this.devTimeAfterRenderMs) * 0.05;
+        this.lastFrameEndTimestamp = tFrameFinish;
+        const targetFps = this.framePacer.getTargetFps() || 60;
+        const expectedIntervalMs = 1000 / targetFps;
+        if (frameMs > expectedIntervalMs * 1.5) this.devMissedFrames++;
+      }
+      this.animationFrameId = requestAnimationFrame(loop);
     };
-    this.animationFrameId = requestAnimationFrame(render);
+    this.animationFrameId = requestAnimationFrame(loop);
+  };
+
+  public getPerfStats(): {
+    tier: EffectivePerformanceQuality; targetFps: number; springBoneUpdateFps: number; fps: number; frameMs: number; pixelRatio: number; devicePixelRatio: number; drawingBufferWidth: number; drawingBufferHeight: number; canvasWidth: number; canvasHeight: number; drawCalls: number; triangles: number; geometries: number; textures: number; rafIntervalMs: number; timeBeforeUpdateMs: number; timeAfterRenderMs: number; totalFrameIntervalMs: number; missedFrames: number; gpuTimeMs: number; gpuTimerSupported: boolean; updateMs: number; lipMs: number; exprMs: number; vrmMs: number; animMs: number; gestMs: number; renderMs: number;
+  } {
+    const info = this.renderer?.info;
+    const size = this.renderer ? this.renderer.getDrawingBufferSize(this._dbSize) : this._dbSize.set(0, 0);
+    return {
+      tier: this.effectiveQuality,
+      targetFps: this.framePacer.getTargetFps(),
+      springBoneUpdateFps: this.springBoneUpdateFps,
+      fps: Math.round(this.perfFpsEma * 10) / 10,
+      frameMs: Math.round(this.perfFrameMsEma * 100) / 100,
+      pixelRatio: this.renderer?.getPixelRatio() ?? 0,
+      devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 0,
+      drawingBufferWidth: size.x,
+      drawingBufferHeight: size.y,
+      canvasWidth: this.renderer?.domElement.clientWidth ?? 0,
+      canvasHeight: this.renderer?.domElement.clientHeight ?? 0,
+      drawCalls: info?.render.calls ?? 0,
+      triangles: info?.render.triangles ?? 0,
+      geometries: info?.memory.geometries ?? 0,
+      textures: info?.memory.textures ?? 0,
+      rafIntervalMs: this.devRafIntervalMs,
+      timeBeforeUpdateMs: this.devTimeBeforeUpdateMs,
+      timeAfterRenderMs: this.devTimeAfterRenderMs,
+      totalFrameIntervalMs: this.devTotalFrameIntervalMs,
+      missedFrames: this.devMissedFrames,
+      gpuTimeMs: this.devGpuTimeMs,
+      gpuTimerSupported: this.gpuTimerSupported,
+      updateMs: this.devUpdateMs,
+      lipMs: this.devLipMs,
+      exprMs: this.devExprMs,
+      vrmMs: this.devVrmMs,
+      animMs: this.devAnimMs,
+      gestMs: this.devGestMs,
+      renderMs: this.devRenderMs,
+    };
   }
 }
