@@ -28,6 +28,23 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
+      - name: Repair Windows icon format
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = 'src-tauri/icons/128x128@2x.png'
+          $target = 'src-tauri/icons/icon.ico'
+
+          if (-not (Get-Command magick -ErrorAction SilentlyContinue)) {
+            throw 'ImageMagick (magick) is required on the Windows runner to generate the ICO resource.'
+          }
+
+          magick $source -define icon:auto-resize=16,24,32,48,64,128 $target
+
+          if (-not (Test-Path $target)) {
+            throw 'Failed to generate src-tauri/icons/icon.ico.'
+          }
+
       - name: Build Tauri installer
         run: npx tauri build
 
