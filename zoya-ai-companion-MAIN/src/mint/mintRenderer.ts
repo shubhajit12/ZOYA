@@ -24,6 +24,8 @@ const CARLOTTA_VRM_URL = '/mint/Carlotta.vrm';
 export type ActiveModelId = 'carlotta' | 'mint';
 const DEFAULT_MODEL: ActiveModelId = 'carlotta';
 
+const COMPANION_MODEL_Y_OFFSET = -1.15;
+
 export class MintRenderer {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
@@ -98,8 +100,14 @@ export class MintRenderer {
     this.initProceduralAvatar();
   }
 
+  private applyCompanionModelTransform(): void {
+    if (!this.activeModelGroup || this.activeModelId !== 'carlotta') return;
+    this.activeModelGroup.position.y = this.companionMode ? COMPANION_MODEL_Y_OFFSET : 0;
+  }
+
   public setCompanionMode(enabled: boolean): void {
     this.companionMode = enabled;
+    this.applyCompanionModelTransform();
     if (this.controls) this.controls.enabled = !enabled;
     if (enabled) {
       this.camera.position.set(0, 0.72, 3.35);
@@ -145,6 +153,7 @@ export class MintRenderer {
       this.activeModelId = 'carlotta';
       this.isVrmLoaded = true;
       this.isFbxLoaded = false;
+      this.applyCompanionModelTransform();
       applyCarlottaRelaxedPose(loaded.vrm);
       loaded.vrm.update(0);
       carlottaAnimationController.init(loaded.vrm);
