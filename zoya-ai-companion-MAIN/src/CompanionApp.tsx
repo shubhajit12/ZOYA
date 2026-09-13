@@ -5,11 +5,6 @@ import { tauriBridge } from './native/tauriBridge';
 import { carlottaCompanionController } from './mint/carlottaCompanionController';
 import { carlottaGestureController } from './mint/carlottaGestureController';
 
-// Companion-only world-space offset for Carlotta's actual 3D model.
-// This moves the model inside the scene without moving the native window,
-// renderer surface, or companion controls.
-const COMPANION_MODEL_Y_OFFSET = -0.7;
-
 /** Standalone UI used only by the real Tauri desktop companion window. */
 export default function CompanionApp() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -18,9 +13,6 @@ export default function CompanionApp() {
   const [phase, setPhase] = useState('jumping');
 
   useEffect(() => {
-    // A transparent Tauri/WebView2 companion must also have a transparent
-    // document surface. Tailwind's normal page surface can otherwise leave
-    // the native transparent window looking like a solid white rectangle.
     const html = document.documentElement;
     const body = document.body;
     const previousHtmlBackground = html.style.background;
@@ -39,15 +31,6 @@ export default function CompanionApp() {
       startAttempts += 1;
       if (!rendererRef.current) return;
       if (rendererRef.current.getIsVrmLoaded()) {
-        // Move Carlotta's actual loaded 3D scene downward in world space.
-        // The native companion window and its renderer surface stay fixed.
-        const modelGroup = (renderer as unknown as {
-          activeModelGroup: { position: { y: number } } | null;
-        }).activeModelGroup;
-        if (modelGroup) modelGroup.position.y = COMPANION_MODEL_Y_OFFSET;
-
-        // The normal app has a startup Bow. The companion has its own
-        // arrival animation, so cancel that upper-body gesture here.
         carlottaGestureController.cancel();
         renderer.setCompanionMode(true);
         carlottaCompanionController.enter();
@@ -86,25 +69,12 @@ export default function CompanionApp() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
-      <div
-        ref={hostRef}
-        className="absolute inset-0 bg-transparent"
-      />
+      <div ref={hostRef} className="absolute inset-0 bg-transparent" />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
-        <button
-          type="button"
-          onClick={restore}
-          title="Return to ZOYA"
-          className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg"
-        >
+        <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
           <RotateCcw className="w-4 h-4" />
         </button>
-        <button
-          type="button"
-          onClick={restore}
-          title="Return to ZOYA"
-          className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg"
-        >
+        <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
           <X className="w-4 h-4" />
         </button>
       </div>
