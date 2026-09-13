@@ -8,8 +8,8 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `cfc927e55fdd4e0cb73a07e732235ac2c6a82b78`  
-**Exact commit message:** `Remove temporary companion grounding file`
+**Latest code commit:** `ee08979496af0311501b9c06bb9100cf1da3dffe`  
+**Exact commit message:** `Fix Windows icon generation before Tauri build`
 
 **Feature code commit:** `e27316eba62f41a314ed6b68c7656bd0cefe9865`  
 **Exact commit message:** `Move Carlotta further down in desktop companion`
@@ -20,7 +20,7 @@
 **Previous feature commit:** `dcca4dfdd0ffb7419ca1cf40ac5d8c7c730de677`  
 **Exact commit message:** `Fix actual Carlotta companion model grounding`
 
-**README update commit:** this README synchronization commit follows the code commits above.
+**README update commit:** this README synchronization commit follows the code commit above.
 
 > **Important:** Wave development has been dropped. The validated Point and Bow remain intact. The new desktop-companion work is separate from the existing minimized chat widget.
 
@@ -40,6 +40,7 @@
 - **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
 - **Companion model grounding:** Carlotta's actual 3D scene is lowered in world space by the renderer only while companion mode is active; the renderer surface, native window, and companion controls are not shifted
 - **Current grounding adjustment:** the companion-only Carlotta Y offset is now `-1.45` world units
+- **Windows build icon repair:** the workflow regenerates `src-tauri/icons/icon.ico` as a valid multi-size ICO from the existing PNG asset before invoking the Tauri Windows build
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
 - **Minimized chat widget:** remains separate; Carlotta is not embedded into it
 - **Camera / OrbitControls:** normal ZOYA camera behavior remains protected; companion uses separate framing and disables OrbitControls
@@ -64,6 +65,7 @@
 15. **CODE COMMIT** `e27316eba62f41a314ed6b68c7656bd0cefe9865` — `Move Carlotta further down in desktop companion`
 16. **CODE COMMIT** `a679ce5922b0a47e1d7d0eefccd6beb21f1aea39` — `Fix companion grounding build integration`
 17. **CODE COMMIT** `cfc927e55fdd4e0cb73a07e732235ac2c6a82b78` — `Remove temporary companion grounding file`
+18. **CODE COMMIT** `ee08979496af0311501b9c06bb9100cf1da3dffe` — `Fix Windows icon generation before Tauri build`
 
 ## ✨ What ZOYA Is
 
