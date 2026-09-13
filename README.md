@@ -8,10 +8,10 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `ad07e0bab612077117467fec24bbacd14c3da398`  
-**Exact commit message:** `Remove invalid ImageMagick icon generation step`
+**Latest code commit:** `f48c48376ea48947601431cc5907764793efa01b`  
+**Exact commit message:** `Move Carlotta further down in desktop companion`
 
-**Feature code commit:** `e27316eba62f41a314ed6b68c7656bd0cefe9865`  
+**Feature code commit:** `f48c48376ea48947601431cc5907764793efa01b`  
 **Exact commit message:** `Move Carlotta further down in desktop companion`
 
 **Companion integration commit:** `a679ce5922b0a47e1d7d0eefccd6beb21f1aea39`  
@@ -39,7 +39,7 @@
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
 - **Companion model grounding:** Carlotta's actual 3D scene is lowered in world space by the renderer only while companion mode is active; the renderer surface, native window, and companion controls are not shifted
-- **Current grounding adjustment:** the companion-only Carlotta Y offset is now `-1.45` world units
+- **Current grounding adjustment:** the companion-only Carlotta Y offset is now `-1.60` world units
 - **Windows build icon:** the workflow now relies on the committed `src-tauri/icons/icon.ico` directly; the invalid ImageMagick generation step that referenced a missing `128x128@2x.png` source has been removed
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
 - **Minimized chat widget:** remains separate; Carlotta is not embedded into it
@@ -67,6 +67,7 @@
 17. **CODE COMMIT** `cfc927e55fdd4e0cb73a07e732235ac2c6a82b78` — `Remove temporary companion grounding file`
 18. **CODE COMMIT** `ee08979496af0311501b9c06bb9100cf1da3dffe` — `Fix Windows icon generation before Tauri build`
 19. **CODE COMMIT** `ad07e0bab612077117467fec24bbacd14c3da398` — `Remove invalid ImageMagick icon generation step`
+20. **CODE COMMIT** `f48c48376ea48947601431cc5907764793efa01b` — `Move Carlotta further down in desktop companion`
 
 ## ✨ What ZOYA Is
 
