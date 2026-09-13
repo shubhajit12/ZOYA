@@ -24,7 +24,7 @@ const CARLOTTA_VRM_URL = '/mint/Carlotta.vrm';
 export type ActiveModelId = 'carlotta' | 'mint';
 const DEFAULT_MODEL: ActiveModelId = 'carlotta';
 
-const COMPANION_MODEL_Y_OFFSET = -1.6;
+const COMPANION_MODEL_Y_OFFSET = -1.7;
 
 export class MintRenderer {
   private scene: THREE.Scene;
