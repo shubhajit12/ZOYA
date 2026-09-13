@@ -8,13 +8,19 @@
 
 ## 📌 CURRENT CODE COMMIT — CHECK THIS FIRST
 
-**Latest code commit:** `dcca4dfdd0ffb7419ca1cf40ac5d8c7c730de677`  
+**Latest code commit:** `cfc927e55fdd4e0cb73a07e732235ac2c6a82b78`  
+**Exact commit message:** `Remove temporary companion grounding file`
+
+**Feature code commit:** `e27316eba62f41a314ed6b68c7656bd0cefe9865`  
+**Exact commit message:** `Move Carlotta further down in desktop companion`
+
+**Companion integration commit:** `a679ce5922b0a47e1d7d0eefccd6beb21f1aea39`  
+**Exact commit message:** `Fix companion grounding build integration`
+
+**Previous feature commit:** `dcca4dfdd0ffb7419ca1cf40ac5d8c7c730de677`  
 **Exact commit message:** `Fix actual Carlotta companion model grounding`
 
-**Previous code commit:** `c9b5a70f592d09eed7501a46b9360537a1230fbf`  
-**Exact commit message:** `Restore companion UI layer`
-
-**README update commit:** this README synchronization commit follows the code commit above.
+**README update commit:** this README synchronization commit follows the code commits above.
 
 > **Important:** Wave development has been dropped. The validated Point and Bow remain intact. The new desktop-companion work is separate from the existing minimized chat widget.
 
@@ -33,6 +39,7 @@
 - **Companion motion:** procedural jump-in → sit → idle, with controlled restore to standing
 - **Seated behavior:** lower-body seated pose now includes a controlled alternating leg swing instead of a frozen pose
 - **Companion model grounding:** Carlotta's actual 3D scene is lowered in world space by the renderer only while companion mode is active; the renderer surface, native window, and companion controls are not shifted
+- **Current grounding adjustment:** the companion-only Carlotta Y offset is now `-1.45` world units
 - **Main window restore:** companion exit closes the companion, shows the main window, reloads the main React workspace, and focuses it so the normal 3D workspace is recreated instead of remaining on the minimized chat widget
 - **Minimized chat widget:** remains separate; Carlotta is not embedded into it
 - **Camera / OrbitControls:** normal ZOYA camera behavior remains protected; companion uses separate framing and disables OrbitControls
@@ -54,6 +61,9 @@
 12. **CODE COMMIT** `f16cb4added6a5c8d5fb04054c1a6eb456197405` — `Tune Carlotta companion grounding from screenshot`
 13. **CODE COMMIT** `13375e7bd81f0c347a676602b2d684394e5939dc` — `Lower Carlotta model inside companion scene`
 14. **CODE COMMIT** `dcca4dfdd0ffb7419ca1cf40ac5d8c7c730de677` — `Fix actual Carlotta companion model grounding`
+15. **CODE COMMIT** `e27316eba62f41a314ed6b68c7656bd0cefe9865` — `Move Carlotta further down in desktop companion`
+16. **CODE COMMIT** `a679ce5922b0a47e1d7d0eefccd6beb21f1aea39` — `Fix companion grounding build integration`
+17. **CODE COMMIT** `cfc927e55fdd4e0cb73a07e732235ac2c6a82b78` — `Remove temporary companion grounding file`
 
 ## ✨ What ZOYA Is
 
