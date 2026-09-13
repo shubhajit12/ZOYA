@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RotateCcw, X } from 'lucide-react';
-import { MintRenderer } from './mint/MintRenderer';
+import { MintRenderer } from './mint/mintRenderer';
 import { tauriBridge } from './native/tauriBridge';
 import { carlottaCompanionController } from './mint/carlottaCompanionController';
 import { carlottaGestureController } from './mint/carlottaGestureController';
@@ -24,7 +24,6 @@ export default function CompanionApp() {
     const renderer = new MintRenderer();
     rendererRef.current = renderer;
     renderer.setCompanionMode(true);
-    renderer.setCompanionModelYOffset(-1.45);
     renderer.mount(hostRef.current, 'low');
 
     let startAttempts = 0;
@@ -34,7 +33,6 @@ export default function CompanionApp() {
       if (rendererRef.current.getIsVrmLoaded()) {
         carlottaGestureController.cancel();
         renderer.setCompanionMode(true);
-        renderer.setCompanionModelYOffset(-1.45);
         carlottaCompanionController.enter();
         setReady(true);
         window.clearInterval(startTimer);
