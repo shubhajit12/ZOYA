@@ -1,11 +1,19 @@
+mod companion_tracker;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![enter_companion, exit_companion])
+        .invoke_handler(tauri::generate_handler![
+            enter_companion,
+            exit_companion,
+            start_companion_drag,
+            finish_companion_drag
+        ])
         .setup(|app| {
             use tauri::Manager;
 
             println!("ZOYA Desktop Native Engine initialized");
+            companion_tracker::start_tracking(app.handle().clone());
 
             // Windows' native minimize button is not exposed as a Tauri WindowEvent.
             // Poll the main window's minimized state so the real OS minimize action
@@ -66,13 +74,21 @@ fn get_windows_taskbar_rect() -> Option<WinRect> {
     // Shell_TrayWnd is the real Windows taskbar window class. This follows the
     // same native approach as FindWindowW("Shell_TrayWnd", NULL) rather than
     // guessing the taskbar height or assuming it is at the bottom of the screen.
-    let class_name: Vec<u16> = "Shell_TrayWnd".encode_utf16().chain(std::iter::once(0)).collect();
+    let class_name: Vec<u16> = "Shell_TrayWnd"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
     let hwnd = unsafe { FindWindowW(class_name.as_ptr(), std::ptr::null()) };
     if hwnd.is_null() {
         return None;
     }
 
-    let mut rect = WinRect { left: 0, top: 0, right: 0, bottom: 0 };
+    let mut rect = WinRect {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
     let ok = unsafe { GetWindowRect(hwnd, &mut rect) } != 0;
     ok.then_some(rect)
 }
@@ -95,38 +111,36 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
         let height = 390.0_f64;
         let margin = 2.0_f64;
 
-        // Tauri's monitor work area is already the desktop region excluding the
-        // taskbar. Use it as the coordinate anchor and use the native taskbar
-        // rectangle only to determine which edge the taskbar occupies. This is
-        // important because GetWindowRect is DPI-virtualized on Windows; using
-        // its raw coordinates directly with Tauri logical coordinates can create
-        // a large position error on scaled displays.
         #[cfg(target_os = "windows")]
-        let taskbar_edge = get_windows_taskbar_rect().map(|taskbar| {
-            let work_left = work_area.position.x;
-            let work_top = work_area.position.y;
-            let work_right = work_area.position.x + work_area.size.width as i32;
-            let work_bottom = work_area.position.y + work_area.size.height as i32;
+        let taskbar_edge = get_windows_taskbar_rect()
+            .map(|taskbar| {
+                let work_left = work_area.position.x;
+                let work_top = work_area.position.y;
+                let work_right = work_area.position.x + work_area.size.width as i32;
+                let work_bottom = work_area.position.y + work_area.size.height as i32;
 
-            if taskbar.top >= work_bottom {
-                "bottom"
-            } else if taskbar.bottom <= work_top {
-                "top"
-            } else if taskbar.left >= work_right {
-                "right"
-            } else if taskbar.right <= work_left {
-                "left"
-            } else {
-                "bottom"
-            }
-        }).unwrap_or("bottom");
+                if taskbar.top >= work_bottom {
+                    "bottom"
+                } else if taskbar.bottom <= work_top {
+                    "top"
+                } else if taskbar.left >= work_right {
+                    "right"
+                } else if taskbar.right <= work_left {
+                    "left"
+                } else {
+                    "bottom"
+                }
+            })
+            .unwrap_or("bottom");
 
         #[cfg(target_os = "windows")]
         let position = {
             let work_left = work_area.position.x as f64 / scale;
             let work_top = work_area.position.y as f64 / scale;
-            let work_right = (work_area.position.x as f64 + work_area.size.width as f64) / scale;
-            let work_bottom = (work_area.position.y as f64 + work_area.size.height as f64) / scale;
+            let work_right =
+                (work_area.position.x as f64 + work_area.size.width as f64) / scale;
+            let work_bottom =
+                (work_area.position.y as f64 + work_area.size.height as f64) / scale;
 
             match taskbar_edge {
                 "top" => (
@@ -150,12 +164,22 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
 
         #[cfg(not(target_os = "windows"))]
         let position = (
-            ((work_area.position.x as f64 + work_area.size.width as f64) / scale - width - margin).max(0.0),
-            ((work_area.position.y as f64 + work_area.size.height as f64) / scale - height - margin).max(0.0),
+            ((work_area.position.x as f64 + work_area.size.width as f64) / scale
+                - width
+                - margin)
+                .max(0.0),
+            ((work_area.position.y as f64 + work_area.size.height as f64) / scale
+                - height
+                - margin)
+                .max(0.0),
         );
 
         let url = if cfg!(debug_assertions) {
-            WebviewUrl::External("http://localhost:3000/?companion=1".parse().expect("valid ZOYA dev URL"))
+            WebviewUrl::External(
+                "http://localhost:3000/?companion=1"
+                    .parse()
+                    .expect("valid ZOYA dev URL"),
+            )
         } else {
             WebviewUrl::App("index.html?companion=1".into())
         };
@@ -174,9 +198,9 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
             .build()
             .map_err(|e| e.to_string())?;
 
-        // Keep a physical measurement in the native log so any remaining DPI
-        // mismatch can be diagnosed from the actual window rather than guessed.
-        if let (Ok(actual_position), Ok(actual_size)) = (companion.outer_position(), companion.inner_size()) {
+        if let (Ok(actual_position), Ok(actual_size)) =
+            (companion.outer_position(), companion.inner_size())
+        {
             println!(
                 "[ZOYA] Companion placement: logical=({:.1},{:.1}) scale={:.2} physical_outer=({}, {}) physical_inner=({},{}) taskbar_edge={}",
                 position.0,
@@ -198,15 +222,72 @@ fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn start_companion_drag(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+
+    let companion = app
+        .get_webview_window("companion")
+        .ok_or_else(|| "Companion window is not available".to_string())?;
+
+    companion
+        .set_ignore_cursor_events(true)
+        .map_err(|e| e.to_string())?;
+    companion.start_dragging().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri::Manager;
+
+    let companion = app
+        .get_webview_window("companion")
+        .ok_or_else(|| "Companion window is not available".to_string())?;
+    let companion_hwnd = companion.hwnd().map_err(|e| e.to_string())?.0 as isize;
+
+    let target = companion_tracker::target_under_cursor(companion_hwnd);
+    companion
+        .set_ignore_cursor_events(false)
+        .map_err(|e| e.to_string())?;
+
+    let Some(target) = target else {
+        companion_tracker::clear_target();
+        return Ok(false);
+    };
+
+    companion_tracker::set_target(Some(target.hwnd));
+
+    let size = companion.outer_size().map_err(|e| e.to_string())?;
+    let width = size.width as i32;
+    let x = target.left + ((target.right - target.left - width) / 2)
+        .clamp(0, (target.right - target.left - width).max(0))
+        + target.left;
+    let y = target.top - size.height as i32;
+
+    companion
+        .set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)))
+        .map_err(|e| e.to_string())?;
+
+    println!(
+        "[ZOYA] Companion bound to HWND={} rect=({},{})->({},{})",
+        target.hwnd, target.left, target.top, target.right, target.bottom
+    );
+
+    Ok(true)
+}
+
+#[tauri::command]
 fn exit_companion(app: tauri::AppHandle) -> Result<(), String> {
     use tauri::Manager;
+
+    companion_tracker::clear_target();
 
     if let Some(companion) = app.get_webview_window("companion") {
         companion.close().map_err(|e| e.to_string())?;
     }
     if let Some(main) = app.get_webview_window("main") {
         main.show().map_err(|e| e.to_string())?;
-        main.eval("window.location.reload()").map_err(|e| e.to_string())?;
+        main.eval("window.location.reload()")
+            .map_err(|e| e.to_string())?;
         main.set_focus().map_err(|e| e.to_string())?;
     }
     Ok(())
