@@ -258,9 +258,8 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
 
     let size = companion.outer_size().map_err(|e| e.to_string())?;
     let width = size.width as i32;
-    let x = target.left + ((target.right - target.left - width) / 2)
-        .clamp(0, (target.right - target.left - width).max(0))
-        + target.left;
+    let target_width = target.right - target.left;
+    let x = target.left + ((target_width - width) / 2).clamp(0, (target_width - width).max(0));
     let y = target.top - size.height as i32;
 
     companion
