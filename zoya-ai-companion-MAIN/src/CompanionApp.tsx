@@ -9,6 +9,8 @@ import { carlottaGestureController } from './mint/carlottaGestureController';
 export default function CompanionApp() {
   const hostRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<MintRenderer | null>(null);
+  const readyRef = useRef(false);
+  const draggingRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [phase, setPhase] = useState('jumping');
@@ -36,6 +38,7 @@ export default function CompanionApp() {
         carlottaGestureController.cancel();
         renderer.setCompanionMode(true);
         carlottaCompanionController.enter();
+        readyRef.current = true;
         setReady(true);
         window.clearInterval(startTimer);
       } else if (startAttempts >= 100) {
@@ -53,8 +56,9 @@ export default function CompanionApp() {
     };
 
     const onPointerDown = async (event: PointerEvent) => {
-      if (event.button !== 0 || !ready || dragging) return;
+      if (event.button !== 0 || !readyRef.current || draggingRef.current) return;
       event.preventDefault();
+      draggingRef.current = true;
       setDragging(true);
       try {
         await tauriBridge.startCompanionDrag();
@@ -62,6 +66,7 @@ export default function CompanionApp() {
       } catch (error) {
         console.error('[ZOYA] Companion drag failed:', error);
       } finally {
+        draggingRef.current = false;
         setDragging(false);
       }
     };
@@ -76,10 +81,12 @@ export default function CompanionApp() {
       window.removeEventListener('resize', onResize);
       renderer.unmount();
       rendererRef.current = null;
+      readyRef.current = false;
+      draggingRef.current = false;
       html.style.background = previousHtmlBackground;
       body.style.background = previousBodyBackground;
     };
-  }, [ready, dragging]);
+  }, []);
 
   const restore = async () => {
     rendererRef.current?.exitCompanionMotion();
