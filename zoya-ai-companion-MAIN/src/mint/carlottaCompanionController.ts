@@ -3,7 +3,7 @@ import type { VRM } from '@pixiv/three-vrm';
 
 /**
  * Companion-only lower-body controller.
- * It owns only hips/legs/feet while the normal Carlotta idle/gesture layers
+ * It owns only hips/legs while the normal Carlotta idle/gesture layers
  * continue to own their existing upper-body bones. Targets are derived from
  * the character's calibrated world axes rather than blind Euler sign flips.
  */
@@ -146,6 +146,25 @@ export class CarlottaCompanionController {
       this.root.position.z = this.rootBaseZ;
       this.stepLegs(dt, SHIN_ZETA, true);
       this.applySitPose(1);
+
+      // --- TEMP DIAGNOSTIC, remove after debugging ---
+      if (Math.floor(this.elapsed * 4) !== Math.floor((this.elapsed - dt) * 4)) {
+        console.log(
+          `[carlotta-diag] phase=${this.phase} t=${this.elapsed.toFixed(2)} ` +
+          `L(angle=${this.legL.angle.toFixed(4)} vel=${this.legL.vel.toFixed(4)}) ` +
+          `R(angle=${this.legR.angle.toFixed(4)} vel=${this.legR.vel.toFixed(4)})`
+        );
+
+        const dbgBone = this.bones.get('leftLowerLeg');
+        if (dbgBone) {
+          console.log(
+            '[carlotta-diag] leftLowerLeg local quat',
+            dbgBone.node.quaternion.toArray().map(n => n.toFixed(4))
+          );
+        }
+      }
+      // --- END TEMP DIAGNOSTIC ---
+
       return;
     }
 
