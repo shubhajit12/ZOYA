@@ -11,6 +11,7 @@ export default function CompanionApp() {
   const rendererRef = useRef<MintRenderer | null>(null);
   const [ready, setReady] = useState(false);
   const [phase, setPhase] = useState('jumping');
+  const [debug, setDebug] = useState(carlottaCompanionController.getDebugSnapshot());
 
   useEffect(() => {
     const html = document.documentElement;
@@ -43,6 +44,7 @@ export default function CompanionApp() {
 
     const phaseTimer = window.setInterval(() => {
       setPhase(carlottaCompanionController.getPhase());
+      setDebug(carlottaCompanionController.getDebugSnapshot());
     }, 120);
 
     const onResize = () => {
@@ -67,9 +69,19 @@ export default function CompanionApp() {
     await tauriBridge.exitCompanion();
   };
 
+  const formatQuat = (value: number[] | null) =>
+    value ? value.map((n) => n.toFixed(3)).join(' ') : '—';
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
       <div ref={hostRef} className="absolute inset-0 bg-transparent" />
+      <div className="absolute top-2 left-2 z-20 rounded-lg bg-black/65 backdrop-blur-md border border-white/15 px-2 py-1.5 text-[9px] leading-3 text-white/85 font-mono pointer-events-none">
+        <div className="text-white/60 mb-0.5">LEG DEBUG</div>
+        <div>phase: {debug.phase}</div>
+        <div>L a {debug.leftAngle.toFixed(3)} · v {debug.leftVelocity.toFixed(3)}</div>
+        <div>R a {debug.rightAngle.toFixed(3)} · v {debug.rightVelocity.toFixed(3)}</div>
+        <div>Q {formatQuat(debug.leftQuaternion)}</div>
+      </div>
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
         <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
           <RotateCcw className="w-4 h-4" />
