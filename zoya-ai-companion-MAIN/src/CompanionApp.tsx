@@ -10,6 +10,7 @@ export default function CompanionApp() {
   const hostRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<MintRenderer | null>(null);
   const [ready, setReady] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [phase, setPhase] = useState('jumping');
 
   useEffect(() => {
@@ -21,10 +22,11 @@ export default function CompanionApp() {
     body.style.background = 'transparent';
 
     if (!hostRef.current) return;
+    const host = hostRef.current;
     const renderer = new MintRenderer();
     rendererRef.current = renderer;
     renderer.setCompanionMode(true);
-    renderer.mount(hostRef.current, 'low');
+    renderer.mount(host, 'low');
 
     let startAttempts = 0;
     const startTimer = window.setInterval(() => {
@@ -49,18 +51,35 @@ export default function CompanionApp() {
       if (!hostRef.current) return;
       renderer.resize(hostRef.current.clientWidth, hostRef.current.clientHeight);
     };
+
+    const onPointerDown = async (event: PointerEvent) => {
+      if (event.button !== 0 || !ready || dragging) return;
+      event.preventDefault();
+      setDragging(true);
+      try {
+        await tauriBridge.startCompanionDrag();
+        await tauriBridge.finishCompanionDrag();
+      } catch (error) {
+        console.error('[ZOYA] Companion drag failed:', error);
+      } finally {
+        setDragging(false);
+      }
+    };
+
+    host.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('resize', onResize);
 
     return () => {
       window.clearInterval(startTimer);
       window.clearInterval(phaseTimer);
+      host.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('resize', onResize);
       renderer.unmount();
       rendererRef.current = null;
       html.style.background = previousHtmlBackground;
       body.style.background = previousBodyBackground;
     };
-  }, []);
+  }, [ready, dragging]);
 
   const restore = async () => {
     rendererRef.current?.exitCompanionMotion();
@@ -69,7 +88,7 @@ export default function CompanionApp() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
-      <div ref={hostRef} className="absolute inset-0 bg-transparent" />
+      <div ref={hostRef} className="absolute inset-0 bg-transparent cursor-grab active:cursor-grabbing" />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
         <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
           <RotateCcw className="w-4 h-4" />
@@ -79,7 +98,7 @@ export default function CompanionApp() {
         </button>
       </div>
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-[10px] text-white/70 whitespace-nowrap">
-        {ready ? (phase === 'sitting' ? 'ZOYA is sitting nearby' : phase === 'standing' ? 'ZOYA is returning…' : 'ZOYA is arriving…') : 'Starting companion…'}
+        {dragging ? 'Drag ZOYA onto a window' : ready ? (phase === 'sitting' ? 'Drag ZOYA onto a window' : phase === 'standing' ? 'ZOYA is returning…' : 'ZOYA is arriving…') : 'Starting companion…'}
       </div>
     </div>
   );
