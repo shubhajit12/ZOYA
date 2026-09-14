@@ -50,7 +50,7 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running zoya tauri application");
+        .expect("error while running tauri application");
 }
 
 #[cfg(target_os = "windows")]
@@ -229,9 +229,6 @@ fn start_companion_drag(app: tauri::AppHandle) -> Result<(), String> {
         .get_webview_window("companion")
         .ok_or_else(|| "Companion window is not available".to_string())?;
 
-    companion
-        .set_ignore_cursor_events(true)
-        .map_err(|e| e.to_string())?;
     companion.start_dragging().map_err(|e| e.to_string())
 }
 
@@ -244,6 +241,9 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
         .ok_or_else(|| "Companion window is not available".to_string())?;
     let companion_hwnd = companion.hwnd().map_err(|e| e.to_string())?.0 as isize;
 
+    companion
+        .set_ignore_cursor_events(true)
+        .map_err(|e| e.to_string())?;
     let target = companion_tracker::target_under_cursor(companion_hwnd);
     companion
         .set_ignore_cursor_events(false)
