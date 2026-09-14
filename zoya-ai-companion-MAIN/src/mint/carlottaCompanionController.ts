@@ -46,6 +46,7 @@ const _q0 = new THREE.Quaternion();
 const _q1 = new THREE.Quaternion();
 const _v0 = new THREE.Vector3();
 const _v1 = new THREE.Vector3();
+const _localHingeAxis = new THREE.Vector3(1, 0, 0);
 
 function clamp01(v: number) { return Math.max(0, Math.min(1, v)); }
 function randomRange(min: number, max: number) { return min + Math.random() * (max - min); }
@@ -113,19 +114,6 @@ export class CarlottaCompanionController {
   }
 
   public getPhase(): CompanionPhase { return this.phase; }
-
-  public getDebugSnapshot() {
-    const bone = this.bones.get('leftLowerLeg');
-    return {
-      phase: this.phase,
-      elapsed: this.elapsed,
-      leftAngle: this.legL.angle,
-      leftVelocity: this.legL.vel,
-      rightAngle: this.legR.angle,
-      rightVelocity: this.legR.vel,
-      leftQuaternion: bone ? bone.node.quaternion.toArray() : null,
-    };
-  }
 
   public update(delta: number): void {
     if (!this.root || this.bones.size === 0 || this.phase === 'idle') return;
@@ -233,6 +221,13 @@ export class CarlottaCompanionController {
     }
   }
 
+  private applyLocalRotation(name: string, axis: THREE.Vector3, angle: number): void {
+    const bone = this.bones.get(name);
+    if (!bone || Math.abs(angle) < 1e-6) return;
+    _q0.setFromAxisAngle(axis, angle);
+    bone.node.quaternion.multiply(_q0).normalize();
+  }
+
   private applySitPose(weight: number): void {
     const w = clamp01(weight);
     const leftThigh = -1.10 + this.legL.angle * THIGH_FOLLOW;
@@ -241,8 +236,15 @@ export class CarlottaCompanionController {
 
     this.applyWorldRotation('leftUpperLeg', this.right, leftThigh * w);
     this.applyWorldRotation('rightUpperLeg', this.right, rightThigh * w);
-    this.applyWorldRotation('leftLowerLeg', this.right, (1.85 + this.legL.angle) * w);
-    this.applyWorldRotation('rightLowerLeg', this.right, (1.85 + this.legR.angle) * w);
+
+    // Keep the calibrated seated bend in world space, then add the spring
+    // swing in the lower-leg's own hinge axis. This avoids turning the
+    // world-space sitting rotation into an unintended local Z-axis twist.
+    this.applyWorldRotation('leftLowerLeg', this.right, 1.85 * w);
+    this.applyLocalRotation('leftLowerLeg', _localHingeAxis, this.legL.angle * w);
+    this.applyWorldRotation('rightLowerLeg', this.right, 1.85 * w);
+    this.applyLocalRotation('rightLowerLeg', _localHingeAxis, this.legR.angle * w);
+
     this.applyWorldRotation('leftFoot', this.right, (-0.75 + this.legL.foot) * w);
     this.applyWorldRotation('rightFoot', this.right, (-0.75 + this.legR.foot) * w);
     this.applyWorldRotation('hips', this.right, hip * w);
@@ -262,12 +264,8 @@ export class CarlottaCompanionController {
     this.rootBaseY = 0;
     this.rootBaseZ = 0;
     this.rootBaseQuat.identity();
-    this.legL.angle = 0;
-    this.legL.vel = 0;
-    this.legL.foot = 0;
-    this.legR.angle = 0;
-    this.legR.vel = 0;
-    this.legR.foot = 0;
+    this.legL = { angle: 0, vel: 0, foot: 0, omega: SHIN_OMEGA_L };
+    this.legR = { angle: 0, vel: 0, foot: 0, omega: SHIN_OMEGA_R };
     this.nextKickAt = Infinity;
     this._clearScratch();
   }
