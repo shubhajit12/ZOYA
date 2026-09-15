@@ -64,7 +64,6 @@ struct WinRect {
 extern "system" {
     fn FindWindowW(class_name: *const u16, window_name: *const u16) -> *mut std::ffi::c_void;
     fn GetWindowRect(hwnd: *mut std::ffi::c_void, rect: *mut WinRect) -> i32;
-    fn GetSystemMetrics(index: i32) -> i32;
 }
 
 #[cfg(target_os = "windows")]
@@ -99,36 +98,46 @@ fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), St
     let taskbar_width = taskbar.right - taskbar.left;
     let taskbar_height = taskbar.bottom - taskbar.top;
 
-    const SM_CXSCREEN: i32 = 0;
-    const SM_CYSCREEN: i32 = 1;
-    let screen_width = unsafe { GetSystemMetrics(SM_CXSCREEN) };
-    let screen_height = unsafe { GetSystemMetrics(SM_CYSCREEN) };
-
-    let horizontal = taskbar_width >= taskbar_height;
-    let at_bottom = horizontal && taskbar.bottom >= screen_height - 2;
-    let at_top = horizontal && taskbar.top <= 2;
-    let at_right = !horizontal && taskbar.right >= screen_width - 2;
-
-    let (x, y) = if at_bottom {
-        (
-            taskbar.left + ((taskbar_width - width) / 2).max(0),
-            taskbar.top - height,
-        )
-    } else if at_top {
-        (
-            taskbar.left + ((taskbar_width - width) / 2).max(0),
-            taskbar.bottom,
-        )
-    } else if at_right {
-        (
-            taskbar.left - width,
-            taskbar.top + ((taskbar_height - height) / 2).max(0),
-        )
+    // Use the actual taskbar rectangle. Windows' normal taskbar is horizontal
+    // at the bottom, but this also handles top/left/right taskbars.
+    let (x, y) = if taskbar_width >= taskbar_height {
+        let screen_height = unsafe {
+            // SM_CYSCREEN = 1. This is only used to distinguish top from bottom.
+            extern "system" {
+                fn GetSystemMetrics(index: i32) -> i32;
+            }
+            GetSystemMetrics(1)
+        };
+        if taskbar.bottom >= screen_height - 2 {
+            (
+                taskbar.left + ((taskbar_width - width) / 2).max(0),
+                taskbar.top - height,
+            )
+        } else {
+            (
+                taskbar.left + ((taskbar_width - width) / 2).max(0),
+                taskbar.bottom,
+            )
+        }
     } else {
-        (
-            taskbar.right,
-            taskbar.top + ((taskbar_height - height) / 2).max(0),
-        )
+        let screen_width = unsafe {
+            // SM_CXSCREEN = 0.
+            extern "system" {
+                fn GetSystemMetrics(index: i32) -> i32;
+            }
+            GetSystemMetrics(0)
+        };
+        if taskbar.right >= screen_width - 2 {
+            (
+                taskbar.left - width,
+                taskbar.top + ((taskbar_height - height) / 2).max(0),
+            )
+        } else {
+            (
+                taskbar.right,
+                taskbar.top + ((taskbar_height - height) / 2).max(0),
+            )
+        }
     };
 
     companion
@@ -292,27 +301,20 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
         .ok_or_else(|| "Companion window is not available".to_string())?;
     let companion_hwnd = companion.hwnd().map_err(|e| e.to_string())?.0 as isize;
 
-    // The companion is always-on-top, so WindowFromPoint can otherwise see the
-    // companion itself instead of the application underneath it. Temporarily
-    // remove the topmost flag for the native drop-target probe, then restore it.
+    // A transparent, always-on-top window can still interfere with native
+    // hit-testing even when cursor events are ignored. Hide it completely for
+    // the one native probe. This makes WindowFromPoint see the real window (or
+    // the desktop shell) at the exact release point.
     companion
-        .set_always_on_top(false)
+        .hide()
         .map_err(|e| e.to_string())?;
-    companion
-        .set_ignore_cursor_events(true)
-        .map_err(|e| {
-            let _ = companion.set_always_on_top(true);
-            e.to_string()
-        })?;
 
     let target = companion_tracker::target_under_cursor(companion_hwnd);
 
-    let restore_result = companion
-        .set_ignore_cursor_events(false)
-        .and_then(|_| companion.set_always_on_top(true));
-    if let Err(err) = restore_result {
-        return Err(err.to_string());
-    }
+    companion.show().map_err(|e| e.to_string())?;
+    companion
+        .set_always_on_top(true)
+        .map_err(|e| e.to_string())?;
 
     let Some(target) = target else {
         companion_tracker::clear_target();
