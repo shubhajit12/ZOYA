@@ -13,8 +13,9 @@ internal sealed class WindowEngine
     private const long WS_EX_NOACTIVATE = 0x08000000L;
     private const long WS_EX_TRANSPARENT = 0x00000020L;
     private const long WS_EX_LAYERED = 0x00080000L;
-    private const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
-    private const uint EVENT_SYSTEM_MINIMIZEEND = 0x0017;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_SHOWWINDOW = 0x0040;
 
     private readonly object sync = new();
     private nint companionHwnd;
@@ -31,40 +32,29 @@ internal sealed class WindowEngine
                 Write(new { type = "target", target = FindTargetUnderCursor(companionHwnd) });
                 break;
             case "bind":
-                Bind(ReadHwnd(command, "hwnd"));
+                Bind(ReadHwnd(command, "companionHwnd"), ReadHwnd(command, "hwnd"));
                 break;
             case "clear":
                 Clear();
                 break;
-            case "taskbar":
-                Write(new { type = "taskbar", taskbar = GetPrimaryTaskbar() });
-                break;
-            case "ping":
-                Write(new { type = "pong" });
-                break;
             default:
-                Write(new { type = "error", message = $"Unknown operation: {op}" });
                 break;
         }
     }
 
-    private void Bind(nint hwnd)
+    private void Bind(nint companion, nint hwnd)
     {
         lock (sync)
         {
             trackingCts?.Cancel();
+            companionHwnd = companion;
             boundHwnd = IsValidSurface(hwnd, companionHwnd) ? hwnd : 0;
-            if (boundHwnd == 0)
-            {
-                Write(new { type = "lost" });
-                return;
-            }
+            if (boundHwnd == 0) return;
 
             var localHwnd = boundHwnd;
             trackingCts = new CancellationTokenSource();
-            _ = TrackAsync(localHwnd, trackingCts.Token);
+            _ = TrackAsync(localHwnd, companionHwnd, trackingCts.Token);
         }
-        Write(new { type = "bound", hwnd = hwnd.ToInt64() });
     }
 
     private void Clear()
@@ -75,32 +65,23 @@ internal sealed class WindowEngine
             trackingCts = null;
             boundHwnd = 0;
         }
-        Write(new { type = "cleared" });
     }
 
-    private async Task TrackAsync(nint hwnd, CancellationToken token)
+    private static async Task TrackAsync(nint targetHwnd, nint companion, CancellationToken token)
     {
-        (int x, int y)? last = null;
         while (!token.IsCancellationRequested)
         {
-            if (!TryGetSurface(hwnd, companionHwnd, out var target))
-            {
-                lock (sync)
-                {
-                    if (boundHwnd == hwnd) boundHwnd = 0;
-                }
-                Write(new { type = "lost", hwnd = hwnd.ToInt64() });
-                return;
-            }
+            if (!TryGetSurface(targetHwnd, companion, out var target)) return;
+            if (!GetWindowRect(companion, out var companionRect)) return;
 
-            var width = target.Right - target.Left;
-            var x = target.Left + Math.Max(0, (width - 330) / 2);
-            var y = target.Top - 390;
-            if (last != (x, y))
-            {
-                Write(new { type = "position", hwnd = hwnd.ToInt64(), x, y, left = target.Left, top = target.Top, right = target.Right, bottom = target.Bottom });
-                last = (x, y);
-            }
+            var companionWidth = companionRect.Right - companionRect.Left;
+            var companionHeight = companionRect.Bottom - companionRect.Top;
+            var targetWidth = target.Right - target.Left;
+            var x = target.Left + Math.Max(0, (targetWidth - companionWidth) / 2);
+            x = Math.Min(x, Math.Max(target.Left, target.Right - companionWidth));
+            var y = target.Top - companionHeight;
+
+            _ = SetWindowPos(companion, 0, x, y, companionWidth, companionHeight, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
             await Task.Delay(16, token).ConfigureAwait(false);
         }
     }
@@ -121,7 +102,6 @@ internal sealed class WindowEngine
         var ownerRoot = GetAncestor(hwnd, GA_ROOTOWNER);
         if (IsValidSurface(ownerRoot, companion)) root = ownerRoot;
         if (!IsValidSurface(root, companion)) return false;
-
         if (!GetWindowRect(root, out var rect)) return false;
         if (rect.Right <= rect.Left || rect.Bottom <= rect.Top) return false;
 
@@ -144,13 +124,6 @@ internal sealed class WindowEngine
         if ((ex & WS_EX_LAYERED) != 0 && (ex & WS_EX_TRANSPARENT) != 0) return false;
 
         return GetWindowRect(root, out var rect) && rect.Right - rect.Left >= 160 && rect.Bottom - rect.Top >= 120;
-    }
-
-    private static TaskbarInfo? GetPrimaryTaskbar()
-    {
-        var hwnd = FindWindow("Shell_TrayWnd", null);
-        if (hwnd == 0 || !GetWindowRect(hwnd, out var rect)) return null;
-        return new TaskbarInfo(rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 
     private static nint ReadHwnd(JsonElement command, string property)
@@ -185,8 +158,6 @@ internal sealed class WindowEngine
     }
 
     private readonly record struct WindowInfo(nint Hwnd, int Left, int Top, int Right, int Bottom, string ClassName, string Title);
-    private readonly record struct TaskbarInfo(int Left, int Top, int Right, int Bottom);
-
     [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X; public int Y; }
     [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
 
@@ -199,8 +170,8 @@ internal sealed class WindowEngine
     [DllImport("user32.dll")] private static extern bool GetWindowRect(nint hwnd, out RECT rect);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassNameW(nint hwnd, StringBuilder lpClassName, int nMaxCount);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowTextW(nint hwnd, StringBuilder lpString, int nMaxCount);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern nint FindWindow(string? lpClassName, string? lpWindowName);
     [DllImport("user32.dll")] private static extern nint GetShellWindow();
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtrW(nint hWnd, int nIndex);
+    [DllImport("user32.dll")] private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
     private static nint GetWindowLongPtr(nint hwnd, int index) => GetWindowLongPtrW(hwnd, index);
 }
