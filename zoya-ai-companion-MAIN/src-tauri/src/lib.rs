@@ -15,9 +15,6 @@ pub fn run() {
             println!("ZOYA Desktop Native Engine initialized");
             companion_tracker::start_tracking(app.handle().clone());
 
-            // Windows' native minimize button is not exposed as a Tauri WindowEvent.
-            // Poll the main window's minimized state so the real OS minimize action
-            // enters the same desktop-companion flow as the in-app button.
             let app_handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(std::time::Duration::from_millis(150));
@@ -67,13 +64,11 @@ struct WinRect {
 extern "system" {
     fn FindWindowW(class_name: *const u16, window_name: *const u16) -> *mut std::ffi::c_void;
     fn GetWindowRect(hwnd: *mut std::ffi::c_void, rect: *mut WinRect) -> i32;
+    fn GetSystemMetrics(index: i32) -> i32;
 }
 
 #[cfg(target_os = "windows")]
 fn get_windows_taskbar_rect() -> Option<WinRect> {
-    // Shell_TrayWnd is the real Windows taskbar window class. This follows the
-    // same native approach as FindWindowW("Shell_TrayWnd", NULL) rather than
-    // guessing the taskbar height or assuming it is at the bottom of the screen.
     let class_name: Vec<u16> = "Shell_TrayWnd"
         .encode_utf16()
         .chain(std::iter::once(0))
@@ -95,15 +90,8 @@ fn get_windows_taskbar_rect() -> Option<WinRect> {
 
 #[cfg(target_os = "windows")]
 fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), String> {
-    use tauri::Manager;
-
     let taskbar = get_windows_taskbar_rect()
         .ok_or_else(|| "Windows taskbar could not be located".to_string())?;
-    let monitor = companion
-        .monitor()
-        .map_err(|e| e.to_string())?
-        .or_else(|| None)
-        .or_else(|| None);
 
     let size = companion.outer_size().map_err(|e| e.to_string())?;
     let width = size.width as i32;
@@ -111,33 +99,41 @@ fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), St
     let taskbar_width = taskbar.right - taskbar.left;
     let taskbar_height = taskbar.bottom - taskbar.top;
 
-    // The normal Windows taskbar is horizontal at the bottom. Keep the
-    // fallback centered over it, while also handling top/left/right taskbars.
-    let (x, y) = if taskbar.top >= taskbar.left && taskbar_width >= taskbar_height {
+    // Windows taskbar is normally horizontal at the bottom. Use the actual
+    // taskbar bounds plus primary-screen metrics so top/left/right taskbars
+    // also get a sensible landing position.
+    const SM_CXSCREEN: i32 = 0;
+    const SM_CYSCREEN: i32 = 1;
+    let screen_width = unsafe { GetSystemMetrics(SM_CXSCREEN) };
+    let screen_height = unsafe { GetSystemMetrics(SM_CYSCREEN) };
+
+    let horizontal = taskbar_width >= taskbar_height;
+    let at_bottom = horizontal && taskbar.bottom >= screen_height - 2;
+    let at_top = horizontal && taskbar.top <= 2;
+    let at_right = !horizontal && taskbar.right >= screen_width - 2;
+
+    let (x, y) = if at_bottom {
         (
             taskbar.left + ((taskbar_width - width) / 2).max(0),
             taskbar.top - height,
         )
-    } else if taskbar.bottom <= taskbar.top && taskbar_width >= taskbar_height {
+    } else if at_top {
         (
             taskbar.left + ((taskbar_width - width) / 2).max(0),
             taskbar.bottom,
         )
-    } else if taskbar.left <= taskbar.right && taskbar_width < taskbar_height {
-        (
-            taskbar.right,
-            taskbar.top + ((taskbar_height - height) / 2).max(0),
-        )
-    } else {
+    } else if at_right {
         (
             taskbar.left - width,
             taskbar.top + ((taskbar_height - height) / 2).max(0),
         )
+    } else {
+        (
+            taskbar.right,
+            taskbar.top + ((taskbar_height - height) / 2).max(0),
+        )
     };
 
-    // Keep the fallback deterministic. The taskbar rectangle itself is in
-    // physical screen coordinates, matching Position::Physical below.
-    let _ = monitor;
     companion
         .set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)))
         .map_err(|e| e.to_string())
@@ -286,8 +282,6 @@ fn start_companion_drag(app: tauri::AppHandle) -> Result<(), String> {
         .get_webview_window("companion")
         .ok_or_else(|| "Companion window is not available".to_string())?;
 
-    // Clear the previous binding before a new drag so the tracker cannot keep
-    // fighting the user's native drag with the old target window.
     companion_tracker::clear_target();
     companion.start_dragging().map_err(|e| e.to_string())
 }
@@ -310,11 +304,10 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
         .map_err(|e| e.to_string())?;
 
     let Some(target) = target else {
-        // Dropping on the desktop intentionally returns Carlotta to the
-        // taskbar instead of requiring the cursor to hit an application HWND.
+        // Desktop drop: no application HWND means return to the taskbar.
         companion_tracker::clear_target();
         place_companion_on_taskbar(&companion)?;
-        println!("[ZOYA] No application under drop point; returned companion to taskbar");
+        println!("[ZOYA] Desktop drop -> taskbar landing");
         return Ok(false);
     };
 
