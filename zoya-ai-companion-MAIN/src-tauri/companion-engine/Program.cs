@@ -28,4 +28,5 @@ internal static class Program
                 Console.Out.Flush();
             }
         }
+    }
 }
