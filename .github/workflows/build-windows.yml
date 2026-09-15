@@ -20,6 +20,14 @@ jobs:
         with:
           node-version: 24
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build standalone C# companion engine
+        run: dotnet publish src-tauri/companion-engine/ZOYA.CompanionEngine.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o src-tauri/companion-engine/bin
+
       - name: Install dependencies
         run: npm install
 
