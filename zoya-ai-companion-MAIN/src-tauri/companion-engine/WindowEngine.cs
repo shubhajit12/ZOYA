@@ -29,15 +29,13 @@ internal sealed class WindowEngine
         {
             case "target":
                 companionHwnd = ReadHwnd(command, "companionHwnd");
-                Write(new { type = "target", target = FindTargetUnderCursor(companionHwnd) });
+                WriteTarget(FindTargetUnderCursor(companionHwnd));
                 break;
             case "bind":
                 Bind(ReadHwnd(command, "companionHwnd"), ReadHwnd(command, "hwnd"));
                 break;
             case "clear":
                 Clear();
-                break;
-            default:
                 break;
         }
     }
@@ -50,7 +48,6 @@ internal sealed class WindowEngine
             companionHwnd = companion;
             boundHwnd = IsValidSurface(hwnd, companionHwnd) ? hwnd : 0;
             if (boundHwnd == 0) return;
-
             var localHwnd = boundHwnd;
             trackingCts = new CancellationTokenSource();
             _ = TrackAsync(localHwnd, companionHwnd, trackingCts.Token);
@@ -124,6 +121,19 @@ internal sealed class WindowEngine
         if ((ex & WS_EX_LAYERED) != 0 && (ex & WS_EX_TRANSPARENT) != 0) return false;
 
         return GetWindowRect(root, out var rect) && rect.Right - rect.Left >= 160 && rect.Bottom - rect.Top >= 120;
+    }
+
+    private static void WriteTarget(WindowInfo? target)
+    {
+        object? payload = target is null ? null : new
+        {
+            hwnd = target.Value.Hwnd.ToInt64(),
+            left = target.Value.Left,
+            top = target.Value.Top,
+            right = target.Value.Right,
+            bottom = target.Value.Bottom,
+        };
+        Write(new { type = "target", target = payload });
     }
 
     private static nint ReadHwnd(JsonElement command, string property)
