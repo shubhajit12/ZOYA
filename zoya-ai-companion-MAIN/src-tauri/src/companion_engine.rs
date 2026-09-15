@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, ChildStdin, Command, Stdio};
+use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 
 use tauri::{path::BaseDirectory, AppHandle, Manager};
@@ -10,6 +10,7 @@ use crate::companion_tracker::WindowTarget;
 struct EngineProcess {
     child: Child,
     stdin: ChildStdin,
+    stdout: BufReader<ChildStdout>,
 }
 
 static ENGINE: OnceLock<Mutex<Option<EngineProcess>>> = OnceLock::new();
@@ -56,17 +57,11 @@ pub fn start(app: &AppHandle) -> bool {
             return false;
         };
 
-        // The engine only writes asynchronous diagnostics after a bind. Drain its
-        // stdout so the child can never block on a full pipe.
-        std::thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines().flatten() {
-                println!("[ZOYA Companion Engine] {line}");
-            }
+        *engine_slot().lock().expect("companion engine lock poisoned") = Some(EngineProcess {
+            child,
+            stdin,
+            stdout: BufReader::new(stdout),
         });
-
-        *engine_slot().lock().expect("companion engine lock poisoned") =
-            Some(EngineProcess { child, stdin });
         println!("[ZOYA] C# companion engine started");
         true
     }
@@ -87,10 +82,8 @@ pub fn target_under_cursor(companion_hwnd: isize) -> Option<WindowTarget> {
     writeln!(engine.stdin, "{}", command).ok()?;
     engine.stdin.flush().ok()?;
 
-    let stdout = engine.child.stdout.as_mut()?;
-    let mut reader = BufReader::new(stdout);
     let mut line = String::new();
-    reader.read_line(&mut line).ok()?;
+    engine.stdout.read_line(&mut line).ok()?;
     let value: Value = serde_json::from_str(line.trim()).ok()?;
     let target = value.get("target")?.clone();
     if target.is_null() {
