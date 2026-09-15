@@ -99,9 +99,6 @@ fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), St
     let taskbar_width = taskbar.right - taskbar.left;
     let taskbar_height = taskbar.bottom - taskbar.top;
 
-    // Windows taskbar is normally horizontal at the bottom. Use the actual
-    // taskbar bounds plus primary-screen metrics so top/left/right taskbars
-    // also get a sensible landing position.
     const SM_CXSCREEN: i32 = 0;
     const SM_CYSCREEN: i32 = 1;
     let screen_width = unsafe { GetSystemMetrics(SM_CXSCREEN) };
@@ -295,16 +292,29 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
         .ok_or_else(|| "Companion window is not available".to_string())?;
     let companion_hwnd = companion.hwnd().map_err(|e| e.to_string())?.0 as isize;
 
+    // The companion is always-on-top, so WindowFromPoint can otherwise see the
+    // companion itself instead of the application underneath it. Temporarily
+    // remove the topmost flag for the native drop-target probe, then restore it.
+    companion
+        .set_always_on_top(false)
+        .map_err(|e| e.to_string())?;
     companion
         .set_ignore_cursor_events(true)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            let _ = companion.set_always_on_top(true);
+            e.to_string()
+        })?;
+
     let target = companion_tracker::target_under_cursor(companion_hwnd);
-    companion
+
+    let restore_result = companion
         .set_ignore_cursor_events(false)
-        .map_err(|e| e.to_string())?;
+        .and_then(|_| companion.set_always_on_top(true));
+    if let Err(err) = restore_result {
+        return Err(err.to_string());
+    }
 
     let Some(target) = target else {
-        // Desktop drop: no application HWND means return to the taskbar.
         companion_tracker::clear_target();
         place_companion_on_taskbar(&companion)?;
         println!("[ZOYA] Desktop drop -> taskbar landing");
