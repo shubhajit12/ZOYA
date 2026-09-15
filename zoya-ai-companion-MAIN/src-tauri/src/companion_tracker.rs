@@ -41,6 +41,7 @@ extern "system" {
     fn GetCursorPos(point: *mut Point) -> i32;
     fn WindowFromPoint(point: Point) -> *mut std::ffi::c_void;
     fn GetAncestor(hwnd: *mut std::ffi::c_void, flags: u32) -> *mut std::ffi::c_void;
+    fn IsWindow(hwnd: *mut std::ffi::c_void) -> i32;
     fn IsWindowVisible(hwnd: *mut std::ffi::c_void) -> i32;
     fn IsIconic(hwnd: *mut std::ffi::c_void) -> i32;
     fn GetWindowRect(hwnd: *mut std::ffi::c_void, rect: *mut WinRect) -> i32;
@@ -65,6 +66,7 @@ fn valid_surface(
 ) -> Option<WindowTarget> {
     if hwnd.is_null()
         || hwnd == companion_hwnd
+        || unsafe { IsWindow(hwnd) } == 0
         || unsafe { IsWindowVisible(hwnd) } == 0
         || unsafe { IsIconic(hwnd) } != 0
     {
@@ -74,6 +76,7 @@ fn valid_surface(
     let root = unsafe { GetAncestor(hwnd, GA_ROOT) };
     if root.is_null()
         || root == companion_hwnd
+        || unsafe { IsWindow(root) } == 0
         || unsafe { IsWindowVisible(root) } == 0
         || unsafe { IsIconic(root) } != 0
     {
@@ -88,7 +91,7 @@ fn valid_surface(
     let class = class_name(root);
     if matches!(
         class.as_str(),
-        "Shell_TrayWnd" | "WorkerW" | "Progman" | "Windows.UI.Core.CoreWindow"
+        "Shell_TrayWnd" | "Shell_SecondaryTrayWnd" | "WorkerW" | "Progman" | "Windows.UI.Core.CoreWindow"
     ) {
         return None;
     }
@@ -124,12 +127,27 @@ pub fn target_under_cursor(companion_hwnd: isize) -> Option<WindowTarget> {
 #[cfg(target_os = "windows")]
 pub fn target_rect(hwnd: isize) -> Option<WindowTarget> {
     let raw = hwnd as *mut std::ffi::c_void;
-    if raw.is_null() || unsafe { IsIconic(raw) } != 0 || unsafe { IsWindowVisible(raw) } == 0 {
+    if raw.is_null()
+        || unsafe { IsWindow(raw) } == 0
+        || unsafe { IsIconic(raw) } != 0
+        || unsafe { IsWindowVisible(raw) } == 0
+    {
+        return None;
+    }
+
+    let class = class_name(raw);
+    if matches!(
+        class.as_str(),
+        "Shell_TrayWnd" | "Shell_SecondaryTrayWnd" | "WorkerW" | "Progman" | "Windows.UI.Core.CoreWindow"
+    ) {
         return None;
     }
 
     let mut rect = WinRect::default();
     if unsafe { GetWindowRect(raw, &mut rect) } == 0 {
+        return None;
+    }
+    if rect.right <= rect.left || rect.bottom <= rect.top {
         return None;
     }
 
