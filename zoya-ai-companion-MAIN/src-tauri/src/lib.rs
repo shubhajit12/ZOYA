@@ -97,6 +97,8 @@ fn get_windows_taskbar_rect() -> Option<WinRect> {
 fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
     use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
+    companion_tracker::clear_target();
+
     if let Some(existing) = app.get_webview_window("companion") {
         existing.show().map_err(|e| e.to_string())?;
         existing.set_focus().map_err(|e| e.to_string())?;
@@ -229,6 +231,9 @@ fn start_companion_drag(app: tauri::AppHandle) -> Result<(), String> {
         .get_webview_window("companion")
         .ok_or_else(|| "Companion window is not available".to_string())?;
 
+    // Clear the previous binding before a new drag so the tracker cannot keep
+    // fighting the user's native drag with the old target window.
+    companion_tracker::clear_target();
     companion.start_dragging().map_err(|e| e.to_string())
 }
 
