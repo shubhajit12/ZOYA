@@ -93,6 +93,61 @@ fn get_windows_taskbar_rect() -> Option<WinRect> {
     ok.then_some(rect)
 }
 
+#[cfg(target_os = "windows")]
+fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), String> {
+    use tauri::Manager;
+
+    let taskbar = get_windows_taskbar_rect()
+        .ok_or_else(|| "Windows taskbar could not be located".to_string())?;
+    let monitor = companion
+        .monitor()
+        .map_err(|e| e.to_string())?
+        .or_else(|| None)
+        .or_else(|| None);
+
+    let size = companion.outer_size().map_err(|e| e.to_string())?;
+    let width = size.width as i32;
+    let height = size.height as i32;
+    let taskbar_width = taskbar.right - taskbar.left;
+    let taskbar_height = taskbar.bottom - taskbar.top;
+
+    // The normal Windows taskbar is horizontal at the bottom. Keep the
+    // fallback centered over it, while also handling top/left/right taskbars.
+    let (x, y) = if taskbar.top >= taskbar.left && taskbar_width >= taskbar_height {
+        (
+            taskbar.left + ((taskbar_width - width) / 2).max(0),
+            taskbar.top - height,
+        )
+    } else if taskbar.bottom <= taskbar.top && taskbar_width >= taskbar_height {
+        (
+            taskbar.left + ((taskbar_width - width) / 2).max(0),
+            taskbar.bottom,
+        )
+    } else if taskbar.left <= taskbar.right && taskbar_width < taskbar_height {
+        (
+            taskbar.right,
+            taskbar.top + ((taskbar_height - height) / 2).max(0),
+        )
+    } else {
+        (
+            taskbar.left - width,
+            taskbar.top + ((taskbar_height - height) / 2).max(0),
+        )
+    };
+
+    // Keep the fallback deterministic. The taskbar rectangle itself is in
+    // physical screen coordinates, matching Position::Physical below.
+    let _ = monitor;
+    companion
+        .set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)))
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn place_companion_on_taskbar(_companion: &tauri::WebviewWindow) -> Result<(), String> {
+    Err("Taskbar fallback is only available on Windows".to_string())
+}
+
 #[tauri::command]
 fn enter_companion(app: tauri::AppHandle) -> Result<(), String> {
     use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
@@ -255,7 +310,11 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
         .map_err(|e| e.to_string())?;
 
     let Some(target) = target else {
+        // Dropping on the desktop intentionally returns Carlotta to the
+        // taskbar instead of requiring the cursor to hit an application HWND.
         companion_tracker::clear_target();
+        place_companion_on_taskbar(&companion)?;
+        println!("[ZOYA] No application under drop point; returned companion to taskbar");
         return Ok(false);
     };
 
