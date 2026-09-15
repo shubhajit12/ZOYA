@@ -174,29 +174,46 @@ pub fn current_target() -> Option<isize> {
 
 #[cfg(target_os = "windows")]
 pub fn start_tracking(app: tauri::AppHandle) {
-    std::thread::spawn(move || loop {
-        std::thread::sleep(std::time::Duration::from_millis(50));
+    std::thread::spawn(move || {
+        let mut last_position: Option<(i32, i32)> = None;
 
-        let Some(hwnd) = current_target() else { continue };
-        let Some(target) = target_rect(hwnd) else {
-            clear_target();
-            let _ = app.emit("companion-surface-lost", ());
-            continue;
-        };
+        loop {
+            // Track at roughly the display refresh cadence instead of the old 20 Hz
+            // polling interval. This keeps the companion visually attached while
+            // the target window is being dragged or resized.
+            std::thread::sleep(std::time::Duration::from_millis(16));
 
-        let Some(companion) = app.get_webview_window("companion") else {
-            continue;
-        };
-        let Ok(size) = companion.outer_size() else { continue };
-        let width = size.width as i32;
-        let height = size.height as i32;
-        let target_width = target.right - target.left;
+            let Some(hwnd) = current_target() else {
+                last_position = None;
+                continue;
+            };
+            let Some(target) = target_rect(hwnd) else {
+                clear_target();
+                last_position = None;
+                let _ = app.emit("companion-surface-lost", ());
+                continue;
+            };
 
-        let mut x = target.left + (target_width - width) / 2;
-        x = x.clamp(target.left, (target.right - width).max(target.left));
-        let y = target.top - height;
+            let Some(companion) = app.get_webview_window("companion") else {
+                continue;
+            };
+            let Ok(size) = companion.outer_size() else { continue };
+            let width = size.width as i32;
+            let height = size.height as i32;
+            let target_width = target.right - target.left;
 
-        let _ = companion.set_position(Position::Physical(PhysicalPosition::new(x, y)));
+            let mut x = target.left + (target_width - width) / 2;
+            x = x.clamp(target.left, (target.right - width).max(target.left));
+            let y = target.top - height;
+            let next_position = (x, y);
+
+            // Avoid issuing redundant native window-position calls when the target
+            // has not moved. This also reduces unnecessary WebView/compositor work.
+            if last_position != Some(next_position) {
+                let _ = companion.set_position(Position::Physical(PhysicalPosition::new(x, y)));
+                last_position = Some(next_position);
+            }
+        }
     });
 }
 
