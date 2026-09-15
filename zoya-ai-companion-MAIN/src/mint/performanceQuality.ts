@@ -59,7 +59,10 @@ export const QUALITY_PROFILES: Record<EffectivePerformanceQuality, QualityProfil
     springBoneUpdateFps: 0, // uncapped — full quality
   },
   medium: {
-    pixelRatioCap: 1.25,
+    // Low-resource Medium: keep the same lightweight 1x pixel ratio and
+    // disabled antialiasing policy as Low. High remains the only tier with
+    // the higher-resolution/AA renderer configuration.
+    pixelRatioCap: 1.0,
     antialias: false,
     shadowsEnabled: false,
     targetFps: 60,
