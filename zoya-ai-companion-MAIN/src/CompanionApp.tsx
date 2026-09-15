@@ -95,7 +95,7 @@ export default function CompanionApp() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
-      <div ref={hostRef} className="absolute inset-0 bg-transparent cursor-grab active:cursor-grabbing" />
+      <div ref={hostRef} className="absolute left-1/2 bottom-0 -translate-x-1/2 w-[220px] h-[350px] bg-transparent cursor-grab active:cursor-grabbing" />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
         <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
           <RotateCcw className="w-4 h-4" />
