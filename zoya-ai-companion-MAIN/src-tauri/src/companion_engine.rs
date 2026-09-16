@@ -42,9 +42,7 @@ pub fn start(app: &AppHandle) -> bool {
         }
 
         let Ok(mut child) = Command::new(&path)
-            // The engine is a background console process. Do not let Windows
-            // create a visible Command Prompt for it in the packaged app.
-            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .creation_flags(0x08000000)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -100,6 +98,48 @@ pub fn target_under_cursor(companion_hwnd: isize) -> Option<WindowTarget> {
 
 #[cfg(not(target_os = "windows"))]
 pub fn target_under_cursor(_companion_hwnd: isize) -> Option<WindowTarget> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+pub fn start_drag(companion_hwnd: isize) -> bool {
+    let mut slot = engine_slot().lock().expect("companion engine lock poisoned");
+    let Some(engine) = slot.as_mut() else { return false };
+    let command = json!({
+        "op": "drag_start",
+        "companionHwnd": companion_hwnd,
+    });
+    if writeln!(engine.stdin, "{}", command).is_err() || engine.stdin.flush().is_err() {
+        return false;
+    }
+    true
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn start_drag(_companion_hwnd: isize) -> bool {
+    false
+}
+
+#[cfg(target_os = "windows")]
+pub fn finish_drag() -> Option<WindowTarget> {
+    let mut slot = engine_slot().lock().expect("companion engine lock poisoned");
+    let engine = slot.as_mut()?;
+    let command = json!({ "op": "drag_finish" });
+    writeln!(engine.stdin, "{}", command).ok()?;
+    engine.stdin.flush().ok()?;
+
+    let mut line = String::new();
+    engine.stdout.read_line(&mut line).ok()?;
+    let value: Value = serde_json::from_str(line.trim()).ok()?;
+    let target = value.get("target")?.clone();
+    if target.is_null() {
+        return None;
+    }
+    serde_json::from_value(target).ok()
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn finish_drag() -> Option<WindowTarget> {
     None
 }
 
