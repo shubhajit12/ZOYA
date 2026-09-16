@@ -16,6 +16,8 @@ internal sealed class WindowEngine
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_SHOWWINDOW = 0x0040;
+    private const int SW_HIDE = 0;
+    private const int SW_SHOWNOACTIVATE = 4;
 
     private readonly object sync = new();
     private nint companionHwnd;
@@ -116,6 +118,18 @@ internal sealed class WindowEngine
         lock (sync)
         {
             var target = lastDragTarget;
+            if (target is null)
+            {
+                // React's pointerup can arrive before the 8 ms native drag loop
+                // observes button release. Resolve the final target synchronously
+                // instead of treating the drop as a desktop drop.
+                target = FindTargetUnderCursor(companionHwnd);
+                if (target is not null)
+                {
+                    Bind(companionHwnd, target.Value.Hwnd);
+                }
+            }
+
             lastDragTarget = null;
             dragCts?.Cancel();
             dragCts = null;
@@ -160,7 +174,19 @@ internal sealed class WindowEngine
     private static WindowInfo? FindTargetUnderCursor(nint companion)
     {
         if (!GetCursorPos(out var point)) return null;
+
         var hit = WindowFromPoint(point);
+        if (hit == companion)
+        {
+            // The companion is intentionally always-on-top, so WindowFromPoint
+            // normally sees ZOYA instead of the application below her. Temporarily
+            // remove only the companion from the hit-test stack while resolving
+            // the drop target; never hide the target application.
+            ShowWindow(companion, SW_HIDE);
+            hit = WindowFromPoint(point);
+            ShowWindow(companion, SW_SHOWNOACTIVATE);
+        }
+
         return TryGetSurface(hit, companion, out var target) ? target : null;
     }
 
@@ -256,6 +282,7 @@ internal sealed class WindowEngine
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowTextW(nint hwnd, StringBuilder lpString, int nMaxCount);
     [DllImport("user32.dll")] private static extern nint GetShellWindow();
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int vKey);
+    [DllImport("user32.dll")] private static extern bool ShowWindow(nint hWnd, int nCmdShow);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtrW(nint hWnd, int nIndex);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
     private static nint GetWindowLongPtr(nint hwnd, int index) => GetWindowLongPtrW(hwnd, index);
