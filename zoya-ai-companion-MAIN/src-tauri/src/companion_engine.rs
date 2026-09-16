@@ -10,6 +10,12 @@ use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 use crate::companion_tracker::WindowTarget;
 
+pub struct DragDropResult {
+    pub target: Option<WindowTarget>,
+    pub cursor_x: i32,
+    pub cursor_y: i32,
+}
+
 struct EngineProcess {
     child: Child,
     stdin: ChildStdin,
@@ -121,7 +127,7 @@ pub fn start_drag(_companion_hwnd: isize) -> bool {
 }
 
 #[cfg(target_os = "windows")]
-pub fn finish_drag() -> Option<WindowTarget> {
+pub fn finish_drag() -> Option<DragDropResult> {
     let mut slot = engine_slot().lock().expect("companion engine lock poisoned");
     let engine = slot.as_mut()?;
     let command = json!({ "op": "drag_finish" });
@@ -131,15 +137,21 @@ pub fn finish_drag() -> Option<WindowTarget> {
     let mut line = String::new();
     engine.stdout.read_line(&mut line).ok()?;
     let value: Value = serde_json::from_str(line.trim()).ok()?;
+
+    let cursor_x = value.get("cursorX")?.as_i64()? as i32;
+    let cursor_y = value.get("cursorY")?.as_i64()? as i32;
     let target = value.get("target")?.clone();
-    if target.is_null() {
-        return None;
-    }
-    serde_json::from_value(target).ok()
+    let target = if target.is_null() {
+        None
+    } else {
+        serde_json::from_value(target).ok()
+    };
+
+    Some(DragDropResult { target, cursor_x, cursor_y })
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn finish_drag() -> Option<WindowTarget> {
+pub fn finish_drag() -> Option<DragDropResult> {
     None
 }
 
