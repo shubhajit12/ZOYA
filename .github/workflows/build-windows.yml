@@ -39,8 +39,8 @@ jobs:
       - name: Build Tauri installer
         run: npx tauri build
 
-      - name: Upload installer
+      - name: Upload MSI installer
         uses: actions/upload-artifact@v4
         with:
           name: ZOYA-Windows-Installer
-          path: zoya-ai-companion-MAIN/src-tauri/target/release/bundle/nsis/*.exe
+          path: zoya-ai-companion-MAIN/src-tauri/target/release/bundle/msi/*.msi
