@@ -210,8 +210,18 @@ fn start_companion_drag(app: tauri::AppHandle) -> Result<(), String> {
     use tauri::Manager;
     let companion = app.get_webview_window("companion")
         .ok_or_else(|| "Companion window is not available".to_string())?;
+    let companion_hwnd = companion.hwnd().map_err(|e| e.to_string())?.0 as isize;
+
     companion_engine::clear();
     companion_tracker::clear_target();
+
+    if companion_engine::is_running() {
+        if companion_engine::start_drag(companion_hwnd) {
+            return Ok(());
+        }
+        return Err("C# companion engine could not start native drag".to_string());
+    }
+
     companion.start_dragging().map_err(|e| e.to_string())
 }
 
@@ -222,15 +232,11 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
         .ok_or_else(|| "Companion window is not available".to_string())?;
     let companion_hwnd = companion.hwnd().map_err(|e| e.to_string())?.0 as isize;
 
-    companion.hide().map_err(|e| e.to_string())?;
-    let engine_running = companion_engine::is_running();
-    let target = if engine_running {
-        companion_engine::target_under_cursor(companion_hwnd)
+    let target = if companion_engine::is_running() {
+        companion_engine::finish_drag()
     } else {
         companion_tracker::target_under_cursor(companion_hwnd)
     };
-    companion.show().map_err(|e| e.to_string())?;
-    companion.set_always_on_top(true).map_err(|e| e.to_string())?;
 
     let Some(target) = target else {
         companion_engine::clear();
@@ -241,7 +247,7 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
     };
 
     companion_tracker::set_target(Some(target.hwnd));
-    if engine_running {
+    if companion_engine::is_running() {
         if !companion_engine::bind(companion_hwnd, target.hwnd) {
             return Err("C# companion engine failed to bind target window".to_string());
         }
@@ -255,7 +261,7 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
             .map_err(|e| e.to_string())?;
     }
 
-    println!("[ZOYA] Companion bound to HWND={} engine={}", target.hwnd, engine_running);
+    println!("[ZOYA] Companion bound to HWND={} engine={}", target.hwnd, companion_engine::is_running());
     Ok(true)
 }
 
