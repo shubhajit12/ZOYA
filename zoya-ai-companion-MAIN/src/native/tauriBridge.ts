@@ -7,11 +7,11 @@ export class TauriBridge {
     return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
   }
 
-  private async invoke<T = void>(command: string): Promise<T | undefined> {
+  private async invoke<T = void>(command: string, args?: Record<string, unknown>): Promise<T | undefined> {
     if (!this.isTauriAvailable()) return undefined;
     const internals = (window as any).__TAURI_INTERNALS__;
     if (typeof internals?.invoke !== 'function') return undefined;
-    return await internals.invoke(command) as T;
+    return await internals.invoke(command, args) as T;
   }
 
   public async enterCompanion(): Promise<void> {
@@ -24,13 +24,13 @@ export class TauriBridge {
     else console.log('[Native] Companion restore requested (browser preview)');
   }
 
-  public async startCompanionDrag(): Promise<void> {
-    if (this.isTauriAvailable()) await this.invoke('start_companion_drag');
+  public async startCompanionDrag(anchorX: number, anchorY: number): Promise<void> {
+    if (this.isTauriAvailable()) await this.invoke('start_companion_drag', { anchorX, anchorY });
     else console.log('[Native] Companion drag requested (browser preview)');
   }
 
-  public async finishCompanionDrag(): Promise<boolean> {
-    if (this.isTauriAvailable()) return (await this.invoke<boolean>('finish_companion_drag')) ?? false;
+  public async finishCompanionDrag(anchorX: number, anchorY: number): Promise<boolean> {
+    if (this.isTauriAvailable()) return (await this.invoke<boolean>('finish_companion_drag', { anchorX, anchorY })) ?? false;
     console.log('[Native] Companion drag finished (browser preview)');
     return false;
   }
