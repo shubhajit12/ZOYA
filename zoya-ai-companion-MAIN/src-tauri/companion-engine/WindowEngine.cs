@@ -24,11 +24,11 @@ internal sealed class WindowEngine
     private nint boundHwnd;
     private int boundOffsetX;
     private int boundAnchorY;
+    private int dragOffsetX;
+    private int dragOffsetY;
     private CancellationTokenSource? trackingCts;
     private CancellationTokenSource? dragCts;
     private WindowInfo? lastDragTarget;
-    private int dragAnchorX;
-    private int dragAnchorY;
 
     public void Handle(JsonElement command)
     {
@@ -43,7 +43,7 @@ internal sealed class WindowEngine
                 Bind(ReadHwnd(command, "companionHwnd"), ReadHwnd(command, "hwnd"));
                 break;
             case "drag_start":
-                StartDrag(ReadHwnd(command, "companionHwnd"), ReadInt(command, "anchorX"), ReadInt(command, "anchorY"));
+                StartDrag(ReadHwnd(command, "companionHwnd"));
                 break;
             case "drag_finish":
                 WriteDragResult(FinishDrag(ReadInt(command, "anchorX"), ReadInt(command, "anchorY")));
@@ -70,38 +70,36 @@ internal sealed class WindowEngine
         }
     }
 
-    private void StartDrag(nint companion, int anchorX, int anchorY)
+    private void StartDrag(nint companion)
     {
         lock (sync)
         {
             dragCts?.Cancel();
             companionHwnd = companion;
             lastDragTarget = null;
-            dragAnchorX = anchorX;
-            dragAnchorY = anchorY;
-
-            if (!GetCursorPos(out var cursor)) return;
+            if (!GetCursorPos(out var cursor) || !GetWindowRect(companion, out var rect)) return;
+            // Preserve exactly where the user grabbed Zoya during the drag.
+            dragOffsetX = cursor.X - rect.Left;
+            dragOffsetY = cursor.Y - rect.Top;
             var cts = new CancellationTokenSource();
             dragCts = cts;
-            _ = DragAsync(companion, anchorX, anchorY, cts.Token);
+            _ = DragAsync(companion, dragOffsetX, dragOffsetY, cts.Token);
         }
     }
 
-    private async Task DragAsync(nint companion, int anchorX, int anchorY, CancellationToken token)
+    private async Task DragAsync(nint companion, int offsetX, int offsetY, CancellationToken token)
     {
         while (!token.IsCancellationRequested && IsLeftButtonDown())
         {
             if (GetCursorPos(out var cursor) && GetWindowRect(companion, out var rect))
             {
-                // Keep the same point on Zoya under the cursor while dragging.
-                var x = cursor.X - anchorX;
-                var y = cursor.Y - anchorY;
+                var x = cursor.X - offsetX;
+                var y = cursor.Y - offsetY;
                 _ = SetWindowPos(companion, 0, x, y, rect.Right - rect.Left, rect.Bottom - rect.Top,
                     SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
             }
             await Task.Delay(8, token).ConfigureAwait(false);
         }
-
         if (!token.IsCancellationRequested)
         {
             lock (sync) { lastDragTarget = FindTargetUnderCursor(companion); }
@@ -114,10 +112,10 @@ internal sealed class WindowEngine
         {
             GetCursorPos(out var cursor);
             var target = lastDragTarget ?? FindTargetUnderCursor(companionHwnd);
-
             if (target is not null)
             {
                 boundHwnd = target.Value.Hwnd;
+                // Horizontal placement follows the released feet X position.
                 boundOffsetX = cursor.X - anchorX - target.Value.Left;
                 boundAnchorY = anchorY;
                 trackingCts?.Cancel();
@@ -127,7 +125,6 @@ internal sealed class WindowEngine
                 var localAnchorY = boundAnchorY;
                 _ = TrackAsync(localTarget, companionHwnd, localOffsetX, localAnchorY, trackingCts.Token);
             }
-
             lastDragTarget = null;
             dragCts?.Cancel();
             dragCts = null;
@@ -147,6 +144,8 @@ internal sealed class WindowEngine
             boundHwnd = 0;
             boundOffsetX = 0;
             boundAnchorY = 0;
+            dragOffsetX = 0;
+            dragOffsetY = 0;
         }
     }
 
@@ -156,16 +155,13 @@ internal sealed class WindowEngine
         {
             if (!TryGetSurface(targetHwnd, companion, out var target)) return;
             if (!GetWindowRect(companion, out var companionRect)) return;
-
             var companionWidth = companionRect.Right - companionRect.Left;
             var companionHeight = companionRect.Bottom - companionRect.Top;
             var targetWidth = target.Right - target.Left;
             var maxOffset = Math.Max(0, targetWidth - companionWidth);
             var clampedOffset = Math.Clamp(offsetX, 0, maxOffset);
             var x = target.Left + clampedOffset;
-            // The feet anchor, not the transparent window bottom, sits on the surface.
             var y = target.Top - anchorY;
-
             _ = SetWindowPos(companion, 0, x, y, companionWidth, companionHeight, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
             await Task.Delay(16, token).ConfigureAwait(false);
         }
@@ -232,10 +228,7 @@ internal sealed class WindowEngine
         return value.ValueKind switch { JsonValueKind.Number when value.TryGetInt64(out var n) => new nint(n), JsonValueKind.String when long.TryParse(value.GetString(), out var n) => new nint(n), _ => 0 };
     }
 
-    private static int ReadInt(JsonElement command, string property)
-    {
-        return command.TryGetProperty(property, out var value) && value.TryGetInt32(out var n) ? n : 0;
-    }
+    private static int ReadInt(JsonElement command, string property) => command.TryGetProperty(property, out var value) && value.TryGetInt32(out var n) ? n : 0;
 
     private static string GetClassName(nint hwnd)
     {
