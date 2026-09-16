@@ -57,6 +57,20 @@ export default function CompanionApp() {
       renderer.resize(hostRef.current.clientWidth, hostRef.current.clientHeight);
     };
 
+    const finishNativeDrag = async () => {
+      if (!draggingRef.current) return;
+
+      try {
+        await tauriBridge.finishCompanionDrag();
+      } catch (error) {
+        console.error('[ZOYA] Companion drop failed:', error);
+      } finally {
+        draggingRef.current = false;
+        dragStartedRef.current = false;
+        setDragging(false);
+      }
+    };
+
     const runNativeDrag = async () => {
       if (dragStartedRef.current || draggingRef.current) return;
 
@@ -65,14 +79,14 @@ export default function CompanionApp() {
       setDragging(true);
 
       try {
-        // Start the native drag from the original mouse-down event. Tauri's
-        // documented manual drag path startsDragging() from a primary-button
-        // mouse event; waiting for pointermove can lose the native drag context.
+        // IMPORTANT: startDragging() only starts the OS drag operation.
+        // The previous implementation called finishCompanionDrag() immediately
+        // afterwards, so Rust hid the companion while the cursor was still on
+        // the companion and correctly concluded that the drop target was null.
+        // That is why every drag snapped straight back to the taskbar.
         await tauriBridge.startCompanionDrag();
-        await tauriBridge.finishCompanionDrag();
       } catch (error) {
         console.error('[ZOYA] Companion drag failed:', error);
-      } finally {
         draggingRef.current = false;
         dragStartedRef.current = false;
         setDragging(false);
@@ -85,13 +99,29 @@ export default function CompanionApp() {
       void runNativeDrag();
     };
 
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      void finishNativeDrag();
+    };
+
+    const onMouseUp = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+      void finishNativeDrag();
+    };
+
     host.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', finishNativeDrag);
+    window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('resize', onResize);
 
     return () => {
       window.clearInterval(startTimer);
       window.clearInterval(phaseTimer);
       host.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', finishNativeDrag);
+      window.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('resize', onResize);
       renderer.unmount();
       rendererRef.current = null;
