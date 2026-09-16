@@ -9,22 +9,14 @@ import type { VRM } from '@pixiv/three-vrm';
  */
 export type CompanionPhase = 'idle' | 'jumping' | 'sitting' | 'standing';
 
-type Bone = {
-  node: THREE.Object3D;
-  restLocal: THREE.Quaternion;
-  restWorld: THREE.Quaternion;
-};
-
-type LegSwingState = {
-  angle: number;
-  vel: number;
-  foot: number;
-  omega: number;
-};
+type Bone = { node: THREE.Object3D; restLocal: THREE.Quaternion; restWorld: THREE.Quaternion };
+type LegSwingState = { angle: number; vel: number; foot: number; omega: number };
 
 const JUMP_DURATION = 0.72;
 const STAND_DURATION = 0.65;
-const SIT_DROP = 0.22;
+// A smaller root drop plus a stronger knee bend keeps the hips seated without
+// making the whole character sink through the window surface.
+const SIT_DROP = 0.16;
 
 const SHIN_OMEGA_L = 5.8;
 const SHIN_OMEGA_R = 5.3;
@@ -75,23 +67,13 @@ export class CarlottaCompanionController {
     this.forward.set(0, 0, -1).applyQuaternion(_q0).normalize();
     this.right.set(1, 0, 0).applyQuaternion(_q0).normalize();
     this.up.set(0, 1, 0).applyQuaternion(_q0).normalize();
-
-    const names = [
-      'hips',
-      'leftUpperLeg', 'leftLowerLeg', 'leftFoot',
-      'rightUpperLeg', 'rightLowerLeg', 'rightFoot',
-    ];
+    const names = ['hips', 'leftUpperLeg', 'leftLowerLeg', 'leftFoot', 'rightUpperLeg', 'rightLowerLeg', 'rightFoot'];
     for (const name of names) {
       const node = vrm.humanoid.getRawBoneNode(name as any);
       if (!node) continue;
       node.updateMatrixWorld(true);
-      this.bones.set(name, {
-        node,
-        restLocal: node.quaternion.clone(),
-        restWorld: node.getWorldQuaternion(new THREE.Quaternion()),
-      });
+      this.bones.set(name, { node, restLocal: node.quaternion.clone(), restWorld: node.getWorldQuaternion(new THREE.Quaternion()) });
     }
-
     this.rootBaseX = vrm.scene.position.x;
     this.rootBaseY = vrm.scene.position.y;
     this.rootBaseZ = vrm.scene.position.z;
@@ -119,7 +101,6 @@ export class CarlottaCompanionController {
     if (!this.root || this.bones.size === 0 || this.phase === 'idle') return;
     const dt = Math.min(Math.max(delta, 0), 0.05);
     this.elapsed += dt;
-
     if (this.phase === 'jumping') {
       const p = clamp01(this.elapsed / JUMP_DURATION);
       const arc = Math.sin(p * Math.PI);
@@ -140,7 +121,6 @@ export class CarlottaCompanionController {
       }
       return;
     }
-
     if (this.phase === 'sitting') {
       this.root.position.x = this.rootBaseX;
       this.root.position.y = this.rootBaseY - SIT_DROP;
@@ -149,7 +129,6 @@ export class CarlottaCompanionController {
       this.applySitPose(1);
       return;
     }
-
     if (this.phase === 'standing') {
       const p = clamp01(this.elapsed / STAND_DURATION);
       this.root.position.y = this.rootBaseY - SIT_DROP * (1 - p);
@@ -165,32 +144,22 @@ export class CarlottaCompanionController {
 
   private stepLegs(dt: number, zeta: number, allowKick: boolean): void {
     if (dt <= 0) return;
-
     const step = (leg: LegSwingState) => {
       const acc = -leg.omega * leg.omega * leg.angle - 2 * zeta * leg.omega * leg.vel;
       leg.vel += acc * dt;
       leg.angle += leg.vel * dt;
       leg.angle = THREE.MathUtils.clamp(leg.angle, -MAX_SHIN, MAX_SHIN);
-
       const footTarget = THREE.MathUtils.clamp(-leg.vel * FOOT_VEL_GAIN, -MAX_FOOT, MAX_FOOT);
       leg.foot += (footTarget - leg.foot) * (1 - Math.exp(-dt / FOOT_TAU));
       leg.foot = THREE.MathUtils.clamp(leg.foot, -MAX_FOOT, MAX_FOOT);
     };
-
     step(this.legL);
     step(this.legR);
-
     if (!allowKick || this.elapsed < this.nextKickAt) return;
-
     const impulse = KICK_IMPULSE * randomRange(0.6, 1.4);
     const sign = Math.random() < 0.5 ? -1 : 1;
-    if (Math.random() < 0.5) {
-      this.legL.vel += sign * impulse;
-      this.legR.vel -= sign * impulse * KICK_CROSS;
-    } else {
-      this.legR.vel += sign * impulse;
-      this.legL.vel -= sign * impulse * KICK_CROSS;
-    }
+    if (Math.random() < 0.5) { this.legL.vel += sign * impulse; this.legR.vel -= sign * impulse * KICK_CROSS; }
+    else { this.legR.vel += sign * impulse; this.legL.vel -= sign * impulse * KICK_CROSS; }
     this.nextKickAt = this.elapsed + randomRange(KICK_MIN, KICK_MAX);
   }
 
@@ -199,12 +168,8 @@ export class CarlottaCompanionController {
     this.root.position.set(this.rootBaseX, this.rootBaseY, this.rootBaseZ);
     this.root.quaternion.copy(this.rootBaseQuat);
     for (const bone of this.bones.values()) bone.node.quaternion.copy(bone.restLocal);
-    this.legL.angle = 0;
-    this.legL.vel = 0;
-    this.legL.foot = 0;
-    this.legR.angle = 0;
-    this.legR.vel = 0;
-    this.legR.foot = 0;
+    this.legL.angle = 0; this.legL.vel = 0; this.legL.foot = 0;
+    this.legR.angle = 0; this.legR.vel = 0; this.legR.foot = 0;
     this.nextKickAt = Infinity;
   }
 
@@ -230,23 +195,20 @@ export class CarlottaCompanionController {
 
   private applySitPose(weight: number): void {
     const w = clamp01(weight);
-    const leftThigh = -1.10 + this.legL.angle * THIGH_FOLLOW;
-    const rightThigh = -1.10 + this.legR.angle * THIGH_FOLLOW;
+    // Calibrated seated pose: thighs fold forward, knees form a clear ~90° bend,
+    // and feet rotate back toward the surface instead of leaving Carlotta in a
+    // half-standing crouch.
+    const leftThigh = -1.25 + this.legL.angle * THIGH_FOLLOW;
+    const rightThigh = -1.25 + this.legR.angle * THIGH_FOLLOW;
     const hip = 0.08 + (this.legL.angle - this.legR.angle) * HIP_ROLL;
-
     this.applyWorldRotation('leftUpperLeg', this.right, leftThigh * w);
     this.applyWorldRotation('rightUpperLeg', this.right, rightThigh * w);
-
-    // Keep the calibrated seated bend in world space, then add the spring
-    // swing in the lower-leg's own hinge axis. This avoids turning the
-    // world-space sitting rotation into an unintended local Z-axis twist.
-    this.applyWorldRotation('leftLowerLeg', this.right, 1.85 * w);
+    this.applyWorldRotation('leftLowerLeg', this.right, 2.35 * w);
     this.applyLocalRotation('leftLowerLeg', _localHingeAxis, this.legL.angle * w);
-    this.applyWorldRotation('rightLowerLeg', this.right, 1.85 * w);
+    this.applyWorldRotation('rightLowerLeg', this.right, 2.35 * w);
     this.applyLocalRotation('rightLowerLeg', _localHingeAxis, this.legR.angle * w);
-
-    this.applyWorldRotation('leftFoot', this.right, (-0.75 + this.legL.foot) * w);
-    this.applyWorldRotation('rightFoot', this.right, (-0.75 + this.legR.foot) * w);
+    this.applyWorldRotation('leftFoot', this.right, (-1.05 + this.legL.foot) * w);
+    this.applyWorldRotation('rightFoot', this.right, (-1.05 + this.legR.foot) * w);
     this.applyWorldRotation('hips', this.right, hip * w);
   }
 
@@ -260,9 +222,7 @@ export class CarlottaCompanionController {
     this.root = null;
     this.phase = 'idle';
     this.elapsed = 0;
-    this.rootBaseX = 0;
-    this.rootBaseY = 0;
-    this.rootBaseZ = 0;
+    this.rootBaseX = 0; this.rootBaseY = 0; this.rootBaseZ = 0;
     this.rootBaseQuat.identity();
     this.legL = { angle: 0, vel: 0, foot: 0, omega: SHIN_OMEGA_L };
     this.legR = { angle: 0, vel: 0, foot: 0, omega: SHIN_OMEGA_R };
@@ -271,11 +231,8 @@ export class CarlottaCompanionController {
   }
 
   private _clearScratch(): void {
-    _v0.set(0, 0, 0);
-    _v1.set(0, 0, 0);
-    this.forward.set(0, 0, -1);
-    this.right.set(1, 0, 0);
-    this.up.set(0, 1, 0);
+    _v0.set(0, 0, 0); _v1.set(0, 0, 0);
+    this.forward.set(0, 0, -1); this.right.set(1, 0, 0); this.up.set(0, 1, 0);
   }
 }
 
