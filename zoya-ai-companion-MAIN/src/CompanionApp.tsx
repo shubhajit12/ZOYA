@@ -44,6 +44,14 @@ export default function CompanionApp() {
         setReady(true);
         window.clearInterval(startTimer);
       } else if (startAttempts >= 100) {
+        // Do not leave the companion permanently locked in its loading state.
+        // The model is visibly mounted on the target machines even when this
+        // internal renderer flag does not settle, so allow native interaction.
+        carlottaGestureController.cancel();
+        renderer.setCompanionMode(true);
+        carlottaCompanionController.enter();
+        readyRef.current = true;
+        setReady(true);
         window.clearInterval(startTimer);
       }
     }, 100);
