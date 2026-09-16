@@ -11,7 +11,6 @@ export default function CompanionApp() {
   const rendererRef = useRef<MintRenderer | null>(null);
   const readyRef = useRef(false);
   const draggingRef = useRef(false);
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const dragStartedRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -22,6 +21,7 @@ export default function CompanionApp() {
     const body = document.body;
     const previousHtmlBackground = html.style.background;
     const previousBodyBackground = body.style.background;
+
     html.style.background = 'transparent';
     body.style.background = 'transparent';
 
@@ -65,6 +65,9 @@ export default function CompanionApp() {
       setDragging(true);
 
       try {
+        // Start the native drag from the original mouse-down event. Tauri's
+        // documented manual drag path startsDragging() from a primary-button
+        // mouse event; waiting for pointermove can lose the native drag context.
         await tauriBridge.startCompanionDrag();
         await tauriBridge.finishCompanionDrag();
       } catch (error) {
@@ -72,57 +75,28 @@ export default function CompanionApp() {
       } finally {
         draggingRef.current = false;
         dragStartedRef.current = false;
-        pointerStartRef.current = null;
         setDragging(false);
       }
     };
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 || !readyRef.current || draggingRef.current) return;
-      pointerStartRef.current = { x: event.clientX, y: event.clientY };
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      const start = pointerStartRef.current;
-      if (!start || draggingRef.current || !readyRef.current) return;
-
-      const dx = event.clientX - start.x;
-      const dy = event.clientY - start.y;
-      const distanceSquared = dx * dx + dy * dy;
-
-      // Do not turn an ordinary click into a native window drag. Start the
-      // system drag only after the pointer has moved a few pixels.
-      if (distanceSquared >= 64) {
-        event.preventDefault();
-        void runNativeDrag();
-      }
-    };
-
-    const onPointerUp = () => {
-      if (!draggingRef.current) {
-        pointerStartRef.current = null;
-      }
+      event.preventDefault();
+      void runNativeDrag();
     };
 
     host.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
     window.addEventListener('resize', onResize);
 
     return () => {
       window.clearInterval(startTimer);
       window.clearInterval(phaseTimer);
       host.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
       window.removeEventListener('resize', onResize);
       renderer.unmount();
       rendererRef.current = null;
       readyRef.current = false;
       draggingRef.current = false;
-      pointerStartRef.current = null;
       dragStartedRef.current = false;
       html.style.background = previousHtmlBackground;
       body.style.background = previousBodyBackground;
