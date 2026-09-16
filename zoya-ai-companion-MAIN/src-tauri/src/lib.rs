@@ -88,7 +88,11 @@ fn get_windows_taskbar_rect() -> Option<WinRect> {
 }
 
 #[cfg(target_os = "windows")]
-fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), String> {
+fn place_companion_on_taskbar_at(
+    companion: &tauri::WebviewWindow,
+    cursor_x: i32,
+    cursor_y: i32,
+) -> Result<(), String> {
     let taskbar = get_windows_taskbar_rect()
         .ok_or_else(|| "Windows taskbar could not be located".to_string())?;
     let size = companion.outer_size().map_err(|e| e.to_string())?;
@@ -102,20 +106,24 @@ fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), St
             extern "system" { fn GetSystemMetrics(index: i32) -> i32; }
             GetSystemMetrics(1)
         };
+        let x = (cursor_x - width / 2)
+            .clamp(taskbar.left, taskbar.right - width);
         if taskbar.bottom >= screen_height - 2 {
-            (taskbar.left + ((taskbar_width - width) / 2).max(0), taskbar.top - height)
+            (x, taskbar.top - height)
         } else {
-            (taskbar.left + ((taskbar_width - width) / 2).max(0), taskbar.bottom)
+            (x, taskbar.bottom)
         }
     } else {
         let screen_width = unsafe {
             extern "system" { fn GetSystemMetrics(index: i32) -> i32; }
             GetSystemMetrics(0)
         };
+        let y = (cursor_y - height / 2)
+            .clamp(taskbar.top, taskbar.bottom - height);
         if taskbar.right >= screen_width - 2 {
-            (taskbar.left - width, taskbar.top + ((taskbar_height - height) / 2).max(0))
+            (taskbar.left - width, y)
         } else {
-            (taskbar.right, taskbar.top + ((taskbar_height - height) / 2).max(0))
+            (taskbar.right, y)
         }
     };
 
@@ -125,7 +133,11 @@ fn place_companion_on_taskbar(companion: &tauri::WebviewWindow) -> Result<(), St
 }
 
 #[cfg(not(target_os = "windows"))]
-fn place_companion_on_taskbar(_companion: &tauri::WebviewWindow) -> Result<(), String> {
+fn place_companion_on_taskbar_at(
+    _companion: &tauri::WebviewWindow,
+    _cursor_x: i32,
+    _cursor_y: i32,
+) -> Result<(), String> {
     Err("Taskbar fallback is only available on Windows".to_string())
 }
 
@@ -232,22 +244,33 @@ fn finish_companion_drag(app: tauri::AppHandle) -> Result<bool, String> {
         .ok_or_else(|| "Companion window is not available".to_string())?;
     let companion_hwnd = companion.hwnd().map_err(|e| e.to_string())?.0 as isize;
 
-    let target = if companion_engine::is_running() {
-        companion_engine::finish_drag()
+    let (target, cursor_x, cursor_y) = if companion_engine::is_running() {
+        let result = companion_engine::finish_drag()
+            .ok_or_else(|| "C# companion engine did not return a drag result".to_string())?;
+        (result.target, result.cursor_x, result.cursor_y)
     } else {
-        companion_tracker::target_under_cursor(companion_hwnd)
+        // Rust fallback has no native drag-result coordinates, so preserve the
+        // current companion position as closely as possible through its cursor hit.
+        let target = companion_tracker::target_under_cursor(companion_hwnd);
+        (target, 0, 0)
     };
 
     let Some(target) = target else {
         companion_engine::clear();
         companion_tracker::clear_target();
-        place_companion_on_taskbar(&companion)?;
-        println!("[ZOYA] Desktop drop -> taskbar landing");
+        if companion_engine::is_running() {
+            place_companion_on_taskbar_at(&companion, cursor_x, cursor_y)?;
+        } else {
+            place_companion_on_taskbar_at(&companion, cursor_x, cursor_y)?;
+        }
+        println!("[ZOYA] Desktop drop -> taskbar landing at release position");
         return Ok(false);
     };
 
     companion_tracker::set_target(Some(target.hwnd));
     if companion_engine::is_running() {
+        // The C# engine already bound using the exact release offset. This second
+        // bind is intentionally kept as the bridge's authoritative target update.
         if !companion_engine::bind(companion_hwnd, target.hwnd) {
             return Err("C# companion engine failed to bind target window".to_string());
         }
