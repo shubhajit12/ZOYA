@@ -3,6 +3,9 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 use crate::companion_tracker::WindowTarget;
@@ -39,9 +42,12 @@ pub fn start(app: &AppHandle) -> bool {
         }
 
         let Ok(mut child) = Command::new(&path)
+            // The engine is a background console process. Do not let Windows
+            // create a visible Command Prompt for it in the packaged app.
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
+            .stderr(Stdio::null())
             .spawn()
         else {
             eprintln!("[ZOYA] Failed to start companion engine: {}", path.display());
