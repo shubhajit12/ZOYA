@@ -16,6 +16,14 @@ export default function CompanionApp() {
   const [dragging, setDragging] = useState(false);
   const [phase, setPhase] = useState('jumping');
 
+  // The native companion window is intentionally larger than Carlotta for
+  // rendering/camera headroom. Dragging and landing use this character-sized
+  // interaction box and the feet anchor instead of the window edges.
+  const DRAG_WIDTH = 190;
+  const DRAG_HEIGHT = 340;
+  const FEET_ANCHOR_X = 165;
+  const FEET_ANCHOR_Y = 350;
+
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -44,9 +52,6 @@ export default function CompanionApp() {
         setReady(true);
         window.clearInterval(startTimer);
       } else if (startAttempts >= 100) {
-        // Do not leave the companion permanently locked in its loading state.
-        // The model is visibly mounted on the target machines even when this
-        // internal renderer flag does not settle, so allow native interaction.
         carlottaGestureController.cancel();
         renderer.setCompanionMode(true);
         carlottaCompanionController.enter();
@@ -67,9 +72,8 @@ export default function CompanionApp() {
 
     const finishNativeDrag = async () => {
       if (!draggingRef.current) return;
-
       try {
-        await tauriBridge.finishCompanionDrag();
+        await tauriBridge.finishCompanionDrag(FEET_ANCHOR_X, FEET_ANCHOR_Y);
       } catch (error) {
         console.error('[ZOYA] Companion drop failed:', error);
       } finally {
@@ -81,18 +85,11 @@ export default function CompanionApp() {
 
     const runNativeDrag = async () => {
       if (dragStartedRef.current || draggingRef.current) return;
-
       dragStartedRef.current = true;
       draggingRef.current = true;
       setDragging(true);
-
       try {
-        // IMPORTANT: startDragging() only starts the OS drag operation.
-        // The previous implementation called finishCompanionDrag() immediately
-        // afterwards, so Rust hid the companion while the cursor was still on
-        // the companion and correctly concluded that the drop target was null.
-        // That is why every drag snapped straight back to the taskbar.
-        await tauriBridge.startCompanionDrag();
+        await tauriBridge.startCompanionDrag(FEET_ANCHOR_X, FEET_ANCHOR_Y);
       } catch (error) {
         console.error('[ZOYA] Companion drag failed:', error);
         draggingRef.current = false;
@@ -148,7 +145,7 @@ export default function CompanionApp() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
-      <div ref={hostRef} className="absolute left-1/2 bottom-0 -translate-x-1/2 w-[220px] h-[350px] bg-transparent cursor-grab active:cursor-grabbing" />
+      <div ref={hostRef} className="absolute left-1/2 bottom-0 -translate-x-1/2 bg-transparent cursor-grab active:cursor-grabbing" style={{ width: DRAG_WIDTH, height: DRAG_HEIGHT }} />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
         <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
           <RotateCcw className="w-4 h-4" />
