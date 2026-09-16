@@ -21,6 +21,8 @@ internal sealed class WindowEngine
     private nint companionHwnd;
     private nint boundHwnd;
     private CancellationTokenSource? trackingCts;
+    private CancellationTokenSource? dragCts;
+    private WindowInfo? lastDragTarget;
 
     public void Handle(JsonElement command)
     {
@@ -33,6 +35,12 @@ internal sealed class WindowEngine
                 break;
             case "bind":
                 Bind(ReadHwnd(command, "companionHwnd"), ReadHwnd(command, "hwnd"));
+                break;
+            case "drag_start":
+                StartDrag(ReadHwnd(command, "companionHwnd"));
+                break;
+            case "drag_finish":
+                WriteTarget(FinishDrag());
                 break;
             case "clear":
                 Clear();
@@ -54,12 +62,76 @@ internal sealed class WindowEngine
         }
     }
 
+    private void StartDrag(nint companion)
+    {
+        lock (sync)
+        {
+            dragCts?.Cancel();
+            companionHwnd = companion;
+            lastDragTarget = null;
+
+            if (!GetCursorPos(out var cursor) || !GetWindowRect(companion, out var rect))
+                return;
+
+            var offsetX = cursor.X - rect.Left;
+            var offsetY = cursor.Y - rect.Top;
+            var cts = new CancellationTokenSource();
+            dragCts = cts;
+            _ = DragAsync(companion, offsetX, offsetY, cts.Token);
+        }
+    }
+
+    private async Task DragAsync(nint companion, int offsetX, int offsetY, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested && IsLeftButtonDown())
+        {
+            if (GetCursorPos(out var cursor) && GetWindowRect(companion, out var rect))
+            {
+                var x = cursor.X - offsetX;
+                var y = cursor.Y - offsetY;
+                _ = SetWindowPos(companion, 0, x, y, rect.Right - rect.Left, rect.Bottom - rect.Top,
+                    SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+            }
+
+            await Task.Delay(8, token).ConfigureAwait(false);
+        }
+
+        if (!token.IsCancellationRequested)
+        {
+            var target = FindTargetUnderCursor(companion);
+            lock (sync)
+            {
+                lastDragTarget = target;
+            }
+
+            if (target is not null)
+            {
+                Bind(companion, target.Value.Hwnd);
+            }
+        }
+    }
+
+    private WindowInfo? FinishDrag()
+    {
+        lock (sync)
+        {
+            var target = lastDragTarget;
+            lastDragTarget = null;
+            dragCts?.Cancel();
+            dragCts = null;
+            return target;
+        }
+    }
+
     private void Clear()
     {
         lock (sync)
         {
             trackingCts?.Cancel();
             trackingCts = null;
+            dragCts?.Cancel();
+            dragCts = null;
+            lastDragTarget = null;
             boundHwnd = 0;
         }
     }
@@ -82,6 +154,8 @@ internal sealed class WindowEngine
             await Task.Delay(16, token).ConfigureAwait(false);
         }
     }
+
+    private static bool IsLeftButtonDown() => (GetAsyncKeyState(0x01) & 0x8000) != 0;
 
     private static WindowInfo? FindTargetUnderCursor(nint companion)
     {
@@ -181,6 +255,7 @@ internal sealed class WindowEngine
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassNameW(nint hwnd, StringBuilder lpClassName, int nMaxCount);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowTextW(nint hwnd, StringBuilder lpString, int nMaxCount);
     [DllImport("user32.dll")] private static extern nint GetShellWindow();
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int vKey);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtrW(nint hWnd, int nIndex);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
     private static nint GetWindowLongPtr(nint hwnd, int index) => GetWindowLongPtrW(hwnd, index);
