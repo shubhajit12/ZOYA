@@ -16,13 +16,13 @@ export default function CompanionApp() {
   const [dragging, setDragging] = useState(false);
   const [phase, setPhase] = useState('jumping');
 
-  // The native companion window is intentionally larger than Carlotta for
-  // rendering/camera headroom. Dragging and landing use this character-sized
-  // interaction box and the feet anchor instead of the window edges.
-  const DRAG_WIDTH = 190;
-  const DRAG_HEIGHT = 340;
+  // The native window is 330x390. The renderer keeps its existing 220x350
+  // canvas, while native placement uses a character/feet anchor rather than
+  // treating the transparent window edges as Zoya's body.
+  const DRAG_WIDTH = 220;
+  const DRAG_HEIGHT = 350;
   const FEET_ANCHOR_X = 165;
-  const FEET_ANCHOR_Y = 350;
+  const FEET_ANCHOR_Y = 370;
 
   useEffect(() => {
     const html = document.documentElement;
@@ -151,7 +151,7 @@ export default function CompanionApp() {
           <RotateCcw className="w-4 h-4" />
         </button>
         <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
-          <X className="w-4 h-4" />
+          <RotateCcw className="w-4 h-4" />
         </button>
       </div>
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-[10px] text-white/70 whitespace-nowrap">
