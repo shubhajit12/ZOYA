@@ -29,17 +29,14 @@ export default function CompanionApp() {
     const body = document.body;
     const previousHtmlBackground = html.style.background;
     const previousBodyBackground = body.style.background;
-
     html.style.background = 'transparent';
     body.style.background = 'transparent';
-
     if (!hostRef.current) return;
     const host = hostRef.current;
     const renderer = new MintRenderer();
     rendererRef.current = renderer;
     renderer.setCompanionMode(true);
     renderer.mount(host, 'low');
-
     let startAttempts = 0;
     const startTimer = window.setInterval(() => {
       startAttempts += 1;
@@ -60,66 +57,34 @@ export default function CompanionApp() {
         window.clearInterval(startTimer);
       }
     }, 100);
-
-    const phaseTimer = window.setInterval(() => {
-      setPhase(carlottaCompanionController.getPhase());
-    }, 120);
-
-    const onResize = () => {
-      if (!hostRef.current) return;
-      renderer.resize(hostRef.current.clientWidth, hostRef.current.clientHeight);
-    };
-
+    const phaseTimer = window.setInterval(() => setPhase(carlottaCompanionController.getPhase()), 120);
+    const onResize = () => { if (hostRef.current) renderer.resize(hostRef.current.clientWidth, hostRef.current.clientHeight); };
     const finishNativeDrag = async () => {
       if (!draggingRef.current) return;
-      try {
-        await tauriBridge.finishCompanionDrag(FEET_ANCHOR_X, FEET_ANCHOR_Y);
-      } catch (error) {
-        console.error('[ZOYA] Companion drop failed:', error);
-      } finally {
-        draggingRef.current = false;
-        dragStartedRef.current = false;
-        setDragging(false);
-      }
+      try { await tauriBridge.finishCompanionDrag(FEET_ANCHOR_X, FEET_ANCHOR_Y); }
+      catch (error) { console.error('[ZOYA] Companion drop failed:', error); }
+      finally { draggingRef.current = false; dragStartedRef.current = false; setDragging(false); }
     };
-
     const runNativeDrag = async () => {
       if (dragStartedRef.current || draggingRef.current) return;
       dragStartedRef.current = true;
       draggingRef.current = true;
       setDragging(true);
-      try {
-        await tauriBridge.startCompanionDrag(FEET_ANCHOR_X, FEET_ANCHOR_Y);
-      } catch (error) {
-        console.error('[ZOYA] Companion drag failed:', error);
-        draggingRef.current = false;
-        dragStartedRef.current = false;
-        setDragging(false);
-      }
+      try { await tauriBridge.startCompanionDrag(FEET_ANCHOR_X, FEET_ANCHOR_Y); }
+      catch (error) { console.error('[ZOYA] Companion drag failed:', error); draggingRef.current = false; dragStartedRef.current = false; setDragging(false); }
     };
-
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 || !readyRef.current || draggingRef.current) return;
       event.preventDefault();
       void runNativeDrag();
     };
-
-    const onPointerUp = (event: PointerEvent) => {
-      if (event.button !== 0) return;
-      void finishNativeDrag();
-    };
-
-    const onMouseUp = (event: MouseEvent) => {
-      if (event.button !== 0) return;
-      void finishNativeDrag();
-    };
-
+    const onPointerUp = (event: PointerEvent) => { if (event.button === 0) void finishNativeDrag(); };
+    const onMouseUp = (event: MouseEvent) => { if (event.button === 0) void finishNativeDrag(); };
     host.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', finishNativeDrag);
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('resize', onResize);
-
     return () => {
       window.clearInterval(startTimer);
       window.clearInterval(phaseTimer);
@@ -147,12 +112,8 @@ export default function CompanionApp() {
     <div className="w-screen h-screen overflow-hidden bg-transparent select-none">
       <div ref={hostRef} className="absolute left-1/2 bottom-0 -translate-x-1/2 bg-transparent cursor-grab active:cursor-grabbing" style={{ width: DRAG_WIDTH, height: DRAG_HEIGHT }} />
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
-        <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
-          <RotateCcw className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg">
-          <RotateCcw className="w-4 h-4" />
-        </button>
+        <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg"><RotateCcw className="w-4 h-4" /></button>
+        <button type="button" onClick={restore} title="Return to ZOYA" className="w-8 h-8 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white/80 hover:text-white hover:bg-black/75 flex items-center justify-center shadow-lg"><X className="w-4 h-4" /></button>
       </div>
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-[10px] text-white/70 whitespace-nowrap">
         {dragging ? 'Drag ZOYA onto a window' : ready ? (phase === 'sitting' ? 'Drag ZOYA onto a window' : phase === 'standing' ? 'ZOYA is returning…' : 'ZOYA is arriving…') : 'Starting companion…'}
