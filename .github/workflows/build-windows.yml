@@ -28,6 +28,23 @@ jobs:
       - name: Build standalone C# companion engine
         run: dotnet publish src-tauri/companion-engine/ZOYA.CompanionEngine.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o src-tauri/companion-engine/bin
 
+      - name: Download Mate Engine runtime
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'MateEngine.zip'
+          $url = 'https://github.com/shinyflvre/Mate-Engine/releases/download/Public-Release-X3.3.0/Public.Release.X3.3.0-HOTFIX-1.zip'
+          Write-Host "Downloading Mate Engine runtime..."
+          Invoke-WebRequest -Uri $url -OutFile $zip
+          $extract = Join-Path $env:RUNNER_TEMP 'MateEngine'
+          if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+          Expand-Archive -Path $zip -DestinationPath $extract -Force
+          $exe = Get-ChildItem -Path $extract -Filter 'MateEngineX.exe' -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'MateEngineX.exe was not found in the Mate Engine release archive.' }
+          $dest = Join-Path $PWD 'src-tauri/mate-companion/bin'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Copy-Item -Path (Join-Path $exe.Directory.FullName '*') -Destination $dest -Recurse -Force
+          Write-Host "Bundling Mate Engine from $($exe.Directory.FullName)"
+
       - name: Install dependencies
         run: npm install
 
