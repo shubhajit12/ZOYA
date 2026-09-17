@@ -1,10 +1,11 @@
 mod companion_engine;
 mod companion_tracker;
+mod mate_handoff;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![enter_companion, exit_companion, start_companion_drag, finish_companion_drag])
+        .invoke_handler(tauri::generate_handler![enter_companion, exit_companion, enter_mate_companion, exit_mate_companion, start_companion_drag, finish_companion_drag])
         .setup(|app| {
             use tauri::Manager;
             println!("ZOYA Desktop Native Engine initialized");
@@ -13,20 +14,6 @@ pub fn run() {
                 println!("[ZOYA] C# companion engine unavailable; retaining Rust fallback tracker");
                 companion_tracker::start_tracking(app.handle().clone());
             }
-            let app_handle = app.handle().clone();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(std::time::Duration::from_millis(150));
-                let Some(main) = app_handle.get_webview_window("main") else { break; };
-                if app_handle.get_webview_window("companion").is_some() { continue; }
-                match main.is_minimized() {
-                    Ok(true) => {
-                        if let Err(err) = main.unminimize() { eprintln!("[ZOYA] Failed to restore minimized main window: {err}"); continue; }
-                        if let Err(err) = enter_companion(app_handle.clone()) { eprintln!("[ZOYA] Failed to enter desktop companion: {err}"); }
-                    }
-                    Ok(false) => {}
-                    Err(err) => eprintln!("[ZOYA] Failed to read main minimized state: {err}"),
-                }
-            });
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -77,6 +64,16 @@ fn place_companion_on_taskbar_at(companion: &tauri::WebviewWindow, cursor_x: i32
 #[cfg(not(target_os = "windows"))]
 fn place_companion_on_taskbar_at(_companion: &tauri::WebviewWindow, _cursor_x: i32, _cursor_y: i32, _anchor_x: i32, _anchor_y: i32) -> Result<(), String> {
     Err("Taskbar fallback is only available on Windows".to_string())
+}
+
+#[tauri::command]
+fn enter_mate_companion(app: tauri::AppHandle) -> Result<(), String> {
+    mate_handoff::start(app)
+}
+
+#[tauri::command]
+fn exit_mate_companion(app: tauri::AppHandle) -> Result<(), String> {
+    mate_handoff::stop(&app)
 }
 
 #[tauri::command]
@@ -170,7 +167,6 @@ fn finish_companion_drag(app: tauri::AppHandle, anchor_x: i32, anchor_y: i32) ->
         return Ok(false);
     };
     companion_tracker::set_target(Some(target.hwnd));
-    // C# has already positioned the companion from the feet anchor and owns tracking.
     println!("[ZOYA] Companion bound to HWND={} engine={}", target.hwnd, companion_engine::is_running());
     Ok(true)
 }
