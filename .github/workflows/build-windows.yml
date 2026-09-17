@@ -53,9 +53,10 @@ jobs:
 
           # ZOYA supplies Carlotta.vrm separately. Remove standalone avatar/model
           # files shipped alongside the Mate executable so they are not included
-          # in the ZOYA installer. Unity's packaged .data/.assets files are kept
-          # intact because they may contain engine/runtime dependencies.
-          $modelExtensions = @('.vrm', '.fbx', '.gltf', '.glb', '.pmx', '.pmd', '.obj', '.blend')
+          # in the ZOYA installer. This includes Mate Engine .me avatar packages.
+          # Unity's packaged .data/.assets files are kept intact because they may
+          # contain engine/runtime dependencies.
+          $modelExtensions = @('.vrm', '.me', '.fbx', '.gltf', '.glb', '.pmx', '.pmd', '.obj', '.blend')
           $removed = @()
           Get-ChildItem -Path $mateRoot -Recurse -File | ForEach-Object {
             if ($modelExtensions -contains $_.Extension.ToLowerInvariant()) {
