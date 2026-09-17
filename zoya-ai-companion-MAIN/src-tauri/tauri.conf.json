@@ -30,7 +30,8 @@
     "active": true,
     "targets": ["msi", "nsis"],
     "resources": {
-      "companion-engine/bin/ZOYA.CompanionEngine.exe": "companion-engine/ZOYA.CompanionEngine.exe"
+      "companion-engine/bin/ZOYA.CompanionEngine.exe": "companion-engine/ZOYA.CompanionEngine.exe",
+      "mate-companion/bin": "mate-companion"
     },
     "icon": [
       "icons/32x32.png",
