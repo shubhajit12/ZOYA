@@ -15,13 +15,13 @@ export class TauriBridge {
   }
 
   public async enterCompanion(): Promise<void> {
-    if (this.isTauriAvailable()) await this.invoke('enter_companion');
-    else console.log('[Native] Companion mode requested (browser preview)');
+    if (this.isTauriAvailable()) await this.invoke('enter_mate_companion');
+    else console.log('[Native] Mate companion mode requested (browser preview)');
   }
 
   public async exitCompanion(): Promise<void> {
-    if (this.isTauriAvailable()) await this.invoke('exit_companion');
-    else console.log('[Native] Companion restore requested (browser preview)');
+    if (this.isTauriAvailable()) await this.invoke('exit_mate_companion');
+    else console.log('[Native] Mate companion restore requested (browser preview)');
   }
 
   public async startCompanionDrag(anchorX: number, anchorY: number): Promise<void> {
