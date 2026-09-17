@@ -45,6 +45,37 @@ jobs:
           Copy-Item -Path (Join-Path $exe.Directory.FullName '*') -Destination $dest -Recurse -Force
           Write-Host "Bundling Mate Engine from $($exe.Directory.FullName)"
 
+      - name: Strip standalone avatar model files from Mate runtime
+        shell: pwsh
+        run: |
+          $mateRoot = Join-Path $PWD 'src-tauri/mate-companion/bin'
+          if (-not (Test-Path $mateRoot)) { throw "Mate runtime directory not found: $mateRoot" }
+
+          # ZOYA supplies Carlotta.vrm separately. Remove standalone avatar/model
+          # files shipped alongside the Mate executable so they are not included
+          # in the ZOYA installer. Unity's packaged .data/.assets files are kept
+          # intact because they may contain engine/runtime dependencies.
+          $modelExtensions = @('.vrm', '.fbx', '.gltf', '.glb', '.pmx', '.pmd', '.obj', '.blend')
+          $removed = @()
+          Get-ChildItem -Path $mateRoot -Recurse -File | ForEach-Object {
+            if ($modelExtensions -contains $_.Extension.ToLowerInvariant()) {
+              $removed += $_.FullName
+              Remove-Item -LiteralPath $_.FullName -Force
+            }
+          }
+
+          if ($removed.Count -gt 0) {
+            Write-Host "Removed standalone avatar/model files: $($removed.Count)"
+            $removed | ForEach-Object { Write-Host "  $_" }
+          } else {
+            Write-Host "No standalone avatar/model files were present in the Mate runtime."
+          }
+
+          # Fail fast if the executable was accidentally removed or the runtime
+          # folder is otherwise missing its entry point.
+          $mateExe = Join-Path $mateRoot 'MateEngineX.exe'
+          if (-not (Test-Path $mateExe)) { throw 'MateEngineX.exe is missing after avatar pruning.' }
+
       - name: Prepare Carlotta VRM for Tauri resources
         shell: pwsh
         run: |
