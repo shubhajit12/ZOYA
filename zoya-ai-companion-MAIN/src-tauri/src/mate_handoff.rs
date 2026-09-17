@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::sync::{Mutex, OnceLock};
@@ -37,6 +38,31 @@ fn find_mate_executable<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<
     candidate_paths(app).into_iter().find(|path| path.is_file())
 }
 
+fn find_carlotta<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf, String> {
+    let resource_dir = app.path().resource_dir().map_err(|err| err.to_string())?;
+    let path = resource_dir.join("mate-companion").join("Carlotta.vrm");
+    if path.is_file() {
+        Ok(path)
+    } else {
+        Err(format!("Carlotta.vrm was not found at {}", path.display()))
+    }
+}
+
+fn write_carlotta_settings<R: tauri::Runtime>(app: &tauri::AppHandle<R>, carlotta: &PathBuf) -> Result<PathBuf, String> {
+    let resource_dir = app.path().resource_dir().map_err(|err| err.to_string())?;
+    let settings_path = resource_dir.join("mate-companion").join("zoya-settings.json");
+    let json = serde_json::json!({
+        "selectedModelPath": carlotta.to_string_lossy().to_string(),
+        "isTopmost": true,
+        "enableWindowSitting": true,
+        "enableRandomAvatar": false,
+        "enableLocomotion": false
+    });
+    fs::write(&settings_path, serde_json::to_vec_pretty(&json).map_err(|err| err.to_string())?)
+        .map_err(|err| format!("Failed to prepare Mate settings: {err}"))?;
+    Ok(settings_path)
+}
+
 pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
     {
         let mut slot = process_slot().lock().map_err(|_| "Mate process state is unavailable".to_string())?;
@@ -49,16 +75,20 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     }
 
     let exe = find_mate_executable(&app).ok_or_else(|| {
-        "MateEngineX.exe was not found. The Mate companion runtime is not bundled in this build yet.".to_string()
+        "MateEngineX.exe was not found. This build does not contain the Mate companion runtime.".to_string()
     })?;
+    let carlotta = find_carlotta(&app)?;
+    let settings = write_carlotta_settings(&app, &carlotta)?;
 
     println!("[ZOYA] Starting Mate companion: {}", exe.display());
+    println!("[ZOYA] Mate avatar: {}", carlotta.display());
 
     let working_dir = exe.parent().map(PathBuf::from);
     let mut command = Command::new(&exe);
     if let Some(dir) = working_dir {
         command.current_dir(dir);
     }
+    command.arg("--savefile").arg(&settings);
 
     let child = command
         .spawn()
@@ -67,6 +97,13 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     {
         let mut slot = process_slot().lock().map_err(|_| "Mate process state is unavailable".to_string())?;
         *slot = Some(child);
+    }
+
+    if let Some(main) = app.get_webview_window("main") {
+        if let Err(err) = main.hide() {
+            let _ = stop(&app);
+            return Err(format!("Mate started but ZOYA could not hide its main window: {err}"));
+        }
     }
 
     let monitor_handle = app.clone();
@@ -102,10 +139,6 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
             }
         }
     });
-
-    if let Some(main) = app.get_webview_window("main") {
-        main.hide().map_err(|err| format!("Mate started but ZOYA could not hide its main window: {err}"))?;
-    }
 
     Ok(())
 }
