@@ -41,8 +41,10 @@ fn find_carlotta<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf
 }
 
 fn write_carlotta_settings<R: tauri::Runtime>(app: &tauri::AppHandle<R>, carlotta: &PathBuf) -> Result<PathBuf, String> {
-    let resource_dir = app.path().resource_dir().map_err(|err| err.to_string())?;
-    let settings_path = resource_dir.join("mate-companion").join("zoya-settings.json");
+    let app_data = app.path().app_data_dir().map_err(|err| err.to_string())?;
+    let handoff_dir = app_data.join("mate-companion");
+    fs::create_dir_all(&handoff_dir).map_err(|err| format!("Failed to create Mate handoff directory: {err}"))?;
+    let settings_path = handoff_dir.join("zoya-settings.json");
     let json = serde_json::json!({
         "selectedModelPath": carlotta.to_string_lossy().to_string(),
         "isTopmost": true,
