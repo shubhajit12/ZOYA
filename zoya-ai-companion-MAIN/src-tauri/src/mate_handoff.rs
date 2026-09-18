@@ -145,11 +145,21 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     {
         let exe_string = exe.to_string_lossy().to_string();
         let settings_string = settings.to_string_lossy().to_string();
+        let working_dir = exe.parent().unwrap_or(Path::new(".")).to_string_lossy().to_string();
 
-        log_line(&app, "Launching Mate with Windows shell start...");
+        log_line(&app, &format!("Launching Mate from working directory: {working_dir}"));
 
         let output = Command::new("cmd.exe")
-            .args(["/C", "start", "", &exe_string, "--savefile", &settings_string])
+            .args([
+                "/C",
+                "start",
+                "",
+                "/D",
+                &working_dir,
+                &exe_string,
+                "--savefile",
+                &settings_string,
+            ])
             .stdin(Stdio::null())
             .output()
             .map_err(|err| {
