@@ -4,6 +4,9 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use tauri::Manager;
 
 static MATE_PROCESS: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
@@ -229,6 +232,20 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         .stdout(Stdio::from(stdout))
         .stderr(Stdio::from(stderr));
 
+    // ZOYA is intentionally going to exit after the handoff. On Windows,
+    // launch Mate in a detached process group so it is independent of ZOYA's
+    // lifetime. CREATE_BREAKAWAY_FROM_JOB also allows Mate to escape a parent
+    // job object when the launcher/runtime places ZOYA in one.
+    #[cfg(target_os = "windows")]
+    {
+        const DETACHED_PROCESS: u32 = 0x00000008;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
+        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x01000000;
+        command.creation_flags(
+            DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB,
+        );
+    }
+
     let child = command.spawn().map_err(|err| {
         let message = format!("Failed to start MateEngineX.exe at {}: {err}", exe.display());
         log_line(&app, &message);
@@ -242,71 +259,24 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         *slot = Some(child);
     }
 
-    std::thread::sleep(Duration::from_millis(1000));
+    log_line(&app, "Mate process spawned; waiting briefly before ZOYA exits.");
+    std::thread::sleep(Duration::from_millis(250));
 
     if let Ok(mut slot) = process_slot().lock() {
         if let Some(child) = slot.as_mut() {
             if let Ok(Some(status)) = child.try_wait() {
                 let message = format!("MateEngineX.exe exited immediately after launch: {status}");
                 *slot = None;
-
                 log_line(&app, &message);
                 log_line(&app, &format!("Mate stdout: {}", stdout_log.display()));
                 log_line(&app, &format!("Mate stderr: {}", stderr_log.display()));
-
                 return Err(message);
             }
         }
     }
 
-    if let Some(main) = app.get_webview_window("main") {
-        if let Err(err) = main.hide() {
-            let _ = stop(&app);
-            let message = format!("Mate started but ZOYA could not hide its main window: {err}");
-            log_line(&app, &message);
-            return Err(message);
-        }
-    }
-
-    log_line(&app, "Mate companion launched successfully; ZOYA main window hidden.");
-
-    let monitor_handle = app.clone();
-
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_millis(250));
-
-        let finished = match process_slot().lock() {
-            Ok(mut slot) => match slot.as_mut() {
-                Some(child) => match child.try_wait() {
-                    Ok(Some(status)) => {
-                        log_line(&monitor_handle, &format!("Mate companion exited: {status}"));
-                        *slot = None;
-                        true
-                    }
-                    Ok(None) => false,
-                    Err(err) => {
-                        log_line(
-                            &monitor_handle,
-                            &format!("Mate process check failed: {err}"),
-                        );
-                        *slot = None;
-                        true
-                    }
-                },
-                None => true,
-            },
-            Err(_) => true,
-        };
-
-        if finished {
-            if let Some(main) = monitor_handle.get_webview_window("main") {
-                let _ = main.show();
-                let _ = main.set_focus();
-            }
-            break;
-        }
-    });
-
+    log_line(&app, "Mate companion is running independently; requesting full ZOYA exit.");
+    app.exit(0);
     Ok(())
 }
 
