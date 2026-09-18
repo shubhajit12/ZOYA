@@ -19,11 +19,7 @@ fn handoff_log_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
             }
         }
     }
-
-    app.path()
-        .app_data_dir()
-        .unwrap_or_else(|_| std::env::temp_dir())
-        .join("mate-companion")
+    app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir()).join("mate-companion")
 }
 
 fn log_line<R: tauri::Runtime>(app: &tauri::AppHandle<R>, message: &str) {
@@ -44,10 +40,7 @@ fn recursive_find_exe(root: &Path) -> Option<PathBuf> {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_file()
-            && path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.eq_ignore_ascii_case("MateEngineX.exe"))
+            && path.file_name().and_then(|name| name.to_str()).is_some_and(|name| name.eq_ignore_ascii_case("MateEngineX.exe"))
         {
             return Some(path);
         }
@@ -62,14 +55,12 @@ fn recursive_find_exe(root: &Path) -> Option<PathBuf> {
 
 fn candidate_paths<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf> {
     let mut paths = Vec::new();
-
     if let Ok(current_exe) = std::env::current_exe() {
-        if let Some(install_root) = current_exe.parent() {
-            paths.push(install_root.join("mate-companion").join("MateEngineX.exe"));
-            paths.push(install_root.join("mate-companion").join("bin").join("MateEngineX.exe"));
+        if let Some(root) = current_exe.parent() {
+            paths.push(root.join("mate-companion").join("MateEngineX.exe"));
+            paths.push(root.join("mate-companion").join("bin").join("MateEngineX.exe"));
         }
     }
-
     if let Ok(resource_dir) = app.path().resource_dir() {
         paths.push(resource_dir.join("mate-companion").join("MateEngineX.exe"));
         paths.push(resource_dir.join("mate-companion").join("bin").join("MateEngineX.exe"));
@@ -78,7 +69,6 @@ fn candidate_paths<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf>
             paths.push(found);
         }
     }
-
     paths
 }
 
@@ -88,36 +78,25 @@ fn find_mate_executable<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<
 
 fn find_carlotta<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf, String> {
     let mut candidates = Vec::new();
-
     if let Ok(current_exe) = std::env::current_exe() {
-        if let Some(install_root) = current_exe.parent() {
-            candidates.push(install_root.join("mate-companion").join("Carlotta.vrm"));
-            candidates.push(install_root.join("mate-companion").join("bin").join("Carlotta.vrm"));
+        if let Some(root) = current_exe.parent() {
+            candidates.push(root.join("mate-companion").join("Carlotta.vrm"));
+            candidates.push(root.join("mate-companion").join("bin").join("Carlotta.vrm"));
         }
     }
-
     if let Ok(resource_dir) = app.path().resource_dir() {
         candidates.push(resource_dir.join("mate-companion").join("Carlotta.vrm"));
         candidates.push(resource_dir.join("mate-companion").join("bin").join("Carlotta.vrm"));
     }
-
-    candidates
-        .into_iter()
-        .find(|path| path.is_file())
-        .ok_or_else(|| "Carlotta.vrm was not found in the installed ZOYA mate-companion directory or Tauri resources".to_string())
+    candidates.into_iter().find(|path| path.is_file())
+        .ok_or_else(|| "Carlotta.vrm was not found in the packaged Mate companion resources".to_string())
 }
 
-fn write_carlotta_settings<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-    carlotta: &PathBuf,
-) -> Result<PathBuf, String> {
-    let app_data = app.path().app_data_dir().map_err(|err| err.to_string())?;
-    let handoff_dir = app_data.join("mate-companion");
-
-    fs::create_dir_all(&handoff_dir)
-        .map_err(|err| format!("Failed to create Mate handoff directory: {err}"))?;
-
-    let settings_path = handoff_dir.join("zoya-settings.json");
+fn write_carlotta_settings<R: tauri::Runtime>(app: &tauri::AppHandle<R>, carlotta: &Path) -> Result<PathBuf, String> {
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let dir = app_data.join("mate-companion");
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create Mate settings directory: {e}"))?;
+    let path = dir.join("zoya-settings.json");
     let json = serde_json::json!({
         "selectedModelPath": carlotta.to_string_lossy().to_string(),
         "isTopmost": true,
@@ -126,36 +105,23 @@ fn write_carlotta_settings<R: tauri::Runtime>(
         "enableLocomotion": false,
         "settingsVersion": 1
     });
-
-    fs::write(
-        &settings_path,
-        serde_json::to_vec_pretty(&json).map_err(|err| err.to_string())?,
-    )
-    .map_err(|err| format!("Failed to prepare Mate settings: {err}"))?;
-
-    Ok(settings_path)
+    fs::write(&path, serde_json::to_vec_pretty(&json).map_err(|e| e.to_string())?)
+        .map_err(|e| format!("Failed to write Mate settings: {e}"))?;
+    Ok(path)
 }
 
 pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
     log_line(&app, "=== Mate handoff started ===");
 
-    let packaged_exe = match find_mate_executable(&app) {
+    let exe = match find_mate_executable(&app) {
         Some(path) => path,
         None => {
-            let resource_dir = app
-                .path()
-                .resource_dir()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|_| "<unavailable>".to_string());
-            let message = format!(
-                "MateEngineX.exe was not found. Checked packaged resources under {resource_dir}."
-            );
+            let message = format!("MateEngineX.exe not found. Checked: {:?}", candidate_paths(&app));
             log_line(&app, &message);
             return Err(message);
         }
     };
-
-    log_line(&app, &format!("Found Mate executable: {}", packaged_exe.display()));
+    log_line(&app, &format!("Mate executable: {}", exe.display()));
 
     let carlotta = match find_carlotta(&app) {
         Ok(path) => path,
@@ -164,8 +130,7 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
             return Err(err);
         }
     };
-
-    log_line(&app, &format!("Found Carlotta avatar: {}", carlotta.display()));
+    log_line(&app, &format!("Carlotta: {}", carlotta.display()));
 
     let settings = match write_carlotta_settings(&app, &carlotta) {
         Ok(path) => path,
@@ -174,41 +139,21 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
             return Err(err);
         }
     };
-
-    log_line(&app, &format!("Mate settings: {}", settings.display()));
+    log_line(&app, &format!("Settings: {}", settings.display()));
 
     #[cfg(target_os = "windows")]
     {
-        // Use PowerShell Start-Process rather than Win32_Process.Create.
-        // This gives Windows a normal detached desktop process while avoiding
-        // Tauri's process/job lifetime taking Mate down with ZOYA.
-        let exe_arg = packaged_exe.to_string_lossy().replace("'", "''");
-        let settings_arg = settings.to_string_lossy().replace("'", "''");
-        let working_dir = packaged_exe
-            .parent()
-            .map(|p| p.to_string_lossy().replace("'", "''"))
-            .unwrap_or_default();
+        let exe_string = exe.to_string_lossy().to_string();
+        let settings_string = settings.to_string_lossy().to_string();
 
-        let ps_script = format!(
-            "$p=Start-Process -FilePath '{}' -ArgumentList @('--savefile','{}') -WorkingDirectory '{}' -WindowStyle Normal -PassThru; Write-Output $p.Id",
-            exe_arg, settings_arg, working_dir
-        );
+        log_line(&app, "Launching Mate with Windows shell start...");
 
-        log_line(&app, "Launching MateEngineX.exe with Start-Process...");
-
-        let output = Command::new("powershell.exe")
-            .args([
-                "-NoProfile",
-                "-NonInteractive",
-                "-WindowStyle",
-                "Hidden",
-                "-Command",
-                &ps_script,
-            ])
+        let output = Command::new("cmd.exe")
+            .args(["/C", "start", "", &exe_string, "--savefile", &settings_string])
             .stdin(Stdio::null())
             .output()
             .map_err(|err| {
-                let message = format!("Failed to start PowerShell Mate launcher: {err}");
+                let message = format!("Failed to invoke Windows start: {err}");
                 log_line(&app, &message);
                 message
             })?;
@@ -216,41 +161,38 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         if !output.status.success() {
             let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
             let message = format!(
-                "Mate Start-Process failed (status {}): {}",
+                "Windows start failed (status {}): {}",
                 output.status,
-                if detail.is_empty() { "no PowerShell error output" } else { &detail }
+                if detail.is_empty() { "no cmd error output" } else { &detail }
             );
             log_line(&app, &message);
             return Err(message);
         }
 
-        let pid = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        log_line(&app, &format!("MateEngineX.exe started (PID={pid})."));
-        log_line(&app, "Mate handoff successful; closing ZOYA now.");
+        log_line(&app, "Mate launch command accepted by Windows.");
+        log_line(&app, "Closing ZOYA now.");
         app.exit(0);
         return Ok(());
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        let child = Command::new(&packaged_exe)
+        let child = Command::new(&exe)
             .arg("--savefile")
             .arg(&settings)
-            .current_dir(packaged_exe.parent().unwrap_or(Path::new(".")))
+            .current_dir(exe.parent().unwrap_or(Path::new(".")))
             .stdin(Stdio::null())
             .spawn()
             .map_err(|err| {
-                let message = format!("Failed to start MateEngineX.exe at {}: {err}", packaged_exe.display());
+                let message = format!("Failed to start MateEngineX.exe: {err}");
                 log_line(&app, &message);
                 message
             })?;
 
-        let mut slot = process_slot()
-            .lock()
-            .map_err(|_| "Mate process state is unavailable".to_string())?;
-        *slot = Some(child);
+        if let Ok(mut slot) = process_slot().lock() {
+            *slot = Some(child);
+        }
 
-        log_line(&app, "Mate process spawned; closing ZOYA now.");
         app.exit(0);
         Ok(())
     }
@@ -266,8 +208,8 @@ pub fn stop<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> 
     }
 
     if let Some(main) = app.get_webview_window("main") {
-        main.show().map_err(|err| err.to_string())?;
-        main.set_focus().map_err(|err| err.to_string())?;
+        main.show().map_err(|e| e.to_string())?;
+        main.set_focus().map_err(|e| e.to_string())?;
     }
 
     Ok(())
