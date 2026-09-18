@@ -51,23 +51,31 @@ fn recursive_find_exe(root: &Path) -> Option<PathBuf> {
 fn candidate_paths<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf> {
     let mut paths = Vec::new();
 
+    // Installed ZOYA layout: <install-root>\\zoya.exe + <install-root>\\mate-companion.
+    // Resolve this first so the user's chosen install directory is always respected.
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(install_root) = current_exe.parent() {
+            paths.push(
+                install_root
+                    .join("mate-companion")
+                    .join("MateEngineX.exe"),
+            );
+            paths.push(
+                install_root
+                    .join("mate-companion")
+                    .join("bin")
+                    .join("MateEngineX.exe"),
+            );
+        }
+    }
+
+    // Development/Tauri-resource fallback.
     if let Ok(resource_dir) = app.path().resource_dir() {
         paths.push(resource_dir.join("mate-companion").join("MateEngineX.exe"));
         paths.push(resource_dir.join("mate-companion").join("bin").join("MateEngineX.exe"));
         paths.push(resource_dir.join("MateEngineX.exe"));
         if let Some(found) = recursive_find_exe(&resource_dir) {
             paths.push(found);
-        }
-    }
-
-    if let Ok(current_exe) = std::env::current_exe() {
-        if let Some(parent) = current_exe.parent() {
-            paths.push(parent.join("mate-companion").join("MateEngineX.exe"));
-            paths.push(parent.join("mate-companion").join("bin").join("MateEngineX.exe"));
-            paths.push(parent.join("MateEngineX.exe"));
-            if let Some(found) = recursive_find_exe(parent) {
-                paths.push(found);
-            }
         }
     }
 
@@ -79,16 +87,36 @@ fn find_mate_executable<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<
 }
 
 fn find_carlotta<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf, String> {
-    let resource_dir = app.path().resource_dir().map_err(|err| err.to_string())?;
-    let candidates = [
-        resource_dir.join("mate-companion").join("Carlotta.vrm"),
-        resource_dir.join("mate-companion").join("bin").join("Carlotta.vrm"),
-    ];
+    let mut candidates = Vec::new();
+
+    // Match Carlotta to the same installed root used for MateEngineX.exe.
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(install_root) = current_exe.parent() {
+            candidates.push(install_root.join("mate-companion").join("Carlotta.vrm"));
+            candidates.push(
+                install_root
+                    .join("mate-companion")
+                    .join("bin")
+                    .join("Carlotta.vrm"),
+            );
+        }
+    }
+
+    // Development/Tauri-resource fallback.
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        candidates.push(resource_dir.join("mate-companion").join("Carlotta.vrm"));
+        candidates.push(
+            resource_dir
+                .join("mate-companion")
+                .join("bin")
+                .join("Carlotta.vrm"),
+        );
+    }
 
     candidates
         .into_iter()
         .find(|path| path.is_file())
-        .ok_or_else(|| format!("Carlotta.vrm was not found under {}", resource_dir.display()))
+        .ok_or_else(|| "Carlotta.vrm was not found in the installed ZOYA mate-companion directory or Tauri resources".to_string())
 }
 
 fn write_carlotta_settings<R: tauri::Runtime>(
@@ -156,9 +184,9 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     log_line(&app, &format!("Installed Mate avatar: {}", carlotta.display()));
     log_line(&app, &format!("Mate settings: {}", settings.display()));
 
-    // Launch Mate directly from the installed ZOYA resource directory.
-    // Tauri's resource_dir() resolves inside the user's chosen installation,
-    // so no hard-coded drive/path is required and no runtime copy is made.
+    // Launch Mate directly from the user's installed ZOYA directory.
+    // current_exe().parent() resolves the actual install root, regardless of
+    // which drive or folder the user selected. No runtime copy is made.
     let exe = packaged_exe;
     let working_dir = exe.parent().map(PathBuf::from);
 
