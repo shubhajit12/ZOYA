@@ -2,10 +2,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
-
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 
 use tauri::Manager;
 
@@ -143,29 +139,6 @@ fn write_carlotta_settings<R: tauri::Runtime>(
 pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
     log_line(&app, "=== Mate handoff started ===");
 
-    {
-        let mut slot = process_slot()
-            .lock()
-            .map_err(|_| "Mate process state is unavailable".to_string())?;
-
-        if let Some(child) = slot.as_mut() {
-            match child.try_wait() {
-                Ok(None) => {
-                    log_line(&app, "Mate process is already running; handoff already active.");
-                    return Ok(());
-                }
-                Ok(Some(status)) => {
-                    log_line(&app, &format!("Previous Mate process had exited: {status}"));
-                    *slot = None;
-                }
-                Err(err) => {
-                    log_line(&app, &format!("Could not inspect previous Mate process: {err}"));
-                    *slot = None;
-                }
-            }
-        }
-    }
-
     let packaged_exe = match find_mate_executable(&app) {
         Some(path) => path,
         None => {
@@ -204,75 +177,24 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
 
     log_line(&app, &format!("Mate settings: {}", settings.display()));
 
-    let exe = packaged_exe;
-    let working_dir = exe.parent().map(PathBuf::from);
-    let log_dir = handoff_log_dir(&app);
-    let stdout_log = log_dir.join("mate-stdout.log");
-    let stderr_log = log_dir.join("mate-stderr.log");
-
-    let stdout = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&stdout_log)
-        .map_err(|err| {
-            let message = format!("Failed to open Mate stdout log: {err}");
-            log_line(&app, &message);
-            message
-        })?;
-
-    let stderr = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&stderr_log)
-        .map_err(|err| {
-            let message = format!("Failed to open Mate stderr log: {err}");
-            log_line(&app, &message);
-            message
-        })?;
-
-    let mut command = Command::new(&exe);
-    if let Some(dir) = working_dir.clone() {
-        command.current_dir(dir);
-    }
-
-    command
-        .arg("--savefile")
-        .arg(&settings)
-        .stdin(Stdio::null())
-        .stdout(Stdio::from(stdout))
-        .stderr(Stdio::from(stderr));
-
     #[cfg(target_os = "windows")]
     {
-        const DETACHED_PROCESS: u32 = 0x00000008;
-        const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
-        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x01000000;
-        command.creation_flags(
-            DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB,
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        let command_line = format!(
-            r#""{}" --savefile "{}""#,
-            exe.display(),
-            settings.display()
-        );
-        let escaped_command_line = command_line.replace("'", "''");
-        let escaped_working_dir = exe
+        // Use PowerShell Start-Process rather than Win32_Process.Create.
+        // This gives Windows a normal detached desktop process while avoiding
+        // Tauri's process/job lifetime taking Mate down with ZOYA.
+        let exe_arg = packaged_exe.to_string_lossy().replace("'", "''");
+        let settings_arg = settings.to_string_lossy().replace("'", "''");
+        let working_dir = packaged_exe
             .parent()
-            .map(|p| p.display().to_string())
-            .unwrap_or_default()
-            .replace("'", "''");
+            .map(|p| p.to_string_lossy().replace("'", "''"))
+            .unwrap_or_default();
 
         let ps_script = format!(
-            "$args=@{{CommandLine='{}';CurrentDirectory='{}'}}; $r=Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments $args; if($r.ReturnValue -ne 0) {{ exit [int]$r.ReturnValue }}; Write-Output $r.ProcessId",
-            escaped_command_line,
-            escaped_working_dir
+            "$p=Start-Process -FilePath '{}' -ArgumentList @('--savefile','{}') -WorkingDirectory '{}' -WindowStyle Normal -PassThru; Write-Output $p.Id",
+            exe_arg, settings_arg, working_dir
         );
 
-        log_line(&app, "Launching MateEngineX.exe via Win32_Process.Create...");
+        log_line(&app, "Launching MateEngineX.exe with Start-Process...");
 
         let output = Command::new("powershell.exe")
             .args([
@@ -286,7 +208,7 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
             .stdin(Stdio::null())
             .output()
             .map_err(|err| {
-                let message = format!("Failed to launch detached Mate process: {err}");
+                let message = format!("Failed to start PowerShell Mate launcher: {err}");
                 log_line(&app, &message);
                 message
             })?;
@@ -294,7 +216,7 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         if !output.status.success() {
             let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
             let message = format!(
-                "Windows detached Mate launch failed (status {}): {}",
+                "Mate Start-Process failed (status {}): {}",
                 output.status,
                 if detail.is_empty() { "no PowerShell error output" } else { &detail }
             );
@@ -303,27 +225,32 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         }
 
         let pid = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        log_line(&app, &format!("MateEngineX.exe launched independently (PID={pid})."));
-        std::thread::sleep(Duration::from_millis(1500));
-        log_line(&app, "Mate handoff complete; requesting full ZOYA exit.");
+        log_line(&app, &format!("MateEngineX.exe started (PID={pid})."));
+        log_line(&app, "Mate handoff successful; closing ZOYA now.");
         app.exit(0);
         return Ok(());
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        let child = command.spawn().map_err(|err| {
-            let message = format!("Failed to start MateEngineX.exe at {}: {err}", exe.display());
-            log_line(&app, &message);
-            message
-        })?;
+        let child = Command::new(&packaged_exe)
+            .arg("--savefile")
+            .arg(&settings)
+            .current_dir(packaged_exe.parent().unwrap_or(Path::new(".")))
+            .stdin(Stdio::null())
+            .spawn()
+            .map_err(|err| {
+                let message = format!("Failed to start MateEngineX.exe at {}: {err}", packaged_exe.display());
+                log_line(&app, &message);
+                message
+            })?;
 
         let mut slot = process_slot()
             .lock()
             .map_err(|_| "Mate process state is unavailable".to_string())?;
         *slot = Some(child);
 
-        log_line(&app, "Mate process spawned; requesting ZOYA exit.");
+        log_line(&app, "Mate process spawned; closing ZOYA now.");
         app.exit(0);
         Ok(())
     }
