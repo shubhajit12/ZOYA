@@ -246,11 +246,100 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         );
     }
 
-    let child = command.spawn().map_err(|err| {
-        let message = format!("Failed to start MateEngineX.exe at {}: {err}", exe.display());
-        log_line(&app, &message);
-        message
-    })?;
+    let child_result = command.spawn();
+
+    let child = match child_result {
+        Ok(child) => child,
+        Err(primary_err) => {
+            // Some Windows launchers place ZOYA inside a Job Object that does
+            // not permit CREATE_BREAKAWAY_FROM_JOB. In that case CreateProcess
+            // can fail with ERROR_ACCESS_DENIED. Win32_Process.Create is used
+            // through PowerShell as a fallback because processes created by
+            // that WMI API are not associated with the caller's Job Object.
+            log_line(
+                &app,
+                &format!(
+                    "Direct Mate launch failed at {}: {primary_err}; trying Windows detached fallback.",
+                    exe.display()
+                ),
+            );
+
+            #[cfg(target_os = "windows")]
+            {
+                let command_line = format!(
+                    r#""{}" --savefile "{}""#,
+                    exe.display(),
+                    settings.display()
+                );
+                let escaped_command_line = command_line.replace("'", "''");
+                let escaped_working_dir = exe
+                    .parent()
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_default()
+                    .replace("'", "''");
+
+                let ps_script = format!(
+                    "$args=@{{CommandLine='{}';CurrentDirectory='{}'}};                      $r=Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments $args;                      if($r.ReturnValue -ne 0) {{ exit [int]$r.ReturnValue }}",
+                    escaped_command_line,
+                    escaped_working_dir
+                );
+
+                let status = Command::new("powershell.exe")
+                    .args([
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-WindowStyle",
+                        "Hidden",
+                        "-Command",
+                        &ps_script,
+                    ])
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .map_err(|fallback_err| {
+                        let message = format!(
+                            "Failed to start MateEngineX.exe directly ({primary_err}) and detached fallback also failed: {fallback_err}"
+                        );
+                        log_line(&app, &message);
+                        message
+                    })?;
+
+                if !status.success() {
+                    let message = format!(
+                        "Failed to start MateEngineX.exe directly ({primary_err}); Windows detached fallback returned {status}"
+                    );
+                    log_line(&app, &message);
+                    return Err(message);
+                }
+
+                log_line(
+                    &app,
+                    "Windows detached fallback created Mate outside the ZOYA Job Object.",
+                );
+
+                // The WMI-created Mate process is independent of ZOYA, so no
+                // Child handle needs to survive this process exiting.
+                std::thread::sleep(Duration::from_millis(750));
+                log_line(
+                    &app,
+                    "Mate companion launch handed off through detached fallback; requesting full ZOYA exit.",
+                );
+                app.exit(0);
+                return Ok(());
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            {
+                let message = format!(
+                    "Failed to start MateEngineX.exe at {}: {primary_err}",
+                    exe.display()
+                );
+                log_line(&app, &message);
+                return Err(message);
+            }
+        }
+    };
 
     {
         let mut slot = process_slot()
@@ -260,7 +349,7 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     }
 
     log_line(&app, "Mate process spawned; waiting briefly before ZOYA exits.");
-    std::thread::sleep(Duration::from_millis(250));
+    std::thread::sleep(Duration::from_millis(500));
 
     if let Ok(mut slot) = process_slot().lock() {
         if let Some(child) = slot.as_mut() {
