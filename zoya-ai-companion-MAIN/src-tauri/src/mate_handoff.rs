@@ -68,9 +68,6 @@ fn candidate_paths<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf>
             }
         }
     }
-    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-        paths.push(PathBuf::from(local_app_data).join("Zoya").join("mate-companion").join("MateEngineX.exe"));
-    }
     paths
 }
 
@@ -90,10 +87,83 @@ fn find_carlotta<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf
         .ok_or_else(|| format!("Carlotta.vrm was not found under {}", resource_dir.display()))
 }
 
-fn write_carlotta_settings<R: tauri::Runtime>(app: &tauri::AppHandle<R>, carlotta: &PathBuf) -> Result<PathBuf, String> {
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    fs::create_dir_all(dst)
+        .map_err(|err| format!("Failed to create {}: {err}", dst.display()))?;
+
+    for entry in fs::read_dir(src)
+        .map_err(|err| format!("Failed to read {}: {err}", src.display()))?
+    {
+        let entry = entry.map_err(|err| format!("Failed to enumerate {}: {err}", src.display()))?;
+        let source = entry.path();
+        let target = dst.join(entry.file_name());
+
+        if source.is_dir() {
+            copy_dir_recursive(&source, &target)?;
+        } else {
+            let needs_copy = match fs::metadata(&target) {
+                Ok(existing) => {
+                    let source_len = fs::metadata(&source).map(|m| m.len()).unwrap_or(0);
+                    existing.len() != source_len
+                }
+                Err(_) => true,
+            };
+
+            if needs_copy {
+                fs::copy(&source, &target).map_err(|err| {
+                    format!("Failed to copy {} -> {}: {err}", source.display(), target.display())
+                })?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn stage_mate_runtime<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    packaged_exe: &Path,
+) -> Result<PathBuf, String> {
+    let source_root = packaged_exe
+        .parent()
+        .ok_or_else(|| "Mate executable has no parent directory".to_string())?;
+
+    let app_data = app.path().app_data_dir().map_err(|err| err.to_string())?;
+    let stage_root = app_data.join("mate-companion").join("runtime");
+    let staged_exe = stage_root.join(
+        packaged_exe
+            .file_name()
+            .ok_or_else(|| "Mate executable has no file name".to_string())?,
+    );
+
+    // Unity/Mate may need to write beside its executable. Installed ZOYA lives
+    // under Program Files, so run Mate from a writable per-user app-data copy.
+    if !staged_exe.is_file() {
+        log_line(app, &format!(
+            "Staging Mate runtime from {} to {}",
+            source_root.display(),
+            stage_root.display()
+        ));
+        copy_dir_recursive(source_root, &stage_root)?;
+    }
+
+    if !staged_exe.is_file() {
+        return Err(format!(
+            "Mate runtime staging completed but {} is missing",
+            staged_exe.display()
+        ));
+    }
+
+    Ok(staged_exe)
+}
+
+fn write_carlotta_settings<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    carlotta: &PathBuf,
+) -> Result<PathBuf, String> {
     let app_data = app.path().app_data_dir().map_err(|err| err.to_string())?;
     let handoff_dir = app_data.join("mate-companion");
-    fs::create_dir_all(&handoff_dir).map_err(|err| format!("Failed to create Mate handoff directory: {err}"))?;
+    fs::create_dir_all(&handoff_dir)
+        .map_err(|err| format!("Failed to create Mate handoff directory: {err}"))?;
     let settings_path = handoff_dir.join("zoya-settings.json");
     let json = serde_json::json!({
         "selectedModelPath": carlotta.to_string_lossy().to_string(),
@@ -103,14 +173,19 @@ fn write_carlotta_settings<R: tauri::Runtime>(app: &tauri::AppHandle<R>, carlott
         "enableLocomotion": false,
         "settingsVersion": 1
     });
-    fs::write(&settings_path, serde_json::to_vec_pretty(&json).map_err(|err| err.to_string())?)
-        .map_err(|err| format!("Failed to prepare Mate settings: {err}"))?;
+    fs::write(
+        &settings_path,
+        serde_json::to_vec_pretty(&json).map_err(|err| err.to_string())?,
+    )
+    .map_err(|err| format!("Failed to prepare Mate settings: {err}"))?;
     Ok(settings_path)
 }
 
 pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
     {
-        let mut slot = process_slot().lock().map_err(|_| "Mate process state is unavailable".to_string())?;
+        let mut slot = process_slot()
+            .lock()
+            .map_err(|_| "Mate process state is unavailable".to_string())?;
         if let Some(child) = slot.as_mut() {
             match child.try_wait() {
                 Ok(None) => return Ok(()),
@@ -119,29 +194,99 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         }
     }
 
-    let exe = find_mate_executable(&app).ok_or_else(|| {
-        let resource_dir = app.path().resource_dir().map(|p| p.display().to_string()).unwrap_or_else(|_| "<unavailable>".to_string());
-        format!("MateEngineX.exe was not found. Checked packaged resources under {resource_dir}.")
+    let packaged_exe = find_mate_executable(&app).ok_or_else(|| {
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| "<unavailable>".to_string());
+        format!(
+            "MateEngineX.exe was not found. Checked packaged resources under {resource_dir}."
+        )
     })?;
+
     let carlotta = find_carlotta(&app)?;
     let settings = write_carlotta_settings(&app, &carlotta)?;
+    log_line(
+        &app,
+        &format!("Packaged Mate executable: {}", packaged_exe.display()),
+    );
+    log_line(&app, &format!("Packaged Mate avatar: {}", carlotta.display()));
 
-    log_line(&app, &format!("Starting Mate companion: {}", exe.display()));
-    log_line(&app, &format!("Mate working directory: {}", exe.parent().map(|p| p.display().to_string()).unwrap_or_else(|| "<none>".to_string())));
-    log_line(&app, &format!("Mate avatar: {}", carlotta.display()));
-    log_line(&app, &format!("Mate settings: {}", settings.display()));
+    let exe = stage_mate_runtime(&app, &packaged_exe)?;
+    log_line(&app, &format!("Staged Mate executable: {}", exe.display()));
+
+    // Copy Carlotta beside the staged runtime so the savefile never points
+    // back into the read-only installer resource directory.
+    let staged_carlotta = exe
+        .parent()
+        .ok_or_else(|| "Staged Mate executable has no parent directory".to_string())?
+        .join("Carlotta.vrm");
+    if !staged_carlotta.is_file() {
+        fs::copy(&carlotta, &staged_carlotta).map_err(|err| {
+            format!(
+                "Failed to stage Carlotta {} -> {}: {err}",
+                carlotta.display(),
+                staged_carlotta.display()
+            )
+        })?;
+    }
+
+    let staged_settings = write_carlotta_settings(&app, &staged_carlotta)?;
+
+    log_line(
+        &app,
+        &format!(
+            "Mate working directory: {}",
+            exe.parent()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "<none>".to_string())
+        ),
+    );
+    log_line(
+        &app,
+        &format!("Mate avatar (staged): {}", staged_carlotta.display()),
+    );
+    log_line(
+        &app,
+        &format!("Mate settings: {}", staged_settings.display()),
+    );
 
     let working_dir = exe.parent().map(PathBuf::from);
+    let stdout_log = app
+        .path()
+        .app_data_dir()
+        .map_err(|err| err.to_string())?
+        .join("mate-companion")
+        .join("mate-stdout.log");
+    let stderr_log = app
+        .path()
+        .app_data_dir()
+        .map_err(|err| err.to_string())?
+        .join("mate-companion")
+        .join("mate-stderr.log");
+
+    let stdout = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&stdout_log)
+        .map_err(|err| format!("Failed to open Mate stdout log: {err}"))?;
+    let stderr = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&stderr_log)
+        .map_err(|err| format!("Failed to open Mate stderr log: {err}"))?;
+
     let mut command = Command::new(&exe);
     if let Some(dir) = working_dir {
         command.current_dir(dir);
     }
     command
         .arg("--savefile")
-        .arg(&settings)
+        .arg(&staged_settings)
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(Stdio::from(stdout))
+        .stderr(Stdio::from(stderr));
 
     let child = command.spawn().map_err(|err| {
         let message = format!("Failed to start MateEngineX.exe at {}: {err}", exe.display());
@@ -150,9 +295,13 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     })?;
 
     {
-        let mut slot = process_slot().lock().map_err(|_| "Mate process state is unavailable".to_string())?;
+        let mut slot = process_slot()
+            .lock()
+            .map_err(|_| "Mate process state is unavailable".to_string())?;
         *slot = Some(child);
     }
+
+    std::thread::sleep(Duration::from_millis(1000));
 
     if let Ok(mut slot) = process_slot().lock() {
         if let Some(child) = slot.as_mut() {
@@ -160,6 +309,14 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
                 let message = format!("MateEngineX.exe exited immediately after launch: {status}");
                 *slot = None;
                 log_line(&app, &message);
+                log_line(
+                    &app,
+                    &format!("Mate stdout: {}", stdout_log.display()),
+                );
+                log_line(
+                    &app,
+                    &format!("Mate stderr: {}", stderr_log.display()),
+                );
                 return Err(message);
             }
         }
@@ -189,7 +346,10 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
                     }
                     Ok(None) => false,
                     Err(err) => {
-                        log_line(&monitor_handle, &format!("Mate process check failed: {err}"));
+                        log_line(
+                            &monitor_handle,
+                            &format!("Mate process check failed: {err}"),
+                        );
                         *slot = None;
                         true
                     }
