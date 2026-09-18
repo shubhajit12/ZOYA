@@ -15,17 +15,33 @@ fn process_slot() -> &'static Mutex<Option<Child>> {
     MATE_PROCESS.get_or_init(|| Mutex::new(None))
 }
 
+fn handoff_log_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
+    // Prefer the installed ZOYA directory so the handoff diagnostics are
+    // immediately visible beside zoya.exe.
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(install_root) = current_exe.parent() {
+            if fs::create_dir_all(install_root).is_ok() {
+                return install_root.to_path_buf();
+            }
+        }
+    }
+
+    // Fallback for environments where the executable directory is read-only.
+    app.path()
+        .app_data_dir()
+        .unwrap_or_else(|_| std::env::temp_dir())
+        .join("mate-companion")
+}
+
 fn log_line<R: tauri::Runtime>(app: &tauri::AppHandle<R>, message: &str) {
     println!("[ZOYA Mate] {message}");
-    if let Ok(app_data) = app.path().app_data_dir() {
-        let dir = app_data.join("mate-companion");
-        if fs::create_dir_all(&dir).is_ok() {
-            let path = dir.join("handoff.log");
-            let line = format!("{message}\n");
-            use std::io::Write;
-            if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
-                let _ = file.write_all(line.as_bytes());
-            }
+    let dir = handoff_log_dir(app);
+    if fs::create_dir_all(&dir).is_ok() {
+        let path = dir.join("mate-handoff.log");
+        let line = format!("{message}\n");
+        use std::io::Write;
+        if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
+            let _ = file.write_all(line.as_bytes());
         }
     }
 }
@@ -54,8 +70,6 @@ fn recursive_find_exe(root: &Path) -> Option<PathBuf> {
 fn candidate_paths<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf> {
     let mut paths = Vec::new();
 
-    // Installed ZOYA layout: <install-root>\\zoya.exe + <install-root>\\mate-companion.
-    // Resolve this first so the user's chosen install directory is always respected.
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(install_root) = current_exe.parent() {
             paths.push(
@@ -72,7 +86,6 @@ fn candidate_paths<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf>
         }
     }
 
-    // Development/Tauri-resource fallback.
     if let Ok(resource_dir) = app.path().resource_dir() {
         paths.push(resource_dir.join("mate-companion").join("MateEngineX.exe"));
         paths.push(resource_dir.join("mate-companion").join("bin").join("MateEngineX.exe"));
@@ -92,7 +105,6 @@ fn find_mate_executable<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<
 fn find_carlotta<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf, String> {
     let mut candidates = Vec::new();
 
-    // Match Carlotta to the same installed root used for MateEngineX.exe.
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(install_root) = current_exe.parent() {
             candidates.push(install_root.join("mate-companion").join("Carlotta.vrm"));
@@ -105,7 +117,6 @@ fn find_carlotta<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf
         }
     }
 
-    // Development/Tauri-resource fallback.
     if let Ok(resource_dir) = app.path().resource_dir() {
         candidates.push(resource_dir.join("mate-companion").join("Carlotta.vrm"));
         candidates.push(
@@ -187,25 +198,12 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     log_line(&app, &format!("Installed Mate avatar: {}", carlotta.display()));
     log_line(&app, &format!("Mate settings: {}", settings.display()));
 
-    // Launch Mate directly from the user's installed ZOYA directory.
-    // current_exe().parent() resolves the actual install root, regardless of
-    // which drive or folder the user selected. No runtime copy is made.
     let exe = packaged_exe;
     let working_dir = exe.parent().map(PathBuf::from);
 
-    let stdout_log = app
-        .path()
-        .app_data_dir()
-        .map_err(|err| err.to_string())?
-        .join("mate-companion")
-        .join("mate-stdout.log");
-
-    let stderr_log = app
-        .path()
-        .app_data_dir()
-        .map_err(|err| err.to_string())?
-        .join("mate-companion")
-        .join("mate-stderr.log");
+    let log_dir = handoff_log_dir(&app);
+    let stdout_log = log_dir.join("mate-stdout.log");
+    let stderr_log = log_dir.join("mate-stderr.log");
 
     let stdout = fs::OpenOptions::new()
         .create(true)
@@ -232,10 +230,6 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         .stdout(Stdio::from(stdout))
         .stderr(Stdio::from(stderr));
 
-    // ZOYA is intentionally going to exit after the handoff. On Windows,
-    // launch Mate in a detached process group so it is independent of ZOYA's
-    // lifetime. CREATE_BREAKAWAY_FROM_JOB also allows Mate to escape a parent
-    // job object when the launcher/runtime places ZOYA in one.
     #[cfg(target_os = "windows")]
     {
         const DETACHED_PROCESS: u32 = 0x00000008;
@@ -246,10 +240,6 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         );
     }
 
-    // Use Windows' native WMI process creation for the packaged handoff.
-    // This avoids inheriting the Tauri/launcher Job Object, which can otherwise
-    // terminate Mate when ZOYA exits. It also means there is no fragile Child
-    // handle to keep alive after app.exit().
     #[cfg(target_os = "windows")]
     {
         let command_line = format!(
