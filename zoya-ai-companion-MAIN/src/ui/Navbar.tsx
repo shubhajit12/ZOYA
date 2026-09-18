@@ -34,8 +34,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const meta = getEmotionMeta(emotionalState.currentEmotion);
 
   const handleCompanionMinimize = async () => {
-    onMinimize();
-    await tauriBridge.enterCompanion();
+    try {
+      // Mate handoff owns the transition. Only update the React minimized
+      // state after native handoff succeeds; otherwise ZOYA remains usable.
+      await tauriBridge.enterCompanion();
+      onMinimize();
+    } catch (error) {
+      console.error('[ZOYA] Mate companion handoff failed:', error);
+    }
   };
 
   return (
