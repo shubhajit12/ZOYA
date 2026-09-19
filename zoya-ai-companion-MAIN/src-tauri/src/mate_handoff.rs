@@ -24,20 +24,39 @@ fn process_slot() -> &'static Mutex<Option<Child>> {
 }
 
 fn handoff_log_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
+    // Keep the normal per-app log, but never depend on Tauri's app-data
+    // resolution for diagnostics. The temp directory is always writable on
+    // Windows and gives us a predictable fallback during startup failures.
     app.path()
         .app_data_dir()
-        .unwrap_or_else(|_| std::env::temp_dir())
+        .unwrap_or_else(|_| std::env::temp_dir().join("ZOYA"))
         .join("mate-companion")
+}
+
+fn temp_log_path() -> PathBuf {
+    std::env::temp_dir().join("ZOYA-mate-handoff.log")
+}
+
+fn append_log(path: &Path, message: &str) {
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
+        let _ = writeln!(file, "{message}");
+    }
 }
 
 fn log_line<R: tauri::Runtime>(app: &tauri::AppHandle<R>, message: &str) {
     println!("[ZOYA Mate] {message}");
+
+    // Write the diagnostic log to a guaranteed temp location first.
+    // This is intentionally independent of Tauri's path APIs.
+    append_log(&temp_log_path(), message);
+
+    // Also keep the app-data copy for normal packaged-app diagnostics.
     let dir = handoff_log_dir(app);
     if fs::create_dir_all(&dir).is_ok() {
-        let path = dir.join("mate-handoff.log");
-        if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
-            let _ = writeln!(file, "{message}");
-        }
+        append_log(&dir.join("mate-handoff.log"), message);
     }
 }
 
@@ -211,6 +230,7 @@ fn force_exit_zoya<R: tauri::Runtime>(
 
 pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
     log_line(&app, "=== Mate handoff started ===");
+    log_line(&app, &format!("Temporary diagnostic log: {}", temp_log_path().display()));
 
     companion_engine::stop();
     companion_tracker::clear_target();
@@ -222,9 +242,14 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     })?;
     log_line(&app, &format!("Mate executable: {}", exe.display()));
 
-    let working_dir = exe
-        .parent()
-        .ok_or_else(|| "Mate executable has no parent directory".to_string())?;
+    let working_dir = match exe.parent() {
+        Some(path) => path,
+        None => {
+            let message = "Mate executable has no parent directory".to_string();
+            log_line(&app, &message);
+            return Err(message);
+        }
+    };
     let data_dir = working_dir.join("MateEngineX_Data");
     if !data_dir.is_dir() {
         let message = format!(
@@ -236,10 +261,22 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     }
     log_line(&app, &format!("Mate working directory: {}", working_dir.display()));
 
-    let carlotta = find_carlotta(&app)?;
+    let carlotta = match find_carlotta(&app) {
+        Ok(path) => path,
+        Err(err) => {
+            log_line(&app, &format!("Carlotta lookup failed: {err}"));
+            return Err(err);
+        }
+    };
     log_line(&app, &format!("Carlotta: {}", carlotta.display()));
 
-    let settings = write_carlotta_settings(&app, &carlotta)?;
+    let settings = match write_carlotta_settings(&app, &carlotta) {
+        Ok(path) => path,
+        Err(err) => {
+            log_line(&app, &format!("Settings write failed: {err}"));
+            return Err(err);
+        }
+    };
     log_line(&app, &format!("Settings: {}", settings.display()));
 
     let unity_log = handoff_log_dir(&app).join("mate-unity.log");
