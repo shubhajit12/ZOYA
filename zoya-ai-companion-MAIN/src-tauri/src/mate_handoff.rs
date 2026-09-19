@@ -5,6 +5,14 @@ use std::sync::{Mutex, OnceLock};
 
 use tauri::Manager;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+#[cfg(target_os = "windows")]
+const DETACHED_PROCESS: u32 = 0x0000_0008;
+
 static MATE_PROCESS: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
 
 fn process_slot() -> &'static Mutex<Option<Child>> {
@@ -143,44 +151,36 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
 
     #[cfg(target_os = "windows")]
     {
-        let exe_string = exe.to_string_lossy().to_string();
-        let settings_string = settings.to_string_lossy().to_string();
-        let working_dir = exe.parent().unwrap_or(Path::new(".")).to_string_lossy().to_string();
+        let working_dir = exe.parent().unwrap_or(Path::new("."));
 
-        log_line(&app, &format!("Launching Mate from working directory: {working_dir}"));
+        log_line(
+            &app,
+            &format!(
+                "Launching Mate directly: {} | cwd: {}",
+                exe.display(),
+                working_dir.display()
+            ),
+        );
 
-        let output = Command::new("cmd.exe")
-            .args([
-                "/C",
-                "start",
-                "",
-                "/D",
-                &working_dir,
-                &exe_string,
-                "--savefile",
-                &settings_string,
-            ])
+        let child = Command::new(&exe)
+            .arg("--savefile")
+            .arg(&settings)
+            .current_dir(working_dir)
             .stdin(Stdio::null())
-            .output()
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS)
+            .spawn()
             .map_err(|err| {
-                let message = format!("Failed to invoke Windows start: {err}");
+                let message = format!("Failed to start MateEngineX.exe directly: {err}");
                 log_line(&app, &message);
                 message
             })?;
 
-        if !output.status.success() {
-            let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
-            let message = format!(
-                "Windows start failed (status {}): {}",
-                output.status,
-                if detail.is_empty() { "no cmd error output" } else { &detail }
-            );
-            log_line(&app, &message);
-            return Err(message);
-        }
+        log_line(&app, &format!("Mate process created successfully (PID {}).", child.id()));
+        log_line(&app, "Mate launch succeeded. Closing ZOYA.");
 
-        log_line(&app, "Mate launch command accepted by Windows.");
-        log_line(&app, "Closing ZOYA now.");
+        drop(child);
         app.exit(0);
         return Ok(());
     }
