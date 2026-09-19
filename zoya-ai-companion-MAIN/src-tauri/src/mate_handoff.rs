@@ -135,7 +135,7 @@ fn write_carlotta_settings<R: tauri::Runtime>(
 
 #[cfg(target_os = "windows")]
 fn ps_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "''"))
+    format!("'{}'", value.replace(''', "''"))
 }
 
 #[cfg(target_os = "windows")]
@@ -149,7 +149,7 @@ fn start_restore_watcher<R: tauri::Runtime>(
     // This small detached watcher survives ZOYA exiting. When Mate closes,
     // it starts the same ZOYA executable from the user's actual install path.
     let command = format!(
-        "$p=Get-Process -Id {mate_pid} -ErrorAction SilentlyContinue;          if($p){{Wait-Process -Id {mate_pid} -ErrorAction SilentlyContinue}};          Start-Process -FilePath {} -WorkingDirectory {}",
+        "$p=Get-Process -Id {mate_pid} -ErrorAction SilentlyContinue; if($p){{Wait-Process -Id {mate_pid} -ErrorAction SilentlyContinue}}; Start-Process -FilePath {} -WorkingDirectory {}",
         ps_quote(&zoya_path),
         ps_quote(
             zoya_exe
@@ -182,6 +182,29 @@ fn start_restore_watcher<R: tauri::Runtime>(
                 app,
                 &format!("Failed to start ZOYA restore watcher: {e}"),
             );
+            e.to_string()
+        })
+}
+
+#[cfg(target_os = "windows")]
+fn force_exit_zoya<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<(), String> {
+    let pid = std::process::id().to_string();
+
+    // Do NOT use /T here: Mate is intentionally launched separately and
+    // must never be killed as part of ZOYA's own shutdown.
+    Command::new("taskkill")
+        .args(["/PID", &pid, "/F"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map(|_| {
+            log_line(app, &format!("Issued taskkill for ZOYA PID {pid}."));
+        })
+        .map_err(|e| {
+            log_line(app, &format!("Failed to issue taskkill for ZOYA PID {pid}: {e}"));
             e.to_string()
         })
 }
@@ -249,7 +272,7 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         let pid = child.id();
         log_line(&app, &format!("Mate process created (PID {pid})."));
 
-        let deadline = Instant::now() + Duration::from_secs(3);
+        let deadline = Instant::now() + Duration::from_secs(5);
         loop {
             match child.try_wait() {
                 Ok(Some(status)) => {
@@ -291,9 +314,14 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
             return Err(err);
         }
 
-        log_line(&app, "Mate survived startup verification. Closing ZOYA.");
+        log_line(&app, "Mate survived startup verification. Forcing ZOYA shutdown.");
         drop(child);
-        app.exit(0);
+
+        // app.exit(0) is graceful, but the installed app has other native
+        // resources/children. Force the current ZOYA process down only after
+        // Mate has survived the startup check.
+        force_exit_zoya(&app)?;
+
         Ok(())
     }
 
