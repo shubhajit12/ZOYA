@@ -24,9 +24,6 @@ fn process_slot() -> &'static Mutex<Option<Child>> {
 }
 
 fn handoff_log_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
-    // Keep the normal per-app log, but never depend on Tauri's app-data
-    // resolution for diagnostics. The temp directory is always writable on
-    // Windows and gives us a predictable fallback during startup failures.
     app.path()
         .app_data_dir()
         .unwrap_or_else(|_| std::env::temp_dir().join("ZOYA"))
@@ -48,12 +45,8 @@ fn append_log(path: &Path, message: &str) {
 
 fn log_line<R: tauri::Runtime>(app: &tauri::AppHandle<R>, message: &str) {
     println!("[ZOYA Mate] {message}");
-
-    // Write the diagnostic log to a guaranteed temp location first.
-    // This is intentionally independent of Tauri's path APIs.
     append_log(&temp_log_path(), message);
 
-    // Also keep the app-data copy for normal packaged-app diagnostics.
     let dir = handoff_log_dir(app);
     if fs::create_dir_all(&dir).is_ok() {
         append_log(&dir.join("mate-handoff.log"), message);
@@ -154,7 +147,7 @@ fn write_carlotta_settings<R: tauri::Runtime>(
 
 #[cfg(target_os = "windows")]
 fn ps_quote(value: &str) -> String {
-    format!("'{}'", value.replace(''', "''"))
+    format!("'{}'", value.replace('\'', "''"))
 }
 
 #[cfg(target_os = "windows")]
@@ -165,8 +158,6 @@ fn start_restore_watcher<R: tauri::Runtime>(
     let zoya_exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let zoya_path = zoya_exe.to_string_lossy().to_string();
 
-    // This small detached watcher survives ZOYA exiting. When Mate closes,
-    // it starts the same ZOYA executable from the user's actual install path.
     let command = format!(
         "$p=Get-Process -Id {mate_pid} -ErrorAction SilentlyContinue; if($p){{Wait-Process -Id {mate_pid} -ErrorAction SilentlyContinue}}; Start-Process -FilePath {} -WorkingDirectory {}",
         ps_quote(&zoya_path),
@@ -211,8 +202,6 @@ fn force_exit_zoya<R: tauri::Runtime>(
 ) -> Result<(), String> {
     let pid = std::process::id().to_string();
 
-    // Do NOT use /T here: Mate is intentionally launched separately and
-    // must never be killed as part of ZOYA's own shutdown.
     Command::new("taskkill")
         .args(["/PID", &pid, "/F"])
         .stdin(Stdio::null())
@@ -354,9 +343,6 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         log_line(&app, "Mate survived startup verification. Forcing ZOYA shutdown.");
         drop(child);
 
-        // app.exit(0) is graceful, but the installed app has other native
-        // resources/children. Force the current ZOYA process down only after
-        // Mate has survived the startup check.
         force_exit_zoya(&app)?;
 
         Ok(())
