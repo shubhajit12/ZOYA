@@ -45,53 +45,42 @@ jobs:
           Copy-Item -Path (Join-Path $exe.Directory.FullName '*') -Destination $dest -Recurse -Force
           Write-Host "Bundling Mate Engine from $($exe.Directory.FullName)"
 
-      - name: Strip unused Mate avatar and local AI payloads
+      - name: Strip optional Mate model and local AI data
         shell: pwsh
         run: |
           $mateRoot = Join-Path $PWD 'src-tauri/mate-companion/bin'
           if (-not (Test-Path $mateRoot)) { throw "Mate runtime directory not found: $mateRoot" }
 
-          # ZOYA supplies Carlotta.vrm separately and uses Groq for AI. Do not
-          # ship Mate's optional standalone avatar files or its local LLM payloads.
-          # Unity engine .data/.assets files remain intact because they are required
-          # runtime containers and cannot safely be pruned by filename alone.
+          # ZOYA supplies Carlotta.vrm separately and uses Groq for AI.
+          # Keep Unity's runtime containers and native Windows dependencies intact.
+          # In particular, DO NOT delete undreamai runtime DLL/LIB payloads: the
+          # previous build removed them and Mate then failed to launch.
           $modelExtensions = @('.vrm', '.me', '.fbx', '.gltf', '.glb', '.pmx', '.pmd', '.obj', '.blend')
-          $aiExtensions = @('.gguf')
           $removed = @()
 
           Get-ChildItem -Path $mateRoot -Recurse -File | ForEach-Object {
             $extension = $_.Extension.ToLowerInvariant()
-            $name = $_.Name.ToLowerInvariant()
-            $path = $_.FullName.ToLowerInvariant()
-            $remove = $modelExtensions -contains $extension -or $aiExtensions -contains $extension
-
-            # Mate's source tree identifies these as local AI runtime payloads.
-            # ZOYA does not use Mate's local LLM, so remove them from our bundle.
-            if ($name -like 'undreamai*' -or $path -like '*undreamai*') {
-              $remove = $true
-            }
-
-            if ($remove) {
+            if ($modelExtensions -contains $extension -or $extension -eq '.gguf') {
               $removed += $_.FullName
               Remove-Item -LiteralPath $_.FullName -Force
             }
           }
 
           if ($removed.Count -gt 0) {
-            Write-Host "Removed optional Mate payload files: $($removed.Count)"
+            Write-Host "Removed optional Mate model/local-AI files: $($removed.Count)"
             $removed | ForEach-Object { Write-Host "  $_" }
           } else {
-            Write-Host "No optional standalone avatar/local-AI payload files were present."
+            Write-Host "No standalone Mate model/local-AI files needed removal."
           }
 
           $mateExe = Join-Path $mateRoot 'MateEngineX.exe'
+          $mateData = Join-Path $mateRoot 'MateEngineX_Data'
           if (-not (Test-Path $mateExe)) { throw 'MateEngineX.exe is missing after payload pruning.' }
+          if (-not (Test-Path $mateData)) { throw 'MateEngineX_Data is missing after payload pruning.' }
 
-          # Report the remaining Mate runtime size so the next build gives us a
-          # concrete before/after measurement without another blind optimization.
           $bytes = (Get-ChildItem -Path $mateRoot -Recurse -File | Measure-Object -Property Length -Sum).Sum
           $gb = [math]::Round($bytes / 1GB, 2)
-          Write-Host "Remaining Mate runtime size: $gb GB"
+          Write-Host "Mate runtime size after safe pruning: $gb GB"
 
       - name: Prepare Carlotta VRM for Tauri resources
         shell: pwsh
