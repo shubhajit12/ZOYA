@@ -135,7 +135,7 @@ fn write_carlotta_settings<R: tauri::Runtime>(
 
 #[cfg(target_os = "windows")]
 fn ps_quote(value: &str) -> String {
-    format!("'{}'", value.replace(''', "''"))
+    format!("'{}'", value.replace('\'', "''"))
 }
 
 #[cfg(target_os = "windows")]

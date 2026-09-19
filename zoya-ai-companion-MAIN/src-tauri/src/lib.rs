@@ -7,7 +7,6 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![enter_companion, exit_companion, enter_mate_companion, exit_mate_companion, start_companion_drag, finish_companion_drag])
         .setup(|app| {
-            use tauri::Manager;
             println!("ZOYA Desktop Native Engine initialized");
             let engine_running = companion_engine::start(app.handle());
             if !engine_running {
