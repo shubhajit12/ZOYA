@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use std::sync::{Mutex, OnceLock};
 
 use tauri::Manager;
+use crate::companion_engine;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -187,6 +188,9 @@ fn start_restore_watcher<R: tauri::Runtime>(
 
 pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
     log_line(&app, "=== Mate handoff started ===");
+
+    companion_engine::stop();
+    companion_tracker::clear_target();
 
     let exe = find_mate_executable(&app).ok_or_else(|| {
         let message = "MateEngineX.exe was not found in the bundled Mate resources".to_string();
