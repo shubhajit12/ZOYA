@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use std::sync::{Mutex, OnceLock};
 
 use tauri::Manager;
-use crate::companion_engine;
+use crate::{companion_engine, companion_tracker};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
