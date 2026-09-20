@@ -2,6 +2,8 @@ mod companion_engine;
 mod companion_tracker;
 mod mate_handoff;
 
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -10,7 +12,7 @@ pub fn run() {
             let startup_lines = [
                 "=== ZOYA startup ===".to_string(),
                 "version=1.0.0".to_string(),
-                "build=2aeb2d1b49436817fcdf179cc2b8609a9c56eaa0".to_string(),
+                "build=mate-handoff-diagnostic-2026-09-20-v2".to_string(),
                 format!("pid={}", std::process::id()),
                 format!("exe={}", std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "<unknown>".to_string())),
             ];
