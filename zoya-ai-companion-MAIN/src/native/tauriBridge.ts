@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+
 /**
  * Bridge for Tauri native features when running inside the desktop .exe.
  * Browser preview keeps safe no-op fallbacks.
@@ -11,11 +13,7 @@ export class TauriBridge {
     if (!this.isTauriAvailable()) {
       throw new Error(`Tauri is not available; cannot invoke native command: ${command}`);
     }
-    const internals = (window as any).__TAURI_INTERNALS__;
-    if (typeof internals?.invoke !== 'function') {
-      throw new Error(`Tauri invoke bridge is unavailable; cannot invoke native command: ${command}`);
-    }
-    return await internals.invoke(command, args) as T;
+    return await invoke(command, args) as T;
   }
 
   public async enterCompanion(): Promise<void> {
