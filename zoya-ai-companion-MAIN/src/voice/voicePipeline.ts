@@ -1,5 +1,5 @@
 import { audioAnalyser } from './audioAnalyser';
-import { GeminiTTSProvider } from './geminiTtsProvider';
+import { FishTTSProvider } from './fishTtsProvider';
 import { TTSProvider, TTSResponse } from './ttsProvider';
 
 /**
@@ -12,8 +12,8 @@ import { TTSProvider, TTSResponse } from './ttsProvider';
  *      (connected to audioAnalyser for lip-sync / viseme data).
  *   4. Expose speech-recognition (STT) for voice input.
  *
- * TTS is delegated to a pluggable TTSProvider.  The default (and
- * currently only) implementation is GeminiTTSProvider.  Swap or add
+ * TTS is delegated to a pluggable TTSProvider. The default implementation
+ * is FishTTSProvider. Swap or add
  * providers by calling `setProvider()`.
  */
 export class VoicePipeline {
@@ -35,7 +35,7 @@ export class VoicePipeline {
 
   constructor() {
     // Default provider: Gemini TTS via the server proxy
-    this.ttsProvider = new GeminiTTSProvider();
+    this.ttsProvider = new FishTTSProvider();
     this.initSpeechRecognition();
   }
 
@@ -58,14 +58,11 @@ export class VoicePipeline {
     return this.ttsProvider;
   }
 
-  /**
-   * Convenience: update Gemini provider settings in-place
-   * so the caller doesn't need to know about GeminiTTSProvider.
-   */
-  public configureGemini(apiKey?: string, voiceName?: string) {
-    if (this.ttsProvider instanceof GeminiTTSProvider) {
+  /** Update Fish Audio provider settings in-place. */
+  public configureFish(apiKey?: string, voiceReferenceId?: string) {
+    if (this.ttsProvider instanceof FishTTSProvider) {
       if (apiKey !== undefined) this.ttsProvider.setApiKey(apiKey);
-      if (voiceName !== undefined) this.ttsProvider.setVoiceName(voiceName);
+      if (voiceReferenceId !== undefined) this.ttsProvider.setVoiceReferenceId(voiceReferenceId);
     }
   }
 
