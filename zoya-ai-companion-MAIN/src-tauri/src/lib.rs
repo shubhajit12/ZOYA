@@ -12,7 +12,7 @@ pub fn run() {
             let startup_lines = [
                 "=== ZOYA startup ===".to_string(),
                 "version=1.0.0".to_string(),
-                "build=mate-handoff-diagnostic-2026-09-20-v2".to_string(),
+                "build=mate-handoff-rebuild-2026-09-20-v1".to_string(),
                 format!("pid={}", std::process::id()),
                 format!("exe={}", std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "<unknown>".to_string())),
             ];
