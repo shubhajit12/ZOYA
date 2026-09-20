@@ -27,3 +27,8 @@ commands.allow = ["start_companion_drag"]
 identifier = "allow-finish-companion-drag"
 description = "Allows finishing desktop companion dragging."
 commands.allow = ["finish_companion_drag"]
+
+[[permission]]
+identifier = "allow-diagnostic-ping"
+description = "Allows the ZOYA UI to verify native Tauri command delivery."
+commands.allow = ["diagnostic_ping"]
