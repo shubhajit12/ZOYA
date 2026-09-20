@@ -65,9 +65,12 @@ fn minimize_window(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn toggle_maximize_window(app: tauri::AppHandle) -> Result<(), String> {
     let window = app.get_webview_window("main").ok_or_else(|| "Main window is not available".to_string())?;
-    if window.is_maximized().map_err(|e| e.to_string())? {\n        window.unmaximize().map_err(|e| e.to_string())\n    } else {\n        window.maximize().map_err(|e| e.to_string())\n    }
+    if window.is_maximized().map_err(|e| e.to_string())? {
+        window.unmaximize().map_err(|e| e.to_string())
+    } else {
+        window.maximize().map_err(|e| e.to_string())
+    }
 }
-
 #[tauri::command]
 fn close_window(app: tauri::AppHandle) -> Result<(), String> {
     let window = app.get_webview_window("main").ok_or_else(|| "Main window is not available".to_string())?;
