@@ -18,7 +18,7 @@ export class TauriBridge {
 
   public async enterCompanion(): Promise<void> {
     if (this.isTauriAvailable()) {
-      await this.invoke('enter_mate_companion');
+      await this.invoke('start_mate_companion');
     } else {
       console.log('[Native] Mate companion mode requested (browser preview)');
     }
