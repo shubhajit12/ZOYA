@@ -92,7 +92,13 @@ fn place_companion_on_taskbar_at(_companion: &tauri::WebviewWindow, _cursor_x: i
 
 #[tauri::command]
 fn enter_mate_companion(app: tauri::AppHandle) -> Result<(), String> {
-    mate_handoff::start(app)
+    println!("[ZOYA Mate] enter_mate_companion command ENTER");
+    let result = mate_handoff::start(app);
+    match &result {
+        Ok(()) => println!("[ZOYA Mate] enter_mate_companion command EXIT: Ok"),
+        Err(error) => println!("[ZOYA Mate] enter_mate_companion command EXIT: Err: {error}"),
+    }
+    result
 }
 
 #[tauri::command]
