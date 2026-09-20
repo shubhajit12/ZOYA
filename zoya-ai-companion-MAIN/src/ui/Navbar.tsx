@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="w-full h-14 bg-[#050506]/95 backdrop-blur-xl border-b border-white/5 flex items-center z-20 shadow-lg select-none">
       <div
-        className="flex-1 h-full flex items-center min-w-0 cursor-default"
+        className="flex-1 h-full flex items-center min-w-0 cursor-move"
         onMouseDown={handleWindowDrag}
       >
         <div className="flex items-center gap-3 px-5 min-w-0">
