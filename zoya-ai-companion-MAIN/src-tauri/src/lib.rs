@@ -7,7 +7,7 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![enter_companion, exit_companion, enter_mate_companion, exit_mate_companion, start_companion_drag, finish_companion_drag])
+        .invoke_handler(tauri::generate_handler![start_mate_companion, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag])
         .setup(|app| {
             let startup_lines = [
                 "=== ZOYA startup ===".to_string(),
@@ -90,13 +90,27 @@ fn place_companion_on_taskbar_at(_companion: &tauri::WebviewWindow, _cursor_x: i
     Err("Taskbar fallback is only available on Windows".to_string())
 }
 
+fn write_companion_diagnostic(app: &tauri::AppHandle, message: &str) {
+    use std::io::Write;
+    let line = format!("{message}\n");
+    let temp_path = std::env::temp_dir().join("ZOYA-companion-diagnostic.log");
+    let _ = std::fs::OpenOptions::new().create(true).append(true).open(&temp_path)
+        .and_then(|mut file| file.write_all(line.as_bytes()));
+    if let Ok(app_data) = app.path().app_data_dir() {
+        let _ = std::fs::create_dir_all(&app_data);
+        let _ = std::fs::OpenOptions::new().create(true).append(true).open(app_data.join("ZOYA-companion-diagnostic.log"))
+            .and_then(|mut file| file.write_all(line.as_bytes()));
+    }
+}
+
 #[tauri::command]
-fn enter_mate_companion(app: tauri::AppHandle) -> Result<(), String> {
-    println!("[ZOYA Mate] enter_mate_companion command ENTER");
-    let result = mate_handoff::start(app);
+fn start_mate_companion(app: tauri::AppHandle) -> Result<(), String> {
+    write_companion_diagnostic(&app, "MINIMIZE COMMAND RECEIVED");
+    write_companion_diagnostic(&app, "TAURI COMMAND ENTERED");
+    let result = mate_handoff::start(app.clone());
     match &result {
-        Ok(()) => println!("[ZOYA Mate] enter_mate_companion command EXIT: Ok"),
-        Err(error) => println!("[ZOYA Mate] enter_mate_companion command EXIT: Err: {error}"),
+        Ok(()) => write_companion_diagnostic(&app, "MATE HANDOFF RETURNED OK"),
+        Err(error) => write_companion_diagnostic(&app, &format!("MATE HANDOFF RETURNED ERROR: {error}")),
     }
     result
 }
