@@ -378,7 +378,7 @@ export default function App() {
           isSpeaking={isSpeaking}
         />
       ) : (
-        <main className="flex-1 w-full h-[calc(100vh-4rem)] flex flex-col md:flex-row p-6 gap-6 overflow-hidden">
+        <main className="flex-1 w-full h-[calc(100vh-3.5rem)] flex flex-col md:flex-row p-6 gap-6 overflow-hidden">
           <section className="w-full md:w-1/2 h-[45%] md:h-full flex flex-col">
             <MintCanvas
               currentEmotion={emotionalState.currentEmotion}
