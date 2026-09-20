@@ -314,252 +314,108 @@ Respond warmly, naturally, and concisely to your friend.
     }
   });
 
-  // ── TTS Provider: Server-side helpers ──────────────────────────────────────
-
-  /** Prepend a 44-byte RIFF WAV header to 16-bit PCM mono audio data. */
-  const pcmToWav = (pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer => {
-    const headerLength = 44;
-    const dataLength = pcmBuffer.length;
-    const wavBuffer = Buffer.alloc(headerLength + dataLength);
-
-    wavBuffer.write('RIFF', 0);
-    wavBuffer.writeUInt32LE(36 + dataLength, 4);
-    wavBuffer.write('WAVE', 8);
-    wavBuffer.write('fmt ', 12);
-    wavBuffer.writeUInt32LE(16, 16);
-    wavBuffer.writeUInt16LE(1, 20); // 1 = PCM
-    wavBuffer.writeUInt16LE(numChannels, 22);
-    wavBuffer.writeUInt32LE(sampleRate, 24);
-    wavBuffer.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
-    wavBuffer.writeUInt16LE(numChannels * (bitsPerSample / 8), 32);
-    wavBuffer.writeUInt16LE(bitsPerSample, 34);
-    wavBuffer.write('data', 36);
-    wavBuffer.writeUInt32LE(dataLength, 40);
-
-    pcmBuffer.copy(wavBuffer, 44);
-    return wavBuffer;
-  };
-
-  // Rate limit / 429 Cooldown state (shared across all TTS providers)
-  let ttsQuotaCooldownUntil: number = 0;
-  let lastQuotaErrorMessage: string = '';
-
-  /**
-   * Gemini TTS Provider — calls Google Generative AI TTS endpoint.
-   * Isolates ALL Gemini-specific code here so future providers
-   * (local, Hugging Face, etc.) can be added as sibling functions.
-   */
-  const geminiTtsGenerate = async (
+  // ── Fish Audio TTS Provider ─────────────────────────────────────────────
+  //
+  // Google/Gemini TTS is intentionally not used here. Gemini remains available
+  // only for the optional AI-brain fallback above.
+  const fishTtsGenerate = async (
     cleanText: string,
-    voiceName: string,
     apiKey: string,
+    referenceId: string,
   ): Promise<{
-    audioUrl: string; base64Audio: string; format: string; usedEndpoint: string; usedModel: string; usedAuth: string;
+    audioUrl: string;
+    base64Audio: string;
+    format: string;
+    usedEndpoint: string;
+    usedModel: string;
+    usedAuth: string;
   }> => {
-    // Primary: gemini-3.1-flash-tts-preview, Fallback: gemini-2.5-flash-preview-tts
-    const candidateModels = ['gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
-    let lastGenErr: any = null;
+    const endpoint = 'https://api.fish.audio/v1/tts';
+    const model = 's2.1-pro-free';
 
-    for (const modelName of candidateModels) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        model,
+      },
+      body: JSON.stringify({
+        text: cleanText,
+        reference_id: referenceId,
+        format: 'mp3',
+      }),
+    });
+
+    if (!response.ok) {
+      const bodyText = await response.text().catch(() => '');
+      let message = bodyText || `Fish Audio TTS request failed (HTTP ${response.status})`;
       try {
-        const genEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-        const genRes = await fetch(genEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: cleanText }] }],
-            generationConfig: {
-              responseModalities: ['AUDIO'],
-              speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: voiceName || 'Leda' },
-                },
-              },
-            },
-          }),
-        });
+        const parsed = JSON.parse(bodyText);
+        message = parsed.message || parsed.error?.message || parsed.error || message;
+      } catch {}
 
-        if (genRes.ok) {
-          const genData = await genRes.json();
-          const inlineData = genData.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-          const rawBase64 = inlineData?.data;
-
-          if (rawBase64 && rawBase64.length > 50) {
-            const rawBuffer = Buffer.from(rawBase64, 'base64');
-            const wavBuffer = rawBuffer.subarray(0, 4).toString('ascii') === 'RIFF'
-              ? rawBuffer
-              : pcmToWav(rawBuffer, 24000, 1, 16);
-
-            const base64Audio = wavBuffer.toString('base64');
-            console.log(`[Gemini TTS] Success: ${wavBuffer.length} bytes via model ${modelName}`);
-            return {
-              audioUrl: `data:audio/wav;base64,${base64Audio}`,
-              base64Audio,
-              format: 'wav',
-              usedEndpoint: `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
-              usedModel: modelName,
-              usedAuth: 'API Key (GEMINI_TTS_API_KEY / GEMINI_API_KEY)',
-            };
-          }
-        } else if (genRes.status === 429) {
-          const genErrJson = await genRes.json().catch(() => ({}));
-          const quotaMsg = genErrJson.error?.message || 'Gemini TTS rate limit / quota exceeded (429).';
-          lastQuotaErrorMessage = quotaMsg;
-          ttsQuotaCooldownUntil = Date.now() + 60000;
-          console.warn(`[Gemini TTS] Quota exceeded: ${quotaMsg} (60s cooldown)`);
-          const err: any = new Error(`[TTS] Gemini quota exceeded: ${quotaMsg}`);
-          err.isQuotaExceeded = true;
-          err.status = 429;
-          throw err;
-        } else if (genRes.status === 403) {
-          const genErrJson = await genRes.json().catch(() => ({}));
-          const authMsg = genErrJson.error?.message || 'Gemini TTS request forbidden (403).';
-          console.warn(`[Gemini TTS] Key forbidden (403): ${authMsg}`);
-          const err: any = new Error(`Gemini TTS request forbidden (403): ${authMsg}`);
-          err.status = 403;
-          throw err;
-        } else {
-          const genErrJson = await genRes.json().catch(() => ({}));
-          const shortErrMsg = genErrJson.error?.message || `Status ${genRes.status}`;
-          lastGenErr = new Error(`TTS model ${modelName} returned status ${genRes.status}: ${shortErrMsg}`);
-        }
-      } catch (err: any) {
-        if (err.isQuotaExceeded || err.status === 403) throw err;
-        lastGenErr = err;
+      const err: any = new Error(message);
+      err.status = response.status;
+      if (response.status === 429) {
+        err.isQuotaExceeded = true;
+        err.retryAfter = 60;
       }
+      throw err;
     }
 
-    throw lastGenErr || new Error('Gemini TTS audio generation failed on all candidate models.');
+    const audioBytes = Buffer.from(await response.arrayBuffer());
+    if (audioBytes.length < 50) {
+      throw new Error('Fish Audio returned empty or invalid audio data.');
+    }
+
+    const base64Audio = audioBytes.toString('base64');
+    console.log(
+      `[Fish TTS] Success: ${audioBytes.length} bytes via ${model}, voice=${referenceId}`,
+    );
+
+    return {
+      audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
+      base64Audio,
+      format: 'mp3',
+      usedEndpoint: endpoint,
+      usedModel: model,
+      usedAuth: 'Fish Audio API key (FISH_API_KEY / user override)',
+    };
   };
 
-  /**
-   * Google Cloud TTS Provider — calls Cloud Text-to-Speech API via GCP metadata auth.
-   * Only invoked when `provider === 'google-cloud'`.
-   */
-  const googleCloudTtsGenerate = async (
-    cleanText: string,
-    voiceName: string,
-    languageCode: string,
-  ): Promise<{
-    audioUrl: string; base64Audio: string; format: string; usedEndpoint: string; usedModel: string; usedAuth: string;
-  } | null> => {
-    let accessToken = '';
-    try {
-      const tokenRes = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', {
-        headers: { 'Metadata-Flavor': 'Google' },
-      });
-      if (tokenRes.ok) {
-        const tokenData = await tokenRes.json();
-        accessToken = tokenData.access_token || '';
-      }
-    } catch (metaErr: any) {
-      console.warn('[Cloud TTS Auth Warning] Could not fetch metadata token:', metaErr.message);
-    }
-
-    if (!accessToken) return null;
-
-    const cloudEndpoint = 'https://texttospeech.googleapis.com/v1beta1/text:synthesize';
-    const cloudModel = 'gemini-3.1-flash-tts-preview';
-
-    try {
-      const cloudRes = await fetch(cloudEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': 'ais-asia-southeast1-41f9a9454f',
-        },
-        body: JSON.stringify({
-          input: { text: cleanText },
-          voice: { languageCode, name: voiceName || 'Leda' },
-          audioConfig: { audioEncoding: 'MP3' },
-          model: cloudModel,
-        }),
-      });
-
-      const cloudData = await cloudRes.json().catch(() => ({}));
-
-      if (cloudRes.ok && cloudData.audioContent) {
-        const base64Audio = cloudData.audioContent;
-        console.log(`[Cloud TTS] Success: ${base64Audio.length} base64 chars`);
-        return {
-          audioUrl: `data:audio/mp3;base64,${base64Audio}`,
-          base64Audio,
-          format: 'mp3',
-          usedEndpoint: cloudEndpoint,
-          usedModel: cloudModel,
-          usedAuth: 'OAuth2 Bearer Token (GCP Metadata Service)',
-        };
-      }
-    } catch (fetchErr: any) {
-      console.warn('[Cloud TTS] Request failed:', fetchErr.message);
-    }
-    return null;
-  };
-
-  /**
-   * TTS Provider Router — dispatches to the correct provider.
-   * Add new providers here (local TTS, Hugging Face, etc.).
-   */
+  // Single TTS endpoint used by the browser voice pipeline.
   app.post('/api/tts', async (req, res) => {
     try {
-      const { text, voiceName = 'Leda', geminiApiKey, provider = 'gemini' } = req.body;
+      const {
+        text,
+        fishApiKey,
+        fishVoiceId,
+      } = req.body;
+
       if (!text || typeof text !== 'string' || !text.trim()) {
         return res.status(400).json({ error: 'Text prompt is required for TTS' });
       }
 
       const cleanText = text.trim();
 
-      // Check server-side 429 cooldown
-      const now = Date.now();
-      if (now < ttsQuotaCooldownUntil) {
-        const remainingSec = Math.ceil((ttsQuotaCooldownUntil - now) / 1000);
-        console.warn(`[TTS] Cooldown active (${remainingSec}s). Skipping upstream call.`);
-        return res.status(429).json({
-          error: `TTS quota exceeded: ${lastQuotaErrorMessage || 'Rate limit active'}. Cooldown for ${remainingSec}s.`,
-          isQuotaExceeded: true,
-          retryAfter: remainingSec,
-          status: 429,
+      // User-provided key wins; otherwise use the server environment key.
+      const apiKey =
+        (typeof fishApiKey === 'string' && fishApiKey.trim()) ||
+        process.env.FISH_API_KEY;
+
+      const referenceId =
+        (typeof fishVoiceId === 'string' && fishVoiceId.trim()) ||
+        process.env.FISH_VOICE_REFERENCE_ID ||
+        'cbe13152c7ff4da98be9a95d448a1f39';
+
+      if (!apiKey) {
+        return res.status(400).json({
+          error: 'Fish Audio API key is not configured. Add your Fish Audio API key in Zoya Settings or set FISH_API_KEY in the environment.',
         });
       }
 
-      // Resolve TTS API key: user override → GEMINI_TTS_API_KEY → GOOGLE_TTS_API_KEY → GEMINI_API_KEY
-      const apiKey =
-        (typeof geminiApiKey === 'string' && geminiApiKey.trim()) ||
-        process.env.GEMINI_TTS_API_KEY ||
-        process.env.GOOGLE_TTS_API_KEY ||
-        process.env.GEMINI_API_KEY;
-
-      // Auto-detect language for Cloud TTS (Hindi, Bangla, English)
-      let languageCode = 'en-US';
-      if (/[\u0900-\u097F]/.test(cleanText)) {
-        languageCode = 'hi-IN';
-      } else if (/[\u0980-\u09FF]/.test(cleanText)) {
-        languageCode = 'bn-IN';
-      }
-
-      // ── Provider routing ────────────────────────────────────────
-      let result: { audioUrl: string; base64Audio: string; format: string; usedEndpoint: string; usedModel: string; usedAuth: string } | null = null;
-      let cloudTtsStatus = '';
-
-      // Provider 1: Google Cloud TTS (if explicitly requested)
-      if (provider === 'google-cloud') {
-        result = await googleCloudTtsGenerate(cleanText, voiceName, languageCode);
-        if (!result) {
-          cloudTtsStatus = 'Disabled or unavailable in GCP project';
-        }
-      }
-
-      // Provider 2: Google Generative AI Gemini TTS (default)
-      if (!result) {
-        if (!apiKey) {
-          return res.status(400).json({
-            error: 'Google TTS API key is not configured. Please set your Gemini TTS API key in Settings (⚙️) or set GEMINI_TTS_API_KEY in environment variables.',
-            endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
-          });
-        }
-        result = await geminiTtsGenerate(cleanText, voiceName, apiKey);
-      }
+      const result = await fishTtsGenerate(cleanText, apiKey, referenceId);
 
       return res.json({
         audioUrl: result.audioUrl,
@@ -568,14 +424,14 @@ Respond warmly, naturally, and concisely to your friend.
         endpoint: result.usedEndpoint,
         model: result.usedModel,
         authMethod: result.usedAuth,
-        cloudTtsStatus: cloudTtsStatus || 'Success',
       });
     } catch (err: any) {
       const status = err.status || 500;
       const isQuota = err.isQuotaExceeded || status === 429;
-      console.error(`[TTS] ${isQuota ? 'Quota exceeded' : 'Error'}:`, err.message);
+      console.error(`[Fish TTS] ${isQuota ? 'Rate limited' : 'Error'}:`, err.message);
+
       res.status(status).json({
-        error: err.message || 'Text-to-Speech generation failed',
+        error: err.message || 'Fish Audio text-to-speech generation failed',
         ...(isQuota ? { isQuotaExceeded: true, retryAfter: err.retryAfter || 60 } : {}),
       });
     }
