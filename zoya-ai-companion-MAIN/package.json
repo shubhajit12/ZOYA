@@ -25,7 +25,8 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "three": "^0.185.1",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",
