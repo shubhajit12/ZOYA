@@ -7,7 +7,7 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![start_mate_companion, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag])
+        .invoke_handler(tauri::generate_handler![diagnostic_ping, start_mate_companion, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag])
         .setup(|app| {
             let startup_lines = [
                 "=== ZOYA startup ===".to_string(),
