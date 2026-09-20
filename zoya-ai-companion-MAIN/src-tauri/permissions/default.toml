@@ -9,9 +9,9 @@ description = "Allows exiting the ZOYA desktop companion mode."
 commands.allow = ["exit_companion"]
 
 [[permission]]
-identifier = "allow-enter-mate-companion"
-description = "Allows handing off ZOYA to the Mate companion engine."
-commands.allow = ["enter_mate_companion"]
+identifier = "allow-start-mate-companion"
+description = "Allows starting the ZOYA Mate companion handoff."
+commands.allow = ["start_mate_companion"]
 
 [[permission]]
 identifier = "allow-exit-mate-companion"
