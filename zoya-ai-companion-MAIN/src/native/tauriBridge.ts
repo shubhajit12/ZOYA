@@ -1,9 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 
-/**
- * Bridge for Tauri native features when running inside the desktop .exe.
- * Browser preview keeps safe no-op fallbacks.
- */
 export class TauriBridge {
   private isTauriAvailable(): boolean {
     return isTauri();
@@ -21,8 +17,6 @@ export class TauriBridge {
   }
 
   public async enterCompanion(): Promise<void> {
-    // This action is desktop-only. Invoke the native command directly so the
-    // companion path cannot silently become a browser-preview no-op.
     await invoke('start_mate_companion');
   }
 
@@ -31,6 +25,14 @@ export class TauriBridge {
       await this.invoke('exit_mate_companion');
     } else {
       console.log('[Native] Mate companion restore requested (browser preview)');
+    }
+  }
+
+  public async startWindowDrag(): Promise<void> {
+    if (this.isTauriAvailable()) {
+      await this.invoke('start_window_drag');
+    } else {
+      console.log('[Native] Window drag requested (browser preview)');
     }
   }
 
@@ -50,33 +52,33 @@ export class TauriBridge {
     return false;
   }
 
-  public minimizeWindow() {
+  public async minimizeWindow(): Promise<void> {
     if (this.isTauriAvailable()) {
-      void this.invoke('plugin:window|set_minimized', { value: true });
+      await this.invoke('minimize_window');
     } else {
       console.log('[Native] Minimize window triggered');
     }
   }
 
-  public toggleMaximizeWindow() {
+  public async toggleMaximizeWindow(): Promise<void> {
     if (this.isTauriAvailable()) {
-      void this.invoke('plugin:window|toggle_maximize');
+      await this.invoke('toggle_maximize_window');
     } else {
       console.log('[Native] Toggle Maximize triggered');
     }
   }
 
-  public closeWindow() {
+  public async closeWindow(): Promise<void> {
     if (this.isTauriAvailable()) {
-      void this.invoke('plugin:window|close');
+      await this.invoke('close_window');
     } else {
       console.log('[Native] Close window triggered');
     }
   }
 
-  public async setAlwaysOnTop(alwaysOnTop: boolean) {
+  public async setAlwaysOnTop(alwaysOnTop: boolean): Promise<void> {
     if (this.isTauriAvailable()) {
-      await this.invoke('plugin:window|set_always_on_top', { value: alwaysOnTop });
+      await this.invoke('set_always_on_top', { alwaysOnTop });
     } else {
       console.log(`[Native] Always-on-top set to: ${alwaysOnTop}`);
     }
