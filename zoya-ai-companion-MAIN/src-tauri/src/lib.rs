@@ -7,13 +7,28 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![enter_companion, exit_companion, enter_mate_companion, exit_mate_companion, start_companion_drag, finish_companion_drag])
         .setup(|app| {
-            let startup_log = std::env::temp_dir().join("ZOYA-startup.log");
-            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&startup_log) {
-                use std::io::Write;
-                let _ = writeln!(file, "=== ZOYA startup ===");
-                let _ = writeln!(file, "version=1.0.0");
-                let _ = writeln!(file, "pid={}", std::process::id());
-                let _ = writeln!(file, "exe={}", std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "<unknown>".to_string()));
+            let startup_lines = [
+                "=== ZOYA startup ===".to_string(),
+                "version=1.0.0".to_string(),
+                "build=2aeb2d1b49436817fcdf179cc2b8609a9c56eaa0".to_string(),
+                format!("pid={}", std::process::id()),
+                format!("exe={}", std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "<unknown>".to_string())),
+            ];
+            let startup_text = format!("{}\n", startup_lines.join("\n"));
+            let temp_startup_log = std::env::temp_dir().join("ZOYA-startup.log");
+            let _ = std::fs::OpenOptions::new().create(true).append(true).open(&temp_startup_log)
+                .and_then(|mut file| {
+                    use std::io::Write;
+                    file.write_all(startup_text.as_bytes())
+                });
+            if let Ok(app_data) = app.path().app_data_dir() {
+                let _ = std::fs::create_dir_all(&app_data);
+                let app_startup_log = app_data.join("ZOYA-startup.log");
+                let _ = std::fs::OpenOptions::new().create(true).append(true).open(&app_startup_log)
+                    .and_then(|mut file| {
+                        use std::io::Write;
+                        file.write_all(startup_text.as_bytes())
+                    });
             }
             println!("ZOYA Desktop Native Engine initialized");
             let engine_running = companion_engine::start(app.handle());
