@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 
 /**
  * Bridge for Tauri native features when running inside the desktop .exe.
@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
  */
 export class TauriBridge {
   private isTauriAvailable(): boolean {
-    return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+    return isTauri();
   }
 
   private async invoke<T = void>(command: string, args?: Record<string, unknown>): Promise<T> {
