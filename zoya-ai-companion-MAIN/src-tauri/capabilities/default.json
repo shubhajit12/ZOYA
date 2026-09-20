@@ -8,7 +8,7 @@
   "permissions": [
     "allow-enter-companion",
     "allow-exit-companion",
-    "allow-enter-mate-companion",
+    "allow-start-mate-companion",
     "allow-exit-mate-companion",
     "allow-start-companion-drag",
     "allow-finish-companion-drag"
