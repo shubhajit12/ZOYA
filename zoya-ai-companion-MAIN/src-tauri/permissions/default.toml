@@ -1,0 +1,29 @@
+[[permission]]
+identifier = "allow-enter-companion"
+description = "Allows entering the ZOYA desktop companion mode."
+commands = ["enter_companion"]
+
+[[permission]]
+identifier = "allow-exit-companion"
+description = "Allows exiting the ZOYA desktop companion mode."
+commands = ["exit_companion"]
+
+[[permission]]
+identifier = "allow-enter-mate-companion"
+description = "Allows handing off ZOYA to the Mate companion engine."
+commands = ["enter_mate_companion"]
+
+[[permission]]
+identifier = "allow-exit-mate-companion"
+description = "Allows returning from the Mate companion engine."
+commands = ["exit_mate_companion"]
+
+[[permission]]
+identifier = "allow-start-companion-drag"
+description = "Allows starting desktop companion dragging."
+commands = ["start_companion_drag"]
+
+[[permission]]
+identifier = "allow-finish-companion-drag"
+description = "Allows finishing desktop companion dragging."
+commands = ["finish_companion_drag"]
