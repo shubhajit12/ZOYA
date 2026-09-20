@@ -37,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     try {
       // Mate handoff owns the transition. Only update the React minimized
       // state after native handoff succeeds; otherwise ZOYA remains usable.
+      await tauriBridge.diagnosticPing();
       await tauriBridge.enterCompanion();
       onMinimize();
     } catch (error) {
