@@ -1,4 +1,4 @@
-import { invoke, isTauri } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Bridge for Tauri native features when running inside the desktop .exe.
@@ -17,11 +17,9 @@ export class TauriBridge {
   }
 
   public async enterCompanion(): Promise<void> {
-    if (this.isTauriAvailable()) {
-      await this.invoke('start_mate_companion');
-    } else {
-      console.log('[Native] Mate companion mode requested (browser preview)');
-    }
+    // This action is desktop-only. Invoke the native command directly so the
+    // companion path cannot silently become a browser-preview no-op.
+    await invoke('start_mate_companion');
   }
 
   public async exitCompanion(): Promise<void> {
