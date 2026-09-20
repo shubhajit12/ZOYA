@@ -32,3 +32,28 @@ commands.allow = ["finish_companion_drag"]
 identifier = "allow-diagnostic-ping"
 description = "Allows the ZOYA UI to verify native Tauri command delivery."
 commands.allow = ["diagnostic_ping"]
+
+[[permission]]
+identifier = "allow-start-window-drag"
+description = "Allows the main ZOYA window to be dragged from the custom title bar."
+commands.allow = ["start_window_drag"]
+
+[[permission]]
+identifier = "allow-minimize-window"
+description = "Allows the custom ZOYA title bar to minimize the main window."
+commands.allow = ["minimize_window"]
+
+[[permission]]
+identifier = "allow-toggle-maximize-window"
+description = "Allows the custom ZOYA title bar to maximize or restore the main window."
+commands.allow = ["toggle_maximize_window"]
+
+[[permission]]
+identifier = "allow-close-window"
+description = "Allows the custom ZOYA title bar to close the main window."
+commands.allow = ["close_window"]
+
+[[permission]]
+identifier = "allow-set-always-on-top"
+description = "Allows ZOYA to control the main window always-on-top state."
+commands.allow = ["set_always_on_top"]
