@@ -7,6 +7,14 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![enter_companion, exit_companion, enter_mate_companion, exit_mate_companion, start_companion_drag, finish_companion_drag])
         .setup(|app| {
+            let startup_log = std::env::temp_dir().join("ZOYA-startup.log");
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&startup_log) {
+                use std::io::Write;
+                let _ = writeln!(file, "=== ZOYA startup ===");
+                let _ = writeln!(file, "version=1.0.0");
+                let _ = writeln!(file, "pid={}", std::process::id());
+                let _ = writeln!(file, "exe={}", std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "<unknown>".to_string()));
+            }
             println!("ZOYA Desktop Native Engine initialized");
             let engine_running = companion_engine::start(app.handle());
             if !engine_running {
