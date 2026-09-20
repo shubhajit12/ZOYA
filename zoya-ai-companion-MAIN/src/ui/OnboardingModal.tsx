@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { Sparkles, Heart, Key } from 'lucide-react';
 
 interface OnboardingModalProps {
-  onComplete: (userName: string, groqApiKey?: string, geminiApiKey?: string) => void;
+  onComplete: (userName: string, groqApiKey?: string, fishApiKey?: string, geminiApiKey?: string) => void;
 }
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) => {
   const [name, setName] = useState<string>('');
   const [groqApiKey, setGroqApiKey] = useState<string>('');
+  const [fishApiKey, setFishApiKey] = useState<string>('');
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onComplete(name.trim(), groqApiKey.trim() || undefined, geminiApiKey.trim() || undefined);
+    onComplete(name.trim(), groqApiKey.trim() || undefined, fishApiKey.trim() || undefined, geminiApiKey.trim() || undefined);
   };
 
   return (
@@ -26,7 +27,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
 
           <h2 className="text-xl font-bold tracking-wider uppercase text-orange-500">Welcome to ZOYA</h2>
           <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-            Your warm digital AI companion powered by Groq (AI Brain) and Gemini (TTS Voice).
+            Your warm digital AI companion powered by Groq (AI Brain) and Fish Audio (Voice).
           </p>
         </div>
 
@@ -65,18 +66,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span>Gemini API Key (TTS Voice)</span>
+              <span>Fish Audio API Key (Zoya Voice)</span>
             </label>
-            <input
-              type="password"
-              value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
-              placeholder="Optional if set in environment"
-              className="w-full bg-[#050506]/80 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none transition-colors"
-            />
+            <input type="password" value={fishApiKey} onChange={(e) => setFishApiKey(e.target.value)} placeholder="Optional if set in FISH_API_KEY" className="w-full bg-[#050506]/80 border border-white/10 focus:border-orange-500 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none transition-colors" />
+            <p className="text-[10px] text-slate-500 mt-1">Used for Fish Audio voice generation.</p>
           </div>
 
-          <button
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-slate-400" />
+              <span>Gemini API Key (Optional Brain Fallback)</span>
+            </label>
+            <input type="password" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} placeholder="Optional if set in GEMINI_API_KEY" className="w-full bg-[#050506]/80 border border-white/10 focus:border-orange-500 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none transition-colors" />
+          </div>        <button
             type="submit"
             disabled={!name.trim()}
             className="w-full py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-semibold rounded-xl transition-all shadow-[0_0_20px_rgba(242,125,38,0.4)] flex items-center justify-center gap-2"
