@@ -70,8 +70,9 @@ export interface MemoryItem {
 export interface UserSettings {
   userName: string;
   groqApiKey: string; // optional override for Groq AI Brain
-  geminiApiKey: string; // optional override for Gemini TTS Voice
-  voiceName: string; // 'Leda' | 'Kore' | 'Puck' | 'Zephyr' | 'Fenrir'
+  geminiApiKey: string; // optional override for Gemini fallback brain
+  fishApiKey: string; // optional override for Fish Audio TTS
+  fishVoiceId: string; // Fish Audio voice reference ID
   volume: number; // 0 - 1
   speechSpeed: number; // 0.5 - 2.0
   language: string; // 'Auto' | 'English' | 'Spanish' | 'Japanese' | 'French' | 'German' | 'Hindi'
