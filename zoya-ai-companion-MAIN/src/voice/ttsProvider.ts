@@ -2,7 +2,7 @@
  * TTS Provider Abstraction
  *
  * Defines a common interface so Zoya can swap TTS backends
- * (Gemini, local models, Hugging Face, etc.) without touching
+ * (Fish Audio, local models, etc.) without touching
  * the voice pipeline, UI, or emotion/animation code.
  *
  * Architecture:
@@ -12,7 +12,7 @@
 export interface TTSRequest {
   /** The text to synthesize. Already sanitized by the caller. */
   text: string;
-  /** Voice preset name (e.g. 'Leda', 'Kore'). Provider-specific. */
+  /** Provider-specific voice reference ID. */
   voiceName?: string;
 }
 
@@ -35,7 +35,7 @@ export type TTSQuotaStatus = {
 };
 
 export interface TTSProvider {
-  /** Short name for logging (e.g. 'gemini'). */
+  /** Short name for logging (e.g. 'fish-audio'). */
   readonly name: string;
 
   /**
