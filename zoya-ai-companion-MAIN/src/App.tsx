@@ -355,7 +355,7 @@ export default function App() {
   };
 
   return (
-    <div className="w-screen h-screen bg-[#050506] text-slate-200 flex flex-col font-sans overflow-hidden select-none">
+    <div className="w-screen h-screen bg-[#050506] text-slate-200 flex flex-col font-sans overflow-hidden select-none pt-14">
       <Navbar
         userName={settings.userName}
         emotionalState={emotionalState}
