@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 
 /**
  * Bridge for Tauri native features when running inside the desktop .exe.
@@ -14,6 +14,10 @@ export class TauriBridge {
       throw new Error(`Tauri is not available; cannot invoke native command: ${command}`);
     }
     return await invoke(command, args) as T;
+  }
+
+  public async diagnosticPing(): Promise<void> {
+    await invoke('diagnostic_ping');
   }
 
   public async enterCompanion(): Promise<void> {
