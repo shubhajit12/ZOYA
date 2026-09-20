@@ -44,6 +44,36 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
+#[tauri::command]
+fn start_window_drag(app: tauri::AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or_else(|| "Main window is not available".to_string())?;
+    window.start_dragging().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn minimize_window(app: tauri::AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or_else(|| "Main window is not available".to_string())?;
+    window.minimize().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn toggle_maximize_window(app: tauri::AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or_else(|| "Main window is not available".to_string())?;
+    window.toggle_maximize().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn close_window(app: tauri::AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or_else(|| "Main window is not available".to_string())?;
+    window.close().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_always_on_top(app: tauri::AppHandle, always_on_top: bool) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or_else(|| "Main window is not available".to_string())?;
+    window.set_always_on_top(always_on_top).map_err(|e| e.to_string())
+}
+
 #[cfg(target_os = "windows")]
 #[repr(C)]
 struct WinRect { left: i32, top: i32, right: i32, bottom: i32 }
