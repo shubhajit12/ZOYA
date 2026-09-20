@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main ZOYA window",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "enter_companion",
+    "exit_companion",
+    "enter_mate_companion",
+    "exit_mate_companion",
+    "start_companion_drag",
+    "finish_companion_drag"
+  ]
+}
