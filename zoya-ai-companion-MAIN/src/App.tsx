@@ -438,6 +438,7 @@ export default function App() {
               userName: name,
               ...(groqApiKey ? { groqApiKey } : {}),
               ...(fishApiKey ? { fishApiKey } : {}),
+              ...(fishApiKey ? { fishApiKey } : {}),
               ...(geminiApiKey ? { geminiApiKey } : {}),
               hasCompletedOnboarding: true,
             });
