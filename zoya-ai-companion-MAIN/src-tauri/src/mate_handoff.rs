@@ -133,7 +133,10 @@ fn write_carlotta_settings<R: tauri::Runtime>(
         "enableWindowSitting": true,
         "enableRandomAvatar": false,
         "enableLocomotion": false,
-        "settingsVersion": 1
+        "tutorialDone": true,
+        "uiHueShift": 0.07,
+        "uiSaturation": 1.0,
+        "settingsVersion": 2
     });
 
     fs::write(
