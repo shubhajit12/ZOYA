@@ -20,6 +20,7 @@ interface NavbarProps {
   onOpenBrowser: () => void;
   onOpenMemory: () => void;
   onOpenSettings: () => void;
+  mateDesktopCompanionEnabled: boolean;
   onMinimize: () => void;
 }
 
@@ -31,12 +32,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenBrowser,
   onOpenMemory,
   onOpenSettings,
+  mateDesktopCompanionEnabled,
   onMinimize,
 }) => {
   const meta = getEmotionMeta(emotionalState.currentEmotion);
 
   const handleCompanionMinimize = async (event: React.MouseEvent) => {
     event.stopPropagation();
+
+    if (!mateDesktopCompanionEnabled) {
+      try {
+        await tauriBridge.minimizeWindow();
+        onMinimize();
+      } catch (error) {
+        console.error('[ZOYA] Normal window minimize failed:', error);
+      }
+      return;
+    }
+
     try {
       await tauriBridge.enterCompanion();
       onMinimize();
@@ -149,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           onMouseDown={handleCompanionMinimize}
           className="w-10 h-14 flex items-center justify-center text-slate-300 hover:text-orange-400 hover:bg-white/10 transition-colors"
-          title="Send ZOYA to desktop companion"
+          title={mateDesktopCompanionEnabled ? "Send ZOYA to desktop companion" : "Minimize ZOYA window"}
         >
           <Minimize2 className="w-4 h-4" />
         </button>
