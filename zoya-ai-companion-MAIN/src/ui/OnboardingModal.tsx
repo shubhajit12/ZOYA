@@ -17,7 +17,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#050506]/85 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[9000] flex items-center justify-center p-4 bg-[#050506]/85 backdrop-blur-xl">
       <div className="w-full max-w-md glass border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6 glow-amber">
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="w-16 h-16 rounded-full border border-orange-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(242,125,38,0.3)]">
