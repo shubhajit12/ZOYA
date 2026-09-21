@@ -2,6 +2,8 @@ name: Build ZOYA Windows Installer
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [trigger-zoya-build]
 
 jobs:
   build-windows:
