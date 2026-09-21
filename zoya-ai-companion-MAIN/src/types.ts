@@ -77,6 +77,8 @@ export interface UserSettings {
   language: string; // 'Auto' | 'English' | 'Spanish' | 'Japanese' | 'French' | 'German' | 'Hindi'
   alwaysOnTop: boolean;
   minimizedMode: boolean;
+  /** Enables the Mate/desktop companion handoff from the title-bar minimize button. */
+  mateDesktopCompanionEnabled: boolean;
   pcControlPermissions: boolean;
   screenShareAllowed: boolean;
   theme: 'dark' | 'light' | 'cyan_twilight' | 'soft_pink';
