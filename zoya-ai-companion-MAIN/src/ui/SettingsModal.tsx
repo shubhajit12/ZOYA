@@ -29,6 +29,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [language, setLanguage] = useState<string>(settings.language);
   const [alwaysOnTop, setAlwaysOnTop] = useState<boolean>(settings.alwaysOnTop);
   const [pcPermissions, setPcPermissions] = useState<boolean>(settings.pcControlPermissions);
+  const [mateDesktopCompanionEnabled, setMateDesktopCompanionEnabled] = useState<boolean>(settings.mateDesktopCompanionEnabled ?? true);
   const [performanceQuality, setPerformanceQuality] = useState<PerformanceQualitySetting>(
     isValidQualitySetting(settings.performanceQuality) ? settings.performanceQuality : 'auto'
   );
@@ -45,6 +46,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       language,
       alwaysOnTop,
       pcControlPermissions: pcPermissions,
+      mateDesktopCompanionEnabled,
       performanceQuality,
     });
     setSavedSuccess(true);
@@ -199,6 +201,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {performanceQuality === 'auto'
                 ? `Currently using: ${capitalizeTier(resolveEffectiveQuality('auto'))}`
                 : 'Manual selection is always respected and never overridden.'}
+            </p>
+          </div>
+
+          {/* Desktop Companion */}
+          <div className="space-y-3 border-t border-white/10 pt-4">
+            <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mateDesktopCompanionEnabled}
+                onChange={(e) => setMateDesktopCompanionEnabled(e.target.checked)}
+                className="w-4 h-4 accent-orange-500 rounded"
+              />
+              <span>Enable Desktop Companion (Mate)</span>
+            </label>
+            <p className="text-[11px] text-slate-500">
+              When enabled, the title-bar minimize button sends Zoya to the desktop Mate companion. Turn this off if you prefer normal window minimization.
             </p>
           </div>
 
