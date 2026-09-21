@@ -73,9 +73,28 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="w-full h-14 bg-[#050506]/95 backdrop-blur-xl border-b border-white/5 flex items-center z-20 shadow-lg select-none">
+    <header
+      className="zoya-titlebar"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10000,
+        height: 56,
+        minHeight: 56,
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+        background: '#050506',
+        borderBottom: '2px solid rgba(242, 125, 38, 0.4)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.55)',
+        userSelect: 'none',
+      }}
+    >
       <div
         className="flex-1 h-full flex items-center min-w-0 cursor-move"
+        data-tauri-drag-region
         onMouseDown={handleWindowDrag}
       >
         <div className="flex items-center gap-3 px-5 min-w-0">
