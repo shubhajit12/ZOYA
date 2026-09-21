@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   language: 'Auto',
   alwaysOnTop: false,
   minimizedMode: false,
+  mateDesktopCompanionEnabled: true,
   pcControlPermissions: true,
   screenShareAllowed: true,
   theme: 'dark',
@@ -44,7 +45,7 @@ export default function App() {
   const [settings, setSettings] = useState<UserSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_SETTINGS_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
     } catch {
       return DEFAULT_SETTINGS;
     }
@@ -364,6 +365,7 @@ export default function App() {
         onOpenBrowser={() => setShowBrowser(!showBrowser)}
         onOpenMemory={() => setShowMemory(true)}
         onOpenSettings={() => setShowSettings(true)}
+        mateDesktopCompanionEnabled={settings.mateDesktopCompanionEnabled}
         onMinimize={() => setIsMinimized(true)}
       />
 
