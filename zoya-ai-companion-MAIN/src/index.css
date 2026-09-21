@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
 @layer utilities {
   .glass {
     background: rgba(255, 255, 255, 0.03);
