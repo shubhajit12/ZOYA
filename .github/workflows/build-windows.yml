@@ -28,21 +28,36 @@ jobs:
       - name: Build standalone C# companion engine
         run: dotnet publish src-tauri/companion-engine/ZOYA.CompanionEngine.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o src-tauri/companion-engine/bin
 
-      - name: Download Mate Engine runtime
+      - name: Download Zoya Mate Engine release
         shell: pwsh
         run: |
-          $zip = Join-Path $env:RUNNER_TEMP 'MateEngine.zip'
-          $url = 'https://github.com/shubhajit12/Mate-Engine-FOR-ZOYA/archive/refs/heads/main.zip'
-          Write-Host "Downloading Zoya Mate Engine runtime from shubhajit12/Mate-Engine-FOR-ZOYA..."
+          # Keep this pinned to a tested Mate Engine release.
+          # When a new Mate release is intentionally tested, update this version.
+          $mateVersion = 'v1.0.0'
+          $assetName = 'Zoya-Mate-Engine.zip'
+          $zip = Join-Path $env:RUNNER_TEMP $assetName
+          $url = "https://github.com/shubhajit12/Mate-Engine-FOR-ZOYA/releases/download/$mateVersion/$assetName"
+
+          Write-Host "Downloading Zoya Mate Engine $mateVersion..."
           Invoke-WebRequest -Uri $url -OutFile $zip
+
+          if (-not (Test-Path $zip)) {
+            throw "Mate Engine release asset was not downloaded: $url"
+          }
+
           $extract = Join-Path $env:RUNNER_TEMP 'MateEngine'
           if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
           Expand-Archive -Path $zip -DestinationPath $extract -Force
+
           $exe = Get-ChildItem -Path $extract -Filter 'MateEngineX.exe' -File -Recurse | Select-Object -First 1
-          if (-not $exe) { throw 'MateEngineX.exe was not found in the Mate Engine release archive.' }
+          if (-not $exe) {
+            throw 'MateEngineX.exe was not found in the Zoya Mate Engine release asset.'
+          }
+
           $dest = Join-Path $PWD 'src-tauri/mate-companion/bin'
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
           Copy-Item -Path (Join-Path $exe.Directory.FullName '*') -Destination $dest -Recurse -Force
+
           Write-Host "Bundling Mate Engine from $($exe.Directory.FullName)"
 
       - name: Strip unused Mate avatar and local AI payloads
@@ -65,8 +80,6 @@ jobs:
             $path = $_.FullName.ToLowerInvariant()
             $remove = $modelExtensions -contains $extension -or $aiExtensions -contains $extension
 
-            # Mate's source tree identifies these as local AI runtime payloads.
-            # ZOYA does not use Mate's local LLM, so remove them from our bundle.
             if ($name -like 'undreamai*' -or $path -like '*undreamai*') {
               $remove = $true
             }
@@ -87,8 +100,6 @@ jobs:
           $mateExe = Join-Path $mateRoot 'MateEngineX.exe'
           if (-not (Test-Path $mateExe)) { throw 'MateEngineX.exe is missing after payload pruning.' }
 
-          # Report the remaining Mate runtime size so the next build gives us a
-          # concrete before/after measurement without another blind optimization.
           $bytes = (Get-ChildItem -Path $mateRoot -Recurse -File | Measure-Object -Property Length -Sum).Sum
           $gb = [math]::Round($bytes / 1GB, 2)
           Write-Host "Remaining Mate runtime size: $gb GB"
