@@ -14,6 +14,21 @@ async function startServer() {
 
   app.use(express.json({ limit: '20mb' }));
 
+  // Allow the packaged Tauri webview to call the bundled localhost API.
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin === 'tauri://localhost' || origin === 'http://tauri.localhost' || origin === 'https://tauri.localhost' || origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000') {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
   // Shared Groq client helper (AI Brain)
   const getGroqClient = (overrideApiKey?: string) => {
     const key = overrideApiKey || process.env.GROQ_API_KEY;
