@@ -345,6 +345,14 @@ export default function App() {
       if (newSettings.alwaysOnTop !== undefined) {
         tauriBridge.setAlwaysOnTop(newSettings.alwaysOnTop);
       }
+      // Apply Fish Audio settings immediately so Settings changes take effect
+      // without requiring another chat turn or app restart.
+      if (newSettings.fishApiKey !== undefined || newSettings.fishVoiceId !== undefined) {
+        voicePipeline.configureFish(
+          updated.fishApiKey || undefined,
+          updated.fishVoiceId || undefined
+        );
+      }
       return updated;
     });
   };
