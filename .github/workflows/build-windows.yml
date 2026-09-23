@@ -112,17 +112,22 @@ jobs:
           if (-not (Test-Path $node)) { throw "Bundled node.exe missing: $node" }
           if (-not (Test-Path $server)) { throw "Bundled server.cjs missing: $server" }
 
-          $log = Join-Path $env:RUNNER_TEMP 'zoya-api-verification.log'
-          if (Test-Path $log) { Remove-Item $log -Force }
+          $stdoutLog = Join-Path $env:RUNNER_TEMP 'zoya-api-verification.stdout.log'
+          $stderrLog = Join-Path $env:RUNNER_TEMP 'zoya-api-verification.stderr.log'
+          foreach ($logFile in @($stdoutLog, $stderrLog)) {
+            if (Test-Path $logFile) { Remove-Item $logFile -Force }
+          }
 
-          $process = Start-Process -FilePath $node -ArgumentList @($server) -WorkingDirectory $serverRoot -Environment @{ NODE_ENV = 'production' } -RedirectStandardOutput $log -RedirectStandardError $log -PassThru -WindowStyle Hidden
+          $process = Start-Process -FilePath $node -ArgumentList @($server) -WorkingDirectory $serverRoot -Environment @{ NODE_ENV = 'production' } -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru -WindowStyle Hidden
           try {
             $ready = $false
             for ($i = 0; $i -lt 50; $i++) {
               Start-Sleep -Milliseconds 100
               if ($process.HasExited) {
                 $details = ''
-                if (Test-Path $log) { $details = Get-Content $log -Raw }
+                $details = ''
+                if (Test-Path $stdoutLog) { $details += "STDOUT:`n" + (Get-Content $stdoutLog -Raw) }
+                if (Test-Path $stderrLog) { $details += "STDERR:`n" + (Get-Content $stderrLog -Raw) }
                 throw "Bundled API server exited during startup with code $($process.ExitCode). Log: $details"
               }
               try {
@@ -135,7 +140,10 @@ jobs:
               } catch {}
             }
             if (-not $ready) {
-              $details = if (Test-Path $log) { Get-Content $log -Raw } else { 'No server output was captured.' }
+              $details = ''
+              if (Test-Path $stdoutLog) { $details += "STDOUT:`n" + (Get-Content $stdoutLog -Raw) }
+              if (Test-Path $stderrLog) { $details += "STDERR:`n" + (Get-Content $stderrLog -Raw) }
+              if (-not $details) { $details = 'No server output was captured.' }
               throw "Bundled API server did not become healthy on 127.0.0.1:3000. Log: $details"
             }
           } finally {
