@@ -27,7 +27,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   userName: 'User',
   groqApiKey: '',
   geminiApiKey: '',
-  voiceName: 'Leda',
+  fishApiKey: '',
+  fishVoiceId: 'cbe13152c7ff4da98be9a95d448a1f39',
   volume: 0.9,
   speechSpeed: 1.0,
   language: 'Auto',
@@ -218,7 +219,7 @@ export default function App() {
       const t0 = performance.now();
       console.log(`[Zoya Perf] T0: User message sent ("${text}")`);
 
-      voicePipeline.configureGemini(settings.geminiApiKey || undefined, settings.voiceName || 'Leda');
+      voicePipeline.configureFish(settings.fishApiKey || undefined, settings.fishVoiceId || undefined);
       voicePipeline.beginSpeechStream(t0);
 
       const zoyaMsgId = `zoya_${Date.now()}`;
@@ -434,10 +435,11 @@ export default function App() {
 
       {showOnboarding && (
         <OnboardingModal
-          onComplete={(name, groqApiKey, geminiApiKey) => {
+          onComplete={(name, groqApiKey, fishApiKey, geminiApiKey) => {
             handleSaveSettings({
               userName: name,
               ...(groqApiKey ? { groqApiKey } : {}),
+              ...(fishApiKey ? { fishApiKey } : {}),
               ...(geminiApiKey ? { geminiApiKey } : {}),
               hasCompletedOnboarding: true,
             });
