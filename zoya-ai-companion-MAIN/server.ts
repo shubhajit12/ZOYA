@@ -265,6 +265,30 @@ Respond warmly, naturally, and concisely to your friend.
     }
   });
 
+  // Fish Audio TTS provider. Gemini/Google TTS is not used for voice generation.
+  const fishTtsGenerate = async (cleanText: string, apiKey: string, referenceId: string) => {
+    const endpoint = 'https://api.fish.audio/v1/tts';
+    const model = 's2.1-pro-free';
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', model },
+      body: JSON.stringify({ text: cleanText, reference_id: referenceId, format: 'mp3' }),
+    });
+    if (!response.ok) {
+      const bodyText = await response.text().catch(() => '');
+      let message = bodyText || `Fish Audio TTS request failed (HTTP ${response.status})`;
+      try { const parsed = JSON.parse(bodyText); message = parsed.message || parsed.error?.message || parsed.error || message; } catch {}
+      const err: any = new Error(message); err.status = response.status;
+      if (response.status === 429) { err.isQuotaExceeded = true; err.retryAfter = 60; }
+      throw err;
+    }
+    const audioBytes = Buffer.from(await response.arrayBuffer());
+    if (audioBytes.length < 50) throw new Error('Fish Audio returned empty or invalid audio data.');
+    const base64Audio = audioBytes.toString('base64');
+    console.log(`[Fish TTS] Success: ${audioBytes.length} bytes via ${model}, voice=${referenceId}`);
+    return { audioUrl: `data:audio/mpeg;base64,${base64Audio}`, base64Audio, format: 'mp3', usedEndpoint: endpoint, usedModel: model, usedAuth: 'Fish Audio API key (FISH_API_KEY / user override)' };
+  };
+
   const pcmToWav = (pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer => {
     const headerLength = 44;
     const dataLength = pcmBuffer.length;
@@ -395,63 +419,18 @@ Respond warmly, naturally, and concisely to your friend.
 
   app.post('/api/tts', async (req, res) => {
     try {
-      const { text, voiceName = 'Leda', geminiApiKey, provider = 'gemini' } = req.body;
+      const { text, fishApiKey, fishVoiceId } = req.body;
       if (!text || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'Text prompt is required for TTS' });
-
       const cleanText = text.trim();
-      const now = Date.now();
-      if (now < ttsQuotaCooldownUntil) {
-        const remainingSec = Math.ceil((ttsQuotaCooldownUntil - now) / 1000);
-        return res.status(429).json({
-          error: `TTS quota exceeded: ${lastQuotaErrorMessage || 'Rate limit active'}. Cooldown for ${remainingSec}s.`,
-          isQuotaExceeded: true,
-          retryAfter: remainingSec,
-          status: 429,
-        });
-      }
-
-      const apiKey =
-        (typeof geminiApiKey === 'string' && geminiApiKey.trim()) ||
-        process.env.GEMINI_TTS_API_KEY ||
-        process.env.GOOGLE_TTS_API_KEY ||
-        process.env.GEMINI_API_KEY;
-
-      let languageCode = 'en-US';
-      if (/[\u0900-\u097F]/.test(cleanText)) languageCode = 'hi-IN';
-      else if (/[\u0980-\u09FF]/.test(cleanText)) languageCode = 'bn-IN';
-
-      let result: any = null;
-      let cloudTtsStatus = '';
-
-      if (provider === 'google-cloud') {
-        result = await googleCloudTtsGenerate(cleanText, voiceName, languageCode);
-        if (!result) cloudTtsStatus = 'Disabled or unavailable in GCP project';
-      }
-
-      if (!result) {
-        if (!apiKey) return res.status(400).json({
-          error: 'Google TTS API key is not configured. Please set your Gemini TTS API key in Settings (⚙️) or set GEMINI_TTS_API_KEY in environment variables.',
-          endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
-        });
-        result = await geminiTtsGenerate(cleanText, voiceName, apiKey);
-      }
-
-      return res.json({
-        audioUrl: result.audioUrl,
-        base64Audio: result.base64Audio,
-        format: result.format,
-        endpoint: result.usedEndpoint,
-        model: result.usedModel,
-        authMethod: result.usedAuth,
-        cloudTtsStatus: cloudTtsStatus || 'Success',
-      });
+      const apiKey = (typeof fishApiKey === 'string' && fishApiKey.trim()) || process.env.FISH_API_KEY;
+      const referenceId = (typeof fishVoiceId === 'string' && fishVoiceId.trim()) || process.env.FISH_VOICE_REFERENCE_ID || 'cbe13152c7ff4da98be9a95d448a1f39';
+      if (!apiKey) return res.status(400).json({ error: 'Fish Audio API key is not configured. Add your Fish Audio API key in Zoya Settings or set FISH_API_KEY in the environment.' });
+      const result = await fishTtsGenerate(cleanText, apiKey, referenceId);
+      return res.json({ audioUrl: result.audioUrl, base64Audio: result.base64Audio, format: result.format, endpoint: result.usedEndpoint, model: result.usedModel, authMethod: result.usedAuth });
     } catch (err: any) {
-      const status = err.status || 500;
-      const isQuota = err.isQuotaExceeded || status === 429;
-      res.status(status).json({
-        error: err.message || 'Text-to-Speech generation failed',
-        ...(isQuota ? { isQuotaExceeded: true, retryAfter: err.retryAfter || 60 } : {}),
-      });
+      const status = err.status || 500; const isQuota = err.isQuotaExceeded || status === 429;
+      console.error(`[Fish TTS] ${isQuota ? 'Rate limited' : 'Error'}:`, err.message);
+      res.status(status).json({ error: err.message || 'Fish Audio text-to-speech generation failed', ...(isQuota ? { isQuotaExceeded: true, retryAfter: err.retryAfter || 60 } : {}) });
     }
   });
 
