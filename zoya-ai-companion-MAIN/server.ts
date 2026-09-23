@@ -342,7 +342,7 @@ Respond warmly, naturally, and concisely to your friend.
     wavBuffer.write('WAVE', 8);
     wavBuffer.write('fmt ', 12);
     wavBuffer.writeUInt32LE(16, 16);
-    wavBuffer.writeUInt16LE(1, 20); // 1 = PCM
+    wavBuffer.writeUInt16LE(1, 20);
     wavBuffer.writeUInt16LE(numChannels, 22);
     wavBuffer.writeUInt32LE(sampleRate, 24);
     wavBuffer.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
@@ -350,20 +350,13 @@ Respond warmly, naturally, and concisely to your friend.
     wavBuffer.writeUInt16LE(bitsPerSample, 34);
     wavBuffer.write('data', 36);
     wavBuffer.writeUInt32LE(dataLength, 40);
-
     pcmBuffer.copy(wavBuffer, 44);
     return wavBuffer;
   };
 
-  // Rate limit / 429 Cooldown state (shared across all TTS providers)
   let ttsQuotaCooldownUntil: number = 0;
   let lastQuotaErrorMessage: string = '';
 
-  /**
-   * Gemini TTS Provider — calls Google Generative AI TTS endpoint.
-   * Isolates ALL Gemini-specific code here so future providers
-   * (local, Hugging Face, etc.) can be added as sibling functions.
-   */
   const geminiTtsGenerate = async (
     cleanText: string,
     voiceName: string,
@@ -371,7 +364,6 @@ Respond warmly, naturally, and concisely to your friend.
   ): Promise<{
     audioUrl: string; base64Audio: string; format: string; usedEndpoint: string; usedModel: string; usedAuth: string;
   }> => {
-    // Primary: gemini-3.1-flash-tts-preview, Fallback: gemini-2.5-flash-preview-tts
     const candidateModels = ['gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
     let lastGenErr: any = null;
 
@@ -447,10 +439,6 @@ Respond warmly, naturally, and concisely to your friend.
     throw lastGenErr || new Error('Gemini TTS audio generation failed on all candidate models.');
   };
 
-  /**
-   * Google Cloud TTS Provider — calls Cloud Text-to-Speech API via GCP metadata auth.
-   * Only invoked when `provider === 'google-cloud'`.
-   */
   const googleCloudTtsGenerate = async (
     cleanText: string,
     voiceName: string,
@@ -512,10 +500,6 @@ Respond warmly, naturally, and concisely to your friend.
     return null;
   };
 
-  /**
-   * TTS Provider Router — dispatches to the correct provider.
-   * Add new providers here (local TTS, Hugging Face, etc.).
-   */
   app.post('/api/tts', async (req, res) => {
     try {
       const { text, voiceName = 'Leda', geminiApiKey, provider = 'gemini' } = req.body;
@@ -525,7 +509,6 @@ Respond warmly, naturally, and concisely to your friend.
 
       const cleanText = text.trim();
 
-      // Check server-side 429 cooldown
       const now = Date.now();
       if (now < ttsQuotaCooldownUntil) {
         const remainingSec = Math.ceil((ttsQuotaCooldownUntil - now) / 1000);
@@ -538,14 +521,12 @@ Respond warmly, naturally, and concisely to your friend.
         });
       }
 
-      // Resolve TTS API key: user override → GEMINI_TTS_API_KEY → GOOGLE_TTS_API_KEY → GEMINI_API_KEY
       const apiKey =
         (typeof geminiApiKey === 'string' && geminiApiKey.trim()) ||
         process.env.GEMINI_TTS_API_KEY ||
         process.env.GOOGLE_TTS_API_KEY ||
         process.env.GEMINI_API_KEY;
 
-      // Auto-detect language for Cloud TTS (Hindi, Bangla, English)
       let languageCode = 'en-US';
       if (/[\u0900-\u097F]/.test(cleanText)) {
         languageCode = 'hi-IN';
@@ -553,11 +534,9 @@ Respond warmly, naturally, and concisely to your friend.
         languageCode = 'bn-IN';
       }
 
-      // ── Provider routing ────────────────────────────────────────
       let result: { audioUrl: string; base64Audio: string; format: string; usedEndpoint: string; usedModel: string; usedAuth: string } | null = null;
       let cloudTtsStatus = '';
 
-      // Provider 1: Google Cloud TTS (if explicitly requested)
       if (provider === 'google-cloud') {
         result = await googleCloudTtsGenerate(cleanText, voiceName, languageCode);
         if (!result) {
@@ -565,7 +544,6 @@ Respond warmly, naturally, and concisely to your friend.
         }
       }
 
-      // Provider 2: Google Generative AI Gemini TTS (default)
       if (!result) {
         if (!apiKey) {
           return res.status(400).json({
@@ -606,7 +584,9 @@ Respond warmly, naturally, and concisely to your friend.
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    // Express 5 path-to-regexp rejects bare "*" routes. Use a middleware
+    // fallback instead, which also avoids parsing a catch-all route pattern.
+    app.use((req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
