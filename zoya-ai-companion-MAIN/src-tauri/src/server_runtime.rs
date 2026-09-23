@@ -1,6 +1,5 @@
 use std::process::{Child, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
-use std::thread;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
@@ -47,6 +46,9 @@ pub fn start(app: &AppHandle) {
                 }
             }
 
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+
             let child = Command::new(&node)
                 .arg(&server)
                 .current_dir(&server_root)
@@ -54,30 +56,32 @@ pub fn start(app: &AppHandle) {
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn();
 
             match child {
                 Ok(child) => {
                     *slot = Some(child);
-                    eprintln!("[ZOYA] Bundled API server started on http://127.0.0.1:3000");
+                    eprintln!("[ZOYA] Bundled API server started in background.");
                 }
                 Err(err) => {
                     eprintln!("[ZOYA] Failed to start bundled API server: {err}");
-                    return;
                 }
             }
         }
 
-        // Wait briefly for Express to bind so the first chat request cannot
-        // race the server startup.
-        for _ in 0..50 {
-            if std::net::TcpStream::connect(("127.0.0.1", 3000)).is_ok() {
-                eprintln!("[ZOYA] Bundled API server is ready.");
-                return;
+        // Never block Tauri startup waiting for Node/Express.
+        // The first API request can retry/fail normally if the server is still booting.
+        std::thread::spawn(|| {
+            for _ in 0..50 {
+                if std::net::TcpStream::connect(("127.0.0.1", 3000)).is_ok() {
+                    eprintln!("[ZOYA] Bundled API server is ready.");
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(100));
             }
-            thread::sleep(Duration::from_millis(100));
-        }
-        eprintln!("[ZOYA] Bundled API server did not become reachable within 5 seconds");
+            eprintln!("[ZOYA] Bundled API server did not become reachable within 5 seconds.");
+        });
     }
 }
 
