@@ -1,3 +1,4 @@
+use std::fs::OpenOptions;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
@@ -49,13 +50,30 @@ pub fn start(app: &AppHandle) {
             use std::os::windows::process::CommandExt;
             const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+            let log_path = match app.path().app_data_dir() {
+                Ok(dir) => {
+                    let _ = std::fs::create_dir_all(&dir);
+                    dir.join("zoya-api.log")
+                }
+                Err(_) => std::env::temp_dir().join("ZOYA-api.log"),
+            };
+
+            let log_file = OpenOptions::new().create(true).append(true).open(&log_path);
+            let (stdout, stderr) = match log_file {
+                Ok(file) => {
+                    let stderr = file.try_clone().ok();
+                    (Stdio::from(file), stderr.map(Stdio::from).unwrap_or_else(Stdio::null))
+                }
+                Err(_) => (Stdio::null(), Stdio::null()),
+            };
+
             let child = Command::new(&node)
                 .arg(&server)
                 .current_dir(&server_root)
                 .env("NODE_ENV", "production")
                 .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                .stdout(stdout)
+                .stderr(stderr)
                 .creation_flags(CREATE_NO_WINDOW)
                 .spawn();
 
