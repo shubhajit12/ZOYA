@@ -6,7 +6,6 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
-
     defaults:
       run:
         working-directory: zoya-ai-companion-MAIN
@@ -31,90 +30,44 @@ jobs:
       - name: Download Zoya Mate Engine release
         shell: pwsh
         run: |
-          # Always use the latest published Zoya Mate Engine release.
           $releaseApi = 'https://api.github.com/repos/shubhajit12/Mate-Engine-FOR-ZOYA/releases/latest'
           $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ 'Accept' = 'application/vnd.github+json' }
-
-          if (-not $release.tag_name) {
-            throw 'Could not determine the latest Zoya Mate Engine release tag.'
-          }
-
+          if (-not $release.tag_name) { throw 'Could not determine the latest Zoya Mate Engine release tag.' }
           $asset = $release.assets | Where-Object { $_.name -eq 'Zoya-Mate-Engine-Windows.zip' } | Select-Object -First 1
-          if (-not $asset) {
-            throw "Latest Zoya Mate Engine release $($release.tag_name) does not contain Zoya-Mate-Engine-Windows.zip."
-          }
-
-          $mateVersion = $release.tag_name
-          $assetName = $asset.name
-          $zip = Join-Path $env:RUNNER_TEMP $assetName
-          $url = $asset.browser_download_url
-
-          Write-Host "Downloading latest Zoya Mate Engine release $mateVersion..."
-          Write-Host "Asset: $assetName"
-          Invoke-WebRequest -Uri $url -OutFile $zip
-
-          if (-not (Test-Path $zip)) {
-            throw "Mate Engine release asset was not downloaded: $url"
-          }
-
+          if (-not $asset) { throw "Latest Zoya Mate Engine release $($release.tag_name) does not contain Zoya-Mate-Engine-Windows.zip." }
+          $zip = Join-Path $env:RUNNER_TEMP $asset.name
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip
+          if (-not (Test-Path $zip)) { throw "Mate Engine release asset was not downloaded." }
           $extract = Join-Path $env:RUNNER_TEMP 'MateEngine'
           if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
           Expand-Archive -Path $zip -DestinationPath $extract -Force
-
           $exe = Get-ChildItem -Path $extract -Filter 'MateEngineX.exe' -File -Recurse | Select-Object -First 1
-          if (-not $exe) {
-            throw 'MateEngineX.exe was not found in the Zoya Mate Engine release asset.'
-          }
-
+          if (-not $exe) { throw 'MateEngineX.exe was not found in the Zoya Mate Engine release asset.' }
           $dest = Join-Path $PWD 'src-tauri/mate-companion/bin'
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
           Copy-Item -Path (Join-Path $exe.Directory.FullName '*') -Destination $dest -Recurse -Force
-
-          Write-Host "Bundling Mate Engine from $($exe.Directory.FullName)"
 
       - name: Strip unused Mate avatar and local AI payloads
         shell: pwsh
         run: |
           $mateRoot = Join-Path $PWD 'src-tauri/mate-companion/bin'
           if (-not (Test-Path $mateRoot)) { throw "Mate runtime directory not found: $mateRoot" }
-
-          # ZOYA supplies Carlotta.vrm separately and uses Groq for AI. Do not
-          # ship Mate's optional standalone avatar files or its local LLM payloads.
-          # Unity engine .data/.assets files remain intact because they are required
-          # runtime containers and cannot safely be pruned by filename alone.
           $modelExtensions = @('.vrm', '.me', '.fbx', '.gltf', '.glb', '.pmx', '.pmd', '.obj', '.blend')
           $aiExtensions = @('.gguf')
           $removed = @()
-
           Get-ChildItem -Path $mateRoot -Recurse -File | ForEach-Object {
             $extension = $_.Extension.ToLowerInvariant()
             $name = $_.Name.ToLowerInvariant()
             $path = $_.FullName.ToLowerInvariant()
             $remove = $modelExtensions -contains $extension -or $aiExtensions -contains $extension
-
-            if ($name -like 'undreamai*' -or $path -like '*undreamai*') {
-              $remove = $true
-            }
-
+            if ($name -like 'undreamai*' -or $path -like '*undreamai*') { $remove = $true }
             if ($remove) {
               $removed += $_.FullName
               Remove-Item -LiteralPath $_.FullName -Force
             }
           }
-
-          if ($removed.Count -gt 0) {
-            Write-Host "Removed optional Mate payload files: $($removed.Count)"
-            $removed | ForEach-Object { Write-Host "  $_" }
-          } else {
-            Write-Host "No optional standalone avatar/local-AI payload files were present."
-          }
-
           $mateExe = Join-Path $mateRoot 'MateEngineX.exe'
           if (-not (Test-Path $mateExe)) { throw 'MateEngineX.exe is missing after payload pruning.' }
-
-          $bytes = (Get-ChildItem -Path $mateRoot -Recurse -File | Measure-Object -Property Length -Sum).Sum
-          $gb = [math]::Round($bytes / 1GB, 2)
-          Write-Host "Remaining Mate runtime size: $gb GB"
 
       - name: Prepare Carlotta VRM for Tauri resources
         shell: pwsh
@@ -124,7 +77,6 @@ jobs:
           if (-not (Test-Path $source)) { throw "Carlotta.vrm not found at $source" }
           New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
           Copy-Item -Path $source -Destination $destination -Force
-          Write-Host "Prepared Carlotta VRM at $destination"
 
       - name: Install dependencies
         run: npm install
@@ -139,28 +91,17 @@ jobs:
           $serverDist = Join-Path $serverRoot 'dist'
           if (Test-Path $serverRoot) { Remove-Item $serverRoot -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $serverDist | Out-Null
-
-          # server.cjs is bundled with its npm dependencies, so the packaged
-          # runtime does not require Node.js to be installed on the user's PC.
           Copy-Item -Path (Join-Path $PWD 'dist/*') -Destination $serverDist -Recurse -Force
-
           $nodeVersion = '22.14.0'
           $nodeZip = Join-Path $env:RUNNER_TEMP "node-v$nodeVersion-win-x64.zip"
-          $nodeUrl = "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip"
-          Invoke-WebRequest -Uri $nodeUrl -OutFile $nodeZip
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip" -OutFile $nodeZip
           $nodeExtract = Join-Path $env:RUNNER_TEMP 'NodeRuntime'
           if (Test-Path $nodeExtract) { Remove-Item $nodeExtract -Recurse -Force }
           Expand-Archive -Path $nodeZip -DestinationPath $nodeExtract -Force
-
           $nodeExe = Get-ChildItem -Path $nodeExtract -Filter 'node.exe' -File -Recurse | Select-Object -First 1
           if (-not $nodeExe) { throw 'node.exe was not found in the downloaded Node runtime.' }
           Copy-Item -Path $nodeExe.FullName -Destination (Join-Path $serverRoot 'node.exe') -Force
-
-          if (-not (Test-Path (Join-Path $serverDist 'server.cjs'))) {
-            throw 'dist/server.cjs was not produced by npm run build.'
-          }
-
-          Write-Host "Bundled API server prepared at $serverRoot"
+          if (-not (Test-Path (Join-Path $serverDist 'server.cjs'))) { throw 'dist/server.cjs was not produced by npm run build.' }
 
       - name: Verify bundled API server before packaging
         shell: pwsh
@@ -171,24 +112,32 @@ jobs:
           if (-not (Test-Path $node)) { throw "Bundled node.exe missing: $node" }
           if (-not (Test-Path $server)) { throw "Bundled server.cjs missing: $server" }
 
-          $process = Start-Process -FilePath $node -ArgumentList @($server) -WorkingDirectory $serverRoot -PassThru -WindowStyle Hidden
+          $log = Join-Path $env:RUNNER_TEMP 'zoya-api-verification.log'
+          if (Test-Path $log) { Remove-Item $log -Force }
+
+          $process = Start-Process -FilePath $node -ArgumentList @($server) -WorkingDirectory $serverRoot -Environment @{ NODE_ENV = 'production' } -RedirectStandardOutput $log -RedirectStandardError $log -PassThru -WindowStyle Hidden
           try {
             $ready = $false
             for ($i = 0; $i -lt 50; $i++) {
               Start-Sleep -Milliseconds 100
+              if ($process.HasExited) {
+                $details = ''
+                if (Test-Path $log) { $details = Get-Content $log -Raw }
+                throw "Bundled API server exited during startup with code $($process.ExitCode). Log: $details"
+              }
               try {
                 $response = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/api/health' -UseBasicParsing -TimeoutSec 2
                 if ($response.StatusCode -eq 200) {
                   $ready = $true
-                  Write-Host "Bundled API health check passed."
+                  Write-Host 'Bundled API health check passed in production mode.'
                   break
                 }
               } catch {}
-              if ($process.HasExited) {
-                throw "Bundled API server exited during startup with code $($process.ExitCode)."
-              }
             }
-            if (-not $ready) { throw 'Bundled API server did not become healthy on 127.0.0.1:3000.' }
+            if (-not $ready) {
+              $details = if (Test-Path $log) { Get-Content $log -Raw } else { 'No server output was captured.' }
+              throw "Bundled API server did not become healthy on 127.0.0.1:3000. Log: $details"
+            }
           } finally {
             if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
           }
