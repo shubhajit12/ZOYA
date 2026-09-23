@@ -162,6 +162,37 @@ jobs:
 
           Write-Host "Bundled API server prepared at $serverRoot"
 
+      - name: Verify bundled API server before packaging
+        shell: pwsh
+        run: |
+          $serverRoot = Join-Path $PWD 'src-tauri/server'
+          $node = Join-Path $serverRoot 'node.exe'
+          $server = Join-Path $serverRoot 'dist/server.cjs'
+          if (-not (Test-Path $node)) { throw "Bundled node.exe missing: $node" }
+          if (-not (Test-Path $server)) { throw "Bundled server.cjs missing: $server" }
+
+          $process = Start-Process -FilePath $node -ArgumentList @($server) -WorkingDirectory $serverRoot -PassThru -WindowStyle Hidden
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 50; $i++) {
+              Start-Sleep -Milliseconds 100
+              try {
+                $response = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/api/health' -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200) {
+                  $ready = $true
+                  Write-Host "Bundled API health check passed."
+                  break
+                }
+              } catch {}
+              if ($process.HasExited) {
+                throw "Bundled API server exited during startup with code $($process.ExitCode)."
+              }
+            }
+            if (-not $ready) { throw 'Bundled API server did not become healthy on 127.0.0.1:3000.' }
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
