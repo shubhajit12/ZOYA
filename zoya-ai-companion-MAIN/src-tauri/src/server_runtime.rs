@@ -68,16 +68,16 @@ pub fn start(app: &AppHandle) {
             }
         }
 
-        // Give Express a moment to bind before the first chat request.
-        thread::spawn(|| {
-            for _ in 0..50 {
-                if std::net::TcpStream::connect(("127.0.0.1", 3000)).is_ok() {
-                    return;
-                }
-                thread::sleep(Duration::from_millis(100));
+        // Wait briefly for Express to bind so the first chat request cannot
+        // race the server startup.
+        for _ in 0..50 {
+            if std::net::TcpStream::connect(("127.0.0.1", 3000)).is_ok() {
+                eprintln!("[ZOYA] Bundled API server is ready.");
+                return;
             }
-            eprintln!("[ZOYA] Bundled API server did not become reachable within 5 seconds");
-        });
+            thread::sleep(Duration::from_millis(100));
+        }
+        eprintln!("[ZOYA] Bundled API server did not become reachable within 5 seconds");
     }
 }
 
