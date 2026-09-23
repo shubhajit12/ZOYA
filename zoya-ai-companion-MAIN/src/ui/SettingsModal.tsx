@@ -24,7 +24,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [userName, setUserName] = useState<string>(settings.userName);
   const [groqApiKey, setGroqApiKey] = useState<string>(settings.groqApiKey || '');
   const [geminiApiKey, setGeminiApiKey] = useState<string>(settings.geminiApiKey || '');
-  const [voiceName, setVoiceName] = useState<string>(settings.voiceName || 'Leda');
+  const [fishApiKey, setFishApiKey] = useState<string>(settings.fishApiKey || '');
+  const [fishVoiceId, setFishVoiceId] = useState<string>(settings.fishVoiceId || 'cbe13152c7ff4da98be9a95d448a1f39');
   const [volume, setVolume] = useState<number>(settings.volume);
   const [language, setLanguage] = useState<string>(settings.language);
   const [alwaysOnTop, setAlwaysOnTop] = useState<boolean>(settings.alwaysOnTop);
@@ -41,7 +42,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       userName,
       groqApiKey,
       geminiApiKey,
-      voiceName,
+      fishApiKey,
+      fishVoiceId,
       volume,
       language,
       alwaysOnTop,
@@ -103,43 +105,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </p>
           </div>
 
-          {/* Gemini API Key Configuration (TTS Voice) */}
+          {/* Gemini API Key Configuration (Optional Brain Fallback) */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span>Google Gemini API Key (TTS Voice Only)</span>
+              <span>Google Gemini API Key (Optional Brain Fallback)</span>
             </label>
-            <input
-              type="password"
-              value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
-              placeholder="Leave empty to use GEMINI_TTS_API_KEY / GEMINI_API_KEY..."
-              className="w-full bg-[#050506]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
-            />
-            <p className="text-[11px] text-slate-500">
-              Used exclusively for high-quality voice audio synthesis via Gemini TTS.
-            </p>
+            <input type="password" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} placeholder="Leave empty to use GEMINI_API_KEY..." className="w-full bg-[#050506]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-amber-500" />
+            <p className="text-[11px] text-slate-500">Used only if Groq is unavailable and Zoya falls back to Gemini for chat.</p>
           </div>
 
-          {/* Voice Settings */}
+          {/* Fish Audio Voice */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <Mic className="w-3.5 h-3.5 text-orange-400" />
-              <span>Gemini Voice (TTS)</span>
+              <span>Fish Audio Voice</span>
             </label>
-            <select
-              value={voiceName}
-              onChange={(e) => setVoiceName(e.target.value)}
-              className="w-full bg-[#050506] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
-            >
-              <option value="Leda">Leda (Youthful, Expressive - Preferred)</option>
-              <option value="Kore">Kore (Feminine, Warm & Natural)</option>
-              <option value="Puck">Puck (Playful, Friendly)</option>
-              <option value="Zephyr">Zephyr (Soft, Calm)</option>
-              <option value="Fenrir">Fenrir (Deep, Clear)</option>
-            </select>
+            <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 text-sm text-slate-100">Mitsuri Kanroji</div>
+            <label className="block text-[11px] font-semibold text-slate-400">Fish Voice Reference ID</label>
+            <input type="text" value={fishVoiceId} onChange={(e) => setFishVoiceId(e.target.value)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500" />
+            <p className="text-[11px] text-slate-500">Default is the selected Mitsuri Kanroji voice. Replace the reference ID later to switch voices.</p>
           </div>
-
           {/* Volume Slider */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-semibold text-slate-300">
