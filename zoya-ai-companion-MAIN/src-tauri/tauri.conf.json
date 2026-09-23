@@ -34,7 +34,8 @@
     ],
     "resources": [
       "companion-engine/bin/ZOYA.CompanionEngine.exe",
-      "mate-companion/**/*"
+      "mate-companion/**/*",
+      "server/**/*"
     ],
     "icon": [
       "icons/32x32.png",
