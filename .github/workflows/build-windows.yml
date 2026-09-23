@@ -116,6 +116,39 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build web and API bundle
+        run: npm run build
+
+      - name: Prepare bundled API server runtime
+        shell: pwsh
+        run: |
+          $serverRoot = Join-Path $PWD 'src-tauri/server'
+          $serverDist = Join-Path $serverRoot 'dist'
+          if (Test-Path $serverRoot) { Remove-Item $serverRoot -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $serverDist | Out-Null
+
+          # server.cjs is bundled with its npm dependencies, so the packaged
+          # runtime does not require Node.js to be installed on the user's PC.
+          Copy-Item -Path (Join-Path $PWD 'dist/*') -Destination $serverDist -Recurse -Force
+
+          $nodeVersion = '22.14.0'
+          $nodeZip = Join-Path $env:RUNNER_TEMP "node-v$nodeVersion-win-x64.zip"
+          $nodeUrl = "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip"
+          Invoke-WebRequest -Uri $nodeUrl -OutFile $nodeZip
+          $nodeExtract = Join-Path $env:RUNNER_TEMP 'NodeRuntime'
+          if (Test-Path $nodeExtract) { Remove-Item $nodeExtract -Recurse -Force }
+          Expand-Archive -Path $nodeZip -DestinationPath $nodeExtract -Force
+
+          $nodeExe = Get-ChildItem -Path $nodeExtract -Filter 'node.exe' -File -Recurse | Select-Object -First 1
+          if (-not $nodeExe) { throw 'node.exe was not found in the downloaded Node runtime.' }
+          Copy-Item -Path $nodeExe.FullName -Destination (Join-Path $serverRoot 'node.exe') -Force
+
+          if (-not (Test-Path (Join-Path $serverDist 'server.cjs'))) {
+            throw 'dist/server.cjs was not produced by npm run build.'
+          }
+
+          Write-Host "Bundled API server prepared at $serverRoot"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
