@@ -2,6 +2,20 @@ import { EmotionType, AnimationIntent, StructuredAiResponse } from '../types';
 
 const API_BASE = import.meta.env.PROD ? 'http://127.0.0.1:3000' : '';
 
+const fetchApi = async (path: string, init: RequestInit, attempts = 15): Promise<Response> => {
+  let lastError: any;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const response = await fetch(`${API_BASE}${path}`, init);
+      return response;
+    } catch (err) {
+      lastError = err;
+      if (i < attempts - 1) await new Promise(resolve => setTimeout(resolve, 400));
+    }
+  }
+  throw lastError || new Error('Unable to connect to ZOYA AI server');
+};
+
 export class GroqClient {
   /**
    * Send chat message to Groq AI Brain via server API with structured output & emotional analysis.
@@ -15,7 +29,7 @@ export class GroqClient {
     groqApiKeyOverride?: string,
     geminiApiKeyOverride?: string
   ): Promise<StructuredAiResponse> {
-    const response = await fetch(`${API_BASE}/api/chat`, {
+    const response = await fetchApi('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -55,7 +69,7 @@ export class GroqClient {
     signal?: AbortSignal
   ): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE}/api/chat/stream`, {
+      const response = await fetchApi('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
