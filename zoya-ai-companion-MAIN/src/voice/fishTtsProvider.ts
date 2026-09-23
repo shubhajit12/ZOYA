@@ -7,6 +7,7 @@
  */
 import { TTSProvider, TTSRequest, TTSResponse, TTSQuotaStatus } from './ttsProvider';
 const DEFAULT_COOLDOWN_SEC = 60;
+const API_BASE = import.meta.env.PROD ? 'http://127.0.0.1:3000' : '';
 export class FishTTSProvider implements TTSProvider {
   readonly name = 'fish-audio';
   private apiKeyOverride?: string;
@@ -16,7 +17,7 @@ export class FishTTSProvider implements TTSProvider {
   async synthesize(request: TTSRequest): Promise<TTSResponse> {
     const now = Date.now();
     if (now < this.quotaCooldownUntil) { const remaining=Math.ceil((this.quotaCooldownUntil-now)/1000); const err:any=new Error(`Fish Audio TTS rate-limit cooldown active (${remaining}s remaining).`); err.isQuotaExceeded=true; err.retryAfter=remaining; throw err; }
-    const response=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:request.text,fishApiKey:this.apiKeyOverride||undefined,fishVoiceId:request.voiceName||this.voiceReferenceId})});
+    const response=await fetch(`${API_BASE}/api/tts`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:request.text,fishApiKey:this.apiKeyOverride||undefined,fishVoiceId:request.voiceName||this.voiceReferenceId})});
     if(!response.ok){const body=await response.json().catch(()=>({})); if(response.status===429||body.isQuotaExceeded){const cooldown=body.retryAfter||DEFAULT_COOLDOWN_SEC; this.quotaCooldownUntil=Date.now()+cooldown*1000; const err:any=new Error(`Fish Audio rate limit (HTTP 429): ${body.error||'Rate limit'}`); err.isQuotaExceeded=true; err.retryAfter=cooldown; throw err;} const err:any=new Error(body.error||`Fish Audio TTS request failed (HTTP ${response.status})`); err.status=response.status; throw err;}
     const data=await response.json(); const base64=data.base64Audio||''; if(!base64||base64.length<50) throw new Error('Fish Audio returned empty or invalid audio data.');
     return {base64Audio:base64,format:data.format||'mp3',model:data.model,endpoint:data.endpoint};
