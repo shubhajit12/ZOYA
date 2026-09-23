@@ -1,6 +1,7 @@
 mod companion_engine;
 mod companion_tracker;
 mod mate_handoff;
+mod server_runtime;
 
 use tauri::Manager;
 
@@ -9,6 +10,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![diagnostic_ping, start_mate_companion, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag, start_window_drag, minimize_window, toggle_maximize_window, close_window, set_always_on_top])
         .setup(|app| {
+            server_runtime::start(app.handle());
             let startup_lines = [
                 "=== ZOYA startup ===".to_string(),
                 "version=1.0.0".to_string(),
