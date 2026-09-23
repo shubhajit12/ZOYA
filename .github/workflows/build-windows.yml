@@ -31,13 +31,26 @@ jobs:
       - name: Download Zoya Mate Engine release
         shell: pwsh
         run: |
-          # Keep this pinned to a tested Mate Engine release.
-          $mateVersion = 'v1.0.0'
-          $assetName = 'Zoya-Mate-Engine-Windows.zip'
-          $zip = Join-Path $env:RUNNER_TEMP $assetName
-          $url = "https://github.com/shubhajit12/Mate-Engine-FOR-ZOYA/releases/download/$mateVersion/$assetName"
+          # Always use the latest published Zoya Mate Engine release.
+          $releaseApi = 'https://api.github.com/repos/shubhajit12/Mate-Engine-FOR-ZOYA/releases/latest'
+          $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ 'Accept' = 'application/vnd.github+json' }
 
-          Write-Host "Downloading Zoya Mate Engine $mateVersion..."
+          if (-not $release.tag_name) {
+            throw 'Could not determine the latest Zoya Mate Engine release tag.'
+          }
+
+          $asset = $release.assets | Where-Object { $_.name -eq 'Zoya-Mate-Engine-Windows.zip' } | Select-Object -First 1
+          if (-not $asset) {
+            throw "Latest Zoya Mate Engine release $($release.tag_name) does not contain Zoya-Mate-Engine-Windows.zip."
+          }
+
+          $mateVersion = $release.tag_name
+          $assetName = $asset.name
+          $zip = Join-Path $env:RUNNER_TEMP $assetName
+          $url = $asset.browser_download_url
+
+          Write-Host "Downloading latest Zoya Mate Engine release $mateVersion..."
+          Write-Host "Asset: $assetName"
           Invoke-WebRequest -Uri $url -OutFile $zip
 
           if (-not (Test-Path $zip)) {
