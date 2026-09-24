@@ -88,7 +88,7 @@ Return your response strictly in valid JSON matching this schema:
   };
 
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'ZOYA AI Engine (Groq Brain + Gemini Voice)' });
+    res.json({ status: 'ok', service: 'ZOYA AI Engine (Groq Brain + Fish Audio TTS)' });
   });
 
   app.post('/api/zoya/face-debug-log', (req, res) => {
@@ -265,7 +265,7 @@ Respond warmly, naturally, and concisely to your friend.
     }
   });
 
-  // Fish Audio TTS provider. Gemini/Google TTS is not used for voice generation.
+  // Fish Audio is the only TTS provider.
   const fishTtsGenerate = async (cleanText: string, apiKey: string, referenceId: string) => {
     const endpoint = 'https://api.fish.audio/v1/tts';
     const model = 's2.1-pro-free';
@@ -287,134 +287,6 @@ Respond warmly, naturally, and concisely to your friend.
     const base64Audio = audioBytes.toString('base64');
     console.log(`[Fish TTS] Success: ${audioBytes.length} bytes via ${model}, voice=${referenceId}`);
     return { audioUrl: `data:audio/mpeg;base64,${base64Audio}`, base64Audio, format: 'mp3', usedEndpoint: endpoint, usedModel: model, usedAuth: 'Fish Audio API key (FISH_API_KEY / user override)' };
-  };
-
-  const pcmToWav = (pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer => {
-    const headerLength = 44;
-    const dataLength = pcmBuffer.length;
-    const wavBuffer = Buffer.alloc(headerLength + dataLength);
-    wavBuffer.write('RIFF', 0);
-    wavBuffer.writeUInt32LE(36 + dataLength, 4);
-    wavBuffer.write('WAVE', 8);
-    wavBuffer.write('fmt ', 12);
-    wavBuffer.writeUInt32LE(16, 16);
-    wavBuffer.writeUInt16LE(1, 20);
-    wavBuffer.writeUInt16LE(numChannels, 22);
-    wavBuffer.writeUInt32LE(sampleRate, 24);
-    wavBuffer.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
-    wavBuffer.writeUInt16LE(numChannels * (bitsPerSample / 8), 32);
-    wavBuffer.writeUInt16LE(bitsPerSample, 34);
-    wavBuffer.write('data', 36);
-    wavBuffer.writeUInt32LE(dataLength, 40);
-    pcmBuffer.copy(wavBuffer, 44);
-    return wavBuffer;
-  };
-
-  let ttsQuotaCooldownUntil = 0;
-  let lastQuotaErrorMessage = '';
-
-  const geminiTtsGenerate = async (cleanText: string, voiceName: string, apiKey: string) => {
-    const candidateModels = ['gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
-    let lastGenErr: any = null;
-    for (const modelName of candidateModels) {
-      try {
-        const genEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-        const genRes = await fetch(genEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: cleanText }] }],
-            generationConfig: {
-              responseModalities: ['AUDIO'],
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName || 'Leda' } } },
-            },
-          }),
-        });
-
-        if (genRes.ok) {
-          const genData = await genRes.json();
-          const rawBase64 = genData.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-          if (rawBase64 && rawBase64.length > 50) {
-            const rawBuffer = Buffer.from(rawBase64, 'base64');
-            const wavBuffer = rawBuffer.subarray(0, 4).toString('ascii') === 'RIFF' ? rawBuffer : pcmToWav(rawBuffer);
-            const base64Audio = wavBuffer.toString('base64');
-            return {
-              audioUrl: `data:audio/wav;base64,${base64Audio}`,
-              base64Audio,
-              format: 'wav',
-              usedEndpoint: `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
-              usedModel: modelName,
-              usedAuth: 'API Key (GEMINI_TTS_API_KEY / GEMINI_API_KEY)',
-            };
-          }
-        } else if (genRes.status === 429) {
-          const genErrJson = await genRes.json().catch(() => ({}));
-          const quotaMsg = genErrJson.error?.message || 'Gemini TTS rate limit / quota exceeded (429).';
-          lastQuotaErrorMessage = quotaMsg;
-          ttsQuotaCooldownUntil = Date.now() + 60000;
-          const err: any = new Error(`[TTS] Gemini quota exceeded: ${quotaMsg}`);
-          err.isQuotaExceeded = true; err.status = 429; throw err;
-        } else if (genRes.status === 403) {
-          const genErrJson = await genRes.json().catch(() => ({}));
-          const authMsg = genErrJson.error?.message || 'Gemini TTS request forbidden (403).';
-          const err: any = new Error(`Gemini TTS request forbidden (403): ${authMsg}`);
-          err.status = 403; throw err;
-        } else {
-          const genErrJson = await genRes.json().catch(() => ({}));
-          lastGenErr = new Error(`TTS model ${modelName} returned status ${genRes.status}: ${genErrJson.error?.message || `Status ${genRes.status}`}`);
-        }
-      } catch (err: any) {
-        if (err.isQuotaExceeded || err.status === 403) throw err;
-        lastGenErr = err;
-      }
-    }
-    throw lastGenErr || new Error('Gemini TTS audio generation failed on all candidate models.');
-  };
-
-  const googleCloudTtsGenerate = async (cleanText: string, voiceName: string, languageCode: string) => {
-    let accessToken = '';
-    try {
-      const tokenRes = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', {
-        headers: { 'Metadata-Flavor': 'Google' },
-      });
-      if (tokenRes.ok) accessToken = (await tokenRes.json()).access_token || '';
-    } catch (metaErr: any) {
-      console.warn('[Cloud TTS Auth Warning] Could not fetch metadata token:', metaErr.message);
-    }
-    if (!accessToken) return null;
-
-    const cloudEndpoint = 'https://texttospeech.googleapis.com/v1beta1/text:synthesize';
-    const cloudModel = 'gemini-3.1-flash-tts-preview';
-    try {
-      const cloudRes = await fetch(cloudEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': 'ais-asia-southeast1-41f9a9454f',
-        },
-        body: JSON.stringify({
-          input: { text: cleanText },
-          voice: { languageCode, name: voiceName || 'Leda' },
-          audioConfig: { audioEncoding: 'MP3' },
-          model: cloudModel,
-        }),
-      });
-      const cloudData = await cloudRes.json().catch(() => ({}));
-      if (cloudRes.ok && cloudData.audioContent) {
-        return {
-          audioUrl: `data:audio/mp3;base64,${cloudData.audioContent}`,
-          base64Audio: cloudData.audioContent,
-          format: 'mp3',
-          usedEndpoint: cloudEndpoint,
-          usedModel: cloudModel,
-          usedAuth: 'OAuth2 Bearer Token (GCP Metadata Service)',
-        };
-      }
-    } catch (fetchErr: any) {
-      console.warn('[Cloud TTS] Request failed:', fetchErr.message);
-    }
-    return null;
   };
 
   app.post('/api/tts', async (req, res) => {
