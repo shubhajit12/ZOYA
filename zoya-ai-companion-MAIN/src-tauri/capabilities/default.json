@@ -6,8 +6,6 @@
     "main"
   ],
   "permissions": [
-    "allow-enter-companion",
-    "allow-exit-companion",
     "allow-diagnostic-ping",
     "allow-start-mate-companion",
     "allow-exit-mate-companion",
