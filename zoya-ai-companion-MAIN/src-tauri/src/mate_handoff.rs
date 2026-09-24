@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use std::sync::{Mutex, OnceLock};
 
 use tauri::Manager;
+use crate::{companion_engine, companion_tracker};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -25,18 +26,30 @@ fn process_slot() -> &'static Mutex<Option<Child>> {
 fn handoff_log_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
     app.path()
         .app_data_dir()
-        .unwrap_or_else(|_| std::env::temp_dir())
+        .unwrap_or_else(|_| std::env::temp_dir().join("ZOYA"))
         .join("mate-companion")
+}
+
+fn temp_log_path() -> PathBuf {
+    std::env::temp_dir().join("ZOYA-mate-handoff.log")
+}
+
+fn append_log(path: &Path, message: &str) {
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
+        let _ = writeln!(file, "{message}");
+    }
 }
 
 fn log_line<R: tauri::Runtime>(app: &tauri::AppHandle<R>, message: &str) {
     println!("[ZOYA Mate] {message}");
+    append_log(&temp_log_path(), message);
+
     let dir = handoff_log_dir(app);
     if fs::create_dir_all(&dir).is_ok() {
-        let path = dir.join("mate-handoff.log");
-        if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
-            let _ = writeln!(file, "{message}");
-        }
+        append_log(&dir.join("mate-handoff.log"), message);
     }
 }
 
@@ -120,7 +133,10 @@ fn write_carlotta_settings<R: tauri::Runtime>(
         "enableWindowSitting": true,
         "enableRandomAvatar": false,
         "enableLocomotion": false,
-        "settingsVersion": 1
+        "tutorialDone": true,
+        "uiHueShift": 0.07,
+        "uiSaturation": 1.0,
+        "settingsVersion": 2
     });
 
     fs::write(
@@ -134,7 +150,7 @@ fn write_carlotta_settings<R: tauri::Runtime>(
 
 #[cfg(target_os = "windows")]
 fn ps_quote(value: &str) -> String {
-    format!("'{}'", value.replace(''', "''"))
+    format!("'{}'", value.replace('\'', "''"))
 }
 
 #[cfg(target_os = "windows")]
@@ -145,10 +161,8 @@ fn start_restore_watcher<R: tauri::Runtime>(
     let zoya_exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let zoya_path = zoya_exe.to_string_lossy().to_string();
 
-    // This small detached watcher survives ZOYA exiting. When Mate closes,
-    // it starts the same ZOYA executable from the user's actual install path.
     let command = format!(
-        "$p=Get-Process -Id {mate_pid} -ErrorAction SilentlyContinue;          if($p){{Wait-Process -Id {mate_pid} -ErrorAction SilentlyContinue}};          Start-Process -FilePath {} -WorkingDirectory {}",
+        "$p=Get-Process -Id {mate_pid} -ErrorAction SilentlyContinue; if($p){{Wait-Process -Id {mate_pid} -ErrorAction SilentlyContinue}}; Start-Process -FilePath {} -WorkingDirectory {}",
         ps_quote(&zoya_path),
         ps_quote(
             zoya_exe
@@ -185,11 +199,31 @@ fn start_restore_watcher<R: tauri::Runtime>(
         })
 }
 
+#[cfg(target_os = "windows")]
+fn force_exit_zoya<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<(), String> {
+    let pid = std::process::id().to_string();
+
+    Command::new("taskkill")
+        .args(["/PID", &pid, "/F"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map(|_| {
+            log_line(app, &format!("Issued taskkill for ZOYA PID {pid}."));
+        })
+        .map_err(|e| {
+            log_line(app, &format!("Failed to issue taskkill for ZOYA PID {pid}: {e}"));
+            e.to_string()
+        })
+}
+
 pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
     log_line(&app, "=== Mate handoff started ===");
+    log_line(&app, &format!("Temporary diagnostic log: {}", temp_log_path().display()));
 
-    // The legacy C# companion engine must release all native companion state
-    // before Mate takes ownership of the desktop character.
     companion_engine::stop();
     companion_tracker::clear_target();
 
@@ -200,9 +234,14 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     })?;
     log_line(&app, &format!("Mate executable: {}", exe.display()));
 
-    let working_dir = exe
-        .parent()
-        .ok_or_else(|| "Mate executable has no parent directory".to_string())?;
+    let working_dir = match exe.parent() {
+        Some(path) => path,
+        None => {
+            let message = "Mate executable has no parent directory".to_string();
+            log_line(&app, &message);
+            return Err(message);
+        }
+    };
     let data_dir = working_dir.join("MateEngineX_Data");
     if !data_dir.is_dir() {
         let message = format!(
@@ -214,10 +253,22 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
     }
     log_line(&app, &format!("Mate working directory: {}", working_dir.display()));
 
-    let carlotta = find_carlotta(&app)?;
+    let carlotta = match find_carlotta(&app) {
+        Ok(path) => path,
+        Err(err) => {
+            log_line(&app, &format!("Carlotta lookup failed: {err}"));
+            return Err(err);
+        }
+    };
     log_line(&app, &format!("Carlotta: {}", carlotta.display()));
 
-    let settings = write_carlotta_settings(&app, &carlotta)?;
+    let settings = match write_carlotta_settings(&app, &carlotta) {
+        Ok(path) => path,
+        Err(err) => {
+            log_line(&app, &format!("Settings write failed: {err}"));
+            return Err(err);
+        }
+    };
     log_line(&app, &format!("Settings: {}", settings.display()));
 
     let unity_log = handoff_log_dir(&app).join("mate-unity.log");
@@ -250,7 +301,7 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
         let pid = child.id();
         log_line(&app, &format!("Mate process created (PID {pid})."));
 
-        let deadline = Instant::now() + Duration::from_secs(3);
+        let deadline = Instant::now() + Duration::from_secs(5);
         loop {
             match child.try_wait() {
                 Ok(Some(status)) => {
@@ -292,9 +343,11 @@ pub fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> 
             return Err(err);
         }
 
-        log_line(&app, "Mate survived startup verification. Closing ZOYA.");
+        log_line(&app, "Mate survived startup verification. Forcing ZOYA shutdown.");
         drop(child);
-        app.exit(0);
+
+        force_exit_zoya(&app)?;
+
         Ok(())
     }
 
