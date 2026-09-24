@@ -22,6 +22,7 @@ interface NavbarProps {
   onOpenSettings: () => void;
   mateDesktopCompanionEnabled: boolean;
   onMinimize: () => void;
+  minecraftStatus?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -34,6 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   mateDesktopCompanionEnabled,
   onMinimize,
+  minecraftStatus,
 }) => {
   const meta = getEmotionMeta(emotionalState.currentEmotion);
 
@@ -134,6 +136,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="flex items-center h-full gap-2 px-2">
+        {minecraftStatus && (
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl glass border border-white/10 text-[10px] font-semibold tracking-wide" title="Minecraft integration status">
+            <span className={`w-1.5 h-1.5 rounded-full ${minecraftStatus === 'CONNECTED' ? 'bg-emerald-400' : minecraftStatus === 'ERROR' ? 'bg-red-400' : 'bg-amber-400'}`} />
+            <span className="text-slate-300">MC {minecraftStatus}</span>
+          </div>
+        )}
+
         <button
           onClick={onToggleScreenShare}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
