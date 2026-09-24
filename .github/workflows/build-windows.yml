@@ -162,3 +162,37 @@ jobs:
         with:
           name: ZOYA-Windows-Installer
           path: zoya-ai-companion-MAIN/src-tauri/target/release/bundle/msi/*.msi
+
+      - name: Build EXE installer wrapper
+        shell: pwsh
+        run: |
+          choco install 7zip -y --no-progress
+          $bundleDir = Join-Path $PWD 'src-tauri/target/release/bundle/msi'
+          $msi = Get-ChildItem -Path $bundleDir -Filter '*.msi' -File | Select-Object -First 1
+          if (-not $msi) { throw 'Tauri MSI installer was not produced.' }
+          $temp = Join-Path $env:RUNNER_TEMP 'zoya-exe-installer'
+          if (Test-Path $temp) { Remove-Item $temp -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $temp | Out-Null
+          Copy-Item $msi.FullName (Join-Path $temp 'Zoya.msi') -Force
+          Push-Location $temp
+          & 'C:\Program Files\7-Zip\7z.exe' a -t7z -mx=0 Zoya-MSI.7z Zoya.msi | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "7-Zip archive creation failed with exit code $LASTEXITCODE." }
+          @'
+;!@Install@!UTF-8!
+Title="Zoya"
+RunProgram="msiexec.exe /i Zoya.msi /passive"
+;!@InstallEnd@!
+'@ | Set-Content -Path sfx-config.txt -Encoding UTF8
+          $sfx = 'C:\Program Files\7-Zip\7z.sfx'
+          if (-not (Test-Path $sfx)) { throw "7z.sfx not found: $sfx" }
+          $output = Join-Path $PWD 'Zoya_1.0.0_x64-setup.exe'
+          cmd /c ('copy /b "' + $sfx + '" + sfx-config.txt + Zoya-MSI.7z "' + $output + '"') | Out-Host
+          if (-not (Test-Path $output)) { throw 'EXE installer wrapper was not produced.' }
+          Copy-Item $output (Join-Path $env:GITHUB_WORKSPACE 'zoya-ai-companion-MAIN/ZOYA_1.0.0_x64-setup.exe') -Force
+          Pop-Location
+
+      - name: Upload EXE installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZOYA-Windows-EXE-Installer
+          path: zoya-ai-companion-MAIN/ZOYA_1.0.0_x64-setup.exe
