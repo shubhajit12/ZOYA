@@ -6,15 +6,6 @@
     "main"
   ],
   "permissions": [
-    "allow-diagnostic-ping",
-    "allow-start-mate-companion",
-    "allow-exit-mate-companion",
-    "allow-start-companion-drag",
-    "allow-finish-companion-drag",
-    "allow-start-window-drag",
-    "allow-minimize-window",
-    "allow-toggle-maximize-window",
-    "allow-close-window",
-    "allow-set-always-on-top"
+    "core:default"
   ]
 }
