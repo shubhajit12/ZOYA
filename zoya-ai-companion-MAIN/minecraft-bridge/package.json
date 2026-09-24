@@ -1,9 +1,0 @@
-{
-  "name": "zoya-minecraft-bridge",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "dependencies": {
-    "mineflayer": "^4.31.0"
-  }
-}
