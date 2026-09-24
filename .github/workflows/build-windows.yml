@@ -125,7 +125,6 @@ jobs:
               Start-Sleep -Milliseconds 100
               if ($process.HasExited) {
                 $details = ''
-                $details = ''
                 if (Test-Path $stdoutLog) { $details += "STDOUT:`n" + (Get-Content $stdoutLog -Raw) }
                 if (Test-Path $stderrLog) { $details += "STDERR:`n" + (Get-Content $stderrLog -Raw) }
                 throw "Bundled API server exited during startup with code $($process.ExitCode). Log: $details"
