@@ -74,8 +74,14 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  const config = readConfig();
-  if (config?.autoConnect === true) connect(config);
+  const config = readConfig() || {
+    host: "127.0.0.1",
+    port: 25565,
+    username: "Zoya",
+    auth: "offline",
+    autoConnect: true
+  };
+  if (config.autoConnect === true) connect(config);
 });
 function shutdown() { disconnect(); server.close(() => process.exit(0)); }
 process.on("SIGINT", shutdown);
