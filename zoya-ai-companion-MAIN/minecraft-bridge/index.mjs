@@ -48,13 +48,13 @@ function connect(config) {
 }
 
 function send(res, status, payload) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "http://localhost:3000", "Cache-Control": "no-store" });
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
   res.end(JSON.stringify(payload));
 }
 
 const server = http.createServer((req, res) => {
   if (req.method === "OPTIONS") {
-    res.writeHead(204, { "Access-Control-Allow-Origin": "http://localhost:3000", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type" });
+    res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type" });
     return res.end();
   }
   const url = new URL(req.url || "/", "http://127.0.0.1");
