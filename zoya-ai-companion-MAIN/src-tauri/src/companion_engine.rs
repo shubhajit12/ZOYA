@@ -65,7 +65,7 @@ pub fn start(app: &AppHandle) -> bool {
 pub fn stop() {
     let mut slot = engine_slot().lock().expect("companion engine lock poisoned");
     if let Some(mut engine) = slot.take() {
-        let _ = writeln!(engine.stdin, "{\"op\":\"clear\"}");
+        let _ = writeln!(engine.stdin, "{}", json!({ "op": "clear" }));
         let _ = engine.stdin.flush();
         let _ = engine.child.kill();
         let _ = engine.child.wait();
