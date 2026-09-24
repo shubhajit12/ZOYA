@@ -1,6 +1,7 @@
 mod companion_engine;
 mod companion_tracker;
 mod mate_handoff;
+mod minecraft_bridge;
 mod server_runtime;
 
 use tauri::Manager;
@@ -8,7 +9,7 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![diagnostic_ping, start_mate_companion, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag, start_window_drag, minimize_window, toggle_maximize_window, close_window, set_always_on_top])
+        .invoke_handler(tauri::generate_handler![diagnostic_ping, start_mate_companion, start_minecraft_bridge, stop_minecraft_bridge, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag, start_window_drag, minimize_window, toggle_maximize_window, close_window, set_always_on_top])
         .setup(|app| {
             server_runtime::start(app.handle());
             let startup_lines = [
@@ -45,6 +46,7 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 
+    minecraft_bridge::stop();
     server_runtime::stop();
 }
 
@@ -144,6 +146,17 @@ fn write_companion_diagnostic(app: &tauri::AppHandle, message: &str) {
         let _ = std::fs::OpenOptions::new().create(true).append(true).open(app_data.join("ZOYA-companion-diagnostic.log"))
             .and_then(|mut file| file.write_all(line.as_bytes()));
     }
+}
+
+#[tauri::command]
+fn start_minecraft_bridge(app: tauri::AppHandle) -> Result<(), String> {
+    minecraft_bridge::start(&app)
+}
+
+#[tauri::command]
+fn stop_minecraft_bridge() -> Result<(), String> {
+    minecraft_bridge::stop();
+    Ok(())
 }
 
 #[tauri::command]
