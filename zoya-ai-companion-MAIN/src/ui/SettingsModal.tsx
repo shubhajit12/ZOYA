@@ -30,6 +30,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [language, setLanguage] = useState<string>(settings.language);
   const [alwaysOnTop, setAlwaysOnTop] = useState<boolean>(settings.alwaysOnTop);
   const [pcPermissions, setPcPermissions] = useState<boolean>(settings.pcControlPermissions);
+  const [mateDesktopCompanionEnabled, setMateDesktopCompanionEnabled] = useState<boolean>(settings.mateDesktopCompanionEnabled ?? true);
   const [performanceQuality, setPerformanceQuality] = useState<PerformanceQualitySetting>(
     isValidQualitySetting(settings.performanceQuality) ? settings.performanceQuality : 'auto'
   );
@@ -47,6 +48,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       language,
       alwaysOnTop,
       pcControlPermissions: pcPermissions,
+      mateDesktopCompanionEnabled,
       performanceQuality,
     });
     setSavedSuccess(true);
@@ -103,22 +105,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </p>
           </div>
 
-          {/* Gemini API Key Configuration (TTS Voice) */}
+          {/* Gemini API Key Configuration (Optional Brain Fallback) */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5 text-amber-400" />
               <span>Google Gemini API Key (Optional Brain Fallback)</span>
             </label>
-            <input
-              type="password"
-              value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
-              placeholder="Leave empty to use GEMINI_API_KEY..."
-              className="w-full bg-[#050506]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
-            />
-            <p className="text-[11px] text-slate-500">
-              Used only if Groq is unavailable and Zoya falls back to Gemini for chat.
-            </p>
+            <input type="password" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} placeholder="Leave empty to use GEMINI_API_KEY..." className="w-full bg-[#050506]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-amber-500" />
+            <p className="text-[11px] text-slate-500">Used only if Groq is unavailable and Zoya falls back to Gemini for chat.</p>
           </div>
 
           {/* Fish Audio Voice */}
@@ -128,11 +122,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span>Fish Audio Voice</span>
             </label>
             <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 text-sm text-slate-100">Mitsuri Kanroji</div>
+            <label className="block text-[11px] font-semibold text-slate-400">Fish Audio API Key</label>
+            <input
+              type="password"
+              value={fishApiKey}
+              onChange={(e) => setFishApiKey(e.target.value)}
+              placeholder="Paste your Fish Audio API key"
+              className="w-full bg-[#050506] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+            />
+            <p className="text-[11px] text-slate-500">Used for Zoya's voice generation through Fish Audio.</p>
             <label className="block text-[11px] font-semibold text-slate-400">Fish Voice Reference ID</label>
             <input type="text" value={fishVoiceId} onChange={(e) => setFishVoiceId(e.target.value)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500" />
             <p className="text-[11px] text-slate-500">Default is the selected Mitsuri Kanroji voice. Replace the reference ID later to switch voices.</p>
           </div>
-
           {/* Volume Slider */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-semibold text-slate-300">
@@ -194,6 +196,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {performanceQuality === 'auto'
                 ? `Currently using: ${capitalizeTier(resolveEffectiveQuality('auto'))}`
                 : 'Manual selection is always respected and never overridden.'}
+            </p>
+          </div>
+
+          {/* Desktop Companion */}
+          <div className="space-y-3 border-t border-white/10 pt-4">
+            <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mateDesktopCompanionEnabled}
+                onChange={(e) => setMateDesktopCompanionEnabled(e.target.checked)}
+                className="w-4 h-4 accent-orange-500 rounded"
+              />
+              <span>Enable Desktop Companion (Mate)</span>
+            </label>
+            <p className="text-[11px] text-slate-500">
+              When enabled, the title-bar minimize button sends Zoya to the desktop Mate companion. Turn this off if you prefer normal window minimization.
             </p>
           </div>
 
