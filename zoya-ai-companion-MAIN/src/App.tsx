@@ -83,6 +83,31 @@ export default function App() {
   const [isScreenSharing, setIsScreenSharing] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [animationIntent, setAnimationIntent] = useState<AnimationIntent>('idle');
+  const [minecraftMode, setMinecraftMode] = useState(false);
+  const [minecraftStatus, setMinecraftStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: number | undefined;
+    let cancelled = false;
+    const loadMinecraftStatus = async () => {
+      try {
+        const enabled = await tauriBridge.isMinecraftMode();
+        if (cancelled) return;
+        setMinecraftMode(enabled);
+        if (!enabled) return;
+        const response = await fetch('http://127.0.0.1:32123/status');
+        if (response.ok) {
+          const data = await response.json();
+          if (!cancelled) setMinecraftStatus(data.status || 'DISCONNECTED');
+        }
+      } catch {
+        if (!cancelled) setMinecraftStatus('ERROR');
+      }
+    };
+    void loadMinecraftStatus();
+    timer = window.setInterval(() => { void loadMinecraftStatus(); }, 1000);
+    return () => { cancelled = true; if (timer) window.clearInterval(timer); };
+  }, []);
 
   // Modal Toggles
   const [showOnboarding, setShowOnboarding] = useState<boolean>(!settings.hasCompletedOnboarding);
@@ -376,6 +401,7 @@ export default function App() {
         onOpenSettings={() => setShowSettings(true)}
         mateDesktopCompanionEnabled={settings.mateDesktopCompanionEnabled}
         onMinimize={() => setIsMinimized(true)}
+        minecraftStatus={minecraftMode ? (minecraftStatus || 'CONNECTING') : undefined}
       />
 
       {isMinimized ? (
