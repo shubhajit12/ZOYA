@@ -12,8 +12,7 @@ import { TTSProvider, TTSResponse } from './ttsProvider';
  *      (connected to audioAnalyser for lip-sync / viseme data).
  *   4. Expose speech-recognition (STT) for voice input.
  *
- * TTS is delegated to a pluggable TTSProvider. The default implementation
- * is FishTTSProvider. Swap or add
+ * TTS is delegated to a pluggable TTSProvider.  The default implementation is FishTTSProvider.  Swap or add
  * providers by calling `setProvider()`.
  */
 export class VoicePipeline {
