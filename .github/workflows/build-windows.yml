@@ -2,13 +2,10 @@ name: Build ZOYA Windows Installer
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [trigger-zoya-build]
 
 jobs:
   build-windows:
     runs-on: windows-latest
-
     defaults:
       run:
         working-directory: zoya-ai-companion-MAIN
@@ -22,8 +19,136 @@ jobs:
         with:
           node-version: 24
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build standalone C# companion engine
+        run: dotnet publish src-tauri/companion-engine/ZOYA.CompanionEngine.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o src-tauri/companion-engine/bin
+
+      - name: Download Zoya Mate Engine release
+        shell: pwsh
+        run: |
+          $releaseApi = 'https://api.github.com/repos/shubhajit12/Mate-Engine-FOR-ZOYA/releases/latest'
+          $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ 'Accept' = 'application/vnd.github+json' }
+          if (-not $release.tag_name) { throw 'Could not determine the latest Zoya Mate Engine release tag.' }
+          $asset = $release.assets | Where-Object { $_.name -eq 'Zoya-Mate-Engine-Windows.zip' } | Select-Object -First 1
+          if (-not $asset) { throw "Latest Zoya Mate Engine release $($release.tag_name) does not contain Zoya-Mate-Engine-Windows.zip." }
+          $zip = Join-Path $env:RUNNER_TEMP $asset.name
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip
+          if (-not (Test-Path $zip)) { throw "Mate Engine release asset was not downloaded." }
+          $extract = Join-Path $env:RUNNER_TEMP 'MateEngine'
+          if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+          Expand-Archive -Path $zip -DestinationPath $extract -Force
+          $exe = Get-ChildItem -Path $extract -Filter 'MateEngineX.exe' -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'MateEngineX.exe was not found in the Zoya Mate Engine release asset.' }
+          $dest = Join-Path $PWD 'src-tauri/mate-companion/bin'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Copy-Item -Path (Join-Path $exe.Directory.FullName '*') -Destination $dest -Recurse -Force
+
+      - name: Strip unused Mate avatar and local AI payloads
+        shell: pwsh
+        run: |
+          $mateRoot = Join-Path $PWD 'src-tauri/mate-companion/bin'
+          if (-not (Test-Path $mateRoot)) { throw "Mate runtime directory not found: $mateRoot" }
+          $modelExtensions = @('.vrm', '.me', '.fbx', '.gltf', '.glb', '.pmx', '.pmd', '.obj', '.blend')
+          $aiExtensions = @('.gguf')
+          $removed = @()
+          Get-ChildItem -Path $mateRoot -Recurse -File | ForEach-Object {
+            $extension = $_.Extension.ToLowerInvariant()
+            $name = $_.Name.ToLowerInvariant()
+            $path = $_.FullName.ToLowerInvariant()
+            $remove = $modelExtensions -contains $extension -or $aiExtensions -contains $extension
+            if ($name -like 'undreamai*' -or $path -like '*undreamai*') { $remove = $true }
+            if ($remove) {
+              $removed += $_.FullName
+              Remove-Item -LiteralPath $_.FullName -Force
+            }
+          }
+          $mateExe = Join-Path $mateRoot 'MateEngineX.exe'
+          if (-not (Test-Path $mateExe)) { throw 'MateEngineX.exe is missing after payload pruning.' }
+
+      - name: Prepare Carlotta VRM for Tauri resources
+        shell: pwsh
+        run: |
+          $source = Join-Path $PWD 'public/mint/Carlotta.vrm'
+          $destination = Join-Path $PWD 'src-tauri/mate-companion/Carlotta.vrm'
+          if (-not (Test-Path $source)) { throw "Carlotta.vrm not found at $source" }
+          New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+          Copy-Item -Path $source -Destination $destination -Force
+
       - name: Install dependencies
         run: npm install
+
+      - name: Build web and API bundle
+        run: npm run build
+
+      - name: Prepare bundled API server runtime
+        shell: pwsh
+        run: |
+          $serverRoot = Join-Path $PWD 'src-tauri/server'
+          $serverDist = Join-Path $serverRoot 'dist'
+          if (Test-Path $serverRoot) { Remove-Item $serverRoot -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $serverDist | Out-Null
+          Copy-Item -Path (Join-Path $PWD 'dist/*') -Destination $serverDist -Recurse -Force
+          $nodeVersion = '22.14.0'
+          $nodeZip = Join-Path $env:RUNNER_TEMP "node-v$nodeVersion-win-x64.zip"
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip" -OutFile $nodeZip
+          $nodeExtract = Join-Path $env:RUNNER_TEMP 'NodeRuntime'
+          if (Test-Path $nodeExtract) { Remove-Item $nodeExtract -Recurse -Force }
+          Expand-Archive -Path $nodeZip -DestinationPath $nodeExtract -Force
+          $nodeExe = Get-ChildItem -Path $nodeExtract -Filter 'node.exe' -File -Recurse | Select-Object -First 1
+          if (-not $nodeExe) { throw 'node.exe was not found in the downloaded Node runtime.' }
+          Copy-Item -Path $nodeExe.FullName -Destination (Join-Path $serverRoot 'node.exe') -Force
+          if (-not (Test-Path (Join-Path $serverDist 'server.cjs'))) { throw 'dist/server.cjs was not produced by npm run build.' }
+
+      - name: Verify bundled API server before packaging
+        shell: pwsh
+        run: |
+          $serverRoot = Join-Path $PWD 'src-tauri/server'
+          $node = Join-Path $serverRoot 'node.exe'
+          $server = Join-Path $serverRoot 'dist/server.cjs'
+          if (-not (Test-Path $node)) { throw "Bundled node.exe missing: $node" }
+          if (-not (Test-Path $server)) { throw "Bundled server.cjs missing: $server" }
+
+          $stdoutLog = Join-Path $env:RUNNER_TEMP 'zoya-api-verification.stdout.log'
+          $stderrLog = Join-Path $env:RUNNER_TEMP 'zoya-api-verification.stderr.log'
+          foreach ($logFile in @($stdoutLog, $stderrLog)) {
+            if (Test-Path $logFile) { Remove-Item $logFile -Force }
+          }
+
+          $process = Start-Process -FilePath $node -ArgumentList @($server) -WorkingDirectory $serverRoot -Environment @{ NODE_ENV = 'production' } -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru -WindowStyle Hidden
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 50; $i++) {
+              Start-Sleep -Milliseconds 100
+              if ($process.HasExited) {
+                $details = ''
+                $details = ''
+                if (Test-Path $stdoutLog) { $details += "STDOUT:`n" + (Get-Content $stdoutLog -Raw) }
+                if (Test-Path $stderrLog) { $details += "STDERR:`n" + (Get-Content $stderrLog -Raw) }
+                throw "Bundled API server exited during startup with code $($process.ExitCode). Log: $details"
+              }
+              try {
+                $response = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/api/health' -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200) {
+                  $ready = $true
+                  Write-Host 'Bundled API health check passed in production mode.'
+                  break
+                }
+              } catch {}
+            }
+            if (-not $ready) {
+              $details = ''
+              if (Test-Path $stdoutLog) { $details += "STDOUT:`n" + (Get-Content $stdoutLog -Raw) }
+              if (Test-Path $stderrLog) { $details += "STDERR:`n" + (Get-Content $stderrLog -Raw) }
+              if (-not $details) { $details = 'No server output was captured.' }
+              throw "Bundled API server did not become healthy on 127.0.0.1:3000. Log: $details"
+            }
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -33,8 +158,8 @@ jobs:
       - name: Build Tauri installer
         run: npx tauri build
 
-      - name: Upload installer
+      - name: Upload MSI installer
         uses: actions/upload-artifact@v4
         with:
           name: ZOYA-Windows-Installer
-          path: zoya-ai-companion-MAIN/src-tauri/target/release/bundle/nsis/*.exe
+          path: zoya-ai-companion-MAIN/src-tauri/target/release/bundle/msi/*.msi
