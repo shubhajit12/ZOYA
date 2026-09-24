@@ -16,6 +16,11 @@ export class TauriBridge {
     await invoke('diagnostic_ping');
   }
 
+  public async isMinecraftMode(): Promise<boolean> {
+    if (this.isTauriAvailable()) return await this.invoke<boolean>('is_minecraft_mode');
+    return false;
+  }
+
   public async enterCompanion(): Promise<void> {
     await invoke('start_mate_companion');
   }
