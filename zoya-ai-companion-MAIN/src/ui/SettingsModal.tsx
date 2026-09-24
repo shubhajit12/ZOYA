@@ -122,6 +122,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span>Fish Audio Voice</span>
             </label>
             <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 text-sm text-slate-100">Mitsuri Kanroji</div>
+            <label className="block text-[11px] font-semibold text-slate-400">Fish Audio API Key</label>
+            <input
+              type="password"
+              value={fishApiKey}
+              onChange={(e) => setFishApiKey(e.target.value)}
+              placeholder="Paste your Fish Audio API key"
+              className="w-full bg-[#050506] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"
+            />
+            <p className="text-[11px] text-slate-500">Used for Zoya's voice generation through Fish Audio.</p>
             <label className="block text-[11px] font-semibold text-slate-400">Fish Voice Reference ID</label>
             <input type="text" value={fishVoiceId} onChange={(e) => setFishVoiceId(e.target.value)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-orange-500" />
             <p className="text-[11px] text-slate-500">Default is the selected Mitsuri Kanroji voice. Replace the reference ID later to switch voices.</p>
