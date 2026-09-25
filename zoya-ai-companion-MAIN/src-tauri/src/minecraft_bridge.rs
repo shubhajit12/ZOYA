@@ -72,7 +72,7 @@ pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
     }
 
     let mut command = Command::new(&exe);
-    command.current_dir(exe.parent().unwrap_or_else(|| std::path::Path::new(".)))
+    command.current_dir(exe.parent().unwrap_or_else(|| std::path::Path::new(".")))
         .env("ZOYA_MINECRAFT_CONFIG", &config_json_path(&config))
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
