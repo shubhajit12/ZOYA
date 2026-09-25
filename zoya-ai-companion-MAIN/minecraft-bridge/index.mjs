@@ -21,6 +21,44 @@ let latestMinecraftState = {
   game: null
 };
 
+
+let lastLoggedState = null;
+let lastSnapshotLogAt = 0;
+let lastEntityIds = new Set();
+
+function logMinecraftState() {
+  const current = latestMinecraftState;
+  if (!current?.available || !current.player) return;
+  const now = Date.now();
+  const p = current.player;
+  const nearby = current.nearbyEntities || [];
+  const nearbyIds = new Set(nearby.map(entity => String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown")))));
+
+  if (!lastLoggedState) {
+    console.log("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z);
+    console.log("[STATE] Health: " + (p.health ?? "?") + " | Hunger: " + (p.food ?? "?") + " | XP: Lv." + (p.experience?.level ?? 0) + " (" + Math.round((p.experience?.progress ?? 0) * 100) + "%)");
+    console.log("[STATE] Dimension: " + (current.world?.dimension || "unknown") + " | Time: " + (current.world?.timeOfDay ?? "?") + " | Day: " + (current.world?.day ?? "?"));
+    console.log("[STATE] Held: " + (current.selectedItem?.displayName || "empty") + " | Nearby: " + nearby.length);
+  } else {
+    if (p.health !== lastLoggedState.health) console.log("[EVENT] Health changed: " + lastLoggedState.health + " -> " + p.health);
+    if (p.food !== lastLoggedState.food) console.log("[EVENT] Hunger changed: " + lastLoggedState.food + " -> " + p.food);
+    if ((current.selectedItem?.name || null) !== lastLoggedState.held) console.log("[EVENT] Held item changed: " + (lastLoggedState.held || "empty") + " -> " + (current.selectedItem?.name || "empty"));
+    for (const entity of nearby) {
+      const id = String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown")));
+      if (!lastEntityIds.has(id)) console.log("[EVENT] Entity detected: " + (entity.username || entity.displayName || entity.name || entity.type || "unknown") + " (distance " + entity.distance + "m)");
+    }
+    for (const id of lastEntityIds) {
+      if (!nearbyIds.has(id)) console.log("[EVENT] Entity left nearby range: " + id);
+    }
+    if (now - lastSnapshotLogAt >= 1000) {
+      console.log("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z + " | Health=" + (p.health ?? "?") + " | Hunger=" + (p.food ?? "?") + " | Nearby=" + nearby.length);
+      lastSnapshotLogAt = now;
+    }
+  }
+  lastLoggedState = { health: p.health, food: p.food, held: current.selectedItem?.name || null };
+  lastEntityIds = nearbyIds;
+}
+
 function serializeItem(item) {
   if (!item) return null;
   return { name: item.name || null, displayName: item.displayName || item.name || null, type: item.type ?? null, count: item.count ?? 0, slot: item.slot ?? null, stackSize: item.stackSize ?? null, durabilityUsed: item.durabilityUsed ?? null, maxDurability: item.maxDurability ?? null };
@@ -73,6 +111,7 @@ function collectMinecraftState() {
     selectedItem: serializeItem(bot.heldItem),
     game: { gameMode: bot.game?.gameMode ?? null, difficulty: bot.game?.difficulty ?? null, hardcore: bot.game?.hardcore ?? null, levelType: bot.game?.levelType ?? null }
   };
+  logMinecraftState();
   return latestMinecraftState;
 }
 
@@ -119,6 +158,9 @@ function applyConfiguredSkin(config) {
 }
 
 function disconnect() {
+  lastLoggedState = null;
+  lastEntityIds = new Set();
+  lastSnapshotLogAt = 0;
   if (bot) { try { bot.quit(); } catch {} bot = null; }
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
 }
@@ -134,6 +176,7 @@ function connect(config) {
   try {
     bot = mineflayer.createBot({ host, port, username, auth, ...(version ? { version } : {}) });
     bot.once("login", () => {
+      console.log("[EVENT] Zoya joined the Minecraft world.");
       console.log(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
@@ -142,6 +185,13 @@ function connect(config) {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
       console.error(`[ZOYA Minecraft Bridge] Bot kicked: ${message}`);
       state.error = `Kicked by Minecraft server: ${message}`;
+    });
+    bot.once("death", () => {
+      console.log("[EVENT] Zoya died. Waiting for respawn/state recovery.");
+    });
+    bot.once("respawn", () => {
+      console.log("[EVENT] Zoya respawned.");
+      collectMinecraftState();
     });
     bot.once("end", reason => {
       bot = null;
