@@ -40,6 +40,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [minecraftPort, setMinecraftPort] = useState<number>(settings.minecraftServerPort || 25565);
   const [minecraftVersion, setMinecraftVersion] = useState<string>(settings.minecraftVersion || '');
   const [minecraftSkinUrl, setMinecraftSkinUrl] = useState<string>(settings.minecraftSkinUrl || '');
+  const [minecraftSkinProvider, setMinecraftSkinProvider] = useState<'auto' | 'custom' | 'disabled'>(settings.minecraftSkinProvider || 'auto');
+  const [minecraftSkinCommand, setMinecraftSkinCommand] = useState<string>(settings.minecraftSkinCommand || '/skin url "%URL%"');
   const [minecraftStatus, setMinecraftStatus] = useState<string>('BRIDGE NOT RUNNING');
   const [minecraftError, setMinecraftError] = useState<string>('');
   const [minecraftBusy, setMinecraftBusy] = useState<boolean>(false);
@@ -86,6 +88,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         minecraftBotUsername: MINECRAFT_BOT_USERNAME,
         minecraftVersion: minecraftVersion.trim(),
         minecraftSkinUrl: minecraftSkinUrl.trim(),
+        minecraftSkinProvider,
+        minecraftSkinCommand: minecraftSkinCommand.trim() || '/skin url "%URL%"',
       });
       await tauriBridge.launchMinecraftBot({
         host: minecraftHost.trim() || '127.0.0.1',
@@ -136,6 +140,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       minecraftServerPort: minecraftPort || 25565,
       minecraftBotUsername: MINECRAFT_BOT_USERNAME,
       minecraftVersion: minecraftVersion.trim(),
+      minecraftSkinUrl: minecraftSkinUrl.trim(),
+      minecraftSkinProvider,
+      minecraftSkinCommand: minecraftSkinCommand.trim() || '/skin url "%URL%"',
     });
     setSavedSuccess(true);
     setTimeout(() => {
@@ -244,7 +251,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Minecraft Version</label><input type="text" value={minecraftVersion} onChange={(e) => setMinecraftVersion(e.target.value)} placeholder="Auto" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
             </div>
 
-            <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Custom Skin URL <span className="font-normal text-slate-500">(Optional)</span></label><input type="url" value={minecraftSkinUrl} onChange={(e) => setMinecraftSkinUrl(e.target.value)} placeholder="https://.../skin.png" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /><p className="text-[10px] text-slate-500">Leave empty to keep the default skin. Custom URL application requires a compatible server skin plugin such as SkinsRestorer.</p>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Skin Provider</label>
+                <select value={minecraftSkinProvider} onChange={(e) => setMinecraftSkinProvider(e.target.value as 'auto' | 'custom' | 'disabled')} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500">
+                  <option value="auto">Auto (SkinsRestorer-compatible)</option>
+                  <option value="custom">Custom Command</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Custom Skin URL <span className="font-normal text-slate-500">(Optional)</span></label>
+                <input type="url" value={minecraftSkinUrl} onChange={(e) => setMinecraftSkinUrl(e.target.value)} placeholder="https://.../skin.png" disabled={minecraftSkinProvider === 'disabled'} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50" />
+                <p className="text-[10px] text-slate-500">Optional. Zoya does not bundle or install a skin plugin; the selected provider sends a server command.</p>
+              </div>
+              {minecraftSkinProvider === 'custom' && <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Custom Command Template</label>
+                <input type="text" value={minecraftSkinCommand} onChange={(e) => setMinecraftSkinCommand(e.target.value)} placeholder='/skin url "%URL%"' className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+                <p className="text-[10px] text-slate-500">Use <code>%URL%</code> for the skin URL and <code>%USERNAME%</code> for Zoya's username.</p>
+              </div>}
             </div>
 
             <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 space-y-2">
