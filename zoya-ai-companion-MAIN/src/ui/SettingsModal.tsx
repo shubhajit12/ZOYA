@@ -43,6 +43,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [minecraftStatus, setMinecraftStatus] = useState<string>('BRIDGE NOT RUNNING');
   const [minecraftError, setMinecraftError] = useState<string>('');
   const [minecraftBusy, setMinecraftBusy] = useState<boolean>(false);
+  const [minecraftState, setMinecraftState] = useState<any>(null);
 
   const MINECRAFT_BOT_USERNAME = 'Zoya';
 
@@ -57,6 +58,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           setMinecraftStatus(data.status || 'DISCONNECTED');
           setMinecraftError(data.error || '');
         }
+        try {
+          const stateResponse = await fetch('http://127.0.0.1:32123/state', { cache: 'no-store' });
+          if (stateResponse.ok && !cancelled) setMinecraftState(await stateResponse.json());
+        } catch {}
       } catch {
         if (!cancelled) {
           setMinecraftStatus('BRIDGE NOT RUNNING');
@@ -242,8 +247,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Custom Skin URL <span className="font-normal text-slate-500">(Optional)</span></label><input type="url" value={minecraftSkinUrl} onChange={(e) => setMinecraftSkinUrl(e.target.value)} placeholder="https://.../skin.png" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /><p className="text-[10px] text-slate-500">Leave empty to keep the default skin. Custom URL application requires a compatible server skin plugin such as SkinsRestorer.</p>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3">
+            <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 space-y-2">
               <div className="flex items-center justify-between"><span className="text-[11px] font-semibold text-slate-400">Bridge Status</span><span className="text-[11px] font-bold text-slate-200">{minecraftStatus}</span></div>
+              {minecraftState?.available && minecraftState.player && <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400">
+                <span>Position: <b className="text-slate-200">{minecraftState.player.position.x}, {minecraftState.player.position.y}, {minecraftState.player.position.z}</b></span>
+                <span>Dimension: <b className="text-slate-200">{minecraftState.world?.dimension || 'unknown'}</b></span>
+                <span>Health: <b className="text-slate-200">{minecraftState.player.health ?? '—'}</b></span>
+                <span>Hunger: <b className="text-slate-200">{minecraftState.player.food ?? '—'}</b></span>
+                <span>Selected: <b className="text-slate-200">{minecraftState.selectedItem?.displayName || 'Empty'}</b></span>
+                <span>Nearby: <b className="text-slate-200">{minecraftState.nearbyEntities?.length ?? 0}</b></span>
+              </div>}
               {minecraftError && <p className="text-[10px] text-rose-400 mt-1 break-words">{minecraftError}</p>}
             </div>
 
