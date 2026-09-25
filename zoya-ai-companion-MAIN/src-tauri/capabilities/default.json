@@ -11,6 +11,8 @@
     "allow-diagnostic-ping",
     "allow-start-mate-companion",
     "allow-exit-mate-companion",
+    "allow-launch-minecraft-bot",
+    "allow-stop-minecraft-bot",
     "allow-start-companion-drag",
     "allow-finish-companion-drag",
     "allow-start-window-drag",
