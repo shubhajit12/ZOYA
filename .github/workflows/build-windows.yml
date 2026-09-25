@@ -98,14 +98,6 @@ jobs:
           if (-not (Test-Path (Join-Path $bridgeDist 'node.exe'))) { throw 'Minecraft Bridge bundled node.exe is missing.' }
 
 
-      - name: Build standalone Minecraft Bridge launcher
-        shell: pwsh
-        run: |
-          $launcherRoot = Join-Path $PWD 'minecraft-bridge-launcher'
-          $bridgeDist = Join-Path $PWD 'src-tauri/minecraft-bridge'
-          cargo build --manifest-path (Join-Path $launcherRoot 'Cargo.toml') --release --target x86_64-pc-windows-msvc
-          Copy-Item -Path (Join-Path $launcherRoot 'target/x86_64-pc-windows-msvc/release/minecraft-bridge-launcher.exe') -Destination (Join-Path $bridgeDist 'MinecraftBridge.exe') -Force
-
       - name: Build web and API bundle
         run: npm run build
 
@@ -181,6 +173,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+
+      - name: Build standalone Minecraft Bridge launcher
+        shell: pwsh
+        run: |
+          $launcherRoot = Join-Path $PWD 'minecraft-bridge-launcher'
+          $bridgeDist = Join-Path $PWD 'src-tauri/minecraft-bridge'
+          cargo build --manifest-path (Join-Path $launcherRoot 'Cargo.toml') --release --target x86_64-pc-windows-msvc
+          Copy-Item -Path (Join-Path $launcherRoot 'target/x86_64-pc-windows-msvc/release/minecraft-bridge-launcher.exe') -Destination (Join-Path $bridgeDist 'MinecraftBridge.exe') -Force
 
       - name: Build Tauri installer
         run: npx tauri build
