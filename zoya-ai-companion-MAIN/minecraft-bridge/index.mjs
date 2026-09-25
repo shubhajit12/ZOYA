@@ -38,19 +38,6 @@ function connect(config) {
     bot.once("login", () => {
       console.log(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
-      const skinUrl = typeof config.skinUrl === "string" ? config.skinUrl.trim() : "";
-      if (skinUrl) {
-        // Offline-mode clients cannot advertise an arbitrary skin URL directly.
-        // If the server provides a compatible skin plugin (for example SkinsRestorer),
-        // apply the configured URL through its /skin command after login.
-        const escapedUrl = skinUrl.replace(/\\/g, "\\\\").replace(/"/g, '\\\"');
-        console.log(`[ZOYA Minecraft Bridge] Applying configured skin URL through server skin command: ${skinUrl}`);
-        setTimeout(() => {
-          try { bot?.chat(`/skin url "${escapedUrl}"`); } catch (error) {
-            console.error(`[ZOYA Minecraft Bridge] Skin command failed: ${error instanceof Error ? error.message : String(error)}`);
-          }
-        }, 500);
-      }
     });
     bot.once("kicked", reason => {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
