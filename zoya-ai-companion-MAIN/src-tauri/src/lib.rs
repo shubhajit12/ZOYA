@@ -148,22 +148,6 @@ fn write_companion_diagnostic(app: &tauri::AppHandle, message: &str) {
 }
 
 #[tauri::command]
-fn is_minecraft_mode() -> bool {
-    std::env::args().any(|arg| arg.eq_ignore_ascii_case("--minecraft"))
-}
-
-#[tauri::command]
-fn start_minecraft_bridge(app: tauri::AppHandle) -> Result<(), String> {
-    minecraft_bridge::start(&app)
-}
-
-#[tauri::command]
-fn stop_minecraft_bridge() -> Result<(), String> {
-    minecraft_bridge::stop();
-    Ok(())
-}
-
-#[tauri::command]
 fn start_mate_companion(app: tauri::AppHandle) -> Result<(), String> {
     write_companion_diagnostic(&app, "MINIMIZE COMMAND RECEIVED");
     write_companion_diagnostic(&app, "TAURI COMMAND ENTERED");
