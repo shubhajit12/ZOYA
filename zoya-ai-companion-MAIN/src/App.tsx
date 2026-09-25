@@ -45,6 +45,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   minecraftServerPort: 25565,
   minecraftBotUsername: 'Zoya',
   minecraftVersion: '',
+  minecraftSkinUrl: '',
 };
 
 export default function App() {
