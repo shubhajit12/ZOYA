@@ -27,7 +27,6 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn post_bridge(path: &str, body: Option<&str>) -> Result<(), String> {
-    let url = format!("http://127.0.0.1:32123{path}");
     let client = std::net::TcpStream::connect_timeout(
         &"127.0.0.1:32123".parse().map_err(|e| e.to_string())?,
         Duration::from_millis(500),
@@ -45,7 +44,7 @@ fn post_bridge(path: &str, body: Option<&str>) -> Result<(), String> {
     stream.write_all(request.as_bytes()).map_err(|e| format!("Failed to contact Minecraft Bridge: {e}"))?;
     let mut response = String::new();
     let _ = stream.read_to_string(&mut response);
-    if response.starts_with("HTTP/1.1 2") { let _ = url; Ok(()) } else { Err(format!("Minecraft Bridge request failed: {response}")) }
+    if response.starts_with("HTTP/1.1 2") { Ok(()) } else { Err(format!("Minecraft Bridge request failed: {response}")) }
 }
 
 pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
