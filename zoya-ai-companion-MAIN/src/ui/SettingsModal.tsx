@@ -80,6 +80,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         minecraftServerPort: minecraftPort || 25565,
         minecraftBotUsername: MINECRAFT_BOT_USERNAME,
         minecraftVersion: minecraftVersion.trim(),
+        minecraftSkinUrl: minecraftSkinUrl.trim(),
       });
       await tauriBridge.launchMinecraftBot({
         host: minecraftHost.trim() || '127.0.0.1',
@@ -87,6 +88,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         username: MINECRAFT_BOT_USERNAME,
         auth: 'offline',
         ...(minecraftVersion.trim() ? { version: minecraftVersion.trim() } : {}),
+        ...(minecraftSkinUrl.trim() ? { skinUrl: minecraftSkinUrl.trim() } : {}),
         autoConnect: true,
       });
     } catch (error) {
@@ -233,6 +235,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <p className="text-[10px] text-slate-500">Fixed bot identity.</p>
               </div>
               <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Minecraft Version</label><input type="text" value={minecraftVersion} onChange={(e) => setMinecraftVersion(e.target.value)} placeholder="Auto" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
+            </div>
+
+            <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Custom Skin URL <span className="font-normal text-slate-500">(Optional)</span></label><input type="url" value={minecraftSkinUrl} onChange={(e) => setMinecraftSkinUrl(e.target.value)} placeholder="https://.../skin.png" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /><p className="text-[10px] text-slate-500">Leave empty to keep the default skin. Custom URL application requires a compatible server skin plugin such as SkinsRestorer.</p>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3">
