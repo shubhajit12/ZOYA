@@ -70,6 +70,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleLaunchMinecraft = async () => {
     setMinecraftBusy(true);
+    setMinecraftStatus('CONNECTING');
     setMinecraftError('');
     try {
       await onSaveSettings({
@@ -87,7 +88,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(minecraftVersion.trim() ? { version: minecraftVersion.trim() } : {}),
         autoConnect: true,
       });
-      setMinecraftStatus('CONNECTING');
     } catch (error) {
       setMinecraftError(error instanceof Error ? error.message : String(error));
     } finally {
