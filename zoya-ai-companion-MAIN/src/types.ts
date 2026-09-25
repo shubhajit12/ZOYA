@@ -93,6 +93,9 @@ export interface UserSettings {
   minecraftVersion: string;
   /** Optional skin URL for the Minecraft bot. Empty uses the server/default skin. */
   minecraftSkinUrl: string;
+  minecraftSkinProvider: 'auto' | 'custom' | 'disabled';
+  /** Optional server/plugin command template. Supports %URL% and %USERNAME%. */
+  minecraftSkinCommand: string;
 }
 
 export interface PcCommand {
