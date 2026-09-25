@@ -19,6 +19,16 @@ description = "Allows returning from the Mate companion engine."
 commands.allow = ["exit_mate_companion"]
 
 [[permission]]
+identifier = "allow-launch-minecraft-bot"
+description = "Allows ZOYA to launch the Minecraft bridge bot."
+commands.allow = ["launch_minecraft_bot"]
+
+[[permission]]
+identifier = "allow-stop-minecraft-bot"
+description = "Allows ZOYA to stop the Minecraft bridge bot."
+commands.allow = ["stop_minecraft_bot"]
+
+[[permission]]
 identifier = "allow-start-companion-drag"
 description = "Allows starting desktop companion dragging."
 commands.allow = ["start_companion_drag"]
