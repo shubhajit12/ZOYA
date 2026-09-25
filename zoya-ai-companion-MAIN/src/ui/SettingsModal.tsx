@@ -89,6 +89,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         auth: 'offline',
         ...(minecraftVersion.trim() ? { version: minecraftVersion.trim() } : {}),
         ...(minecraftSkinUrl.trim() ? { skinUrl: minecraftSkinUrl.trim() } : {}),
+        skinProvider: minecraftSkinProvider,
+        skinCommand: minecraftSkinCommand.trim() || '/skin url "%URL%"',
         autoConnect: true,
       });
     } catch (error) {
