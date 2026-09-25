@@ -94,8 +94,6 @@ jobs:
           npm install --omit=dev --ignore-scripts
           Pop-Location
           if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency was not installed.' }
-          if (-not (Test-Path (Join-Path $bridgeDist 'MinecraftBridge.exe'))) { throw 'MinecraftBridge.exe was not produced.' }
-          if (-not (Test-Path (Join-Path $bridgeDist 'node.exe'))) { throw 'Minecraft Bridge bundled node.exe is missing.' }
 
 
       - name: Build web and API bundle
@@ -181,6 +179,15 @@ jobs:
           $bridgeDist = Join-Path $PWD 'src-tauri/minecraft-bridge'
           cargo build --manifest-path (Join-Path $launcherRoot 'Cargo.toml') --release --target x86_64-pc-windows-msvc
           Copy-Item -Path (Join-Path $launcherRoot 'target/x86_64-pc-windows-msvc/release/minecraft-bridge-launcher.exe') -Destination (Join-Path $bridgeDist 'MinecraftBridge.exe') -Force
+
+      - name: Verify standalone Minecraft Bridge bundle
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $PWD 'src-tauri/minecraft-bridge'
+          if (-not (Test-Path (Join-Path $bridgeDist 'MinecraftBridge.exe'))) { throw 'MinecraftBridge.exe was not produced.' }
+          if (-not (Test-Path (Join-Path $bridgeDist 'node.exe'))) { throw 'Minecraft Bridge bundled node.exe is missing.' }
+          if (-not (Test-Path (Join-Path $bridgeDist 'index.mjs'))) { throw 'Minecraft Bridge index.mjs is missing.' }
+          if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency is missing from the final bridge bundle.' }
 
       - name: Build Tauri installer
         run: npx tauri build
