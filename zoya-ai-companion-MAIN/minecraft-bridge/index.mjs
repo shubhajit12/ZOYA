@@ -20,6 +20,38 @@ function readConfig() {
 function snapshot() { return { ...state, configPath: CONFIG_PATH }; }
 function setState(status, patch = {}) { Object.assign(state, { status, ...patch, connected: status === "CONNECTED" }); }
 
+function applyConfiguredSkin(config) {
+  const skinUrl = String(config.skinUrl || "").trim();
+  const provider = config.skinProvider || "auto";
+  if (!skinUrl || provider === "disabled" || !bot) return;
+
+  const defaultCommand = '/skin url "%URL%"';
+  const template = provider === "custom"
+    ? String(config.skinCommand || defaultCommand)
+    : defaultCommand;
+
+  if (!template.includes("%URL%")) {
+    console.warn("[ZOYA Minecraft Bridge] Skin command ignored: template must contain %URL%.");
+    return;
+  }
+
+  const escapedUrl = skinUrl.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const command = template
+    .replace(/%URL%/g, escapedUrl)
+    .replace(/%USERNAME%/g, bot.username || "Zoya");
+
+  console.log(`[ZOYA Minecraft Bridge] Applying configured skin using provider mode: ${provider}`);
+  console.log(`[ZOYA Minecraft Bridge] Skin command: ${command.replace(escapedUrl, "<skin-url>")}`);
+
+  setTimeout(() => {
+    try {
+      if (bot) bot.chat(command);
+    } catch (error) {
+      console.error(`[ZOYA Minecraft Bridge] Skin command failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, 750);
+}
+
 function disconnect() {
   if (bot) { try { bot.quit(); } catch {} bot = null; }
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
@@ -38,6 +70,7 @@ function connect(config) {
     bot.once("login", () => {
       console.log(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
+      applyConfiguredSkin(config);
     });
     bot.once("kicked", reason => {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
