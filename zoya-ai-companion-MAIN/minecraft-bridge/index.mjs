@@ -70,10 +70,17 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === "POST" && url.pathname === "/disconnect") { disconnect(); return send(res, 200, snapshot()); }
+  if (req.method === "POST" && url.pathname === "/shutdown") {
+    disconnect();
+    send(res, 200, { ...snapshot(), shuttingDown: true });
+    setTimeout(() => server.close(() => process.exit(0)), 50);
+    return;
+  }
   send(res, 404, { error: "Not found" });
 });
 
 server.listen(PORT, "127.0.0.1", () => {
+  console.log(`[ZOYA Minecraft Bridge] Listening on http://127.0.0.1:${PORT}`);
   const config = readConfig() || {
     host: "127.0.0.1",
     port: 25565,
