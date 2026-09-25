@@ -35,12 +35,28 @@ function connect(config) {
   setState("CONNECTING", { host, port, username, version: version || null, error: null });
   try {
     bot = mineflayer.createBot({ host, port, username, auth, ...(version ? { version } : {}) });
-    bot.once("login", () => setState("CONNECTED", { host, port, username: bot.username || username, version: bot.version || version || null, error: null }));
-    bot.once("end", () => { bot = null; setState("DISCONNECTED", { error: null }); });
+    bot.once("login", () => {
+      console.log(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
+      setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
+    });
+    bot.once("kicked", reason => {
+      const message = typeof reason === "string" ? reason : JSON.stringify(reason);
+      console.error(`[ZOYA Minecraft Bridge] Bot kicked: ${message}`);
+      state.error = `Kicked by Minecraft server: ${message}`;
+    });
+    bot.once("end", reason => {
+      bot = null;
+      const message = reason ? String(reason) : state.error;
+      if (state.status === "ERROR" || state.error) {
+        setState("ERROR", { error: state.error || message || "Minecraft connection ended." });
+      } else {
+        setState("DISCONNECTED", { error: message || null });
+      }
+    });
     bot.once("error", error => {
       const message = error instanceof Error ? error.message : String(error);
-      state.error = message;
-      if (state.status !== "CONNECTED") setState("ERROR", { error: message });
+      console.error(`[ZOYA Minecraft Bridge] Mineflayer error: ${message}`);
+      setState("ERROR", { error: message });
     });
   } catch (error) {
     setState("ERROR", { error: error instanceof Error ? error.message : String(error) });
@@ -77,6 +93,11 @@ const server = http.createServer((req, res) => {
     return;
   }
   send(res, 404, { error: "Not found" });
+});
+
+server.on("clientError", (error, socket) => {
+  console.error(`[ZOYA Minecraft Bridge] HTTP client error: ${error.message}`);
+  if (socket.writable) socket.end("HTTP/1.1 400 Bad Request\\r\\nConnection: close\\r\\n\\r\\n");
 });
 
 server.listen(PORT, "127.0.0.1", () => {
