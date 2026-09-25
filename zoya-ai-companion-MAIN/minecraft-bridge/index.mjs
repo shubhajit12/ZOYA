@@ -109,6 +109,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", "http://127.0.0.1");
   if (req.method === "GET" && url.pathname === "/status") return send(res, 200, snapshot());
   if (req.method === "GET" && url.pathname === "/health") return send(res, 200, { ok: true, service: "zoya-minecraft-bridge", ...snapshot() });
+  if (req.method === "GET" && url.pathname === "/state") return send(res, 200, collectMinecraftState());
   if (req.method === "POST" && url.pathname === "/connect") {
     let body = "";
     req.on("data", chunk => { body += chunk; });
