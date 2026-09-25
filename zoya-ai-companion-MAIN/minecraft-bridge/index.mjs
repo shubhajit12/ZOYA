@@ -200,7 +200,9 @@ server.on("clientError", (error, socket) => {
   if (socket.writable) socket.end("HTTP/1.1 400 Bad Request\\r\\nConnection: close\\r\\n\\r\\n");
 });
 
-const stateTicker = setInterval(() => collectMinecraftState(), 500);\n\nserver.listen(PORT, "127.0.0.1", () => {
+const stateTicker = setInterval(() => collectMinecraftState(), 500);
+
+server.listen(PORT, "127.0.0.1", () => {
   console.log(`[ZOYA Minecraft Bridge] Listening on http://127.0.0.1:${PORT}`);
   const config = readConfig() || {
     host: "127.0.0.1",
