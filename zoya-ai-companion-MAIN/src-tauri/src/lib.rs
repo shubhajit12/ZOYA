@@ -9,14 +9,9 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![diagnostic_ping, start_mate_companion, start_minecraft_bridge, stop_minecraft_bridge, is_minecraft_mode, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag, start_window_drag, minimize_window, toggle_maximize_window, close_window, set_always_on_top])
+        .invoke_handler(tauri::generate_handler![diagnostic_ping, start_mate_companion, launch_minecraft_bot, stop_minecraft_bot, exit_mate_companion, enter_companion, exit_companion, start_companion_drag, finish_companion_drag, start_window_drag, minimize_window, toggle_maximize_window, close_window, set_always_on_top])
         .setup(|app| {
             server_runtime::start(app.handle());
-            if is_minecraft_mode() {
-                if let Err(error) = minecraft_bridge::start(app.handle()) {
-                    write_companion_diagnostic(app.handle(), &format!("MINECRAFT BRIDGE START ERROR: {error}"));
-                }
-            }
             let startup_lines = [
                 "=== ZOYA startup ===".to_string(),
                 "version=1.0.0".to_string(),
@@ -51,7 +46,6 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 
-    minecraft_bridge::stop();
     server_runtime::stop();
 }
 
@@ -293,4 +287,14 @@ fn exit_companion(app: tauri::AppHandle) -> Result<(), String> {
         main.set_focus().map_err(|e| e.to_string())?;
     }
     Ok(())
+}#[tauri::command]
+fn launch_minecraft_bot(app: tauri::AppHandle, config_json: String) -> Result<(), String> {
+    minecraft_bridge::launch(&app, &config_json)
 }
+
+#[tauri::command]
+fn stop_minecraft_bot() -> Result<(), String> {
+    minecraft_bridge::stop()
+}
+
+
