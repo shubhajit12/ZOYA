@@ -91,6 +91,8 @@ export interface UserSettings {
   minecraftServerPort: number;
   minecraftBotUsername: string;
   minecraftVersion: string;
+  /** Optional skin URL for the Minecraft bot. Empty uses the server/default skin. */
+  minecraftSkinUrl: string;
 }
 
 export interface PcCommand {
