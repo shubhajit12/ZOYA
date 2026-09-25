@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UserSettings } from '../types';
+import { tauriBridge } from '../native/tauriBridge';
 import { resolveEffectiveQuality, isValidQualitySetting, type EffectivePerformanceQuality, type PerformanceQualitySetting } from '../mint/performanceQuality';
-import { X, Key, Volume2, Mic, Globe, Shield, Monitor, Gauge, Check, Trash2 } from 'lucide-react';
+import { X, Key, Volume2, Mic, Globe, Shield, Monitor, Gauge, Check, Trash2, Gamepad2, Play, Square } from 'lucide-react';
 
 interface SettingsModalProps {
   settings: UserSettings;
@@ -35,6 +36,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     isValidQualitySetting(settings.performanceQuality) ? settings.performanceQuality : 'auto'
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [minecraftEnabled, setMinecraftEnabled] = useState<boolean>(settings.minecraftIntegrationEnabled ?? false);
+  const [minecraftHost, setMinecraftHost] = useState<string>(settings.minecraftServerAddress || '127.0.0.1');
+  const [minecraftPort, setMinecraftPort] = useState<number>(settings.minecraftServerPort || 25565);
+  const [minecraftUsername, setMinecraftUsername] = useState<string>(settings.minecraftBotUsername || 'Zoya');
+  const [minecraftVersion, setMinecraftVersion] = useState<string>(settings.minecraftVersion || '');
+  const [minecraftStatus, setMinecraftStatus] = useState<string>('BRIDGE NOT RUNNING');
+  const [minecraftError, setMinecraftError] = useState<string>('');
+  const [minecraftBusy, setMinecraftBusy] = useState<boolean>(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:32123/status', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Bridge unavailable');
+        const data = await response.json();
+        if (!cancelled) {
+          setMinecraftStatus(data.status || 'DISCONNECTED');
+          setMinecraftError(data.error || '');
+        }
+      } catch {
+        if (!cancelled) {
+          setMinecraftStatus('BRIDGE NOT RUNNING');
+          setMinecraftError('Launch the bot to start the Minecraft Bridge.');
+        }
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => { void poll(); }, 1000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, []);
+
+  const handleLaunchMinecraft = async () => {
+    setMinecraftBusy(true);
+    setMinecraftError('');
+    try {
+      await onSaveSettings({
+        minecraftIntegrationEnabled: minecraftEnabled,
+        minecraftServerAddress: minecraftHost.trim() || '127.0.0.1',
+        minecraftServerPort: minecraftPort || 25565,
+        minecraftBotUsername: minecraftUsername.trim() || 'Zoya',
+        minecraftVersion: minecraftVersion.trim(),
+      });
+      await tauriBridge.launchMinecraftBot({
+        host: minecraftHost.trim() || '127.0.0.1',
+        port: minecraftPort || 25565,
+        username: minecraftUsername.trim() || 'Zoya',
+        auth: 'offline',
+        ...(minecraftVersion.trim() ? { version: minecraftVersion.trim() } : {}),
+        autoConnect: true,
+      });
+      setMinecraftStatus('CONNECTING');
+    } catch (error) {
+      setMinecraftError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setMinecraftBusy(false);
+    }
+  };
+
+  const handleStopMinecraft = async () => {
+    setMinecraftBusy(true);
+    try {
+      await tauriBridge.stopMinecraftBot();
+      setMinecraftStatus('DISCONNECTED');
+    } catch (error) {
+      setMinecraftError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setMinecraftBusy(false);
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +121,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       pcControlPermissions: pcPermissions,
       mateDesktopCompanionEnabled,
       performanceQuality,
+      minecraftIntegrationEnabled: minecraftEnabled,
+      minecraftServerAddress: minecraftHost.trim() || '127.0.0.1',
+      minecraftServerPort: minecraftPort || 25565,
+      minecraftBotUsername: minecraftUsername.trim() || 'Zoya',
+      minecraftVersion: minecraftVersion.trim(),
     });
     setSavedSuccess(true);
     setTimeout(() => {
@@ -239,6 +315,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>Allow PC Control Voice Commands</span>
               </span>
             </label>
+          </div>
+
+          {/* Minecraft Integration */}
+          <div className="space-y-4 border-t border-white/10 pt-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <Gamepad2 className="w-3.5 h-3.5 text-orange-400" />
+                <span>Minecraft Integration</span>
+              </label>
+              <p className="text-[11px] text-slate-500 mt-1">Launch the standalone ZOYA Minecraft bot. The debug terminal stays running even if ZOYA is closed.</p>
+            </div>
+
+            <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer">
+              <input type="checkbox" checked={minecraftEnabled} onChange={(e) => setMinecraftEnabled(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" />
+              <span>Enable Minecraft Integration</span>
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Server Address</label>
+                <input type="text" value={minecraftHost} onChange={(e) => setMinecraftHost(e.target.value)} placeholder="127.0.0.1" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Server Port</label>
+                <input type="number" min="1" max="65535" value={minecraftPort} onChange={(e) => setMinecraftPort(Number(e.target.value) || 25565)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Bot Username</label>
+                <input type="text" value={minecraftUsername} onChange={(e) => setMinecraftUsername(e.target.value)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Minecraft Version</label>
+                <input type="text" value={minecraftVersion} onChange={(e) => setMinecraftVersion(e.target.value)} placeholder="Auto" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400">Bridge Status</span>
+                <span className="text-[11px] font-bold text-slate-200">{minecraftStatus}</span>
+              </div>
+              {minecraftError && <p className="text-[10px] text-rose-400 mt-1 break-words">{minecraftError}</p>}
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" disabled={!minecraftEnabled || minecraftBusy} onClick={handleLaunchMinecraft} className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+                <Play className="w-3.5 h-3.5" /> Launch Bot
+              </button>
+              <button type="button" disabled={minecraftBusy} onClick={handleStopMinecraft} className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-white/10">
+                <Square className="w-3.5 h-3.5" /> Stop Bot
+              </button>
+            </div>
           </div>
 
           {/* Destructive Zone - Delete Profile */}
