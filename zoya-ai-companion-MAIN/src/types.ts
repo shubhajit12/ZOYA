@@ -86,6 +86,11 @@ export interface UserSettings {
   hasCompletedOnboarding: boolean;
   /** Performance quality setting. 'auto' resolves to an effective tier at runtime. */
   performanceQuality: 'auto' | 'high' | 'medium' | 'low';
+  minecraftIntegrationEnabled: boolean;
+  minecraftServerAddress: string;
+  minecraftServerPort: number;
+  minecraftBotUsername: string;
+  minecraftVersion: string;
 }
 
 export interface PcCommand {
