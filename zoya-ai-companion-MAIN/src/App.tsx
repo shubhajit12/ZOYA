@@ -46,6 +46,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   minecraftBotUsername: 'Zoya',
   minecraftVersion: '',
   minecraftSkinUrl: '',
+  minecraftSkinProvider: 'auto',
+  minecraftSkinCommand: '/skin url "%URL%"',
 };
 
 export default function App() {
