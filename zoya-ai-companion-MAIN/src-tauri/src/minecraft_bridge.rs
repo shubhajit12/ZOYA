@@ -68,6 +68,9 @@ pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
         &address,
         Duration::from_millis(150),
     ).is_ok() {
+        // The bridge is already running. Apply the newly saved settings to it
+        // instead of silently leaving the old bot connection/config in place.
+        post_bridge("/connect", Some(config_json))?;
         return Ok(());
     }
 
@@ -82,13 +85,9 @@ pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
 
     command.spawn().map_err(|e| format!("Failed to launch MinecraftBridge.exe: {e}"))?;
 
-    for _ in 0..50 {
-        if std::net::TcpStream::connect(("127.0.0.1", 32123)).is_ok() {
-            return Ok(());
-        }
-        std::thread::sleep(Duration::from_millis(100));
-    }
-    Err("Minecraft Bridge terminal was launched, but its HTTP service did not become ready.".to_string())
+    // Do not block the ZOYA settings UI while Node/Mineflayer starts.
+    // The UI already polls /status and will report CONNECTING/CONNECTED/ERROR.
+    Ok(())
 }
 
 fn config_json_path(path: &PathBuf) -> String {
