@@ -9,6 +9,72 @@ const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
 
 const state = { status: "DISCONNECTED", connected: false, host: null, port: null, username: null, version: null, error: null, startedAt: new Date().toISOString() };
 let bot = null;
+let latestMinecraftState = {
+  available: false,
+  timestamp: new Date().toISOString(),
+  player: null,
+  world: null,
+  environment: null,
+  nearbyEntities: [],
+  inventory: [],
+  selectedItem: null,
+  game: null
+};
+
+function serializeItem(item) {
+  if (!item) return null;
+  return { name: item.name || null, displayName: item.displayName || item.name || null, type: item.type ?? null, count: item.count ?? 0, slot: item.slot ?? null, stackSize: item.stackSize ?? null, durabilityUsed: item.durabilityUsed ?? null, maxDurability: item.maxDurability ?? null };
+}
+
+function collectMinecraftState() {
+  if (!bot || !bot.entity) {
+    latestMinecraftState = { available: false, timestamp: new Date().toISOString(), player: null, world: null, environment: null, nearbyEntities: [], inventory: [], selectedItem: null, game: null };
+    return latestMinecraftState;
+  }
+  const position = bot.entity.position;
+  const inventory = Array.isArray(bot.inventory?.slots) ? bot.inventory.slots.filter(Boolean).map(serializeItem) : [];
+  const nearbyEntities = Object.values(bot.entities || {})
+    .filter(entity => entity && entity !== bot.entity && entity.position && entity.position.distanceTo(position) <= 16)
+    .slice(0, 32)
+    .map(entity => ({ id: entity.id ?? null, type: entity.type || null, name: entity.name || entity.displayName || null, username: entity.username || null, position: { x: Number(entity.position.x.toFixed(3)), y: Number(entity.position.y.toFixed(3)), z: Number(entity.position.z.toFixed(3)) }, distance: Number(entity.position.distanceTo(position).toFixed(2)), health: entity.health ?? null }));
+
+  let environment = null;
+  try {
+    const block = bot.blockAt(position.offset(0, -1, 0));
+    environment = { blockBelow: block?.name || null, blockBelowDisplayName: block?.displayName || block?.name || null, light: block?.light ?? null, skyLight: block?.skyLight ?? null };
+  } catch {}
+
+  latestMinecraftState = {
+    available: true,
+    timestamp: new Date().toISOString(),
+    player: {
+      username: bot.username || "Zoya",
+      position: { x: Number(position.x.toFixed(3)), y: Number(position.y.toFixed(3)), z: Number(position.z.toFixed(3)) },
+      yaw: bot.entity.yaw ?? null,
+      pitch: bot.entity.pitch ?? null,
+      health: bot.health ?? bot.entity.health ?? null,
+      food: bot.food ?? null,
+      saturation: bot.foodSaturation ?? null,
+      experience: bot.experience ? { level: bot.experience.level ?? 0, points: bot.experience.points ?? 0, progress: bot.experience.progress ?? 0 } : null
+    },
+    world: {
+      dimension: bot.game?.dimension || bot.game?.levelType || null,
+      serverHost: state.host,
+      serverPort: state.port,
+      version: bot.version || state.version || null,
+      timeOfDay: bot.time?.time ?? null,
+      day: bot.time?.day ?? null,
+      isRaining: bot.isRaining ?? null,
+      thunderState: bot.thunderState ?? null
+    },
+    environment,
+    nearbyEntities,
+    inventory,
+    selectedItem: serializeItem(bot.heldItem),
+    game: { gameMode: bot.game?.gameMode ?? null, difficulty: bot.game?.difficulty ?? null, hardcore: bot.game?.hardcore ?? null, levelType: bot.game?.levelType ?? null }
+  };
+  return latestMinecraftState;
+}
 
 function writeConfig(config) {
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
