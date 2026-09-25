@@ -39,6 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [minecraftHost, setMinecraftHost] = useState<string>(settings.minecraftServerAddress || '127.0.0.1');
   const [minecraftPort, setMinecraftPort] = useState<number>(settings.minecraftServerPort || 25565);
   const [minecraftVersion, setMinecraftVersion] = useState<string>(settings.minecraftVersion || '');
+  const [minecraftSkinUrl, setMinecraftSkinUrl] = useState<string>(settings.minecraftSkinUrl || '');
   const [minecraftStatus, setMinecraftStatus] = useState<string>('BRIDGE NOT RUNNING');
   const [minecraftError, setMinecraftError] = useState<string>('');
   const [minecraftBusy, setMinecraftBusy] = useState<boolean>(false);
