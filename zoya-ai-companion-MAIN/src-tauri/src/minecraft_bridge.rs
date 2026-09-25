@@ -27,8 +27,11 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn post_bridge(path: &str, body: Option<&str>) -> Result<(), String> {
+    let address: std::net::SocketAddr = "127.0.0.1:32123"
+        .parse()
+        .map_err(|e: std::net::AddrParseError| e.to_string())?;
     let client = std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:32123".parse().map_err(|e| e.to_string())?,
+        &address,
         Duration::from_millis(500),
     ).map_err(|e| e.to_string())?;
     client.set_write_timeout(Some(Duration::from_millis(500))).map_err(|e| e.to_string())?;
@@ -58,15 +61,18 @@ pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
     let config = config_path(app)?;
     fs::write(&config, config_json).map_err(|e| format!("Failed to save Minecraft settings: {e}"))?;
 
+    let address: std::net::SocketAddr = "127.0.0.1:32123"
+        .parse()
+        .map_err(|e: std::net::AddrParseError| e.to_string())?;
     if std::net::TcpStream::connect_timeout(
-        &"127.0.0.1:32123".parse().map_err(|e| e.to_string())?,
+        &address,
         Duration::from_millis(150),
     ).is_ok() {
         return Ok(());
     }
 
     let mut command = Command::new(&exe);
-    command.current_dir(exe.parent().unwrap_or_else(|| std::path::Path::new(".")))
+    command.current_dir(exe.parent().unwrap_or_else(|| std::path::Path::new(".)))
         .env("ZOYA_MINECRAFT_CONFIG", &config_json_path(&config))
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
