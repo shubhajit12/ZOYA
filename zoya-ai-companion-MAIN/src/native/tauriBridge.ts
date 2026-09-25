@@ -16,9 +16,20 @@ export class TauriBridge {
     await invoke('diagnostic_ping');
   }
 
-  public async isMinecraftMode(): Promise<boolean> {
-    if (this.isTauriAvailable()) return await this.invoke<boolean>('is_minecraft_mode');
-    return false;
+  public async launchMinecraftBot(config: Record<string, unknown>): Promise<void> {
+    if (this.isTauriAvailable()) {
+      await this.invoke('launch_minecraft_bot', { configJson: JSON.stringify(config) });
+    } else {
+      throw new Error('Minecraft Bot can only be launched from the desktop ZOYA app.');
+    }
+  }
+
+  public async stopMinecraftBot(): Promise<void> {
+    if (this.isTauriAvailable()) {
+      await this.invoke('stop_minecraft_bot');
+    } else {
+      throw new Error('Minecraft Bot can only be stopped from the desktop ZOYA app.');
+    }
   }
 
   public async enterCompanion(): Promise<void> {
