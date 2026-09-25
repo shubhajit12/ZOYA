@@ -1,52 +1,98 @@
 use std::fs;
 use std::path::PathBuf;
-use std::process::{Child, Command, Stdio};
-use std::sync::{Mutex, OnceLock};
+use std::process::Command;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 #[cfg(target_os = "windows")]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
+const CREATE_NEW_CONSOLE: u32 = 0x00000010;
 
-static BRIDGE_PROCESS: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
-fn slot() -> &'static Mutex<Option<Child>> { BRIDGE_PROCESS.get_or_init(|| Mutex::new(None)) }
-
-fn bridge_dir(app: &AppHandle) -> PathBuf {
-  app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("ZOYA")).join("minecraft-bridge")
+fn bridge_resource_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let exe = app.path()
+        .resolve("minecraft-bridge/MinecraftBridge.exe", tauri::path::BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    exe.parent()
+        .map(PathBuf::from)
+        .ok_or_else(|| "Minecraft Bridge resource directory is unavailable.".to_string())
 }
-fn resource_file(app: &AppHandle) -> Option<PathBuf> {
-  app.path().resolve("minecraft-bridge/index.mjs", tauri::path::BaseDirectory::Resource).ok().filter(|p| p.is_file())
+
+fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("minecraft");
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("config.json"))
 }
 
-pub fn start(app: &AppHandle) -> Result<(), String> {
-  let bridge = resource_file(app).ok_or_else(|| "Minecraft Bridge runtime is not bundled.".to_string())?;
-  let node = app.path().resolve("server/node.exe", tauri::path::BaseDirectory::Resource).map_err(|e| e.to_string())?;
-  if !node.is_file() { return Err("Bundled Node runtime is missing for Minecraft Bridge.".to_string()); }
-  let dir = bridge_dir(app);
-  fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-  let config = dir.join("config.json");
+fn post_bridge(path: &str, body: Option<&str>) -> Result<(), String> {
+    let url = format!("http://127.0.0.1:32123{path}");
+    let client = std::net::TcpStream::connect_timeout(
+        &"127.0.0.1:32123".parse().map_err(|e| e.to_string())?,
+        Duration::from_millis(500),
+    ).map_err(|e| e.to_string())?;
+    client.set_write_timeout(Some(Duration::from_millis(500))).map_err(|e| e.to_string())?;
+    client.set_read_timeout(Some(Duration::from_millis(500))).map_err(|e| e.to_string())?;
+    use std::io::{Read, Write};
+    let payload = body.unwrap_or("");
+    let request = if payload.is_empty() {
+        format!("POST {path} HTTP/1.1\r\nHost: 127.0.0.1:32123\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")
+    } else {
+        format!("POST {path} HTTP/1.1\r\nHost: 127.0.0.1:32123\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{payload}", payload.len())
+    };
+    let mut stream = client;
+    stream.write_all(request.as_bytes()).map_err(|e| format!("Failed to contact Minecraft Bridge: {e}"))?;
+    let mut response = String::new();
+    let _ = stream.read_to_string(&mut response);
+    if response.starts_with("HTTP/1.1 2") { let _ = url; Ok(()) } else { Err(format!("Minecraft Bridge request failed: {response}")) }
+}
 
-  if let Ok(mut guard) = slot().lock() {
-    if let Some(child) = guard.as_mut() {
-      if child.try_wait().ok().flatten().is_none() { return Ok(()); }
+pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
+    let exe = app.path()
+        .resolve("minecraft-bridge/MinecraftBridge.exe", tauri::path::BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    if !exe.is_file() {
+        return Err("MinecraftBridge.exe is not bundled.".to_string());
     }
-    let mut command = Command::new(&node);
-    command.arg(&bridge).env("ZOYA_MINECRAFT_CONFIG", &config).current_dir(&dir).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+
+    let config = config_path(app)?;
+    fs::write(&config, config_json).map_err(|e| format!("Failed to save Minecraft settings: {e}"))?;
+
+    if std::net::TcpStream::connect_timeout(
+        &"127.0.0.1:32123".parse().map_err(|e| e.to_string())?,
+        Duration::from_millis(150),
+    ).is_ok() {
+        return Ok(());
+    }
+
+    let mut command = Command::new(&exe);
+    command.current_dir(exe.parent().unwrap_or_else(|| std::path::Path::new(".")))
+        .env("ZOYA_MINECRAFT_CONFIG", &config_json_path(&config))
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit());
     #[cfg(target_os = "windows")]
-    command.creation_flags(CREATE_NO_WINDOW);
-    *guard = Some(command.spawn().map_err(|e| format!("Failed to start Minecraft Bridge: {e}"))?);
-  }
-  for _ in 0..50 {
-    if std::net::TcpStream::connect(("127.0.0.1", 32123)).is_ok() { return Ok(()); }
-    std::thread::sleep(Duration::from_millis(100));
-  }
-  Err("Minecraft Bridge did not become ready on 127.0.0.1:32123.".to_string())
+    command.creation_flags(CREATE_NEW_CONSOLE);
+
+    command.spawn().map_err(|e| format!("Failed to launch MinecraftBridge.exe: {e}"))?;
+
+    for _ in 0..50 {
+        if std::net::TcpStream::connect(("127.0.0.1", 32123)).is_ok() {
+            return Ok(());
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    Err("Minecraft Bridge terminal was launched, but its HTTP service did not become ready.".to_string())
 }
 
-pub fn stop() {
-  if let Ok(mut guard) = slot().lock() {
-    if let Some(mut child) = guard.take() { let _ = child.kill(); let _ = child.wait(); }
-  }
+fn config_json_path(path: &PathBuf) -> String {
+    path.to_string_lossy().into_owned()
+}
+
+pub fn stop() -> Result<(), String> {
+    if std::net::TcpStream::connect(("127.0.0.1", 32123)).is_err() {
+        return Ok(());
+    }
+    post_bridge("/shutdown", None)
 }
