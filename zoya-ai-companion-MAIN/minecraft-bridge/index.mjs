@@ -303,8 +303,16 @@ function connect(config) {
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
       setMovementEnabled(config.movementEnabled === true);
-      minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), log: debugLog });
-      ensureZoyaBrain().start();
+      try {
+        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), log: debugLog });
+        ensureZoyaBrain().start();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        debugError("[ZOYA Minecraft Bridge] Runtime initialization failed: " + message);
+        setState("ERROR", { error: message });
+        minecraftRuntime = null;
+        try { bot?.quit("ZOYA runtime initialization failed"); } catch {}
+      }
     });
     bot.once("kicked", reason => {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
