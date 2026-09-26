@@ -93,9 +93,12 @@ jobs:
           Push-Location $bridgeDist
           npm install --omit=dev --ignore-scripts
           Pop-Location
-          if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency was not installed.' }
-          if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer-pathfinder'))) { throw 'mineflayer-pathfinder dependency was not installed.' }
+          foreach ($dependency in @('mineflayer','mineflayer-pathfinder','mineflayer-tool','mineflayer-collectblock','mineflayer-crafting-util')) {
+            if (-not (Test-Path (Join-Path $bridgeDist "node_modules/$dependency"))) { throw "Minecraft dependency was not installed: $dependency" }
+          }
           foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs')) { if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Minecraft bridge runtime file is missing: $required" } }
+
+          node --input-type=module -e "await import('mineflayer'); await import('mineflayer-pathfinder'); await import('mineflayer-tool'); await import('mineflayer-collectblock'); await import('mineflayer-crafting-util'); await import('./minecraftRuntime.mjs'); await import('./zoyaBrain.mjs'); console.log('Minecraft bridge ESM/plugin smoke test passed.')"
 
 
       - name: Build web and API bundle
