@@ -30,6 +30,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   if (!memory.players) memory.players = {};
   if (!Array.isArray(memory.events)) memory.events = [];
   const owner = String(config.ownerUsername || "").trim();
+  const ownerKey = owner.toLowerCase();
   const pending = new Map();
   let currentGoal = null;
   let busy = false;
@@ -60,7 +61,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   }
 
   function permissionFor(username, action) {
-    if (username === owner) return { allowed: true, source: "owner" };
+    if (String(username).toLowerCase() === ownerKey) return { allowed: true, source: "owner" };
     if (action === "safe_roam") return { allowed: config.movementEnabled === true, source: "autonomous-movement" };
     return { allowed: false, source: "owner-required" };
   }
@@ -94,7 +95,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     const text = String(message || "").trim();
     if (!sender || !text) return;
     rememberPlayer(sender, { interactions: (memory.players[sender.toLowerCase()]?.interactions || 0) + 1 });
-    if (sender !== owner) return;
+    if (sender.toLowerCase() !== ownerKey) return;
     const word = text.toLowerCase().split(/\s+/)[0];
     if (!ACCEPT_WORDS.has(word) && !DECLINE_WORDS.has(word)) return;
     const first = pending.values().next();
@@ -248,7 +249,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
         "You are Zoya, an AI Minecraft companion. Reply naturally and briefly to the player.",
         "Stay in character. Do not claim you performed an action unless the action runtime did it.",
         "If the player asks for an action, return JSON with reply and action.",
-        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, return_to_owner.",
+        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
         "The runtime enforces permissions. Never tell the player permission was granted unless it was actually granted.",
         "If no action is requested, use action idle.",
         "JSON only: {reply:string, action:string, memoryFacts:string[]}."
@@ -279,7 +280,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       }
       bot.chat(reply);
       if (action !== "idle") {
-        const ownerAllowed = username === owner;
+        const ownerAllowed = String(username).toLowerCase() === ownerKey;
         const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity"]);
         if (ownerAllowed) {
           await execute(action, { targetUsername: username, permissionGranted: true });
