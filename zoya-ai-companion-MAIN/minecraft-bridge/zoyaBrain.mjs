@@ -50,6 +50,8 @@ export function createZoyaBrain({
   getConfig,
   isMovementEnabled,
   roam,
+  executeAction = null,
+  getMemory = () => null,
   log = () => {}
 }) {
   let timer = null;
@@ -107,7 +109,7 @@ export function createZoyaBrain({
         "You are Zoya's Minecraft decision brain.",
         "You decide what Zoya should do next from the current Minecraft situation.",
         "Do not pretend an action was completed. Choose only one next goal.",
-        "You have these current executable capabilities: idle, safe_roam, explore, gather_basic_resources, follow_player, return_to_owner, eat.",
+        "You have these executable capabilities: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, return_to_owner.",
         "Do not claim execution; choose one action and the runtime will report the result.",
         "If nobody is nearby, you may choose safe_roam or a future goal such as gather_basic_resources/explore.",
         "If a player is nearby, consider their presence and context before choosing a goal.",
@@ -129,6 +131,7 @@ export function createZoyaBrain({
             { role: "system", content: system },
             { role: "user", content: JSON.stringify({
               autonomousMovementEnabled: isMovementEnabled(),
+              memory: getMemory(),
               minecraft: context
             }) }
           ],
@@ -169,10 +172,15 @@ export function createZoyaBrain({
       lastGoal = normalized;
       log("[BRAIN] Decision: " + normalized.action + " | Goal: " + normalized.goal);
 
-      if (normalized.action === "safe_roam" && isMovementEnabled()) {
-        await roam();
-      } else if (normalized.action !== "idle") {
-        log("[BRAIN] Goal selected but execution is waiting for the Phase 5 Minecraft action system: " + normalized.action);
+      if (normalized.action !== "idle") {
+        if (executeAction) {
+          const executed = await executeAction(normalized.action);
+          log("[BRAIN] Action result: " + normalized.action + " -> " + (executed ? "success" : "not completed"));
+        } else if (normalized.action === "safe_roam" && isMovementEnabled()) {
+          await roam();
+        } else {
+          log("[BRAIN] No Minecraft action runtime is attached for: " + normalized.action);
+        }
       }
     } catch (error) {
       log("[BRAIN] Decision failed: " + (error instanceof Error ? error.message : String(error)));
