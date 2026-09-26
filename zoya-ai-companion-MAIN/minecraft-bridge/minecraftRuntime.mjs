@@ -116,21 +116,41 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     const text = String(message || "").trim();
     if (!sender || !text) return;
     rememberPlayer(sender, { interactions: (memory.players[sender.toLowerCase()]?.interactions || 0) + 1 });
-    const parts = text.toLowerCase().split(/\s+/).filter(Boolean);
-    const word = parts[0];
+
+    // Mineflayer's whisper event normally contains only the message body, but
+    // accept a full "/w Zoya ..." payload too so owner replies work either way.
+    const normalized = text.replace(/^\\/(?:w|msg|tell|whisper)\\s+\\S+\\s*/i, "").trim();
+    const tokens = normalized.toLowerCase().split(/\\s+/).filter(Boolean);
+    const decisionWord = tokens.find(token => ACCEPT_WORDS.has(token) || DECLINE_WORDS.has(token));
+    if (!decisionWord) {
+      if (sender.toLowerCase() !== ownerKey) void answerPlayer(sender, text);
+      return;
+    }
+
     if (sender.toLowerCase() !== ownerKey) {
       void answerPlayer(sender, text);
       return;
     }
-    if (!ACCEPT_WORDS.has(word) && !DECLINE_WORDS.has(word)) return;
-    const request = parts[1] ? pending.get(parts[1]) : [...pending.values()].sort((x, y) => x.createdAt - y.createdAt)[0];
-    if (!request) return;
+
+    // The owner can reply naturally ("yes", "yes you can follow ...",
+    // "accept 12", etc.). If no request id is supplied, use the oldest
+    // pending request rather than interpreting the next word as an id.
+    const requestId = tokens.find(token => /^\\d+$/.test(token));
+    const request = requestId
+      ? pending.get(requestId)
+      : [...pending.values()].sort((x, y) => x.createdAt - y.createdAt)[0];
+    if (!request) {
+      log("[PERMISSION] Owner reply received but no pending permission request exists.");
+      return;
+    }
+
     pending.delete(request.id);
-    if (DECLINE_WORDS.has(word)) {
+    if (DECLINE_WORDS.has(decisionWord)) {
       log("[PERMISSION] Owner declined #" + request.id + " " + request.requester + " -> " + request.action + ".");
       try { bot.whisper(request.requester, "[ZOYA] Your request was declined."); } catch {}
       return;
     }
+
     log("[PERMISSION] Owner accepted #" + request.id + " " + request.requester + " -> " + request.action + ".");
     try { bot.whisper(request.requester, "[ZOYA] Permission granted. I will try that now."); } catch {}
     const result = await execute(request.action, { targetUsername: request.requester, permissionGranted: true });
