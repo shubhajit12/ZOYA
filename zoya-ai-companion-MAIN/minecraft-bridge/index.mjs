@@ -311,10 +311,13 @@ function connect(config) {
   const version = config.version ? String(config.version) : false;
   setState("CONNECTING", { host, port, username, version: version || null, error: null });
   try {
-    bot = mineflayer.createBot({ host, port, username, auth, ...(version ? { version } : {}) });
+    bot = mineflayer.createBot({ host, port, username, auth, physicsEnabled: true, ...(version ? { version } : {}) });
     bot.once("login", () => {
       debugLog("[EVENT] Zoya joined the Minecraft world.");
       debugLog(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
+      // Keep physics explicitly enabled for combat/knockback. Mineflayer defaults this to true, but Zoya relies on it and should not inherit a disabled state from another layer.
+      bot.physicsEnabled = true;
+      debugLog("[PHYSICS] Mineflayer physics enabled for movement and knockback.");
       reconnectAttempt = 0;
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
