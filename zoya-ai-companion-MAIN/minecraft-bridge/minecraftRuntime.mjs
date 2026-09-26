@@ -52,6 +52,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   const pending = new Map();
   let nextPermissionId = 1;
   let currentGoal = null;
+  let activeTask = null;
+  let taskSequence = 0;
   let busy = false;
   let chatBusy = false;
 
@@ -144,7 +146,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const tokens = normalized.toLowerCase().split(/\s+/).filter(Boolean);
     const decisionWord = tokens.find(token => ACCEPT_WORDS.has(token) || DECLINE_WORDS.has(token));
     if (!decisionWord) {
-      if (sender.toLowerCase() !== ownerKey) void answerPlayer(sender, text);
+      if (sender.toLowerCase() !== ownerKey) void answerPlayer(sender, text, "whisper");
       return;
     }
 
@@ -173,9 +175,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
 
     log("[PERMISSION] Owner accepted #" + request.id + " " + request.requester + " -> " + request.action + ".");
-    try { bot.whisper(request.requester, "[ZOYA] Permission granted. I will try that now."); } catch {}
+    try { bot.chat("[ZOYA] Permission granted. I will try that now."); } catch {}
     const result = await execute(request.action, { targetUsername: request.requester, permissionGranted: true });
-    try { bot.whisper(request.requester, result ? "[ZOYA] Done." : "[ZOYA] Action could not be completed."); } catch {}
+    try { bot.chat(result ? "[ZOYA] Done." : "[ZOYA] Action could not be completed."); } catch {}
   }
 
   async function lookAtPlayer(username) {
@@ -199,24 +201,46 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     ).length;
   }
 
-  function interruptMovement(reason) {
+  function cancelCurrentTask(reason = "cancelled") {
+    if (!activeTask) {
+      try { bot.pathfinder?.setGoal(null); } catch {}
+      try { bot.clearControlStates(); } catch {}
+      return false;
+    }
+    activeTask.cancelled = true;
+    activeTask.cancelReason = reason;
+    activeTask.token += 1;
     try { bot.pathfinder?.setGoal(null); } catch {}
     try { bot.clearControlStates(); } catch {}
     currentGoal = null;
-    log("[MOVEMENT] Movement interrupted: " + reason);
-    wakeBrain();
+    log("[TASK] Cancelled " + activeTask.action + ": " + reason);
+    return true;
   }
 
-  async function moveToPlayer(username, distance = 3) {
-    const target = findPlayerByUsername(username)?.entity;
-    if (!target) return false;
-    bot.setControlState("sprint", true);
-    try {
-      await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, distance));
-      return true;
-    } finally {
-      bot.setControlState("sprint", false);
+  function taskIsActive(task) {
+    return activeTask === task && !task.cancelled;
+  }
+
+  async function moveToPlayer(username, distance = 3, task = activeTask) {
+    if (!task) return false;
+    while (taskIsActive(task)) {
+      const target = findPlayerByUsername(username)?.entity;
+      if (!target) return false;
+      const targetPosition = target.position.clone();
+      bot.setControlState("sprint", true);
+      try {
+        await bot.pathfinder.goto(new goals.GoalNear(targetPosition.x, targetPosition.y, targetPosition.z, distance));
+      } catch (error) {
+        if (!taskIsActive(task)) return false;
+        log("[TASK] follow_player pathing retry: " + (error instanceof Error ? error.message : String(error)));
+        await new Promise(resolve => setTimeout(resolve, 250));
+      } finally {
+        try { bot.setControlState("sprint", false); } catch {}
+      }
+      if (!taskIsActive(task)) return false;
+      await new Promise(resolve => setTimeout(resolve, 250));
     }
+    return false;
   }
 
   async function explore() {
@@ -327,26 +351,32 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function execute(action, options = {}) {
-    if (busy) return false;
+    if (busy) {
+      log("[TASK] Ignoring new task while '" + (currentGoal || "unknown") + "' is active.");
+      return false;
+    }
     const unsafeActions = new Set(["safe_roam","explore","gather_basic_resources","mine","chop_tree","investigate_entity"]);
     if (unsafeActions.has(action) && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
       log("[SAFETY] Refusing safe_roam: health=" + bot.health + ", hostileMobs=" + nearbyHostileCount(12) + ".");
       wakeBrain();
       return false;
     }
-    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect","investigate_entity","mine","chop_tree"]);
+    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect","investigate_entity","mine","chop_tree","pvp"]);
     if (movementActions.has(action) && config.movementEnabled !== true && !options.permissionGranted) {
       log("[PERMISSION] Autonomous movement is disabled; action blocked: " + action);
       return false;
     }
     busy = true;
+    const task = { id: ++taskSequence, action, targetUsername: options.targetUsername || null, startedAt: Date.now(), cancelled: false, token: 0 };
+    activeTask = task;
     currentGoal = action;
+    log("[TASK] Started #" + task.id + " " + action + (task.targetUsername ? " -> " + task.targetUsername : "") + ".");
     try {
       let result = false;
       if (action === "safe_roam" || action === "explore") result = await explore();
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
       else if (action === "gather_basic_resources" || action === "chop_tree") result = await gatherWood();
-      else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3);
+      else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task);
       else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5) : false;
       else if (action === "eat") result = await eat();
       else if (action === "collect") result = await collectNearestDrop();
@@ -365,12 +395,31 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       rememberEvent("action_error", { action, error: error instanceof Error ? error.message : String(error) });
       return false;
     } finally {
-      currentGoal = null;
+      const wasActive = activeTask === task;
+      if (wasActive) {
+        activeTask = null;
+        currentGoal = null;
+      }
       busy = false;
+      log("[TASK] Finished #" + task.id + " " + action + " -> " + (task.cancelled ? "cancelled" : "completed") + ".");
+      if (wasActive) wakeBrain();
     }
   }
 
-  async function answerPlayer(username, message) {
+  async function answerPlayer(username, message, channel = "public") {
+    const rawMessage = String(message || "").trim();
+    const normalizedMessage = rawMessage.toLowerCase().replace(/[!?.,]+$/g, "").trim();
+    const localStop = /^(stop|stop here|wait here|stay here|cancel|cancel task|hold here|don't move|do not move)$/.test(normalizedMessage);
+    if (localStop) {
+      const cancelled = cancelCurrentTask("player command");
+      const reply = cancelled ? "Okay, I'll stop here." : "Okay, I'm staying here.";
+      if (channel === "whisper") bot.whisper(username, reply);
+      else bot.chat(reply);
+      rememberEvent("chat_command", { username, message: rawMessage, command: "stop", cancelled });
+      wakeBrain();
+      return true;
+    }
+
     const apiKey = String(config.groqApiKey || "").trim();
     if (!apiKey || chatBusy) return false;
     chatBusy = true;
@@ -411,7 +460,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         const existing = memory.players[String(username).toLowerCase()]?.facts || [];
         rememberPlayer(username, { facts: [...new Set([...existing, ...facts])].slice(-20) });
       }
-      bot.whisper(username, reply);
+      if (channel === "whisper") bot.whisper(username, reply);
+      else bot.chat(reply);
       if (action !== "idle") {
         const ownerAllowed = String(username).toLowerCase() === ownerKey;
         const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","look_at_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity","collect"]);
@@ -448,7 +498,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   bot.on("chat", (username, message) => {
     if (username === bot.username) return;
     rememberPlayer(username, { lastMessage: String(message).slice(0, 500), interactions: (memory.players[String(username).toLowerCase()]?.interactions || 0) + 1 });
-    void answerPlayer(username, message);
+    void answerPlayer(username, message, "public");
   });
 
   return {
@@ -458,7 +508,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     permissionFor,
     askOwner,
     execute,
+    cancelCurrentTask,
     answerPlayer,
-    getStatus: () => ({ ownerUsername: owner || null, pendingPermissions: pending.size, currentGoal, busy, memoryPlayers: Object.keys(memory.players).length, memoryEvents: memory.events.length })
+    getActiveTask: () => activeTask,
+    getStatus: () => ({ ownerUsername: owner || null, pendingPermissions: pending.size, currentGoal, busy, activeTask: activeTask ? { id: activeTask.id, action: activeTask.action, targetUsername: activeTask.targetUsername, startedAt: activeTask.startedAt } : null, memoryPlayers: Object.keys(memory.players).length, memoryEvents: memory.events.length })
   };
 }
