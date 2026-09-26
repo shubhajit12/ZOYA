@@ -64,7 +64,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     return { allowed: false, source: "owner-required" };
   }
 
-  function askOwner(requester, action) {
+  function askOwner(requester, action, displayAction = action) {
     if (!owner) {
       log("[PERMISSION] No ownerUsername configured; request denied safely.");
       return false;
@@ -79,7 +79,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       }
     }, PERMISSION_TIMEOUT_MS);
     try {
-      bot.whisper(owner, "[ZOYA PERMISSION] " + requester + " asks me to " + action + ". Reply \"accept\" or \"decline\".");
+      bot.whisper(owner, "[ZOYA PERMISSION] " + requester + " asks me to " + displayAction + ". Reply \"accept\" or \"decline\".");
       log("[PERMISSION] Asked owner " + owner + " to allow " + requester + " -> " + action + ".");
       return true;
     } catch (error) {
@@ -267,7 +267,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
         if (ownerAllowed) {
           await execute(action, { targetUsername: username, permissionGranted: true });
         } else if (movement.has(action)) {
-          askOwner(username, action === "follow_player" ? "follow you" : action);
+          askOwner(username, action, action === "follow_player" ? "follow you" : action);
         }
       }
       rememberEvent("chat", { username, message: String(message).slice(0, 500), action });
@@ -284,12 +284,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   bot.on("chat", (username, message) => {
     if (username === bot.username) return;
     rememberPlayer(username, { lastMessage: String(message).slice(0, 500), interactions: (memory.players[String(username).toLowerCase()]?.interactions || 0) + 1 });
-    const text = String(message || "").toLowerCase();
     void answerPlayer(username, message);
-    if (/\bfollow me\b/.test(text)) {
-      if (username === owner) void execute("follow_player", { targetUsername: username, permissionGranted: true });
-      else askOwner(username, "follow you");
-    }
   });
 
   return {
