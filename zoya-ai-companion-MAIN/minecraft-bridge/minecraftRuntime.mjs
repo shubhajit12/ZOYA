@@ -80,6 +80,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     saveMemory();
   }
 
+  function findPlayerByUsername(username) {
+    const wanted = String(username || "").trim().toLowerCase();
+    if (!wanted) return null;
+    return Object.values(bot.players || {}).find(player =>
+      String(player?.username || "").toLowerCase() === wanted
+    ) || null;
+  }
+
   function permissionFor(username, action) {
     if (String(username).toLowerCase() === ownerKey) return { allowed: true, source: "owner" };
     if (action === "safe_roam") return { allowed: config.movementEnabled === true, source: "autonomous-movement" };
@@ -88,7 +96,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
   function askOwner(requester, action, displayAction = action) {
     const requesterKey = String(requester).toLowerCase();
-    const pendingKey = requesterKey + ":" + action;
     const existing = [...pending.values()].find(request => request.requester.toLowerCase() === requesterKey && request.action === action);
     if (existing) {
       log("[PERMISSION] Existing request #" + existing.id + " is still pending; not sending another request.");
@@ -110,7 +117,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       }
     }, PERMISSION_TIMEOUT_MS);
     try {
-      bot.whisper(owner, "[ZOYA PERMISSION #" + id + "] " + requester + " asks me to " + displayAction + ". Reply \"accept " + id + "\" or \"decline " + id + "\".");
+      const ownerPlayer = findPlayerByUsername(owner);
+      if (!ownerPlayer) {
+        pending.delete(key);
+        log("[PERMISSION] Owner " + owner + " is not currently online; permission request #" + id + " was not delivered.");
+        try { bot.whisper(requester, "[ZOYA] My owner is not online right now, so I cannot request permission."); } catch {}
+        return false;
+      }
+      bot.whisper(ownerPlayer.username, "[ZOYA PERMISSION #" + id + "] " + requester + " asks me to " + displayAction + ". Reply \"accept " + id + "\" or \"decline " + id + "\".");
       log("[PERMISSION] Asked owner " + owner + " to allow " + requester + " -> " + action + ".");
       return true;
     } catch (error) {
@@ -166,7 +180,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function lookAtPlayer(username) {
-    const target = bot.players[username]?.entity;
+    const target = findPlayerByUsername(username)?.entity;
     if (!target) return false;
     await bot.lookAt(target.position.offset(0, target.height ? target.height * 0.75 : 1.5, 0), true);
     return true;
@@ -195,7 +209,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function moveToPlayer(username, distance = 3) {
-    const target = bot.players[username]?.entity;
+    const target = findPlayerByUsername(username)?.entity;
     if (!target) return false;
     bot.setControlState("sprint", true);
     try {
