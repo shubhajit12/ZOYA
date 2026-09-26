@@ -69,6 +69,7 @@ function logMinecraftState() {
   } else {
     if (distance3d(currentPosition, lastLoggedState.position) >= POSITION_LOG_THRESHOLD) {
       debugLog("[EVENT] Position changed → X=" + currentPosition.x + " Y=" + currentPosition.y + " Z=" + currentPosition.z);
+      lastLoggedState.position = { ...currentPosition };
     }
 
     if (p.health !== lastLoggedState.health) {
