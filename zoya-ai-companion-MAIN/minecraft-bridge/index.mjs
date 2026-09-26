@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import mineflayer from "mineflayer";
+import { createZoyaBrain } from "./zoyaBrain.mjs";
 
 const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
 const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
@@ -43,6 +44,19 @@ let movementStopTimer = null;
 let movementSafetyTimer = null;
 let movementHomePosition = null;
 let movementAction = "idle";
+let currentConfig = null;
+let zoyaBrain = null;
+function ensureZoyaBrain() {
+  if (zoyaBrain) return zoyaBrain;
+  zoyaBrain = createZoyaBrain({
+    getMinecraftState: () => latestMinecraftState,
+    getConfig: () => currentConfig,
+    isMovementEnabled: () => movementEnabled,
+    roam: async () => { await performNaturalMovement(); },
+    log: debugLog
+  });
+  return zoyaBrain;
+}
 
 function randomBetween(min, max) {
   return Math.floor(min + Math.random() * (max - min + 1));
@@ -362,6 +376,7 @@ function applyConfiguredSkin(config) {
 }
 
 function disconnect() {
+  if (zoyaBrain) zoyaBrain.stop();
   lastLoggedState = null;
   lastEntityIds = new Set();
   lastHeartbeatAt = 0;
@@ -371,6 +386,8 @@ function disconnect() {
 }
 
 function connect(config) {
+  currentConfig = config;
+  ensureZoyaBrain();
   disconnect();
   const host = String(config.host || "127.0.0.1");
   const port = Number(config.port || 25565);
@@ -386,6 +403,7 @@ function connect(config) {
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
       configureMovement(config);
+      ensureZoyaBrain().start();
     });
     bot.once("kicked", reason => {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
@@ -432,6 +450,8 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET" && url.pathname === "/status") return send(res, 200, snapshot());
   if (req.method === "GET" && url.pathname === "/health") return send(res, 200, { ok: true, service: "zoya-minecraft-bridge", ...snapshot() });
   if (req.method === "GET" && url.pathname === "/state") return send(res, 200, collectMinecraftState());
+  if (req.method === "GET" && url.pathname === "/brain") return send(res, 200, ensureZoyaBrain().status());
+  if (req.method === "POST" && url.pathname === "/brain/think") { void ensureZoyaBrain().thinkNow(); return send(res, 202, { ok: true }); }
   if (req.method === "POST" && url.pathname === "/connect") {
     let body = "";
     req.on("data", chunk => { body += chunk; });
