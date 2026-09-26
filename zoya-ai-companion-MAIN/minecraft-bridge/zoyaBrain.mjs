@@ -1,4 +1,4 @@
-const BRAIN_INTERVAL_MS = 15000;
+const BRAIN_INTERVAL_MS = 3000;
 const MAX_CONTEXT_ENTITIES = 20;
 const MODEL = "openai/gpt-oss-20b";
 
