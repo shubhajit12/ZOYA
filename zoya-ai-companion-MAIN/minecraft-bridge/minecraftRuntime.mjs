@@ -32,6 +32,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   const owner = String(config.ownerUsername || "").trim();
   const ownerKey = owner.toLowerCase();
   const pending = new Map();
+  let nextPermissionId = 1;
   let currentGoal = null;
   let busy = false;
   let chatBusy = false;
@@ -71,8 +72,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       log("[PERMISSION] No ownerUsername configured; request denied safely.");
       return false;
     }
-    const key = requester.toLowerCase() + ":" + action;
-    pending.set(key, { requester, action, createdAt: Date.now() });
+    const id = String(nextPermissionId++);
+    const key = id;
+    pending.set(key, { id, requester, action, createdAt: Date.now() });
     setTimeout(() => {
       const request = pending.get(key);
       if (request && Date.now() - request.createdAt >= PERMISSION_TIMEOUT_MS) {
@@ -81,7 +83,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       }
     }, PERMISSION_TIMEOUT_MS);
     try {
-      bot.whisper(owner, "[ZOYA PERMISSION] " + requester + " asks me to " + displayAction + ". Reply \"accept\" or \"decline\".");
+      bot.whisper(owner, "[ZOYA PERMISSION #" + id + "] " + requester + " asks me to " + displayAction + ". Reply \"accept " + id + "\" or \"decline " + id + "\".");
       log("[PERMISSION] Asked owner " + owner + " to allow " + requester + " -> " + action + ".");
       return true;
     } catch (error) {
@@ -90,24 +92,27 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     }
   }
 
-  function handleWhisper(username, message) {
+  async function handleWhisper(username, message) {
     const sender = String(username || "").trim();
     const text = String(message || "").trim();
     if (!sender || !text) return;
     rememberPlayer(sender, { interactions: (memory.players[sender.toLowerCase()]?.interactions || 0) + 1 });
     if (sender.toLowerCase() !== ownerKey) return;
-    const word = text.toLowerCase().split(/\s+/)[0];
+    const parts = text.toLowerCase().split(/\s+/).filter(Boolean);
+    const word = parts[0];
     if (!ACCEPT_WORDS.has(word) && !DECLINE_WORDS.has(word)) return;
-    const first = pending.values().next();
-    if (first.done) return;
-    const request = first.value;
-    pending.delete(request.requester.toLowerCase() + ":" + request.action);
+    const request = parts[1] ? pending.get(parts[1]) : [...pending.values()].sort((x, y) => x.createdAt - y.createdAt)[0];
+    if (!request) return;
+    pending.delete(request.id);
     if (DECLINE_WORDS.has(word)) {
-      log("[PERMISSION] Owner declined " + request.requester + " -> " + request.action + ".");
+      log("[PERMISSION] Owner declined #" + request.id + " " + request.requester + " -> " + request.action + ".");
+      try { bot.whisper(request.requester, "[ZOYA] Your request was declined."); } catch {}
       return;
     }
-    log("[PERMISSION] Owner accepted " + request.requester + " -> " + request.action + ".");
-    void execute(request.action, { targetUsername: request.requester, permissionGranted: true });
+    log("[PERMISSION] Owner accepted #" + request.id + " " + request.requester + " -> " + request.action + ".");
+    try { bot.whisper(request.requester, "[ZOYA] Permission granted. I will try that now."); } catch {}
+    const result = await execute(request.action, { targetUsername: request.requester, permissionGranted: true });
+    try { bot.whisper(request.requester, result ? "[ZOYA] Done." : "[ZOYA] Action could not be completed."); } catch {}
   }
 
   async function moveToPlayer(username, distance = 3) {
@@ -281,7 +286,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       bot.chat(reply);
       if (action !== "idle") {
         const ownerAllowed = String(username).toLowerCase() === ownerKey;
-        const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity"]);
+        const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity","collect"]);
         if (ownerAllowed) {
           await execute(action, { targetUsername: username, permissionGranted: true });
         } else if (movement.has(action)) {
