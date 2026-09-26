@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import mineflayer from "mineflayer";
 import { createZoyaBrain } from "./zoyaBrain.mjs";
+import { createMinecraftRuntime } from "./minecraftRuntime.mjs";
 
 const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
 const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
@@ -46,6 +47,7 @@ let movementHomePosition = null;
 let movementAction = "idle";
 let currentConfig = null;
 let zoyaBrain = null;
+let minecraftRuntime = null;
 function ensureZoyaBrain() {
   if (zoyaBrain) return zoyaBrain;
   zoyaBrain = createZoyaBrain({
@@ -53,6 +55,8 @@ function ensureZoyaBrain() {
     getConfig: () => currentConfig,
     isMovementEnabled: () => movementEnabled,
     roam: async () => { await performNaturalMovement(); },
+    executeAction: async (action) => minecraftRuntime ? minecraftRuntime.execute(action) : false,
+    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-20) } : null,
     log: debugLog
   });
   return zoyaBrain;
@@ -377,6 +381,7 @@ function applyConfiguredSkin(config) {
 
 function disconnect() {
   if (zoyaBrain) zoyaBrain.stop();
+  minecraftRuntime = null;
   lastLoggedState = null;
   lastEntityIds = new Set();
   lastHeartbeatAt = 0;
@@ -403,6 +408,7 @@ function connect(config) {
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
       configureMovement(config);
+      minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), log: debugLog });
       ensureZoyaBrain().start();
     });
     bot.once("kicked", reason => {
