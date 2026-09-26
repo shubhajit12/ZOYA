@@ -24,7 +24,7 @@ function writeJson(file, value) {
   fs.writeFileSync(file, JSON.stringify(value, null, 2), "utf8");
 }
 
-export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }) {
+export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () => {}, log = () => {} }) {
   if (typeof pathfinder !== "function" || typeof Movements !== "function" || !goals?.GoalNear) {
     throw new Error("mineflayer-pathfinder loaded without the expected CommonJS exports.");
   }
@@ -54,6 +54,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   let currentGoal = null;
   let busy = false;
   let chatBusy = false;
+  let lastPermissionAt = new Map();
 
   function saveMemory() {
     memory.updatedAt = new Date().toISOString();
@@ -86,6 +87,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   }
 
   function askOwner(requester, action, displayAction = action) {
+    const requesterKey = String(requester).toLowerCase();
+    const pendingKey = requesterKey + ":" + action;
+    const existing = [...pending.values()].find(request => request.requester.toLowerCase() === requesterKey && request.action === action);
+    if (existing) {
+      log("[PERMISSION] Existing request #" + existing.id + " is still pending; not sending another request.");
+      return true;
+    }
     if (!owner) {
       log("[PERMISSION] No ownerUsername configured; request denied safely.");
       try { bot.whisper(requester, "[ZOYA] I cannot request permission because no owner is configured."); } catch {}
@@ -162,6 +170,28 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     if (!target) return false;
     await bot.lookAt(target.position.offset(0, target.height ? target.height * 0.75 : 1.5, 0), true);
     return true;
+  }
+
+  function nearbyHostileCount(maxDistance = 12) {
+    if (!bot.entity?.position) return 0;
+    const hostileNames = new Set([
+      "zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider",
+      "witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube",
+      "silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"
+    ]);
+    return Object.values(bot.entities || {}).filter(entity =>
+      entity && entity !== bot.entity && entity.position &&
+      entity.position.distanceTo(bot.entity.position) <= maxDistance &&
+      hostileNames.has(String(entity.name || "").toLowerCase())
+    ).length;
+  }
+
+  function interruptMovement(reason) {
+    try { bot.pathfinder?.setGoal(null); } catch {}
+    try { bot.clearControlStates(); } catch {}
+    currentGoal = null;
+    log("[MOVEMENT] Movement interrupted: " + reason);
+    wakeBrain();
   }
 
   async function moveToPlayer(username, distance = 3) {
@@ -285,6 +315,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
 
   async function execute(action, options = {}) {
     if (busy) return false;
+    if (action === "safe_roam" && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
+      log("[SAFETY] Refusing safe_roam: health=" + bot.health + ", hostileMobs=" + nearbyHostileCount(12) + ".");
+      wakeBrain();
+      return false;
+    }
     const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect","investigate_entity","mine","chop_tree"]);
     if (movementActions.has(action) && config.movementEnabled !== true && !options.permissionGranted) {
       log("[PERMISSION] Autonomous movement is disabled; action blocked: " + action);
@@ -362,7 +397,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
         const existing = memory.players[String(username).toLowerCase()]?.facts || [];
         rememberPlayer(username, { facts: [...new Set([...existing, ...facts])].slice(-20) });
       }
-      bot.chat(reply);
+      bot.whisper(username, reply);
       if (action !== "idle") {
         const ownerAllowed = String(username).toLowerCase() === ownerKey;
         const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","look_at_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity","collect"]);
@@ -385,7 +420,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   bot.on("death", () => rememberEvent("death", { username: bot.username || "Zoya" }));
   bot.on("respawn", () => rememberEvent("respawn", { username: bot.username || "Zoya" }));
   bot.on("kicked", reason => rememberEvent("kicked", { reason: String(reason || "unknown").slice(0, 300) }));
-  bot.on("health", () => rememberEvent("health", { health: bot.health ?? null, food: bot.food ?? null }));
+  let previousHealth = bot.health ?? 20;
+  bot.on("health", () => {
+    const health = bot.health ?? 0;
+    const drop = previousHealth - health;
+    rememberEvent("health", { health, food: bot.food ?? null });
+    if (drop >= 1) interruptMovement("damage received (" + drop + " health)");
+    if (health <= 0) wakeBrain();
+    else if (health < 10) wakeBrain();
+    previousHealth = health;
+  });
   bot.on("whisper", handleWhisper);
   bot.on("chat", (username, message) => {
     if (username === bot.username) return;
