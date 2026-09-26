@@ -98,6 +98,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         port: minecraftPort || 25565,
         username: MINECRAFT_BOT_USERNAME,
         auth: 'offline',
+        groqApiKey: settings.groqApiKey || '',
         ...(minecraftVersion.trim() ? { version: minecraftVersion.trim() } : {}),
         ...(minecraftSkinUrl.trim() ? { skinUrl: minecraftSkinUrl.trim() } : {}),
         skinProvider: minecraftSkinProvider,
