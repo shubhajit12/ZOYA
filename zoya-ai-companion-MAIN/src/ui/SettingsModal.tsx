@@ -108,6 +108,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         skinCommand: minecraftSkinCommand.trim() || '/skin url "%URL%"',
         movementEnabled: minecraftNaturalMovementEnabled,
         autoConnect: true,
+        autoReconnect: true,
       });
     } catch (error) {
       setMinecraftError(error instanceof Error ? error.message : String(error));
