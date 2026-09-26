@@ -1,9 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathfinder, Movements, goals } from "mineflayer-pathfinder";
-import { plugin as toolPlugin } from "mineflayer-tool";
-import { plugin as collectBlockPlugin } from "mineflayer-collectblock";
-import { plugin as craftingUtilPlugin } from "mineflayer-crafting-util";
+import pathfinderPackage from "mineflayer-pathfinder";
+import toolPackage from "mineflayer-tool";
+import collectBlockPackage from "mineflayer-collectblock";
+import craftingUtilPackage from "mineflayer-crafting-util";
+
+const { pathfinder, Movements, goals } = pathfinderPackage;
+const { plugin: toolPlugin } = toolPackage;
+const { plugin: collectBlockPlugin } = collectBlockPackage;
+const craftingUtilPlugin = craftingUtilPackage.plugin || craftingUtilPackage.default;
 
 const MEMORY_FILE = "player-memory.json";
 const DEFAULT_MEMORY = { players: {}, events: [], updatedAt: null };
@@ -20,10 +25,17 @@ function writeJson(file, value) {
 }
 
 export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }) {
+  if (typeof pathfinder !== "function" || typeof Movements !== "function" || !goals?.GoalNear) {
+    throw new Error("mineflayer-pathfinder loaded without the expected CommonJS exports.");
+  }
+  if (typeof toolPlugin !== "function") throw new Error("mineflayer-tool plugin export is unavailable.");
+  if (typeof collectBlockPlugin !== "function") throw new Error("mineflayer-collectblock plugin export is unavailable.");
+  if (typeof craftingUtilPlugin !== "function") throw new Error("mineflayer-crafting-util plugin export is unavailable.");
+
   bot.loadPlugin(pathfinder);
   bot.loadPlugin(toolPlugin);
   bot.loadPlugin(collectBlockPlugin);
-  bot.loadPlugin(craftingUtilPlugin);
+  bot.loadPlugin(craftingUtilPlugin());
   const movements = new Movements(bot);
   movements.canDig = true;
   movements.allow1by1towers = false;
