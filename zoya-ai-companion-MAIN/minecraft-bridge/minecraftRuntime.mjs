@@ -210,19 +210,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     return true;
   }
 
-  async function interactWithNearestPlayer(username) {
-    const target = bot.players[username]?.entity;
-    if (!target) return false;
-    await bot.lookAt(target.position.offset(0, target.height ? target.height * 0.75 : 1.5, 0), true);
-    return true;
-  }
-
-  async function equipBestToolForBlock(block) {
-    if (!block || !bot.tool?.equipForBlock) return false;
-    await bot.tool.equipForBlock(block, {});
-    return true;
-  }
-
   async function collectNearestDrop() {
     const p = bot.entity.position;
     const target = Object.values(bot.entities || {})
@@ -292,7 +279,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
         "You are Zoya, an AI Minecraft companion. Reply naturally and briefly to the player.",
         "Stay in character. Do not claim you performed an action unless the action runtime did it.",
         "If the player asks for an action, return JSON with reply and action.",
-        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, look_at_player, interact_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
+        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, look_at_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
         "The runtime enforces permissions. Never tell the player permission was granted unless it was actually granted.",
         "If no action is requested, use action idle.",
         "JSON only: {reply:string, action:string, memoryFacts:string[]}."
