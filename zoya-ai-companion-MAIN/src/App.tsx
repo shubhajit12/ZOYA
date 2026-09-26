@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   minecraftServerAddress: '127.0.0.1',
   minecraftServerPort: 25565,
   minecraftBotUsername: 'Zoya',
+  minecraftOwnerUsername: '',
   minecraftVersion: '',
   minecraftSkinUrl: '',
   minecraftSkinProvider: 'auto',
