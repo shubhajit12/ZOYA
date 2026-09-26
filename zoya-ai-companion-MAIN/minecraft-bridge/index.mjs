@@ -48,6 +48,8 @@ let movementAction = "idle";
 let currentConfig = null;
 let zoyaBrain = null;
 let minecraftRuntime = null;
+let reconnectTimer = null;
+let reconnectAttempt = 0;
 function ensureZoyaBrain() {
   if (zoyaBrain) return zoyaBrain;
   zoyaBrain = createZoyaBrain({
@@ -380,6 +382,8 @@ function applyConfiguredSkin(config) {
 }
 
 function disconnect() {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  reconnectAttempt = 0;
   if (zoyaBrain) zoyaBrain.stop();
   minecraftRuntime = null;
   lastLoggedState = null;
@@ -405,6 +409,7 @@ function connect(config) {
     bot.once("login", () => {
       debugLog("[EVENT] Zoya joined the Minecraft world.");
       debugLog(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
+      reconnectAttempt = 0;
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
       configureMovement(config);
@@ -425,11 +430,18 @@ function connect(config) {
     });
     bot.once("end", reason => {
       bot = null;
+      minecraftRuntime = null;
       const message = reason ? String(reason) : state.error;
       if (state.status === "ERROR" || state.error) {
         setState("ERROR", { error: state.error || message || "Minecraft connection ended." });
       } else {
         setState("DISCONNECTED", { error: message || null });
+        if (currentConfig?.autoReconnect !== false) {
+          const delay = Math.min(30000, 2000 * Math.max(1, 2 ** Math.min(reconnectAttempt, 4)));
+          reconnectAttempt += 1;
+          debugLog("[RECONNECT] Minecraft connection ended; retrying in " + Math.round(delay / 1000) + "s.");
+          reconnectTimer = setTimeout(() => connect(currentConfig), delay);
+        }
       }
     });
     bot.once("error", error => {
