@@ -151,7 +151,7 @@ function logMinecraftState() {
     }
 
     if (now - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
-      debugLog("[HEARTBEAT] Zoya online | Health=" + (p.health ?? "?") + " | Pos=(" + currentPosition.x + "," + currentPosition.y + "," + currentPosition.z + ") | Nearby=" + nearby.length + " | Rain=" + (current.world?.isRaining ? "YES" : "NO") + " | Movement=" + movementAction);
+      debugLog("[HEARTBEAT] Zoya online | Health=" + (p.health ?? "?") + " | Pos=(" + currentPosition.x + "," + currentPosition.y + "," + currentPosition.z + ") | Nearby=" + nearby.length + " | Rain=" + (current.world?.isRaining ? "YES" : "NO") + " | AutonomousMovement=" + (movementEnabled ? "ON" : "OFF"));
       lastHeartbeatAt = now;
     }
   }
@@ -278,7 +278,6 @@ function disconnect() {
   lastLoggedState = null;
   lastEntityIds = new Set();
   lastHeartbeatAt = 0;
-  stopMovement(null);
   if (bot) { try { bot.quit(); } catch {} bot = null; }
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
 }
