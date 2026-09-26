@@ -201,6 +201,28 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     ).length;
   }
 
+  function interruptMovement(reason = "interrupted") {
+    // Damage/death must immediately yield control without throwing from the
+    // Mineflayer health/death event. The previous implementation called this
+    // function but did not define it, so the first real hit caused a
+    // ReferenceError and could terminate the bridge process.
+    const hadTask = Boolean(activeTask);
+    if (hadTask) {
+      cancelCurrentTask(reason);
+    } else {
+      try { bot.pathfinder?.setGoal(null); } catch {}
+      try { bot.clearControlStates(); } catch {}
+      currentGoal = null;
+    }
+    log("[SAFETY] Movement interrupted: " + reason);
+    if (hadTask) {
+      // The cancelled task's finally block will wake the brain. Avoid issuing
+      // a second request here.
+      return;
+    }
+    wakeBrain();
+  }
+
   function cancelCurrentTask(reason = "cancelled") {
     if (!activeTask) {
       try { bot.pathfinder?.setGoal(null); } catch {}
