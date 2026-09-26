@@ -57,6 +57,57 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   let busy = false;
   let chatBusy = false;
 
+  // Minecraft 1.21.x can deliver the server's knockback velocity and then
+  // immediately overwrite the entity velocity during position-sync handling.
+  // Keep a short, damage-scoped copy of the authoritative velocity so the
+  // normal Mineflayer physics loop gets the knockback instead of losing it.
+  let knockbackUntil = 0;
+  let lastServerVelocity = null;
+
+  function packetVelocity(packet) {
+    const value = packet?.velocity || packet;
+    const x = Number(value?.x ?? packet?.velocityX);
+    const y = Number(value?.y ?? packet?.velocityY);
+    const z = Number(value?.z ?? packet?.velocityZ);
+    if (![x, y, z].every(Number.isFinite)) return null;
+    const scale = Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) > 2 ? 1 / 8000 : 1;
+    return { x: x * scale, y: y * scale, z: z * scale, at: Date.now() };
+  }
+
+  function restoreServerKnockback() {
+    if (!bot.entity || !lastServerVelocity || Date.now() > knockbackUntil) return false;
+    const velocity = lastServerVelocity;
+    if (Math.max(Math.abs(velocity.x), Math.abs(velocity.y), Math.abs(velocity.z)) < 0.001) return false;
+    try {
+      bot.entity.velocity.set(velocity.x, velocity.y, velocity.z);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  if (bot._client?.on) {
+    bot._client.on("entity_velocity", packet => {
+      if (!bot.entity || Number(packet?.entityId) !== Number(bot.entity.id)) return;
+      const velocity = packetVelocity(packet);
+      if (!velocity) return;
+      lastServerVelocity = velocity;
+      if (Date.now() <= knockbackUntil) {
+        setTimeout(() => restoreServerKnockback(), 0);
+      }
+    });
+
+    // 1.21.3+ uses sync_entity_position. If it arrives immediately after a
+    // hit, restore the server velocity after Mineflayer's packet handlers have
+    // finished so the physics tick can consume the knockback normally.
+    bot._client.on("sync_entity_position", packet => {
+      if (!bot.entity || Number(packet?.entityId) !== Number(bot.entity.id)) return;
+      if (Date.now() <= knockbackUntil && lastServerVelocity) {
+        setTimeout(() => restoreServerKnockback(), 0);
+      }
+    });
+  }
+
   function saveMemory() {
     memory.updatedAt = new Date().toISOString();
     memory.events = memory.events.slice(-200);
@@ -547,7 +598,15 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const health = bot.health ?? 0;
     const drop = previousHealth - health;
     rememberEvent("health", { health, food: bot.food ?? null });
-    if (drop >= 1) interruptMovement("damage received (" + drop + " health)");
+    if (drop >= 1) {
+      knockbackUntil = Date.now() + 350;
+      // Give Mineflayer one packet turn to receive the server velocity before
+      // the fallback restore runs. We never invent a knockback direction or
+      // magnitude; only the server-provided velocity is restored.
+      setTimeout(() => restoreServerKnockback(), 0);
+      setTimeout(() => restoreServerKnockback(), 50);
+      interruptMovement("damage received (" + drop + " health)");
+    }
     if (health <= 0) wakeBrain();
     else if (health < 10) wakeBrain();
     previousHealth = health;
