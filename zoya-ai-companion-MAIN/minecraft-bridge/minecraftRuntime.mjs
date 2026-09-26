@@ -256,7 +256,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       let result = false;
       if (action === "safe_roam" || action === "explore") result = await explore();
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
-      else if (action === "interact_player") result = await interactWithNearestPlayer(options.targetUsername || owner);
       else if (action === "gather_basic_resources" || action === "chop_tree") result = await gatherWood();
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3);
       else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5) : false;
