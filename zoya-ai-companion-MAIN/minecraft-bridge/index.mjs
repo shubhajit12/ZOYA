@@ -514,7 +514,8 @@ server.listen(PORT, "127.0.0.1", () => {
     port: 25565,
     username: "Zoya",
     auth: "offline",
-    autoConnect: true
+    autoConnect: true,
+    autoReconnect: true
   };
   if (config.autoConnect === true) connect(config);
 });
