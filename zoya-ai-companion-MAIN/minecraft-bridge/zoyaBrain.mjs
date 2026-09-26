@@ -59,6 +59,8 @@ export function createZoyaBrain({
   let lastDecision = null;
   let lastGoal = null;
   let started = false;
+  let lastActionResult = null;
+  let consecutiveFailures = 0;
 
   function status() {
     return {
@@ -111,7 +113,9 @@ export function createZoyaBrain({
         "Do not pretend an action was completed. Choose only one next goal.",
         "You have these executable capabilities: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
         "Do not claim execution; choose one action and the runtime will report the result.",
-        "If nobody is nearby, you may choose safe_roam or a future goal such as gather_basic_resources/explore.",
+        "If nobody is nearby, independently choose a useful next action from the available capabilities; do not follow a hardcoded no-player routine.",
+        "If the previous action failed, reconsider the situation and choose a different or safer action rather than blindly repeating it.",
+        "If hunger is low, prioritize eat; if resources are missing, gather/mine/craft; if a player needs attention, consider interaction/following.",
         "If a player is nearby, consider their presence and context before choosing a goal.",
         "Respect autonomous movement permission: safe_roam is forbidden when it is disabled.",
         "Return strict JSON with: goal, action, priority, reasonSummary.",
@@ -132,7 +136,9 @@ export function createZoyaBrain({
             { role: "user", content: JSON.stringify({
               autonomousMovementEnabled: isMovementEnabled(),
               memory: getMemory(),
-              minecraft: context
+              minecraft: context,
+              lastActionResult,
+              consecutiveFailures
             }) }
           ],
           response_format: { type: "json_object" },
@@ -175,6 +181,8 @@ export function createZoyaBrain({
       if (normalized.action !== "idle") {
         if (executeAction) {
           const executed = await executeAction(normalized.action);
+          lastActionResult = { action: normalized.action, success: executed, at: new Date().toISOString() };
+          consecutiveFailures = executed ? 0 : consecutiveFailures + 1;
           log("[BRAIN] Action result: " + normalized.action + " -> " + (executed ? "success" : "not completed"));
         } else if (normalized.action === "safe_roam" && isMovementEnabled()) {
           await roam();
