@@ -117,6 +117,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const handleMinecraftMovementToggle = async (enabled: boolean) => {
+    setMinecraftNaturalMovementEnabled(enabled);
+    try {
+      await fetch(`http://127.0.0.1:32123/movement/${enabled ? 'start' : 'stop'}`, { method: 'POST' });
+    } catch {}
+  };
+
   const handleStopMinecraft = async () => {
     setMinecraftBusy(true);
     try {
@@ -289,7 +296,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer">
-              <input type="checkbox" checked={minecraftNaturalMovementEnabled} onChange={(e) => setMinecraftNaturalMovementEnabled(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" />
+              <input type="checkbox" checked={minecraftNaturalMovementEnabled} onChange={(e) => { void handleMinecraftMovementToggle(e.target.checked); }} className="w-4 h-4 accent-orange-500 rounded" />
               <span>Allow Autonomous Minecraft Movement</span>
             </label>
             <p className="text-[10px] text-slate-500">Allows Zoya's autonomous brain to choose movement/exploration when no higher-priority action is active. You can disable this at any time.</p>
