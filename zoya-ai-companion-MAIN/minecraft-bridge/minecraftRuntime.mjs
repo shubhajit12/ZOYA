@@ -70,6 +70,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   function askOwner(requester, action, displayAction = action) {
     if (!owner) {
       log("[PERMISSION] No ownerUsername configured; request denied safely.");
+      try { bot.whisper(requester, "[ZOYA] I cannot request permission because no owner is configured."); } catch {}
       return false;
     }
     const id = String(nextPermissionId++);
@@ -214,7 +215,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
 
   async function execute(action, options = {}) {
     if (busy) return false;
-    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect","investigate_entity","mine","chop_tree","craft","eat","look_at_player"]);
+    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect","investigate_entity","mine","chop_tree"]);
     if (movementActions.has(action) && config.movementEnabled !== true && !options.permissionGranted) {
       log("[PERMISSION] Autonomous movement is disabled; action blocked: " + action);
       return false;
@@ -227,7 +228,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
       else if (action === "gather_basic_resources" || action === "chop_tree") result = await gatherWood();
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3);
-      else if (action === "return_to_owner") result = await moveToPlayer(owner, 5);
+      else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5) : false;
       else if (action === "eat") result = await eat();
       else if (action === "collect") result = await collectNearestDrop();
       else if (action === "investigate_entity") result = await investigateEntity();
