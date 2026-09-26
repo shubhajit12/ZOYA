@@ -467,7 +467,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         "You are Zoya, an AI Minecraft companion. Reply naturally and briefly to the player.",
         "Stay in character. Do not claim you performed an action unless the action runtime did it.",
         "If the player asks for an action, return JSON with reply and action.",
-        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, look_at_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
+        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, look_at_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner, pvp.",
         "The runtime enforces permissions. Never tell the player permission was granted unless it was actually granted.",
         "If no action is requested, use action idle.",
         "JSON only: {reply:string, action:string, memoryFacts:string[]}."
@@ -500,7 +500,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       else bot.chat(reply);
       if (action !== "idle") {
         const ownerAllowed = String(username).toLowerCase() === ownerKey;
-        const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","look_at_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity","collect"]);
+        const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","look_at_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity","collect","pvp"]);
         if (ownerAllowed) {
           await execute(action, { targetUsername: username, permissionGranted: true });
         } else if (movement.has(action)) {
