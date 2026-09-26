@@ -42,7 +42,7 @@ function logMinecraftState() {
   if (!lastLoggedState) {
     debugLog("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z);
     debugLog("[STATE] Health: " + (p.health ?? "?") + " | Hunger: " + (p.food ?? "?") + " | XP: Lv." + (p.experience?.level ?? 0) + " (" + Math.round((p.experience?.progress ?? 0) * 100) + "%)");
-    debugLog("[STATE] Dimension: " + (current.world?.dimension || "unknown") + " | Time: " + (current.world?.timeOfDay ?? "?") + " | Day: " + (current.world?.day ?? "?"));
+    debugLog("[STATE] Dimension: " + (current.world?.dimension || "unknown") + " | Time: " + (current.world?.timeOfDay ?? "?") + " | Day: " + (current.world?.day ?? "?") + " | Rain=" + (current.world?.isRaining ? "YES" : "NO") + " | Thunder=" + (current.world?.thunderState ?? "?"));
     debugLog("[STATE] Held: " + (current.selectedItem?.displayName || "empty") + " | Nearby: " + nearby.length);
   } else {
     if (p.health !== lastLoggedState.health) {
@@ -64,9 +64,9 @@ function logMinecraftState() {
       lastSnapshotLogAt = now;
     }
   }
-  if (current.world?.isRaining !== lastLoggedState?.isRaining) debugLog("[EVENT] Rain changed: " + (lastLoggedState?.isRaining ? "ON" : "OFF") + " -> " + (current.world?.isRaining ? "ON" : "OFF"));
-    if (current.world?.thunderState !== lastLoggedState?.thunderState) debugLog("[EVENT] Thunder changed: " + (lastLoggedState?.thunderState ?? "?") + " -> " + (current.world?.thunderState ?? "?"));
-    lastLoggedState = { health: p.health, food: p.food, held: current.selectedItem?.name || null, isRaining: current.world?.isRaining ?? null, thunderState: current.world?.thunderState ?? null };
+  if (lastLoggedState && current.world?.isRaining !== lastLoggedState.isRaining) debugLog("[EVENT] Rain changed: " + (lastLoggedState.isRaining ? "ON" : "OFF") + " -> " + (current.world?.isRaining ? "ON" : "OFF"));
+  if (lastLoggedState && current.world?.thunderState !== lastLoggedState.thunderState) debugLog("[EVENT] Thunder changed: " + (lastLoggedState.thunderState ?? "?") + " -> " + (current.world?.thunderState ?? "?"));
+  lastLoggedState = { health: p.health, food: p.food, held: current.selectedItem?.name || null, isRaining: current.world?.isRaining ?? null, thunderState: current.world?.thunderState ?? null };
   lastEntityIds = nearbyIds;
 }
 
