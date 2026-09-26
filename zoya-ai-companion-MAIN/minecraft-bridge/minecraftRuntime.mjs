@@ -23,7 +23,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   bot.loadPlugin(pathfinder);
   bot.loadPlugin(toolPlugin);
   bot.loadPlugin(collectBlockPlugin);
-  bot.loadPlugin(craftingUtilPlugin());
+  bot.loadPlugin(craftingUtilPlugin);
   const movements = new Movements(bot);
   movements.canDig = true;
   movements.allow1by1towers = false;
@@ -198,6 +198,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     const plankName = logs.name.replace(/_log$/, "_planks");
     const plankId = bot.registry.itemsByName[plankName]?.id;
     if (!plankId) return false;
+
+    if (typeof bot.craftRecipe === "function") {
+      await bot.craftRecipe(plankId, 1);
+      return true;
+    }
+
     const recipe = bot.recipesFor(plankId, null, 1, null)[0];
     if (!recipe) return false;
     await bot.craft(recipe, 1, null);
