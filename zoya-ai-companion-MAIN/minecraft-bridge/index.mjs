@@ -412,7 +412,15 @@ const server = http.createServer((req, res) => {
 });
 
 server.on("clientError", (error, socket) => {
-  debugError(`[ZOYA Minecraft Bridge] HTTP client error: ${error.message}`);
+  // Browsers/Tauri may abort a local polling request while the bridge is
+  // shutting down or reconnecting. ECONNRESET/ECONNABORTED is not a
+  // Minecraft or brain failure, so keep it out of the error stream.
+  const code = error?.code || "";
+  if (code === "ECONNRESET" || code === "ECONNABORTED") {
+    debugLog("[ZOYA Minecraft Bridge] HTTP client request was closed by the client.");
+  } else {
+    debugError(`[ZOYA Minecraft Bridge] HTTP client error: ${error.message}`);
+  }
   if (socket.writable) socket.end("HTTP/1.1 400 Bad Request\\r\\nConnection: close\\r\\n\\r\\n");
 });
 
