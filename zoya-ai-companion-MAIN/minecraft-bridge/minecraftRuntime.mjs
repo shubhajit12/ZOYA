@@ -33,6 +33,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   const pending = new Map();
   let currentGoal = null;
   let busy = false;
+  let chatBusy = false;
 
   function saveMemory() {
     memory.updatedAt = new Date().toISOString();
@@ -223,11 +224,68 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     }
   }
 
+  async function answerPlayer(username, message) {
+    const apiKey = String(config.groqApiKey || "").trim();
+    if (!apiKey || chatBusy) return false;
+    chatBusy = true;
+    try {
+      const player = memory.players[String(username).toLowerCase()] || null;
+      const nearby = Object.values(bot.players || {}).filter(p => p?.entity && p.username !== bot.username).slice(0, 12)
+        .map(p => ({ username: p.username, distance: p.entity.position.distanceTo(bot.entity.position) }));
+      const prompt = [
+        "You are Zoya, an AI Minecraft companion. Reply naturally and briefly to the player.",
+        "Stay in character. Do not claim you performed an action unless the action runtime did it.",
+        "If the player asks for an action, return JSON with reply and action.",
+        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, return_to_owner.",
+        "The runtime enforces permissions. Never tell the player permission was granted unless it was actually granted.",
+        "If no action is requested, use action idle.",
+        "JSON only: {reply:string, action:string}."
+      ].join("\\n");
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-20b",
+          messages: [
+            { role: "system", content: prompt },
+            { role: "user", content: JSON.stringify({ player: username, memory: player, nearby, message }) }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.5
+        })
+      });
+      if (!response.ok) throw new Error("Groq HTTP " + response.status);
+      const payload = await response.json();
+      const raw = payload?.choices?.[0]?.message?.content;
+      const decision = JSON.parse(raw || "{}");
+      const reply = typeof decision.reply === "string" ? decision.reply.slice(0, 350) : "I'm here.";
+      const action = typeof decision.action === "string" ? decision.action : "idle";
+      bot.chat(reply);
+      if (action !== "idle") {
+        const ownerAllowed = username === owner;
+        const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity"]);
+        if (ownerAllowed) {
+          await execute(action, { targetUsername: username, permissionGranted: true });
+        } else if (movement.has(action)) {
+          askOwner(username, action === "follow_player" ? "follow you" : action);
+        }
+      }
+      rememberEvent("chat", { username, message: String(message).slice(0, 500), action });
+      return true;
+    } catch (error) {
+      log("[CHAT] Groq response failed: " + (error instanceof Error ? error.message : String(error)));
+      return false;
+    } finally {
+      chatBusy = false;
+    }
+  }
+
   bot.on("whisper", handleWhisper);
   bot.on("chat", (username, message) => {
     if (username === bot.username) return;
     rememberPlayer(username, { lastMessage: String(message).slice(0, 500), interactions: (memory.players[String(username).toLowerCase()]?.interactions || 0) + 1 });
     const text = String(message || "").toLowerCase();
+    void answerPlayer(username, message);
     if (/\bfollow me\b/.test(text)) {
       if (username === owner) void execute("follow_player", { targetUsername: username, permissionGranted: true });
       else askOwner(username, "follow you");
@@ -241,6 +299,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     permissionFor,
     askOwner,
     execute,
+    answerPlayer,
     getStatus: () => ({ ownerUsername: owner || null, pendingPermissions: pending.size, currentGoal, busy, memoryPlayers: Object.keys(memory.players).length, memoryEvents: memory.events.length })
   };
 }
