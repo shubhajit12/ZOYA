@@ -7,6 +7,7 @@ import { createMinecraftRuntime } from "./minecraftRuntime.mjs";
 import { startCapabilityTester } from "./capabilityTester.mjs";
 
 const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
+const CAPABILITY_DEBUG_MODE = process.env.ZOYA_CAPABILITY_DEBUG !== "0";
 const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
   path.join(process.env.APPDATA || process.cwd(), "com.zoya.aicompanion", "minecraft", "config.json");
 
@@ -197,7 +198,7 @@ function collectMinecraftState() {
   if (hostileNearby && !lastHostileNearby) {
     debugLog("[SAFETY] Hostile mob entered Zoya's danger range; waking brain.");
     try { bot.pathfinder?.setGoal(null); bot.clearControlStates(); } catch {}
-    void zoyaBrain?.thinkNow();
+    if (!CAPABILITY_DEBUG_MODE) void zoyaBrain?.thinkNow();
   }
   lastHostileNearby = hostileNearby;
 
@@ -327,9 +328,9 @@ function connect(config) {
       applyConfiguredSkin(config);
       setMovementEnabled(config.movementEnabled === true);
       try {
-        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), wakeBrain: () => zoyaBrain?.thinkNow(), log: debugLog });
-        ensureZoyaBrain().start();
-        if (process.env.ZOYA_CAPABILITY_DEBUG !== "0") {
+        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), wakeBrain: () => { if (!CAPABILITY_DEBUG_MODE) void zoyaBrain?.thinkNow(); }, log: debugLog });
+        if (!CAPABILITY_DEBUG_MODE) ensureZoyaBrain().start();
+        if (CAPABILITY_DEBUG_MODE) {
           capabilityTesterStop?.();
           capabilityTesterStop = startCapabilityTester({ bot, runtime: minecraftRuntime, log: debugLog });
           debugLog("[CAPABILITY TESTER] Developer capability tester enabled. Groq does not select capabilities in this tester.");
