@@ -107,6 +107,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     if (sender.toLowerCase() !== ownerKey) return;
     const parts = text.toLowerCase().split(/\s+/).filter(Boolean);
     const word = parts[0];
+    if (sender.toLowerCase() !== ownerKey) {
+      void answerPlayer(sender, text);
+      return;
+    }
     if (!ACCEPT_WORDS.has(word) && !DECLINE_WORDS.has(word)) return;
     const request = parts[1] ? pending.get(parts[1]) : [...pending.values()].sort((x, y) => x.createdAt - y.createdAt)[0];
     if (!request) return;
