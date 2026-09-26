@@ -370,15 +370,12 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "POST" && url.pathname === "/disconnect") { disconnect(); return send(res, 200, snapshot()); }
   if (req.method === "POST" && url.pathname === "/movement/start") {
-    movementEnabled = true;
-    scheduleNaturalMovement();
-    debugLog("[MOVEMENT] Natural movement started by command.");
-    return send(res, 200, { ...snapshot(), movementEnabled: true, movementAction });
+    setMovementEnabled(true);
+    return send(res, 200, { ...snapshot(), movementEnabled: true });
   }
   if (req.method === "POST" && url.pathname === "/movement/stop") {
-    movementEnabled = false;
-    stopMovement("Natural movement stopped by command.");
-    return send(res, 200, { ...snapshot(), movementEnabled: false, movementAction });
+    setMovementEnabled(false);
+    return send(res, 200, { ...snapshot(), movementEnabled: false });
   }
   if (req.method === "POST" && url.pathname === "/shutdown") {
     disconnect();
