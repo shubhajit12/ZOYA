@@ -31,6 +31,78 @@ let lastHeartbeatAt = 0;
 let lastEntityIds = new Set();
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
+const MOVEMENT_MIN_DELAY_MS = 7000;
+const MOVEMENT_MAX_DELAY_MS = 14000;
+const MOVEMENT_MIN_DURATION_MS = 1200;
+const MOVEMENT_MAX_DURATION_MS = 3500;
+let movementEnabled = false;
+let movementTimer = null;
+let movementStopTimer = null;
+let movementAction = "idle";
+
+function randomBetween(min, max) {
+  return Math.floor(min + Math.random() * (max - min + 1));
+}
+
+function stopMovement(reason = "stopped") {
+  if (movementTimer) { clearTimeout(movementTimer); movementTimer = null; }
+  if (movementStopTimer) { clearTimeout(movementStopTimer); movementStopTimer = null; }
+  if (bot) {
+    try {
+      bot.clearControlStates();
+      movementAction = "idle";
+    } catch {}
+  }
+  if (reason) debugLog("[MOVEMENT] " + reason);
+}
+
+function scheduleNaturalMovement() {
+  if (!movementEnabled || !bot || state.status !== "CONNECTED") return;
+  if (movementTimer) clearTimeout(movementTimer);
+  movementTimer = setTimeout(() => performNaturalMovement(), randomBetween(MOVEMENT_MIN_DELAY_MS, MOVEMENT_MAX_DELAY_MS));
+}
+
+async function performNaturalMovement() {
+  if (!movementEnabled || !bot || state.status !== "CONNECTED") return;
+
+  const yawDelta = (randomBetween(-90, 90) * Math.PI) / 180;
+  const currentYaw = bot.entity?.yaw ?? 0;
+  const targetYaw = currentYaw + yawDelta;
+  const pitch = Math.max(-0.35, Math.min(0.35, (bot.entity?.pitch ?? 0) + ((randomBetween(-12, 12) * Math.PI) / 180)));
+  const duration = randomBetween(MOVEMENT_MIN_DURATION_MS, MOVEMENT_MAX_DURATION_MS);
+
+  try {
+    await bot.look(targetYaw, pitch, true);
+    bot.setControlState("forward", true);
+    movementAction = "walking";
+    debugLog("[MOVEMENT] Walking naturally for " + (duration / 1000).toFixed(1) + "s after looking in a new direction.");
+
+    if (movementStopTimer) clearTimeout(movementStopTimer);
+    movementStopTimer = setTimeout(() => {
+      if (!bot) return;
+      try {
+        bot.clearControlStates();
+        movementAction = "idle";
+        debugLog("[MOVEMENT] Stopped walking.");
+      } catch {}
+      scheduleNaturalMovement();
+    }, duration);
+  } catch (error) {
+    debugWarn("[MOVEMENT] Natural movement skipped: " + (error instanceof Error ? error.message : String(error)));
+    scheduleNaturalMovement();
+  }
+}
+
+function configureMovement(config) {
+  movementEnabled = config.movementEnabled === true;
+  stopMovement(null);
+  if (movementEnabled) {
+    debugLog("[MOVEMENT] Natural movement enabled.");
+    scheduleNaturalMovement();
+  } else {
+    debugLog("[MOVEMENT] Natural movement disabled.");
+  }
+}
 
 function distance3d(a, b) {
   if (!a || !b) return Infinity;
@@ -123,7 +195,7 @@ function logMinecraftState() {
     }
 
     if (now - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
-      debugLog("[HEARTBEAT] Zoya online | Health=" + (p.health ?? "?") + " | Pos=(" + currentPosition.x + "," + currentPosition.y + "," + currentPosition.z + ") | Nearby=" + nearby.length + " | Rain=" + (current.world?.isRaining ? "YES" : "NO"));
+      debugLog("[HEARTBEAT] Zoya online | Health=" + (p.health ?? "?") + " | Pos=(" + currentPosition.x + "," + currentPosition.y + "," + currentPosition.z + ") | Nearby=" + nearby.length + " | Rain=" + (current.world?.isRaining ? "YES" : "NO") + " | Movement=" + movementAction);
       lastHeartbeatAt = now;
     }
   }
@@ -245,6 +317,7 @@ function disconnect() {
   lastLoggedState = null;
   lastEntityIds = new Set();
   lastHeartbeatAt = 0;
+  stopMovement(null);
   if (bot) { try { bot.quit(); } catch {} bot = null; }
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
 }
@@ -264,6 +337,7 @@ function connect(config) {
       debugLog(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
+      configureMovement(config);
     });
     bot.once("kicked", reason => {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
@@ -320,6 +394,17 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === "POST" && url.pathname === "/disconnect") { disconnect(); return send(res, 200, snapshot()); }
+  if (req.method === "POST" && url.pathname === "/movement/start") {
+    movementEnabled = true;
+    scheduleNaturalMovement();
+    debugLog("[MOVEMENT] Natural movement started by command.");
+    return send(res, 200, { ...snapshot(), movementEnabled: true, movementAction });
+  }
+  if (req.method === "POST" && url.pathname === "/movement/stop") {
+    movementEnabled = false;
+    stopMovement("Natural movement stopped by command.");
+    return send(res, 200, { ...snapshot(), movementEnabled: false, movementAction });
+  }
   if (req.method === "POST" && url.pathname === "/shutdown") {
     disconnect();
     send(res, 200, { ...snapshot(), shuttingDown: true });
