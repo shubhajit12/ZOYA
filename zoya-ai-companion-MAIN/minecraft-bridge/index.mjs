@@ -26,47 +26,119 @@ let latestMinecraftState = {
   game: null
 };
 
-
 let lastLoggedState = null;
-let lastSnapshotLogAt = 0;
+let lastHeartbeatAt = 0;
 let lastEntityIds = new Set();
+const POSITION_LOG_THRESHOLD = 0.5;
+const HEARTBEAT_INTERVAL_MS = 30000;
+
+function distance3d(a, b) {
+  if (!a || !b) return Infinity;
+  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+function inventorySignature(inventory) {
+  return (inventory || [])
+    .map(item => [item.slot, item.name, item.count, item.durabilityUsed, item.maxDurability].join(":"))
+    .sort()
+    .join("|");
+}
 
 function logMinecraftState() {
   const current = latestMinecraftState;
   if (!current?.available || !current.player) return;
+
   const now = Date.now();
   const p = current.player;
   const nearby = current.nearbyEntities || [];
-  const nearbyIds = new Set(nearby.map(entity => String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown")))));
+  const nearbyIds = new Set(
+    nearby.map(entity => String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown"))))
+  );
+  const currentInventorySignature = inventorySignature(current.inventory);
+  const currentPosition = p.position;
 
   if (!lastLoggedState) {
-    debugLog("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z);
+    debugLog("[STATE] Position: X=" + currentPosition.x + " Y=" + currentPosition.y + " Z=" + currentPosition.z);
     debugLog("[STATE] Health: " + (p.health ?? "?") + " | Hunger: " + (p.food ?? "?") + " | XP: Lv." + (p.experience?.level ?? 0) + " (" + Math.round((p.experience?.progress ?? 0) * 100) + "%)");
     debugLog("[STATE] Dimension: " + (current.world?.dimension || "unknown") + " | Time: " + (current.world?.timeOfDay ?? "?") + " | Day: " + (current.world?.day ?? "?") + " | Rain=" + (current.world?.isRaining ? "YES" : "NO") + " | Thunder=" + (current.world?.thunderState ?? "?"));
     debugLog("[STATE] Held: " + (current.selectedItem?.displayName || "empty") + " | Nearby: " + nearby.length);
+    if (current.environment) {
+      debugLog("[STATE] Below: " + (current.environment.blockBelowDisplayName || current.environment.blockBelow || "unknown") + " | Light=" + (current.environment.light ?? "?") + " | Sky Light=" + (current.environment.skyLight ?? "?"));
+    }
+    lastHeartbeatAt = now;
   } else {
+    if (distance3d(currentPosition, lastLoggedState.position) >= POSITION_LOG_THRESHOLD) {
+      debugLog("[EVENT] Position changed → X=" + currentPosition.x + " Y=" + currentPosition.y + " Z=" + currentPosition.z);
+    }
+
     if (p.health !== lastLoggedState.health) {
       debugLog("[EVENT] Health changed: " + lastLoggedState.health + " -> " + p.health);
       if (lastLoggedState.health > 0 && p.health <= 0) debugLog("[EVENT] Zoya died (health reached 0).");
       if (lastLoggedState.health <= 0 && p.health > 0) debugLog("[EVENT] Zoya respawned (health restored).");
     }
-    if (p.food !== lastLoggedState.food) debugLog("[EVENT] Hunger changed: " + lastLoggedState.food + " -> " + p.food);
-    if ((current.selectedItem?.name || null) !== lastLoggedState.held) debugLog("[EVENT] Held item changed: " + (lastLoggedState.held || "empty") + " -> " + (current.selectedItem?.name || "empty"));
+
+    if (p.food !== lastLoggedState.food) {
+      debugLog("[EVENT] Hunger changed: " + lastLoggedState.food + " -> " + p.food);
+    }
+
+    const currentHeld = current.selectedItem?.name || null;
+    if (currentHeld !== lastLoggedState.held) {
+      debugLog("[EVENT] Held item changed: " + (lastLoggedState.held || "empty") + " -> " + (currentHeld || "empty"));
+    }
+
+    const currentXp = p.experience || {};
+    if (currentXp.level !== lastLoggedState.xpLevel || currentXp.points !== lastLoggedState.xpPoints) {
+      debugLog("[EVENT] XP changed: Lv." + (lastLoggedState.xpLevel ?? 0) + " (" + (lastLoggedState.xpPoints ?? 0) + " pts) -> Lv." + (currentXp.level ?? 0) + " (" + (currentXp.points ?? 0) + " pts)");
+    }
+
+    if (currentInventorySignature !== lastLoggedState.inventorySignature) {
+      debugLog("[EVENT] Inventory changed.");
+    }
+
+    const currentBlockBelow = current.environment?.blockBelow || null;
+    if (currentBlockBelow !== lastLoggedState.blockBelow) {
+      debugLog("[EVENT] Block below changed: " + (lastLoggedState.blockBelow || "unknown") + " -> " + (currentBlockBelow || "unknown"));
+    }
+
     for (const entity of nearby) {
       const id = String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown")));
-      if (!lastEntityIds.has(id)) debugLog("[EVENT] Entity detected: " + (entity.username || entity.displayName || entity.name || entity.type || "unknown") + " (distance " + entity.distance + "m)");
+      if (!lastEntityIds.has(id)) {
+        debugLog("[EVENT] Entity detected: " + (entity.username || entity.displayName || entity.name || entity.type || "unknown") + " (distance " + entity.distance + "m)");
+      }
     }
+
     for (const id of lastEntityIds) {
-      if (!nearbyIds.has(id)) debugLog("[EVENT] Entity left nearby range: " + id);
+      if (!nearbyIds.has(id)) {
+        debugLog("[EVENT] Entity left nearby range: " + id);
+      }
     }
-    if (now - lastSnapshotLogAt >= 1000) {
-      debugLog("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z + " | Health=" + (p.health ?? "?") + " | Hunger=" + (p.food ?? "?") + " | Rain=" + (current.world?.isRaining ? "YES" : "NO") + " | Nearby=" + nearby.length);
-      lastSnapshotLogAt = now;
+
+    if (lastLoggedState.isRaining !== current.world?.isRaining) {
+      debugLog("[EVENT] Rain changed: " + (lastLoggedState.isRaining ? "ON" : "OFF") + " -> " + (current.world?.isRaining ? "ON" : "OFF"));
+    }
+
+    if (lastLoggedState.thunderState !== current.world?.thunderState) {
+      debugLog("[EVENT] Thunder changed: " + (lastLoggedState.thunderState ?? "?") + " -> " + (current.world?.thunderState ?? "?"));
+    }
+
+    if (now - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
+      debugLog("[HEARTBEAT] Zoya online | Health=" + (p.health ?? "?") + " | Pos=(" + currentPosition.x + "," + currentPosition.y + "," + currentPosition.z + ") | Nearby=" + nearby.length + " | Rain=" + (current.world?.isRaining ? "YES" : "NO"));
+      lastHeartbeatAt = now;
     }
   }
-  if (lastLoggedState && current.world?.isRaining !== lastLoggedState.isRaining) debugLog("[EVENT] Rain changed: " + (lastLoggedState.isRaining ? "ON" : "OFF") + " -> " + (current.world?.isRaining ? "ON" : "OFF"));
-  if (lastLoggedState && current.world?.thunderState !== lastLoggedState.thunderState) debugLog("[EVENT] Thunder changed: " + (lastLoggedState.thunderState ?? "?") + " -> " + (current.world?.thunderState ?? "?"));
-  lastLoggedState = { health: p.health, food: p.food, held: current.selectedItem?.name || null, isRaining: current.world?.isRaining ?? null, thunderState: current.world?.thunderState ?? null };
+
+  lastLoggedState = {
+    health: p.health,
+    food: p.food,
+    held: current.selectedItem?.name || null,
+    isRaining: current.world?.isRaining ?? null,
+    thunderState: current.world?.thunderState ?? null,
+    position: { ...currentPosition },
+    xpLevel: p.experience?.level ?? 0,
+    xpPoints: p.experience?.points ?? 0,
+    inventorySignature: currentInventorySignature,
+    blockBelow: current.environment?.blockBelow || null
+  };
   lastEntityIds = nearbyIds;
 }
 
@@ -171,7 +243,7 @@ function applyConfiguredSkin(config) {
 function disconnect() {
   lastLoggedState = null;
   lastEntityIds = new Set();
-  lastSnapshotLogAt = 0;
+  lastHeartbeatAt = 0;
   if (bot) { try { bot.quit(); } catch {} bot = null; }
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
 }
