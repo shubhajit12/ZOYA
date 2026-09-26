@@ -48,6 +48,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   minecraftSkinUrl: '',
   minecraftSkinProvider: 'auto',
   minecraftSkinCommand: '/skin url "%URL%"',
+  minecraftNaturalMovementEnabled: false,
 };
 
 export default function App() {
