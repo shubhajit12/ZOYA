@@ -304,7 +304,7 @@ function connect(config) {
       applyConfiguredSkin(config);
       setMovementEnabled(config.movementEnabled === true);
       try {
-        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), log: debugLog });
+        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), wakeBrain: () => zoyaBrain?.thinkNow(), log: debugLog });
         ensureZoyaBrain().start();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
