@@ -115,7 +115,7 @@ export function createZoyaBrain({
         "If a player is nearby, consider their presence and context before choosing a goal.",
         "Respect autonomous movement permission: safe_roam is forbidden when it is disabled.",
         "Return strict JSON with: goal, action, priority, reasonSummary.",
-        "action must be one of: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, return_to_owner.",
+        "action must be one of: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
         "reasonSummary must be one short sentence; do not output hidden chain-of-thought."
       ].join("\n");
 
