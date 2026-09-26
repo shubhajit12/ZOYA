@@ -42,6 +42,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [minecraftSkinUrl, setMinecraftSkinUrl] = useState<string>(settings.minecraftSkinUrl || '');
   const [minecraftSkinProvider, setMinecraftSkinProvider] = useState<'auto' | 'custom' | 'disabled'>(settings.minecraftSkinProvider || 'auto');
   const [minecraftSkinCommand, setMinecraftSkinCommand] = useState<string>(settings.minecraftSkinCommand || '/skin url "%URL%"');
+  const [minecraftNaturalMovementEnabled, setMinecraftNaturalMovementEnabled] = useState<boolean>(settings.minecraftNaturalMovementEnabled ?? false);
   const [minecraftStatus, setMinecraftStatus] = useState<string>('BRIDGE NOT RUNNING');
   const [minecraftError, setMinecraftError] = useState<string>('');
   const [minecraftBusy, setMinecraftBusy] = useState<boolean>(false);
@@ -90,6 +91,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         minecraftSkinUrl: minecraftSkinUrl.trim(),
         minecraftSkinProvider,
         minecraftSkinCommand: minecraftSkinCommand.trim() || '/skin url "%URL%"',
+        minecraftNaturalMovementEnabled,
       });
       await tauriBridge.launchMinecraftBot({
         host: minecraftHost.trim() || '127.0.0.1',
@@ -100,6 +102,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(minecraftSkinUrl.trim() ? { skinUrl: minecraftSkinUrl.trim() } : {}),
         skinProvider: minecraftSkinProvider,
         skinCommand: minecraftSkinCommand.trim() || '/skin url "%URL%"',
+        movementEnabled: minecraftNaturalMovementEnabled,
         autoConnect: true,
       });
     } catch (error) {
@@ -143,6 +146,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       minecraftSkinUrl: minecraftSkinUrl.trim(),
       minecraftSkinProvider,
       minecraftSkinCommand: minecraftSkinCommand.trim() || '/skin url "%URL%"',
+      minecraftNaturalMovementEnabled,
     });
     setSavedSuccess(true);
     setTimeout(() => {
