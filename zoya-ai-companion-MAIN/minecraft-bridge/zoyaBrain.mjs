@@ -158,7 +158,7 @@ export function createZoyaBrain({
       const decision = JSON.parse(raw);
       const allowedActions = new Set([
         "idle", "safe_roam", "explore", "gather_basic_resources", "follow_player",
-        "investigate_entity", "mine", "chop_tree", "craft", "eat", "collect", "return_to_owner"
+        "look_at_player", "investigate_entity", "mine", "chop_tree", "craft", "eat", "collect", "return_to_owner"
       ]);
 
       const action = allowedActions.has(decision.action) ? decision.action : "idle";
