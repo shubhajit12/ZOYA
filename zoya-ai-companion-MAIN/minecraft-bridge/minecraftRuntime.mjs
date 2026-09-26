@@ -115,6 +115,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     try { bot.whisper(request.requester, result ? "[ZOYA] Done." : "[ZOYA] Action could not be completed."); } catch {}
   }
 
+  async function lookAtPlayer(username) {
+    const target = bot.players[username]?.entity;
+    if (!target) return false;
+    await bot.lookAt(target.position.offset(0, target.height ? target.height * 0.75 : 1.5, 0), true);
+    return true;
+  }
+
   async function moveToPlayer(username, distance = 3) {
     const target = bot.players[username]?.entity;
     if (!target) return false;
@@ -207,7 +214,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
 
   async function execute(action, options = {}) {
     if (busy) return false;
-    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect"]);
+    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect","investigate_entity","mine","chop_tree","craft","eat","look_at_player"]);
     if (movementActions.has(action) && config.movementEnabled !== true && !options.permissionGranted) {
       log("[PERMISSION] Autonomous movement is disabled; action blocked: " + action);
       return false;
@@ -217,6 +224,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     try {
       let result = false;
       if (action === "safe_roam" || action === "explore") result = await explore();
+      else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
       else if (action === "gather_basic_resources" || action === "chop_tree") result = await gatherWood();
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3);
       else if (action === "return_to_owner") result = await moveToPlayer(owner, 5);
@@ -254,7 +262,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
         "You are Zoya, an AI Minecraft companion. Reply naturally and briefly to the player.",
         "Stay in character. Do not claim you performed an action unless the action runtime did it.",
         "If the player asks for an action, return JSON with reply and action.",
-        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
+        "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, look_at_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
         "The runtime enforces permissions. Never tell the player permission was granted unless it was actually granted.",
         "If no action is requested, use action idle.",
         "JSON only: {reply:string, action:string, memoryFacts:string[]}."
@@ -286,7 +294,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       bot.chat(reply);
       if (action !== "idle") {
         const ownerAllowed = String(username).toLowerCase() === ownerKey;
-        const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity","collect"]);
+        const movement = new Set(["safe_roam","explore","gather_basic_resources","follow_player","look_at_player","return_to_owner","mine","chop_tree","craft","eat","investigate_entity","collect"]);
         if (ownerAllowed) {
           await execute(action, { targetUsername: username, permissionGranted: true });
         } else if (movement.has(action)) {
@@ -303,6 +311,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     }
   }
 
+  bot.on("death", () => rememberEvent("death", { username: bot.username || "Zoya" }));
+  bot.on("respawn", () => rememberEvent("respawn", { username: bot.username || "Zoya" }));
+  bot.on("kicked", reason => rememberEvent("kicked", { reason: String(reason || "unknown").slice(0, 300) }));
+  bot.on("health", () => rememberEvent("health", { health: bot.health ?? null, food: bot.food ?? null }));
   bot.on("whisper", handleWhisper);
   bot.on("chat", (username, message) => {
     if (username === bot.username) return;
