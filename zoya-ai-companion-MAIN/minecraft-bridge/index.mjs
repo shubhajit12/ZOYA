@@ -33,143 +33,31 @@ let lastHeartbeatAt = 0;
 let lastEntityIds = new Set();
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
-const MOVEMENT_MIN_DELAY_MS = 7000;
-const MOVEMENT_MAX_DELAY_MS = 14000;
-const MOVEMENT_MIN_DURATION_MS = 1200;
-const MOVEMENT_MAX_DURATION_MS = 3500;
-const MOVEMENT_BOUNDARY_RADIUS = 8;
-const MOVEMENT_SAFETY_CHECK_MS = 250;
+// Autonomous movement is a brain capability, not a second movement loop.
+// Keeping one movement writer prevents natural-walk timers from fighting pathfinder actions.
 let movementEnabled = false;
-let movementTimer = null;
-let movementStopTimer = null;
-let movementSafetyTimer = null;
-let movementHomePosition = null;
-let movementAction = "idle";
 let currentConfig = null;
 let zoyaBrain = null;
 let minecraftRuntime = null;
 let reconnectTimer = null;
 let reconnectAttempt = 0;
+function setMovementEnabled(enabled) {
+  movementEnabled = enabled === true;
+  if (!movementEnabled && bot) { try { bot.clearControlStates(); } catch {} }
+  debugLog("[MOVEMENT] Autonomous movement " + (movementEnabled ? "enabled." : "disabled."));
+}
 function ensureZoyaBrain() {
   if (zoyaBrain) return zoyaBrain;
   zoyaBrain = createZoyaBrain({
     getMinecraftState: () => latestMinecraftState,
     getConfig: () => currentConfig,
     isMovementEnabled: () => movementEnabled,
-    roam: async () => { await performNaturalMovement(); },
-    executeAction: async (action) => minecraftRuntime ? minecraftRuntime.execute(action) : false,
-    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-20) } : null,
+    roam: async () => minecraftRuntime ? minecraftRuntime.execute("safe_roam") : false,
+    executeAction: async (action, options = {}) => minecraftRuntime ? minecraftRuntime.execute(action, options) : false,
+    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-30) } : null,
     log: debugLog
   });
   return zoyaBrain;
-}
-
-function randomBetween(min, max) {
-  return Math.floor(min + Math.random() * (max - min + 1));
-}
-
-function stopMovement(reason = "stopped") {
-  if (movementTimer) { clearTimeout(movementTimer); movementTimer = null; }
-  if (movementStopTimer) { clearTimeout(movementStopTimer); movementStopTimer = null; }
-  if (movementSafetyTimer) { clearInterval(movementSafetyTimer); movementSafetyTimer = null; }
-  if (bot) {
-    try {
-      bot.clearControlStates();
-      movementAction = "idle";
-    } catch {}
-  }
-  if (reason) debugLog("[MOVEMENT] " + reason);
-}
-
-function movementSafetyCheck() {
-  if (!movementEnabled || !bot || state.status !== "CONNECTED" || !bot.entity) return;
-  const position = bot.entity.position;
-  if (!movementHomePosition) movementHomePosition = { x: position.x, y: position.y, z: position.z };
-  const horizontalDistance = Math.hypot(position.x - movementHomePosition.x, position.z - movementHomePosition.z);
-  if (horizontalDistance > MOVEMENT_BOUNDARY_RADIUS) {
-    stopMovement("Movement boundary reached; returning to idle.");
-    scheduleNaturalMovement();
-    return;
-  }
-  if (movementAction !== "walking") return;
-  const forward = bot.entity.velocity;
-  const speed = Math.hypot(forward?.x || 0, forward?.z || 0);
-  if (speed < 0.01) return;
-  const yaw = bot.entity.yaw || 0;
-  const lookAhead = position.offset(-Math.sin(yaw) * 1.2, 0, -Math.cos(yaw) * 1.2);
-  try {
-    const feet = bot.blockAt(lookAhead);
-    const head = bot.blockAt(lookAhead.offset(0, 1, 0));
-    const below = bot.blockAt(lookAhead.offset(0, -1, 0));
-    if (!below || !feet || !head || below.boundingBox === "empty" || feet.boundingBox !== "empty" || head.boundingBox !== "empty") {
-      stopMovement("Unsafe movement path detected; stopping.");
-      scheduleNaturalMovement();
-    }
-  } catch {}
-}
-
-function scheduleNaturalMovement() {
-  if (!movementEnabled || !bot || state.status !== "CONNECTED") return;
-  if (movementTimer) clearTimeout(movementTimer);
-  movementTimer = setTimeout(() => performNaturalMovement(), randomBetween(MOVEMENT_MIN_DELAY_MS, MOVEMENT_MAX_DELAY_MS));
-}
-
-async function performNaturalMovement() {
-  if (!movementEnabled || !bot || state.status !== "CONNECTED") return;
-
-  if (!movementHomePosition) {
-    const p = bot.entity.position;
-    movementHomePosition = { x: p.x, y: p.y, z: p.z };
-  }
-  const home = movementHomePosition;
-  const currentPosition = bot.entity.position;
-  const dx = currentPosition.x - home.x;
-  const dz = currentPosition.z - home.z;
-  const distanceFromHome = Math.hypot(dx, dz);
-  let yawDelta = (randomBetween(-90, 90) * Math.PI) / 180;
-  if (distanceFromHome > MOVEMENT_BOUNDARY_RADIUS * 0.65) {
-    const towardHomeYaw = Math.atan2(-dx, -dz);
-    yawDelta = towardHomeYaw - (bot.entity.yaw ?? 0);
-  }
-  const currentYaw = bot.entity?.yaw ?? 0;
-  const targetYaw = currentYaw + yawDelta;
-  const pitch = Math.max(-0.35, Math.min(0.35, (bot.entity?.pitch ?? 0) + ((randomBetween(-12, 12) * Math.PI) / 180)));
-  const duration = randomBetween(MOVEMENT_MIN_DURATION_MS, MOVEMENT_MAX_DURATION_MS);
-
-  try {
-    await bot.look(targetYaw, pitch, true);
-    bot.setControlState("forward", true);
-    movementAction = "walking";
-    debugLog("[MOVEMENT] Walking naturally for " + (duration / 1000).toFixed(1) + "s after looking in a new direction.");
-
-    if (movementStopTimer) clearTimeout(movementStopTimer);
-    movementSafetyTimer = setInterval(movementSafetyCheck, MOVEMENT_SAFETY_CHECK_MS);
-    movementStopTimer = setTimeout(() => {
-      if (!bot) return;
-      try {
-        bot.clearControlStates();
-        if (movementSafetyTimer) { clearInterval(movementSafetyTimer); movementSafetyTimer = null; }
-        movementAction = "idle";
-        debugLog("[MOVEMENT] Stopped walking.");
-      } catch {}
-      scheduleNaturalMovement();
-    }, duration);
-  } catch (error) {
-    debugWarn("[MOVEMENT] Natural movement skipped: " + (error instanceof Error ? error.message : String(error)));
-    scheduleNaturalMovement();
-  }
-}
-
-function configureMovement(config) {
-  movementEnabled = config.movementEnabled === true;
-  movementHomePosition = bot?.entity?.position ? { x: bot.entity.position.x, y: bot.entity.position.y, z: bot.entity.position.z } : null;
-  stopMovement(null);
-  if (movementEnabled) {
-    debugLog("[MOVEMENT] Natural movement enabled.");
-    scheduleNaturalMovement();
-  } else {
-    debugLog("[MOVEMENT] Natural movement disabled.");
-  }
 }
 
 function distance3d(a, b) {
@@ -385,6 +273,7 @@ function disconnect() {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   reconnectAttempt = 0;
   if (zoyaBrain) zoyaBrain.stop();
+  setMovementEnabled(false);
   minecraftRuntime = null;
   lastLoggedState = null;
   lastEntityIds = new Set();
@@ -412,7 +301,7 @@ function connect(config) {
       reconnectAttempt = 0;
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
-      configureMovement(config);
+      setMovementEnabled(config.movementEnabled === true);
       minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), log: debugLog });
       ensureZoyaBrain().start();
     });
