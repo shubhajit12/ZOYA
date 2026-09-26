@@ -127,7 +127,7 @@ export function createZoyaBrain({
         "Survival has highest priority. If health is low or hostile mobs are nearby, choose safety/survival instead of exploration or gathering.",
         "Respect autonomous movement permission for autonomous tasks. An explicit owner command may start a task, but the runtime still enforces safety.",
         "If the previous task failed, choose a different or safer task rather than blindly repeating it.",
-        "Return strict JSON only: {goal, action, priority, reasonSummary, targetUsername}.",
+        "Return only the requested decision fields. Do not include explanations outside the structured response.",
         "priority is a number from 0 to 1. targetUsername is required for follow_player, look_at_player, pvp when a player target exists; otherwise null.",
         "reasonSummary must be one short sentence and must not contain hidden chain-of-thought."
       ].join("\n");
@@ -152,8 +152,54 @@ export function createZoyaBrain({
               consecutiveFailures
             }) }
           ],
-          response_format: { type: "json_object" },
-          temperature: 0.25,
+          // GPT-OSS supports strict Structured Outputs. Using a schema here prevents
+          // malformed/unsupported JSON generations from killing the decision cycle.
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "zoya_minecraft_decision",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  goal: { type: "string" },
+                  action: {
+                    type: "string",
+                    enum: [
+                      "idle",
+                      "safe_roam",
+                      "explore",
+                      "gather_basic_resources",
+                      "follow_player",
+                      "look_at_player",
+                      "investigate_entity",
+                      "mine",
+                      "chop_tree",
+                      "craft",
+                      "eat",
+                      "collect",
+                      "return_to_owner",
+                      "pvp"
+                    ]
+                  },
+                  priority: { type: "number", minimum: 0, maximum: 1 },
+                  reasonSummary: { type: "string" },
+                  targetUsername: { type: ["string", "null"] }
+                },
+                required: [
+                  "goal",
+                  "action",
+                  "priority",
+                  "reasonSummary",
+                  "targetUsername"
+                ],
+                additionalProperties: false
+              }
+            }
+          },
+          // GPT-OSS reasoning must stay out of the machine-readable response.
+          reasoning_format: "hidden",
+          temperature: 0.2,
           max_completion_tokens: MAX_REASONING_TOKENS
         })
       });
