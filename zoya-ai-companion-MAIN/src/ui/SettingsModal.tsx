@@ -276,6 +276,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>}
             </div>
 
+            <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer">
+              <input type="checkbox" checked={minecraftNaturalMovementEnabled} onChange={(e) => setMinecraftNaturalMovementEnabled(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" />
+              <span>Enable Natural Movement (Phase 3)</span>
+            </label>
+            <p className="text-[10px] text-slate-500">Zoya will make short idle walks and look around naturally. This does not make her follow players, fight, mine, or make higher-level gameplay decisions.</p>
+
             <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 space-y-2">
               <div className="flex items-center justify-between"><span className="text-[11px] font-semibold text-slate-400">Bridge Status</span><span className="text-[11px] font-bold text-slate-200">{minecraftStatus}</span></div>
               {minecraftState?.available && minecraftState.player && <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400">
