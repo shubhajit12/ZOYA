@@ -31,6 +31,7 @@ let latestMinecraftState = {
 let lastLoggedState = null;
 let lastHeartbeatAt = 0;
 let lastEntityIds = new Set();
+let lastHostileNearby = false;
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
 // Autonomous movement is a brain capability, not a second movement loop.
@@ -184,6 +185,19 @@ function collectMinecraftState() {
   }
   const position = bot.entity.position;
   const inventory = Array.isArray(bot.inventory?.slots) ? bot.inventory.slots.filter(Boolean).map(serializeItem) : [];
+  const hostileNames = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
+  const hostileNearby = Object.values(bot.entities || {}).some(entity =>
+    entity && entity !== bot.entity && entity.position &&
+    entity.position.distanceTo(position) <= 12 &&
+    hostileNames.has(String(entity.name || "").toLowerCase())
+  );
+  if (hostileNearby && !lastHostileNearby) {
+    debugLog("[SAFETY] Hostile mob entered Zoya's danger range; waking brain.");
+    try { bot.pathfinder?.setGoal(null); bot.clearControlStates(); } catch {}
+    void zoyaBrain?.thinkNow();
+  }
+  lastHostileNearby = hostileNearby;
+
   const nearbyEntities = Object.values(bot.entities || {})
     .filter(entity => entity && entity !== bot.entity && entity.position && entity.position.distanceTo(position) <= 16)
     .slice(0, 32)
@@ -279,6 +293,7 @@ function disconnect() {
   minecraftRuntime = null;
   lastLoggedState = null;
   lastEntityIds = new Set();
+  lastHostileNearby = false;
   lastHeartbeatAt = 0;
   if (bot) { try { bot.quit(); } catch {} bot = null; }
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
