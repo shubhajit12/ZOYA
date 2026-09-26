@@ -251,6 +251,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
 
+              <div className="border-t border-rose-500/20 pt-4 space-y-2">
+            <div className="flex items-center justify-between gap-4"><div><h4 className="text-xs font-bold text-rose-400">Profile Danger Zone</h4><p className="text-[11px] text-slate-400">Permanently remove your user profile & settings.</p></div><button type="button" onClick={onRequestDeleteProfile} className="px-3.5 py-2 bg-rose-600/20 hover:bg-rose-600 border border-rose-500/50 text-rose-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_10px_rgba(244,63,94,0.2)] flex-shrink-0"><Trash2 className="w-3.5 h-3.5" /><span>Delete Profile</span></button></div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 glass hover:bg-white/10 rounded-xl text-xs text-slate-300 font-medium">Cancel</button>
+            <button type="submit" className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-[0_0_15px_rgba(242,125,38,0.4)]">{savedSuccess ? <><Check className="w-4 h-4" /><span>Saved!</span></> : <span>Save Changes</span>}</button>
+          </div>
+              </>
+            )}
+
           {settingsSection === 'minecraft' && (
             <>
               <div className="space-y-1">
@@ -339,17 +350,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </>
           )}
-              <div className="border-t border-rose-500/20 pt-4 space-y-2">
-            <div className="flex items-center justify-between gap-4"><div><h4 className="text-xs font-bold text-rose-400">Profile Danger Zone</h4><p className="text-[11px] text-slate-400">Permanently remove your user profile & settings.</p></div><button type="button" onClick={onRequestDeleteProfile} className="px-3.5 py-2 bg-rose-600/20 hover:bg-rose-600 border border-rose-500/50 text-rose-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_10px_rgba(244,63,94,0.2)] flex-shrink-0"><Trash2 className="w-3.5 h-3.5" /><span>Delete Profile</span></button></div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 glass hover:bg-white/10 rounded-xl text-xs text-slate-300 font-medium">Cancel</button>
-            <button type="submit" className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-[0_0_15px_rgba(242,125,38,0.4)]">{savedSuccess ? <><Check className="w-4 h-4" /><span>Saved!</span></> : <span>Save Changes</span>}</button>
-          </div>
-              </>
-            )}
-            </form>
+          <div className="flex justify-end gap-3 pt-2">            </form>
           </div>
         </div>
       </div>
