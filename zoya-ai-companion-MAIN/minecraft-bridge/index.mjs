@@ -274,7 +274,8 @@ function disconnect() {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   reconnectAttempt = 0;
   if (zoyaBrain) zoyaBrain.stop();
-  setMovementEnabled(false);
+  movementEnabled = false;
+  if (bot) { try { bot.clearControlStates(); } catch {} }
   minecraftRuntime = null;
   lastLoggedState = null;
   lastEntityIds = new Set();
