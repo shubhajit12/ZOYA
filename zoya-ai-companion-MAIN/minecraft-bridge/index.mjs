@@ -56,7 +56,8 @@ function ensureZoyaBrain() {
     isMovementEnabled: () => movementEnabled,
     roam: async () => minecraftRuntime ? minecraftRuntime.execute("safe_roam") : false,
     executeAction: async (action, options = {}) => minecraftRuntime ? minecraftRuntime.execute(action, options) : false,
-    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-30) } : null,
+    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-20) } : null,
+    getActiveTask: () => minecraftRuntime ? minecraftRuntime.getActiveTask() : null,
     log: debugLog
   });
   return zoyaBrain;
