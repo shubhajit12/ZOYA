@@ -118,9 +118,9 @@ export function createZoyaBrain({
         "If hunger is low, prioritize eat; if resources are missing, gather/mine/craft; if a player needs attention, consider interaction/following.",
         "If a player is nearby, consider their presence and context before choosing a goal.",
         "Respect autonomous movement permission: safe_roam is forbidden when it is disabled.",
-        "Return strict JSON with: goal, action, priority, reasonSummary.",
+        "Return strict JSON with: goal, action, priority, reasonSummary, targetUsername.",
         "action must be one of: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
-        "reasonSummary must be one short sentence; do not output hidden chain-of-thought."
+        "targetUsername should be the intended nearby player username for follow_player, otherwise null. reasonSummary must be one short sentence; do not output hidden chain-of-thought."
       ].join("\n");
 
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -166,7 +166,8 @@ export function createZoyaBrain({
         goal: typeof decision.goal === "string" && decision.goal.trim() ? decision.goal.trim() : "Stay aware of the surroundings",
         action,
         priority: Number.isFinite(Number(decision.priority)) ? Math.max(0, Math.min(1, Number(decision.priority))) : 0.5,
-        reasonSummary: typeof decision.reasonSummary === "string" ? decision.reasonSummary.slice(0, 240) : ""
+        reasonSummary: typeof decision.reasonSummary === "string" ? decision.reasonSummary.slice(0, 240) : "",
+        targetUsername: typeof decision.targetUsername === "string" && decision.targetUsername.trim() ? decision.targetUsername.trim() : null
       };
 
       if (normalized.action === "safe_roam" && !isMovementEnabled()) {
@@ -180,7 +181,7 @@ export function createZoyaBrain({
 
       if (normalized.action !== "idle") {
         if (executeAction) {
-          const executed = await executeAction(normalized.action);
+          const executed = await executeAction(normalized.action, { targetUsername: normalized.targetUsername });
           lastActionResult = { action: normalized.action, success: executed, at: new Date().toISOString() };
           consecutiveFailures = executed ? 0 : consecutiveFailures + 1;
           log("[BRAIN] Action result: " + normalized.action + " -> " + (executed ? "success" : "not completed"));
