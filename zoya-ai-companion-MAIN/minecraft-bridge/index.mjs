@@ -7,7 +7,7 @@ import { createMinecraftRuntime } from "./minecraftRuntime.mjs";
 import { startCapabilityTester } from "./capabilityTester.mjs";
 
 const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
-const CAPABILITY_DEBUG_MODE = process.env.ZOYA_CAPABILITY_DEBUG !== "0";
+const CAPABILITY_DEBUG_MODE = process.env.ZOYA_CAPABILITY_DEBUG === "1";
 const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
   path.join(process.env.APPDATA || process.cwd(), "com.zoya.aicompanion", "minecraft", "config.json");
 
