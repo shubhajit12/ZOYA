@@ -1,4 +1,7 @@
+import pathfinderPackage from "mineflayer-pathfinder";
 import readline from "node:readline";
+
+const { goals } = pathfinderPackage;
 
 const CAPABILITIES = [
   ["follow_player", "Follow Player", "player username"],
@@ -142,7 +145,8 @@ async function directCapability({ bot, runtime, id, arg, log }) {
   if (id === "go_to" || id === "return_to_coordinates") {
     const { x, y, z } = parseCoords(arg);
     log("[CAPABILITY] Target: X=" + x + " Y=" + y + " Z=" + z);
-    await bot.pathfinder.goto(new bot.pathfinder.goals.GoalNear(x, y, z, 1.5));
+    if (!goals?.GoalNear) throw new Error("mineflayer-pathfinder GoalNear is unavailable.");
+    await bot.pathfinder.goto(new goals.GoalNear(x, y, z, 1.5));
     return distance(bot, x, y, z) <= 2.5;
   }
 
