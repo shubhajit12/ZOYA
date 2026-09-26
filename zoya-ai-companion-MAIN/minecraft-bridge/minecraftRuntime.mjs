@@ -181,6 +181,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     return true;
   }
 
+  async function collectNearestDrop() {
+    const p = bot.entity.position;
+    const target = Object.values(bot.entities || {})
+      .filter(e => e && e.position && e !== bot.entity && (e.name === "item" || e.type === "object"))
+      .sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p))[0];
+    if (!target || target.position.distanceTo(p) > 24) return false;
+    await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
+    return true;
+  }
+
   async function eat() {
     const item = bot.inventory.items().find(i => /bread|apple|carrot|potato|beef|porkchop|chicken|mutton|salmon|cod|steak|cooked/.test(i.name));
     if (!item || (bot.food ?? 20) >= 16) return false;
@@ -191,7 +201,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
 
   async function execute(action, options = {}) {
     if (busy) return false;
-    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner"]);
+    const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect"]);
     if (movementActions.has(action) && config.movementEnabled !== true && !options.permissionGranted) {
       log("[PERMISSION] Autonomous movement is disabled; action blocked: " + action);
       return false;
@@ -205,6 +215,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3);
       else if (action === "return_to_owner") result = await moveToPlayer(owner, 5);
       else if (action === "eat") result = await eat();
+      else if (action === "collect") result = await collectNearestDrop();
       else if (action === "investigate_entity") result = await investigateEntity();
       else if (action === "mine") result = await mineNearest();
       else if (action === "craft") result = await craftBasic();
