@@ -54,7 +54,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   let currentGoal = null;
   let busy = false;
   let chatBusy = false;
-  let lastPermissionAt = new Map();
 
   function saveMemory() {
     memory.updatedAt = new Date().toISOString();
@@ -329,7 +328,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
   async function execute(action, options = {}) {
     if (busy) return false;
-    if (action === "safe_roam" && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
+    const unsafeActions = new Set(["safe_roam","explore","gather_basic_resources","mine","chop_tree","investigate_entity"]);
+    if (unsafeActions.has(action) && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
       log("[SAFETY] Refusing safe_roam: health=" + bot.health + ", hostileMobs=" + nearbyHostileCount(12) + ".");
       wakeBrain();
       return false;
@@ -431,8 +431,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
   }
 
-  bot.on("death", () => rememberEvent("death", { username: bot.username || "Zoya" }));
-  bot.on("respawn", () => rememberEvent("respawn", { username: bot.username || "Zoya" }));
+  bot.on("death", () => { rememberEvent("death", { username: bot.username || "Zoya" }); interruptMovement("death"); });
+  bot.on("respawn", () => { rememberEvent("respawn", { username: bot.username || "Zoya" }); wakeBrain(); });
   bot.on("kicked", reason => rememberEvent("kicked", { reason: String(reason || "unknown").slice(0, 300) }));
   let previousHealth = bot.health ?? 20;
   bot.on("health", () => {
