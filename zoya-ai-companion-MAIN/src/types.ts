@@ -96,7 +96,7 @@ export interface UserSettings {
   minecraftSkinProvider: 'auto' | 'custom' | 'disabled';
   /** Optional server/plugin command template. Supports %URL% and %USERNAME%. */
   minecraftSkinCommand: string;
-  /** Enables Phase 3 bounded natural idle movement for the Minecraft bot. */
+  /** Enables autonomous movement when Zoya's Minecraft brain is permitted to roam. */
   minecraftNaturalMovementEnabled: boolean;
 }
 
