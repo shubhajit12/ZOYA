@@ -99,6 +99,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         host: minecraftHost.trim() || '127.0.0.1',
         port: minecraftPort || 25565,
         username: MINECRAFT_BOT_USERNAME,
+        ownerUsername: minecraftOwnerUsername.trim(),
         auth: 'offline',
         groqApiKey: settings.groqApiKey || '',
         ...(minecraftVersion.trim() ? { version: minecraftVersion.trim() } : {}),
