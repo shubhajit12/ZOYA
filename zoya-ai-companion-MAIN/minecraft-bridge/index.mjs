@@ -7,6 +7,11 @@ const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
 const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
   path.join(process.env.APPDATA || process.cwd(), "com.zoya.aicompanion", "minecraft", "config.json");
 
+function debugTimestamp() { return new Date().toISOString(); }
+function debugLog(message) { debugLog("[" + debugTimestamp() + "] " + message); }
+function debugWarn(message) { debugWarn("[" + debugTimestamp() + "] " + message); }
+function debugError(message) { debugError("[" + debugTimestamp() + "] " + message); }
+
 const state = { status: "DISCONNECTED", connected: false, host: null, port: null, username: null, version: null, error: null, startedAt: new Date().toISOString() };
 let bot = null;
 let latestMinecraftState = {
@@ -35,23 +40,27 @@ function logMinecraftState() {
   const nearbyIds = new Set(nearby.map(entity => String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown")))));
 
   if (!lastLoggedState) {
-    console.log("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z);
-    console.log("[STATE] Health: " + (p.health ?? "?") + " | Hunger: " + (p.food ?? "?") + " | XP: Lv." + (p.experience?.level ?? 0) + " (" + Math.round((p.experience?.progress ?? 0) * 100) + "%)");
-    console.log("[STATE] Dimension: " + (current.world?.dimension || "unknown") + " | Time: " + (current.world?.timeOfDay ?? "?") + " | Day: " + (current.world?.day ?? "?"));
-    console.log("[STATE] Held: " + (current.selectedItem?.displayName || "empty") + " | Nearby: " + nearby.length);
+    debugLog("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z);
+    debugLog("[STATE] Health: " + (p.health ?? "?") + " | Hunger: " + (p.food ?? "?") + " | XP: Lv." + (p.experience?.level ?? 0) + " (" + Math.round((p.experience?.progress ?? 0) * 100) + "%)");
+    debugLog("[STATE] Dimension: " + (current.world?.dimension || "unknown") + " | Time: " + (current.world?.timeOfDay ?? "?") + " | Day: " + (current.world?.day ?? "?"));
+    debugLog("[STATE] Held: " + (current.selectedItem?.displayName || "empty") + " | Nearby: " + nearby.length);
   } else {
-    if (p.health !== lastLoggedState.health) console.log("[EVENT] Health changed: " + lastLoggedState.health + " -> " + p.health);
-    if (p.food !== lastLoggedState.food) console.log("[EVENT] Hunger changed: " + lastLoggedState.food + " -> " + p.food);
-    if ((current.selectedItem?.name || null) !== lastLoggedState.held) console.log("[EVENT] Held item changed: " + (lastLoggedState.held || "empty") + " -> " + (current.selectedItem?.name || "empty"));
+    if (p.health !== lastLoggedState.health) {
+      debugLog("[EVENT] Health changed: " + lastLoggedState.health + " -> " + p.health);
+      if (lastLoggedState.health > 0 && p.health <= 0) debugLog("[EVENT] Zoya died (health reached 0).");
+      if (lastLoggedState.health <= 0 && p.health > 0) debugLog("[EVENT] Zoya respawned (health restored).");
+    }
+    if (p.food !== lastLoggedState.food) debugLog("[EVENT] Hunger changed: " + lastLoggedState.food + " -> " + p.food);
+    if ((current.selectedItem?.name || null) !== lastLoggedState.held) debugLog("[EVENT] Held item changed: " + (lastLoggedState.held || "empty") + " -> " + (current.selectedItem?.name || "empty"));
     for (const entity of nearby) {
       const id = String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown")));
-      if (!lastEntityIds.has(id)) console.log("[EVENT] Entity detected: " + (entity.username || entity.displayName || entity.name || entity.type || "unknown") + " (distance " + entity.distance + "m)");
+      if (!lastEntityIds.has(id)) debugLog("[EVENT] Entity detected: " + (entity.username || entity.displayName || entity.name || entity.type || "unknown") + " (distance " + entity.distance + "m)");
     }
     for (const id of lastEntityIds) {
-      if (!nearbyIds.has(id)) console.log("[EVENT] Entity left nearby range: " + id);
+      if (!nearbyIds.has(id)) debugLog("[EVENT] Entity left nearby range: " + id);
     }
     if (now - lastSnapshotLogAt >= 1000) {
-      console.log("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z + " | Health=" + (p.health ?? "?") + " | Hunger=" + (p.food ?? "?") + " | Nearby=" + nearby.length);
+      debugLog("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z + " | Health=" + (p.health ?? "?") + " | Hunger=" + (p.food ?? "?") + " | Nearby=" + nearby.length);
       lastSnapshotLogAt = now;
     }
   }
@@ -136,7 +145,7 @@ function applyConfiguredSkin(config) {
     : defaultCommand;
 
   if (!template.includes("%URL%")) {
-    console.warn("[ZOYA Minecraft Bridge] Skin command ignored: template must contain %URL%.");
+    debugWarn("[ZOYA Minecraft Bridge] Skin command ignored: template must contain %URL%.");
     return;
   }
 
@@ -145,14 +154,14 @@ function applyConfiguredSkin(config) {
     .replace(/%URL%/g, escapedUrl)
     .replace(/%USERNAME%/g, bot.username || "Zoya");
 
-  console.log(`[ZOYA Minecraft Bridge] Applying configured skin using provider mode: ${provider}`);
-  console.log(`[ZOYA Minecraft Bridge] Skin command: ${command.replace(escapedUrl, "<skin-url>")}`);
+  debugLog(`[ZOYA Minecraft Bridge] Applying configured skin using provider mode: ${provider}`);
+  debugLog(`[ZOYA Minecraft Bridge] Skin command: ${command.replace(escapedUrl, "<skin-url>")}`);
 
   setTimeout(() => {
     try {
       if (bot) bot.chat(command);
     } catch (error) {
-      console.error(`[ZOYA Minecraft Bridge] Skin command failed: ${error instanceof Error ? error.message : String(error)}`);
+      debugError(`[ZOYA Minecraft Bridge] Skin command failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }, 750);
 }
@@ -176,21 +185,21 @@ function connect(config) {
   try {
     bot = mineflayer.createBot({ host, port, username, auth, ...(version ? { version } : {}) });
     bot.once("login", () => {
-      console.log("[EVENT] Zoya joined the Minecraft world.");
-      console.log(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
+      debugLog("[EVENT] Zoya joined the Minecraft world.");
+      debugLog(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
     });
     bot.once("kicked", reason => {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
-      console.error(`[ZOYA Minecraft Bridge] Bot kicked: ${message}`);
+      debugError(`[ZOYA Minecraft Bridge] Bot kicked: ${message}`);
       state.error = `Kicked by Minecraft server: ${message}`;
     });
     bot.once("death", () => {
-      console.log("[EVENT] Zoya died. Waiting for respawn/state recovery.");
+      debugLog("[EVENT] Zoya died. Waiting for respawn/state recovery.");
     });
     bot.once("respawn", () => {
-      console.log("[EVENT] Zoya respawned.");
+      debugLog("[EVENT] Zoya respawned.");
       collectMinecraftState();
     });
     bot.once("end", reason => {
@@ -204,7 +213,7 @@ function connect(config) {
     });
     bot.once("error", error => {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`[ZOYA Minecraft Bridge] Mineflayer error: ${message}`);
+      debugError(`[ZOYA Minecraft Bridge] Mineflayer error: ${message}`);
       setState("ERROR", { error: message });
     });
   } catch (error) {
@@ -246,14 +255,14 @@ const server = http.createServer((req, res) => {
 });
 
 server.on("clientError", (error, socket) => {
-  console.error(`[ZOYA Minecraft Bridge] HTTP client error: ${error.message}`);
+  debugError(`[ZOYA Minecraft Bridge] HTTP client error: ${error.message}`);
   if (socket.writable) socket.end("HTTP/1.1 400 Bad Request\\r\\nConnection: close\\r\\n\\r\\n");
 });
 
 const stateTicker = setInterval(() => collectMinecraftState(), 500);
 
 server.listen(PORT, "127.0.0.1", () => {
-  console.log(`[ZOYA Minecraft Bridge] Listening on http://127.0.0.1:${PORT}`);
+  debugLog(`[ZOYA Minecraft Bridge] Listening on http://127.0.0.1:${PORT}`);
   const config = readConfig() || {
     host: "127.0.0.1",
     port: 25565,
