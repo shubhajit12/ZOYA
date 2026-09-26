@@ -115,6 +115,7 @@ export function createZoyaBrain({
         "Do not claim execution; choose one action and the runtime will report the result.",
         "If nobody is nearby, independently choose a useful next action from the available capabilities; do not follow a hardcoded no-player routine.",
         "If the previous action failed, reconsider the situation and choose a different or safer action rather than blindly repeating it.",
+        "Survival has highest priority: if health is low, seek safety and avoid exploration; if hostile mobs are nearby, do not choose safe_roam, explore, mine, chop_tree, or gather_basic_resources. Retreat to safety or return_to_owner instead. Never deliberately approach a hostile mob because there is no combat capability.",
         "If hunger is low, prioritize eat; if resources are missing, gather/mine/craft; if a player needs attention, consider interaction/following.",
         "If a player is nearby, consider their presence and context before choosing a goal.",
         "Respect autonomous movement permission: safe_roam is forbidden when it is disabled.",
