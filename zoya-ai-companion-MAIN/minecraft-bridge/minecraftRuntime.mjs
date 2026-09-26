@@ -104,7 +104,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     const text = String(message || "").trim();
     if (!sender || !text) return;
     rememberPlayer(sender, { interactions: (memory.players[sender.toLowerCase()]?.interactions || 0) + 1 });
-    if (sender.toLowerCase() !== ownerKey) return;
     const parts = text.toLowerCase().split(/\s+/).filter(Boolean);
     const word = parts[0];
     if (sender.toLowerCase() !== ownerKey) {
