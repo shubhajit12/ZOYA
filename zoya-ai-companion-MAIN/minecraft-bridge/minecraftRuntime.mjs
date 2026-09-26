@@ -350,12 +350,47 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return true;
   }
 
+  async function pvp(targetUsername, task) {
+    if (!targetUsername) return false;
+    let hadTarget = false;
+    while (taskIsActive(task)) {
+      const target = findPlayerByUsername(targetUsername)?.entity;
+      if (!target) return hadTarget;
+      if (target.health != null && target.health <= 0) return hadTarget;
+      hadTarget = true;
+
+      const distance = target.position.distanceTo(bot.entity.position);
+      try {
+        await bot.lookAt(target.position.offset(0, target.height ? target.height * 0.75 : 1.4, 0), true);
+      } catch {}
+
+      if (distance > 3.1) {
+        bot.setControlState("sprint", true);
+        try {
+          await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 2.6));
+        } catch (error) {
+          if (taskIsActive(task)) log("[PVP] Pathing retry: " + (error instanceof Error ? error.message : String(error)));
+        } finally {
+          try { bot.setControlState("sprint", false); } catch {}
+        }
+      } else {
+        try { bot.attack(target); } catch (error) {
+          log("[PVP] Attack failed: " + (error instanceof Error ? error.message : String(error)));
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      if ((bot.health ?? 20) <= 0) return false;
+    }
+    return false;
+  }
+
   async function execute(action, options = {}) {
     if (busy) {
       log("[TASK] Ignoring new task while '" + (currentGoal || "unknown") + "' is active.");
       return false;
     }
-    const unsafeActions = new Set(["safe_roam","explore","gather_basic_resources","mine","chop_tree","investigate_entity"]);
+    const unsafeActions = new Set(["safe_roam","explore","gather_basic_resources","mine","chop_tree","investigate_entity","pvp"]);
     if (unsafeActions.has(action) && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
       log("[SAFETY] Refusing safe_roam: health=" + bot.health + ", hostileMobs=" + nearbyHostileCount(12) + ".");
       wakeBrain();
@@ -383,6 +418,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       else if (action === "investigate_entity") result = await investigateEntity();
       else if (action === "mine") result = await mineNearest();
       else if (action === "craft") result = await craftBasic();
+      else if (action === "pvp") result = await pvp(options.targetUsername, task);
       else if (action === "idle") result = true;
       else {
         log("[ACTION] Capability not implemented yet: " + action);
