@@ -109,7 +109,7 @@ export function createZoyaBrain({
         "You are Zoya's Minecraft decision brain.",
         "You decide what Zoya should do next from the current Minecraft situation.",
         "Do not pretend an action was completed. Choose only one next goal.",
-        "You have these executable capabilities: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, return_to_owner.",
+        "You have these executable capabilities: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, collect, return_to_owner.",
         "Do not claim execution; choose one action and the runtime will report the result.",
         "If nobody is nearby, you may choose safe_roam or a future goal such as gather_basic_resources/explore.",
         "If a player is nearby, consider their presence and context before choosing a goal.",
@@ -152,7 +152,7 @@ export function createZoyaBrain({
       const decision = JSON.parse(raw);
       const allowedActions = new Set([
         "idle", "safe_roam", "explore", "gather_basic_resources", "follow_player",
-        "investigate_entity", "mine", "chop_tree", "craft", "eat", "return_to_owner"
+        "investigate_entity", "mine", "chop_tree", "craft", "eat", "collect", "return_to_owner"
       ]);
 
       const action = allowedActions.has(decision.action) ? decision.action : "idle";
