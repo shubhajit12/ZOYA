@@ -48,6 +48,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       firstSeenAt: memory.players[key]?.firstSeenAt || new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
       interactions: memory.players[key]?.interactions || 0,
+      facts: Array.isArray(memory.players[key]?.facts) ? memory.players[key].facts : [],
       ...memory.players[key],
       ...patch
     };
@@ -239,7 +240,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
         "Allowed actions: idle, safe_roam, explore, gather_basic_resources, follow_player, investigate_entity, mine, chop_tree, craft, eat, return_to_owner.",
         "The runtime enforces permissions. Never tell the player permission was granted unless it was actually granted.",
         "If no action is requested, use action idle.",
-        "JSON only: {reply:string, action:string}."
+        "JSON only: {reply:string, action:string, memoryFacts:string[]}."
       ].join("\\n");
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -260,6 +261,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       const decision = JSON.parse(raw || "{}");
       const reply = typeof decision.reply === "string" ? decision.reply.slice(0, 350) : "I'm here.";
       const action = typeof decision.action === "string" ? decision.action : "idle";
+      const facts = Array.isArray(decision.memoryFacts) ? decision.memoryFacts.filter(x => typeof x === "string").map(x => x.slice(0, 240)).slice(0, 5) : [];
+      if (facts.length) {
+        const existing = memory.players[String(username).toLowerCase()]?.facts || [];
+        rememberPlayer(username, { facts: [...new Set([...existing, ...facts])].slice(-20) });
+      }
       bot.chat(reply);
       if (action !== "idle") {
         const ownerAllowed = username === owner;
