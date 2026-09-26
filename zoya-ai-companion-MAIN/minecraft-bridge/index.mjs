@@ -43,6 +43,7 @@ let reconnectTimer = null;
 let reconnectAttempt = 0;
 function setMovementEnabled(enabled) {
   movementEnabled = enabled === true;
+  if (currentConfig) currentConfig.movementEnabled = movementEnabled;
   if (!movementEnabled && bot) { try { bot.clearControlStates(); } catch {} }
   debugLog("[MOVEMENT] Autonomous movement " + (movementEnabled ? "enabled." : "disabled."));
 }
