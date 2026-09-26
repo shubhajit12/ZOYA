@@ -184,8 +184,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </aside>
           <div className="flex-1 overflow-y-auto p-6">
             <form onSubmit={handleSave} className="space-y-5">
-            {settingsSection === 'general' && (
-              <>
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-300">Your Preferred Name</label>
             <input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} className="w-full bg-[#050506]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
@@ -250,107 +248,101 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={pcPermissions} onChange={(e) => setPcPermissions(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" /><span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-orange-400" /><span>Allow PC Control Voice Commands</span></span></label>
           </div>
 
+            {settingsSection === 'general' && (
+              <>
+          <div className="space-y-4 border-t border-white/10 pt-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5 text-orange-400" /><span>Minecraft Integration</span></label>
+              <p className="text-[11px] text-slate-500 mt-1">Launch the standalone ZOYA Minecraft bot. The debug terminal stays running even if ZOYA is closed.</p>
+            </div>
 
-              <div className="border-t border-rose-500/20 pt-4 space-y-2">
+            <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={minecraftEnabled} onChange={(e) => setMinecraftEnabled(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" /><span>Enable Minecraft Integration</span></label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Server Address</label><input type="text" value={minecraftHost} onChange={(e) => setMinecraftHost(e.target.value)} placeholder="127.0.0.1" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
+              <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Server Port</label><input type="number" min="1" max="65535" value={minecraftPort} onChange={(e) => setMinecraftPort(Number(e.target.value) || 25565)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-slate-400">Owner Minecraft Username</label>
+              <input type="text" value={minecraftOwnerUsername} onChange={(e) => setMinecraftOwnerUsername(e.target.value)} placeholder="Your Minecraft username" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+              <p className="text-[10px] text-slate-500">Used for private /w permission requests when another player asks Zoya to perform an action.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Bot Username</label>
+                <div className="w-full bg-[#050506]/80 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100">Zoya</div>
+                <p className="text-[10px] text-slate-500">Fixed bot identity.</p>
+              </div>
+              <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Minecraft Version</label><input type="text" value={minecraftVersion} onChange={(e) => setMinecraftVersion(e.target.value)} placeholder="Auto" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Skin Provider</label>
+                <select value={minecraftSkinProvider} onChange={(e) => setMinecraftSkinProvider(e.target.value as 'auto' | 'custom' | 'disabled')} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500">
+                  <option value="auto">Auto (SkinsRestorer-compatible)</option>
+                  <option value="custom">Custom Command</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Custom Skin URL <span className="font-normal text-slate-500">(Optional)</span></label>
+                <input type="url" value={minecraftSkinUrl} onChange={(e) => setMinecraftSkinUrl(e.target.value)} placeholder="https://.../skin.png" disabled={minecraftSkinProvider === 'disabled'} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50" />
+                <p className="text-[10px] text-slate-500">Optional. Zoya does not bundle or install a skin plugin; the selected provider sends a server command.</p>
+              </div>
+              {minecraftSkinProvider === 'custom' && <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-400">Custom Command Template</label>
+                <input type="text" value={minecraftSkinCommand} onChange={(e) => setMinecraftSkinCommand(e.target.value)} placeholder='/skin url "%URL%"' className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+                <p className="text-[10px] text-slate-500">Use <code>%URL%</code> for the skin URL and <code>%USERNAME%</code> for Zoya's username.</p>
+              </div>}
+            </div>
+
+            <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer">
+              <input type="checkbox" checked={minecraftNaturalMovementEnabled} onChange={(e) => { void handleMinecraftMovementToggle(e.target.checked); }} className="w-4 h-4 accent-orange-500 rounded" />
+              <span>Allow Autonomous Minecraft Movement</span>
+            </label>
+            <p className="text-[10px] text-slate-500">Allows Zoya's autonomous brain to choose movement/exploration when no higher-priority action is active. You can disable this at any time.</p>
+
+            <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 space-y-2">
+              <div className="flex items-center justify-between"><span className="text-[11px] font-semibold text-slate-400">Bridge Status</span><span className="text-[11px] font-bold text-slate-200">{minecraftStatus}</span></div>
+              {minecraftState?.available && minecraftState.player && <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400">
+                <span>Position: <b className="text-slate-200">{minecraftState.player.position.x}, {minecraftState.player.position.y}, {minecraftState.player.position.z}</b></span>
+                <span>Dimension: <b className="text-slate-200">{minecraftState.world?.dimension || 'unknown'}</b></span>
+                <span>Weather: <b className="text-slate-200">{minecraftState.world?.isRaining ? 'Rain' : 'Clear'}</b></span>
+                <span>Thunder: <b className="text-slate-200">{minecraftState.world?.thunderState ?? '—'}</b></span>
+                <span>Below: <b className="text-slate-200">{minecraftState.environment?.blockBelowDisplayName || minecraftState.environment?.blockBelow || '—'}</b></span>
+                <span>Light: <b className="text-slate-200">{minecraftState.environment?.light ?? '—'}</b></span>
+                <span>Sky Light: <b className="text-slate-200">{minecraftState.environment?.skyLight ?? '—'}</b></span>
+                <span>Health: <b className="text-slate-200">{minecraftState.player.health ?? '—'}</b></span>
+                <span>Hunger: <b className="text-slate-200">{minecraftState.player.food ?? '—'}</b></span>
+                <span>Selected: <b className="text-slate-200">{minecraftState.selectedItem?.displayName || 'Empty'}</b></span>
+                <span>Nearby: <b className="text-slate-200">{minecraftState.nearbyEntities?.length ?? 0}</b></span>
+              </div>}
+              {minecraftError && <p className="text-[10px] text-rose-400 mt-1 break-words">{minecraftError}</p>}
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" disabled={!minecraftEnabled || minecraftBusy} onClick={handleLaunchMinecraft} className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"><Play className="w-3.5 h-3.5" /> Launch Bot</button>
+              <button type="button" disabled={minecraftBusy} onClick={handleStopMinecraft} className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-white/10"><Square className="w-3.5 h-3.5" /> Stop Bot</button>
+            </div>
+          </div>
+
+            )}
+            {settingsSection === 'minecraft' && (
+              <>
+          <div className="border-t border-rose-500/20 pt-4 space-y-2">
             <div className="flex items-center justify-between gap-4"><div><h4 className="text-xs font-bold text-rose-400">Profile Danger Zone</h4><p className="text-[11px] text-slate-400">Permanently remove your user profile & settings.</p></div><button type="button" onClick={onRequestDeleteProfile} className="px-3.5 py-2 bg-rose-600/20 hover:bg-rose-600 border border-rose-500/50 text-rose-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_10px_rgba(244,63,94,0.2)] flex-shrink-0"><Trash2 className="w-3.5 h-3.5" /><span>Delete Profile</span></button></div>
           </div>
 
+            </>
+            )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 glass hover:bg-white/10 rounded-xl text-xs text-slate-300 font-medium">Cancel</button>
             <button type="submit" className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-[0_0_15px_rgba(242,125,38,0.4)]">{savedSuccess ? <><Check className="w-4 h-4" /><span>Saved!</span></> : <span>Save Changes</span>}</button>
           </div>
-              </>
-            )}
-
-          {settingsSection === 'minecraft' && (
-            <>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2"><Gamepad2 className="w-5 h-5 text-orange-400" /><h3 className="text-base font-bold text-slate-100">Minecraft</h3></div>
-                <p className="text-[11px] text-slate-500">Configure Zoya's Minecraft connection, behavior, modes, permissions, AI brain, safety, and diagnostics.</p>
-              </div>
-              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-4 space-y-4">
-                <div><h4 className="text-xs font-bold text-slate-200">Connection</h4><p className="text-[10px] text-slate-500 mt-1">Connect Zoya to your Minecraft server. The bot username is permanently Zoya.</p></div>
-                <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={minecraftEnabled} onChange={(e) => setMinecraftEnabled(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" /><span>Enable Minecraft Integration</span></label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Server Address</label><input type="text" value={minecraftHost} onChange={(e) => setMinecraftHost(e.target.value)} placeholder="127.0.0.1" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
-                  <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Server Port</label><input type="number" min="1" max="65535" value={minecraftPort} onChange={(e) => setMinecraftPort(Number(e.target.value) || 25565)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
-                </div>
-                <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Owner Minecraft Username</label><input type="text" value={minecraftOwnerUsername} onChange={(e) => setMinecraftOwnerUsername(e.target.value)} placeholder="Your Minecraft username" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /><p className="text-[10px] text-slate-500">Used for private /w permission requests.</p></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Bot Username</label><div className="w-full bg-[#050506]/80 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100">Zoya</div><p className="text-[10px] text-slate-500">Fixed bot identity.</p></div>
-                  <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Minecraft Version</label><input type="text" value={minecraftVersion} onChange={(e) => setMinecraftVersion(e.target.value)} placeholder="Auto" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
-                </div>
-              </div>
-              <div className="space-y-3 border-t border-white/10 pt-5">
-                <div><h4 className="text-xs font-bold text-slate-200">Zoya Behavior</h4><p className="text-[10px] text-slate-500 mt-1">Autonomous movement is user-controlled. Disable it any time to prevent autonomous movement.</p></div>
-                <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={minecraftNaturalMovementEnabled} onChange={(e) => { void handleMinecraftMovementToggle(e.target.checked); }} className="w-4 h-4 accent-orange-500 rounded" /><span>Allow Autonomous Minecraft Movement</span></label>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
-                <div className="flex items-center justify-between"><div><h4 className="text-xs font-bold text-slate-200">Built-in Modes</h4><p className="text-[10px] text-slate-500 mt-1">Protected Zoya modes. Users can view them but cannot edit, rename, or delete them.</p></div><span className="text-[10px] px-2 py-1 rounded-lg border border-white/10 text-slate-400">🔒 Read-only</span></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] text-slate-400">
-                  ${[
-                    ['Roam','Move 10–15 blocks in a safe direction, then request a new decision.'],
-                    ['PvP','Fight a specified player using available equipment or fists.'],
-                    ['Hit','Attack a specified player or entity.'],
-                    ['Gather Resources','Collect requested resources such as wood, stone, food, or ores.'],
-                    ['Do Task','Complete a higher-level objective using multiple built-in skills.'],
-                    ['Coordinate','Report Zoya or another player’s coordinates.'],
-                    ['Follow','Continuously follow a specified player until stopped.'],
-                    ['Go To','Navigate to a player, coordinate, or location.'],
-                    ['Explore','Explore an area and discover useful terrain, resources, or entities.'],
-                    ['Observe','Look at and inspect a player, entity, location, or situation.'],
-                    ['Return','Return to the owner, home/base, or requested location.'],
-                    ['Give','Give requested items to a player.'],
-                    ['Collect','Collect specified dropped items or resources.'],
-                    ['Retrieve','Obtain a requested item and bring it back.'],
-                    ['Deposit','Place specified items into a permitted container.'],
-                    ['Take','Take requested items from a permitted container.'],
-                    ['Craft','Craft a specified item when materials are available.'],
-                    ['Smelt','Smelt requested materials/items.'],
-                    ['Equip','Equip an appropriate weapon, tool, armor, or item.'],
-                    ['Sleep','Find and use a suitable bed when appropriate.'],
-                    ['Heal / Recover','Stop normal activity and recover when needed.'],
-                    ['Investigate','Investigate something interesting or unusual.'],
-                    ['Watch','Monitor a player or location.'],
-                    ['Guard','Protect a specified player or location.'],
-                    ['Escape','Emergency behavior for immediate danger.'],
-                    ['Stop / Cancel','Immediately cancel the current task and stop active behavior.'],
-                  ].map(([name, description]) => <div key={name} className="rounded-xl border border-white/5 bg-white/[0.02] p-3"><div className="font-semibold text-slate-300">{name}</div><div className="mt-1 leading-relaxed">{description}</div></div>)}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
-                <div><h4 className="text-xs font-bold text-slate-200">Custom Modes</h4><p className="text-[10px] text-slate-500 mt-1">Create your own modes later using Zoya's protected skills. Built-in modes remain immutable.</p></div>
-                <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-[11px] text-slate-500">Custom mode editor will be added in the custom-mode phase.</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
-                <div><h4 className="text-xs font-bold text-slate-200">Permissions</h4><p className="text-[10px] text-slate-500 mt-1">Owner permission requests use private /w. Normal Minecraft conversation stays public.</p></div>
-                <div className="rounded-xl bg-white/[0.02] border border-white/5 px-3 py-2 text-[10px] text-slate-500">Owner: <span className="text-slate-300">{minecraftOwnerUsername || 'Not configured'}</span></div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
-                <div><h4 className="text-xs font-bold text-slate-200">AI / Brain</h4><p className="text-[10px] text-slate-500 mt-1">Groq selects high-level tasks; local Minecraft controllers execute them without putting movement on the AI request path.</p></div>
-                <div className="rounded-xl bg-white/[0.02] border border-white/5 px-3 py-2 text-[10px] text-slate-500">Groq API key: <span className="text-slate-300">{groqApiKey ? 'Configured' : 'Not configured'}</span></div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
-                <div><h4 className="text-xs font-bold text-slate-200">Skin</h4></div>
-                <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Skin Provider</label><select value={minecraftSkinProvider} onChange={(e) => setMinecraftSkinProvider(e.target.value as 'auto' | 'custom' | 'disabled')} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500"><option value="auto">Auto (SkinsRestorer-compatible)</option><option value="custom">Custom Command</option><option value="disabled">Disabled</option></select></div>
-                <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Custom Skin URL <span className="font-normal text-slate-500">(Optional)</span></label><input type="url" value={minecraftSkinUrl} onChange={(e) => setMinecraftSkinUrl(e.target.value)} placeholder="https://.../skin.png" disabled={minecraftSkinProvider === 'disabled'} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50" /></div>
-                {minecraftSkinProvider === 'custom' && <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Custom Command Template</label><input type="text" value={minecraftSkinCommand} onChange={(e) => setMinecraftSkinCommand(e.target.value)} placeholder='/skin url "%URL%"' className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>}
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
-                <div className="flex items-center justify-between"><h4 className="text-xs font-bold text-slate-200">Runtime & Diagnostics</h4><span className="text-[10px] font-bold text-slate-300">{minecraftStatus}</span></div>
-                <p className="text-[10px] text-slate-500">The Minecraft bridge can remain running independently while ZOYA is closed.</p>
-                <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 space-y-2">
-                  {minecraftState?.available && minecraftState.player && <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400"><span>Position: <b className="text-slate-200">{minecraftState.player.position.x}, {minecraftState.player.position.y}, {minecraftState.player.position.z}</b></span><span>Dimension: <b className="text-slate-200">{minecraftState.world?.dimension || 'unknown'}</b></span><span>Health: <b className="text-slate-200">{minecraftState.player.health ?? '—'}</b></span><span>Hunger: <b className="text-slate-200">{minecraftState.player.food ?? '—'}</b></span><span>Nearby: <b className="text-slate-200">{minecraftState.nearbyEntities?.length ?? 0}</b></span></div>}
-                  {minecraftError && <p className="text-[10px] text-rose-400 break-words">{minecraftError}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <button type="button" disabled={!minecraftEnabled || minecraftBusy} onClick={handleLaunchMinecraft} className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"><Play className="w-3.5 h-3.5" /> Launch Bot</button>
-                  <button type="button" disabled={minecraftBusy} onClick={handleStopMinecraft} className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-white/10"><Square className="w-3.5 h-3.5" /> Stop Bot</button>
-                </div>
-              </div>
-            </>
-          )}
-          <div className="flex justify-end gap-3 pt-2">            </form>
+            </form>
           </div>
         </div>
       </div>
