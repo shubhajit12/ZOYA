@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathfinder, Movements, goals } from "mineflayer-pathfinder";
+import { plugin as toolPlugin } from "mineflayer-tool";
+import { plugin as collectBlockPlugin } from "mineflayer-collectblock";
+import { plugin as craftingUtilPlugin } from "mineflayer-crafting-util";
 
 const MEMORY_FILE = "player-memory.json";
 const DEFAULT_MEMORY = { players: {}, events: [], updatedAt: null };
@@ -18,6 +21,9 @@ function writeJson(file, value) {
 
 export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }) {
   bot.loadPlugin(pathfinder);
+  bot.loadPlugin(toolPlugin);
+  bot.loadPlugin(collectBlockPlugin);
+  bot.loadPlugin(craftingUtilPlugin());
   const movements = new Movements(bot);
   movements.canDig = true;
   movements.allow1by1towers = false;
@@ -138,6 +144,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     return true;
   }
 
+  async function collectBlock(block) {
+    if (!block || !bot.collectBlock?.collect) return false;
+    await bot.collectBlock.collect(block);
+    return true;
+  }
+
   async function gatherWood() {
     const origin = bot.entity.position;
     const names = new Set(["oak_log","birch_log","spruce_log","jungle_log","acacia_log","dark_oak_log","mangrove_log","cherry_log"]);
@@ -150,8 +162,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       if (d < bestDistance) { best = block; bestDistance = d; }
     }
     if (!best) return false;
-    await bot.pathfinder.goto(new goals.GoalGetToBlock(best.position.x, best.position.y, best.position.z));
-    if (bot.canDigBlock(best)) await bot.dig(best);
+    await collectBlock(best);
     return true;
   }
 
@@ -177,9 +188,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       if (d < bestDistance) { best = block; bestDistance = d; }
     }
     if (!best) return false;
-    await bot.pathfinder.goto(new goals.GoalGetToBlock(best.position.x, best.position.y, best.position.z));
-    if (!bot.canDigBlock(best)) return false;
-    await bot.dig(best);
+    await collectBlock(best);
     return true;
   }
 
@@ -189,6 +198,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     const plankName = logs.name.replace(/_log$/, "_planks");
     const plankId = bot.registry.itemsByName[plankName]?.id;
     if (!plankId) return false;
+    if (typeof bot.craftItem === "function") {
+      await bot.craftItem(plankId, 4, null);
+      return true;
+    }
     const recipe = bot.recipesFor(plankId, null, 1, null)[0];
     if (!recipe) return false;
     await bot.craft(recipe, 1, null);
