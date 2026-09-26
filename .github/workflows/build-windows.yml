@@ -10,6 +10,9 @@ jobs:
       run:
         working-directory: zoya-ai-companion-MAIN
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,14 +32,21 @@ jobs:
 
       - name: Download Zoya Mate Engine release
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           $releaseApi = 'https://api.github.com/repos/shubhajit12/Mate-Engine-FOR-ZOYA/releases/latest'
-          $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ 'Accept' = 'application/vnd.github+json' }
+          $headers = @{
+            'Accept' = 'application/vnd.github+json'
+            'Authorization' = "Bearer $env:GITHUB_TOKEN"
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $release = Invoke-RestMethod -Uri $releaseApi -Headers $headers
           if (-not $release.tag_name) { throw 'Could not determine the latest Zoya Mate Engine release tag.' }
           $asset = $release.assets | Where-Object { $_.name -eq 'Zoya-Mate-Engine-Windows.zip' } | Select-Object -First 1
           if (-not $asset) { throw "Latest Zoya Mate Engine release $($release.tag_name) does not contain Zoya-Mate-Engine-Windows.zip." }
           $zip = Join-Path $env:RUNNER_TEMP $asset.name
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip
+          Invoke-WebRequest -Uri $asset.browser_download_url -Headers $headers -OutFile $zip
           if (-not (Test-Path $zip)) { throw "Mate Engine release asset was not downloaded." }
           $extract = Join-Path $env:RUNNER_TEMP 'MateEngine'
           if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
