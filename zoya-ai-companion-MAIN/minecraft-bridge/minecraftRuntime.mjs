@@ -167,16 +167,26 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
   async function moveToPlayer(username, distance = 3) {
     const target = bot.players[username]?.entity;
     if (!target) return false;
-    await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, distance));
-    return true;
+    bot.setControlState("sprint", true);
+    try {
+      await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, distance));
+      return true;
+    } finally {
+      bot.setControlState("sprint", false);
+    }
   }
 
   async function explore() {
     const p = bot.entity.position;
     const angle = Math.random() * Math.PI * 2;
-    const radius = 12;
-    await bot.pathfinder.goto(new goals.GoalNear(p.x + Math.cos(angle) * radius, p.y, p.z + Math.sin(angle) * radius, 2));
-    return true;
+    const radius = 16;
+    bot.setControlState("sprint", true);
+    try {
+      await bot.pathfinder.goto(new goals.GoalNear(p.x + Math.cos(angle) * radius, p.y, p.z + Math.sin(angle) * radius, 2));
+      return true;
+    } finally {
+      bot.setControlState("sprint", false);
+    }
   }
 
   async function collectBlock(block) {
@@ -207,8 +217,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     entities.sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
     const target = entities[0];
     if (!target) return false;
-    await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 3));
-    return true;
+    bot.setControlState("sprint", true);
+    try {
+      await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 3));
+      return true;
+    } finally {
+      bot.setControlState("sprint", false);
+    }
   }
 
   async function mineNearest() {
@@ -251,8 +266,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       .filter(e => e && e.position && e !== bot.entity && (e.name === "item" || e.type === "object"))
       .sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p))[0];
     if (!target || target.position.distanceTo(p) > 24) return false;
-    await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
-    return true;
+    bot.setControlState("sprint", true);
+    try {
+      await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
+      return true;
+    } finally {
+      bot.setControlState("sprint", false);
+    }
   }
 
   async function eat() {
