@@ -335,13 +335,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button type="button" disabled={!minecraftEnabled || minecraftBusy} onClick={handleLaunchMinecraft} className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"><Play className="w-3.5 h-3.5" /> Launch Bot</button>
               <button type="button" disabled={minecraftBusy} onClick={handleStopMinecraft} className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-white/10"><Square className="w-3.5 h-3.5" /> Stop Bot</button>
             </div>
+          <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3"><div><h4 className="text-xs font-bold text-slate-200">Built-in Modes</h4><p className="text-[10px] text-slate-500 mt-1">Protected Zoya modes. Users can view what they do, but cannot edit, rename, or delete them.</p></div><span className="text-[10px] px-2 py-1 rounded-lg border border-white/10 text-slate-400">🔒 Read-only</span></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] text-slate-400">
+              <div><b>Roam</b> — Move 10–15 blocks safely, then request a new decision.</div>
+              <div><b>PvP</b> — Fight a specified player with available equipment or fists.</div>
+              <div><b>Hit</b> — Attack a specified player or entity.</div>
+              <div><b>Gather Resources</b> — Collect wood, stone, food, ores, and other requested resources.</div>
+              <div><b>Do Task</b> — Complete a higher-level objective using multiple skills.</div>
+              <div><b>Coordinate</b> — Report Zoya or another player's coordinates.</div>
+              <div><b>Follow</b> — Continuously follow a specified player until stopped.</div>
+              <div><b>Go To</b> — Navigate to a player, coordinate, or location.</div>
+              <div><b>Explore</b> — Explore an area and discover useful terrain, resources, or entities.</div>
+              <div><b>Observe</b> — Look at and inspect a player, entity, location, or situation.</div>
+              <div><b>Return</b> — Return to the owner, home/base, or requested location.</div>
+              <div><b>Give</b> — Give requested items to a player.</div>
+              <div><b>Collect</b> — Collect specified dropped items or resources.</div>
+              <div><b>Retrieve</b> — Obtain a requested item and bring it back.</div>
+              <div><b>Deposit</b> — Place specified items into a permitted container.</div>
+              <div><b>Take</b> — Take requested items from a permitted container.</div>
+              <div><b>Craft</b> — Craft a specified item when materials are available.</div>
+              <div><b>Smelt</b> — Smelt requested materials/items.</div>
+              <div><b>Equip</b> — Equip an appropriate weapon, tool, armor, or item.</div>
+              <div><b>Sleep</b> — Find and use a suitable bed when appropriate.</div>
+              <div><b>Heal / Recover</b> — Stop normal activity and recover when needed.</div>
+              <div><b>Investigate</b> — Investigate something interesting or unusual.</div>
+              <div><b>Watch</b> — Monitor a player or location.</div>
+              <div><b>Guard</b> — Protect a specified player or location.</div>
+              <div><b>Escape</b> — Emergency behavior for immediate danger.</div>
+              <div><b>Stop / Cancel</b> — Immediately cancel the current task.</div>
+            </div>
           </div>
-
-
-
+          <div className="rounded-2xl border border-white/10 bg-[#050506]/40 p-4 space-y-3">
+            <div><h4 className="text-xs font-bold text-slate-200">Custom Modes</h4><p className="text-[10px] text-slate-500 mt-1">Users can create and edit their own modes. Built-in modes remain protected.</p></div>
+            <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-[11px] text-slate-500">No custom modes yet. The custom mode editor will use Zoya's protected skills and task system.</div>
+          </div>
+          </div>
             </>
-            )}
-              </>
             )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 glass hover:bg-white/10 rounded-xl text-xs text-slate-300 font-medium">Cancel</button>
