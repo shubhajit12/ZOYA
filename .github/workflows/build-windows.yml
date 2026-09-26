@@ -88,12 +88,14 @@ jobs:
           $bridgeDist = Join-Path $PWD 'src-tauri/minecraft-bridge'
           if (Test-Path $bridgeDist) { Remove-Item $bridgeDist -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $bridgeDist | Out-Null
-          Copy-Item -Path (Join-Path $bridgeRoot 'index.mjs') -Destination (Join-Path $bridgeDist 'index.mjs') -Force
+          Copy-Item -Path (Join-Path $bridgeRoot '*.mjs') -Destination $bridgeDist -Force
           Copy-Item -Path (Join-Path $bridgeRoot 'package.json') -Destination (Join-Path $bridgeDist 'package.json') -Force
           Push-Location $bridgeDist
           npm install --omit=dev --ignore-scripts
           Pop-Location
           if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency was not installed.' }
+          if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer-pathfinder'))) { throw 'mineflayer-pathfinder dependency was not installed.' }
+          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs')) { if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Minecraft bridge runtime file is missing: $required" } }
 
 
       - name: Build web and API bundle
