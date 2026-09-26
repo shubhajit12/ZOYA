@@ -6,6 +6,7 @@ const MEMORY_FILE = "player-memory.json";
 const DEFAULT_MEMORY = { players: {}, events: [], updatedAt: null };
 const ACCEPT_WORDS = new Set(["accept", "accepted", "allow", "allowed", "yes", "y"]);
 const DECLINE_WORDS = new Set(["decline", "declined", "deny", "denied", "no", "n"]);
+const PERMISSION_TIMEOUT_MS = 60000;
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; }
@@ -69,6 +70,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     }
     const key = requester.toLowerCase() + ":" + action;
     pending.set(key, { requester, action, createdAt: Date.now() });
+    setTimeout(() => {
+      const request = pending.get(key);
+      if (request && Date.now() - request.createdAt >= PERMISSION_TIMEOUT_MS) {
+        pending.delete(key);
+        log("[PERMISSION] Request expired: " + requester + " -> " + action + ".");
+      }
+    }, PERMISSION_TIMEOUT_MS);
     try {
       bot.whisper(owner, "[ZOYA PERMISSION] " + requester + " asks me to " + action + ". Reply \"accept\" or \"decline\".");
       log("[PERMISSION] Asked owner " + owner + " to allow " + requester + " -> " + action + ".");
