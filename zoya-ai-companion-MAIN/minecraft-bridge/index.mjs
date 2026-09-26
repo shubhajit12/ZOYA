@@ -4,6 +4,7 @@ import path from "node:path";
 import mineflayer from "mineflayer";
 import { createZoyaBrain } from "./zoyaBrain.mjs";
 import { createMinecraftRuntime } from "./minecraftRuntime.mjs";
+import { startCapabilityTester } from "./capabilityTester.mjs";
 
 const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
 const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
@@ -42,6 +43,7 @@ let zoyaBrain = null;
 let minecraftRuntime = null;
 let reconnectTimer = null;
 let reconnectAttempt = 0;
+let capabilityTesterStop = null;
 function setMovementEnabled(enabled) {
   movementEnabled = enabled === true;
   if (currentConfig) currentConfig.movementEnabled = movementEnabled;
@@ -288,6 +290,8 @@ function applyConfiguredSkin(config) {
 function disconnect() {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   reconnectAttempt = 0;
+  capabilityTesterStop?.();
+  capabilityTesterStop = null;
   if (zoyaBrain) zoyaBrain.stop();
   movementEnabled = false;
   if (bot) { try { bot.clearControlStates(); } catch {} }
@@ -325,6 +329,11 @@ function connect(config) {
       try {
         minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), wakeBrain: () => zoyaBrain?.thinkNow(), log: debugLog });
         ensureZoyaBrain().start();
+        if (process.env.ZOYA_CAPABILITY_DEBUG !== "0") {
+          capabilityTesterStop?.();
+          capabilityTesterStop = startCapabilityTester({ bot, runtime: minecraftRuntime, log: debugLog });
+          debugLog("[CAPABILITY TESTER] Developer capability tester enabled. Groq does not select capabilities in this tester.");
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         debugError("[ZOYA Minecraft Bridge] Runtime initialization failed: " + message);
