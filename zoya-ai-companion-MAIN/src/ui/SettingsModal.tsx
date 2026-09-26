@@ -39,6 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [minecraftHost, setMinecraftHost] = useState<string>(settings.minecraftServerAddress || '127.0.0.1');
   const [minecraftPort, setMinecraftPort] = useState<number>(settings.minecraftServerPort || 25565);
   const [minecraftVersion, setMinecraftVersion] = useState<string>(settings.minecraftVersion || '');
+  const [minecraftOwnerUsername, setMinecraftOwnerUsername] = useState<string>(settings.minecraftOwnerUsername || settings.userName || '');
   const [minecraftSkinUrl, setMinecraftSkinUrl] = useState<string>(settings.minecraftSkinUrl || '');
   const [minecraftSkinProvider, setMinecraftSkinProvider] = useState<'auto' | 'custom' | 'disabled'>(settings.minecraftSkinProvider || 'auto');
   const [minecraftSkinCommand, setMinecraftSkinCommand] = useState<string>(settings.minecraftSkinCommand || '/skin url "%URL%"');
@@ -87,6 +88,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         minecraftServerAddress: minecraftHost.trim() || '127.0.0.1',
         minecraftServerPort: minecraftPort || 25565,
         minecraftBotUsername: MINECRAFT_BOT_USERNAME,
+        minecraftOwnerUsername: minecraftOwnerUsername.trim(),
         minecraftVersion: minecraftVersion.trim(),
         minecraftSkinUrl: minecraftSkinUrl.trim(),
         minecraftSkinProvider,
@@ -143,6 +145,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       minecraftServerAddress: minecraftHost.trim() || '127.0.0.1',
       minecraftServerPort: minecraftPort || 25565,
       minecraftBotUsername: MINECRAFT_BOT_USERNAME,
+      minecraftOwnerUsername: minecraftOwnerUsername.trim(),
       minecraftVersion: minecraftVersion.trim(),
       minecraftSkinUrl: minecraftSkinUrl.trim(),
       minecraftSkinProvider,
@@ -247,6 +250,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-1.5"><label className="block text-[11px] font-semibold text-slate-400">Server Port</label><input type="number" min="1" max="65535" value={minecraftPort} onChange={(e) => setMinecraftPort(Number(e.target.value) || 25565)} className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" /></div>
             </div>
 
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-slate-400">Owner Minecraft Username</label>
+              <input type="text" value={minecraftOwnerUsername} onChange={(e) => setMinecraftOwnerUsername(e.target.value)} placeholder="Your Minecraft username" className="w-full bg-[#050506] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-orange-500" />
+              <p className="text-[10px] text-slate-500">Used for private /w permission requests when another player asks Zoya to perform an action.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-semibold text-slate-400">Bot Username</label>
@@ -279,9 +288,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer">
               <input type="checkbox" checked={minecraftNaturalMovementEnabled} onChange={(e) => setMinecraftNaturalMovementEnabled(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" />
-              <span>Enable Natural Movement (Phase 3)</span>
+              <span>Allow Autonomous Minecraft Movement</span>
             </label>
-            <p className="text-[10px] text-slate-500">Zoya will make short idle walks and look around naturally. This does not make her follow players, fight, mine, or make higher-level gameplay decisions.</p>
+            <p className="text-[10px] text-slate-500">Allows Zoya's autonomous brain to choose movement/exploration when no higher-priority action is active. You can disable this at any time.</p>
 
             <div className="rounded-xl border border-white/10 bg-[#050506]/80 px-4 py-3 space-y-2">
               <div className="flex items-center justify-between"><span className="text-[11px] font-semibold text-slate-400">Bridge Status</span><span className="text-[11px] font-bold text-slate-200">{minecraftStatus}</span></div>
