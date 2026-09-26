@@ -35,9 +35,13 @@ const MOVEMENT_MIN_DELAY_MS = 7000;
 const MOVEMENT_MAX_DELAY_MS = 14000;
 const MOVEMENT_MIN_DURATION_MS = 1200;
 const MOVEMENT_MAX_DURATION_MS = 3500;
+const MOVEMENT_BOUNDARY_RADIUS = 8;
+const MOVEMENT_SAFETY_CHECK_MS = 250;
 let movementEnabled = false;
 let movementTimer = null;
 let movementStopTimer = null;
+let movementSafetyTimer = null;
+let movementHomePosition = null;
 let movementAction = "idle";
 
 function randomBetween(min, max) {
@@ -47,6 +51,7 @@ function randomBetween(min, max) {
 function stopMovement(reason = "stopped") {
   if (movementTimer) { clearTimeout(movementTimer); movementTimer = null; }
   if (movementStopTimer) { clearTimeout(movementStopTimer); movementStopTimer = null; }
+  if (movementSafetyTimer) { clearInterval(movementSafetyTimer); movementSafetyTimer = null; }
   if (bot) {
     try {
       bot.clearControlStates();
@@ -54,6 +59,33 @@ function stopMovement(reason = "stopped") {
     } catch {}
   }
   if (reason) debugLog("[MOVEMENT] " + reason);
+}
+
+function movementSafetyCheck() {
+  if (!movementEnabled || !bot || state.status !== "CONNECTED" || !bot.entity) return;
+  const position = bot.entity.position;
+  if (!movementHomePosition) movementHomePosition = { x: position.x, y: position.y, z: position.z };
+  const horizontalDistance = Math.hypot(position.x - movementHomePosition.x, position.z - movementHomePosition.z);
+  if (horizontalDistance > MOVEMENT_BOUNDARY_RADIUS) {
+    stopMovement("Movement boundary reached; returning to idle.");
+    scheduleNaturalMovement();
+    return;
+  }
+  if (movementAction !== "walking") return;
+  const forward = bot.entity.velocity;
+  const speed = Math.hypot(forward?.x || 0, forward?.z || 0);
+  if (speed < 0.01) return;
+  const yaw = bot.entity.yaw || 0;
+  const lookAhead = position.offset(-Math.sin(yaw) * 1.2, 0, -Math.cos(yaw) * 1.2);
+  try {
+    const feet = bot.blockAt(lookAhead);
+    const head = bot.blockAt(lookAhead.offset(0, 1, 0));
+    const below = bot.blockAt(lookAhead.offset(0, -1, 0));
+    if (!below || !feet || !head || below.boundingBox === "empty" || feet.boundingBox !== "empty" || head.boundingBox !== "empty") {
+      stopMovement("Unsafe movement path detected; stopping.");
+      scheduleNaturalMovement();
+    }
+  } catch {}
 }
 
 function scheduleNaturalMovement() {
@@ -65,7 +97,20 @@ function scheduleNaturalMovement() {
 async function performNaturalMovement() {
   if (!movementEnabled || !bot || state.status !== "CONNECTED") return;
 
-  const yawDelta = (randomBetween(-90, 90) * Math.PI) / 180;
+  if (!movementHomePosition) {
+    const p = bot.entity.position;
+    movementHomePosition = { x: p.x, y: p.y, z: p.z };
+  }
+  const home = movementHomePosition;
+  const currentPosition = bot.entity.position;
+  const dx = currentPosition.x - home.x;
+  const dz = currentPosition.z - home.z;
+  const distanceFromHome = Math.hypot(dx, dz);
+  let yawDelta = (randomBetween(-90, 90) * Math.PI) / 180;
+  if (distanceFromHome > MOVEMENT_BOUNDARY_RADIUS * 0.65) {
+    const towardHomeYaw = Math.atan2(-dx, -dz);
+    yawDelta = towardHomeYaw - (bot.entity.yaw ?? 0);
+  }
   const currentYaw = bot.entity?.yaw ?? 0;
   const targetYaw = currentYaw + yawDelta;
   const pitch = Math.max(-0.35, Math.min(0.35, (bot.entity?.pitch ?? 0) + ((randomBetween(-12, 12) * Math.PI) / 180)));
@@ -78,10 +123,12 @@ async function performNaturalMovement() {
     debugLog("[MOVEMENT] Walking naturally for " + (duration / 1000).toFixed(1) + "s after looking in a new direction.");
 
     if (movementStopTimer) clearTimeout(movementStopTimer);
+    movementSafetyTimer = setInterval(movementSafetyCheck, MOVEMENT_SAFETY_CHECK_MS);
     movementStopTimer = setTimeout(() => {
       if (!bot) return;
       try {
         bot.clearControlStates();
+        if (movementSafetyTimer) { clearInterval(movementSafetyTimer); movementSafetyTimer = null; }
         movementAction = "idle";
         debugLog("[MOVEMENT] Stopped walking.");
       } catch {}
@@ -95,6 +142,7 @@ async function performNaturalMovement() {
 
 function configureMovement(config) {
   movementEnabled = config.movementEnabled === true;
+  movementHomePosition = bot?.entity?.position ? { x: bot.entity.position.x, y: bot.entity.position.y, z: bot.entity.position.z } : null;
   stopMovement(null);
   if (movementEnabled) {
     debugLog("[MOVEMENT] Natural movement enabled.");
