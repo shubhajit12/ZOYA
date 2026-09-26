@@ -140,8 +140,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
     // Mineflayer's whisper event normally contains only the message body, but
     // accept a full "/w Zoya ..." payload too so owner replies work either way.
-    const normalized = text.replace(/^\\/(?:w|msg|tell|whisper)\\s+\\S+\\s*/i, "").trim();
-    const tokens = normalized.toLowerCase().split(/\\s+/).filter(Boolean);
+    const normalized = text.replace(/^\/(?:w|msg|tell|whisper)\s+\S+\s*/i, "").trim();
+    const tokens = normalized.toLowerCase().split(/\s+/).filter(Boolean);
     const decisionWord = tokens.find(token => ACCEPT_WORDS.has(token) || DECLINE_WORDS.has(token));
     if (!decisionWord) {
       if (sender.toLowerCase() !== ownerKey) void answerPlayer(sender, text);
