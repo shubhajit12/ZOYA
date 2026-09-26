@@ -146,7 +146,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const tokens = normalized.toLowerCase().split(/\s+/).filter(Boolean);
     const decisionWord = tokens.find(token => ACCEPT_WORDS.has(token) || DECLINE_WORDS.has(token));
     if (!decisionWord) {
-      if (sender.toLowerCase() !== ownerKey) void answerPlayer(sender, text, "whisper");
+      void answerPlayer(sender, text, "whisper");
       return;
     }
 
