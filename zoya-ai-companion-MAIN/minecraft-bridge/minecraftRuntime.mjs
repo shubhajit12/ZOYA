@@ -198,10 +198,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     const plankName = logs.name.replace(/_log$/, "_planks");
     const plankId = bot.registry.itemsByName[plankName]?.id;
     if (!plankId) return false;
-    if (typeof bot.craftItem === "function") {
-      await bot.craftItem(plankId, 4, null);
-      return true;
-    }
     const recipe = bot.recipesFor(plankId, null, 1, null)[0];
     if (!recipe) return false;
     await bot.craft(recipe, 1, null);
