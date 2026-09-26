@@ -90,6 +90,8 @@ export interface UserSettings {
   minecraftServerAddress: string;
   minecraftServerPort: number;
   minecraftBotUsername: string;
+  /** Minecraft username of Zoya's owner for permission requests. */
+  minecraftOwnerUsername: string;
   minecraftVersion: string;
   /** Optional skin URL for the Minecraft bot. Empty uses the server/default skin. */
   minecraftSkinUrl: string;
