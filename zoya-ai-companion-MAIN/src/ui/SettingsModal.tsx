@@ -101,7 +101,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         username: MINECRAFT_BOT_USERNAME,
         ownerUsername: minecraftOwnerUsername.trim(),
         auth: 'offline',
-        groqApiKey: settings.groqApiKey || '',
+        groqApiKey: groqApiKey.trim(),
         ...(minecraftVersion.trim() ? { version: minecraftVersion.trim() } : {}),
         ...(minecraftSkinUrl.trim() ? { skinUrl: minecraftSkinUrl.trim() } : {}),
         skinProvider: minecraftSkinProvider,
