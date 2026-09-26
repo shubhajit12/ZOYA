@@ -8,9 +8,9 @@ const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
   path.join(process.env.APPDATA || process.cwd(), "com.zoya.aicompanion", "minecraft", "config.json");
 
 function debugTimestamp() { return new Date().toISOString(); }
-function debugLog(message) { debugLog("[" + debugTimestamp() + "] " + message); }
-function debugWarn(message) { debugWarn("[" + debugTimestamp() + "] " + message); }
-function debugError(message) { debugError("[" + debugTimestamp() + "] " + message); }
+function debugLog(message) { process.stdout.write("[" + debugTimestamp() + "] " + message + "\n"); }
+function debugWarn(message) { process.stderr.write("[" + debugTimestamp() + "] " + message + "\n"); }
+function debugError(message) { process.stderr.write("[" + debugTimestamp() + "] " + message + "\n"); }
 
 const state = { status: "DISCONNECTED", connected: false, host: null, port: null, username: null, version: null, error: null, startedAt: new Date().toISOString() };
 let bot = null;
@@ -60,11 +60,13 @@ function logMinecraftState() {
       if (!nearbyIds.has(id)) debugLog("[EVENT] Entity left nearby range: " + id);
     }
     if (now - lastSnapshotLogAt >= 1000) {
-      debugLog("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z + " | Health=" + (p.health ?? "?") + " | Hunger=" + (p.food ?? "?") + " | Nearby=" + nearby.length);
+      debugLog("[STATE] Position: X=" + p.position.x + " Y=" + p.position.y + " Z=" + p.position.z + " | Health=" + (p.health ?? "?") + " | Hunger=" + (p.food ?? "?") + " | Rain=" + (current.world?.isRaining ? "YES" : "NO") + " | Nearby=" + nearby.length);
       lastSnapshotLogAt = now;
     }
   }
-  lastLoggedState = { health: p.health, food: p.food, held: current.selectedItem?.name || null };
+  if (current.world?.isRaining !== lastLoggedState?.isRaining) debugLog("[EVENT] Rain changed: " + (lastLoggedState?.isRaining ? "ON" : "OFF") + " -> " + (current.world?.isRaining ? "ON" : "OFF"));
+    if (current.world?.thunderState !== lastLoggedState?.thunderState) debugLog("[EVENT] Thunder changed: " + (lastLoggedState?.thunderState ?? "?") + " -> " + (current.world?.thunderState ?? "?"));
+    lastLoggedState = { health: p.health, food: p.food, held: current.selectedItem?.name || null, isRaining: current.world?.isRaining ?? null, thunderState: current.world?.thunderState ?? null };
   lastEntityIds = nearbyIds;
 }
 
