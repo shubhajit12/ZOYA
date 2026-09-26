@@ -131,6 +131,46 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
     return true;
   }
 
+  async function investigateEntity() {
+    const p = bot.entity.position;
+    const entities = Object.values(bot.entities || {}).filter(e => e && e !== bot.entity && e.position && e.position.distanceTo(p) <= 16);
+    entities.sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
+    const target = entities[0];
+    if (!target) return false;
+    await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 3));
+    return true;
+  }
+
+  async function mineNearest() {
+    const origin = bot.entity.position;
+    const names = new Set(["stone","cobblestone","coal_ore","deepslate_coal_ore","iron_ore","deepslate_iron_ore","copper_ore","deepslate_copper_ore"]);
+    let best = null;
+    let bestDistance = Infinity;
+    for (let dx = -8; dx <= 8; dx++) for (let dy = -4; dy <= 6; dy++) for (let dz = -8; dz <= 8; dz++) {
+      const block = bot.blockAt(origin.offset(dx, dy, dz));
+      if (!block || !names.has(block.name)) continue;
+      const d = block.position.distanceTo(origin);
+      if (d < bestDistance) { best = block; bestDistance = d; }
+    }
+    if (!best) return false;
+    await bot.pathfinder.goto(new goals.GoalGetToBlock(best.position.x, best.position.y, best.position.z));
+    if (!bot.canDigBlock(best)) return false;
+    await bot.dig(best);
+    return true;
+  }
+
+  async function craftBasic() {
+    const logs = bot.inventory.items().find(i => /_log$/.test(i.name));
+    if (!logs) return false;
+    const plankName = logs.name.replace(/_log$/, "_planks");
+    const plankId = bot.registry.itemsByName[plankName]?.id;
+    if (!plankId) return false;
+    const recipe = bot.recipesFor(plankId, null, 1, null)[0];
+    if (!recipe) return false;
+    await bot.craft(recipe, 1, null);
+    return true;
+  }
+
   async function eat() {
     const item = bot.inventory.items().find(i => /bread|apple|carrot|potato|beef|porkchop|chicken|mutton|salmon|cod|steak|cooked/.test(i.name));
     if (!item || (bot.food ?? 20) >= 16) return false;
@@ -155,6 +195,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, log = () => {} }
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3);
       else if (action === "return_to_owner") result = await moveToPlayer(owner, 5);
       else if (action === "eat") result = await eat();
+      else if (action === "investigate_entity") result = await investigateEntity();
+      else if (action === "mine") result = await mineNearest();
+      else if (action === "craft") result = await craftBasic();
       else if (action === "idle") result = true;
       else {
         log("[ACTION] Capability not implemented yet: " + action);
