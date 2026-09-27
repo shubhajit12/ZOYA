@@ -430,6 +430,21 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
 export function startCapabilityTester({bot,runtime,log=console.log}) {
   log("[CAPABILITY TESTER] Local-only mode: no Groq calls are made.");
+  const preflight = [
+    ["bot.entity", !!bot?.entity],
+    ["bot.pathfinder.goto", typeof bot?.pathfinder?.goto === "function"],
+    ["bot.lookAt", typeof bot?.lookAt === "function"],
+    ["bot.setControlState", typeof bot?.setControlState === "function"],
+    ["bot.chat", typeof bot?.chat === "function"],
+    ["runtime.execute", typeof runtime?.execute === "function"],
+    ["runtime.cancelCurrentTask", typeof runtime?.cancelCurrentTask === "function"]
+  ];
+  const failed = preflight.filter(([, ok]) => !ok).map(([name]) => name);
+  if (failed.length) {
+    log("[CAPABILITY TESTER] PREFLIGHT FAIL: " + failed.join(", "));
+    return ()=>{};
+  }
+  log("[CAPABILITY TESTER] PREFLIGHT PASS: movement, look, chat, and runtime execution APIs are ready.");
   if(!process.stdin.isTTY||!process.stdout.isTTY){ log("[CAPABILITY TESTER] Interactive terminal unavailable."); return ()=>{}; }
   let stopped=false;
   const rl=readline.createInterface({input:process.stdin,output:process.stdout,terminal:true});
