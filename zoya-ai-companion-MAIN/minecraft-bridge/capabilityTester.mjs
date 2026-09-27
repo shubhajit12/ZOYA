@@ -100,7 +100,7 @@ const CAPABILITIES = [
 ];
 
 const DELEGATED = new Map([
-  ["follow_player","follow_player"],["roam","safe_roam"],["pvp","pvp"],["gather_resources","gather_basic_resources"],
+  ["follow_player","follow_player"],["roam","safe_roam"],["pvp","pvp"],
   ["explore","explore"],["return","return_to_owner"],["investigate_entity","investigate_entity"],["mine","mine"],
   ["chop_tree","chop_tree"],["craft","craft"],["eat","eat"],["collect","collect"],["look_at_player","look_at_player"]
 ]);
@@ -174,6 +174,14 @@ async function attackLoop(bot,target,timeout=15000) {
 }
 
 async function directCapability({bot,runtime,id,arg,log}) {
+  if(id==="gather_resources") {
+    const parts=String(arg||"").trim().split(/\s+/);
+    const resourceName=parts[0] || "oak_log";
+    const amount=Math.max(1, Math.floor(Number(parts[1]) || 1));
+    log("[GATHER] Requested resource=" + resourceName + " amount=" + amount);
+    return runtime.execute("gather_basic_resources",{resourceName,amount,permissionGranted:true});
+  }
+
   if(DELEGATED.has(id)) {
     if(["pvp","follow_player","look_at_player"].includes(id) && !arg) throw new Error("A player username is required.");
     if (["follow_player","pvp"].includes(id)) {
