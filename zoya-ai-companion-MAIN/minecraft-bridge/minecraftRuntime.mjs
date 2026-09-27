@@ -422,17 +422,33 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
     if (!item) return false;
     const targetAmount = Math.max(1, Math.floor(Number(amount) || 1));
-    const recipes = bot.recipesFor(item.id, null, targetAmount, null);
-    if (!recipes.length) return false;
-
-    const recipe = recipes[0];
     let craftingTable = null;
-    if (recipe.requiresTable) {
+    let recipes = bot.recipesFor(item.id, null, targetAmount, null);
+
+    // Some Mineflayer versions only return table recipes when a crafting
+    // table is supplied to recipesFor(). Retry with a real nearby table
+    // instead of treating a valid table recipe as unavailable.
+    if (!recipes.length) {
       const tableId = bot.registry?.blocksByName?.crafting_table?.id;
       craftingTable = tableId != null
         ? bot.findBlock?.({ matching: tableId, maxDistance: 16 }) || null
         : null;
       if (!craftingTable) return false;
+      recipes = bot.recipesFor(item.id, null, targetAmount, craftingTable);
+    }
+
+    if (!recipes.length) return false;
+    const recipe = recipes[0];
+
+    if (recipe.requiresTable && !craftingTable) {
+      const tableId = bot.registry?.blocksByName?.crafting_table?.id;
+      craftingTable = tableId != null
+        ? bot.findBlock?.({ matching: tableId, maxDistance: 16 }) || null
+        : null;
+      if (!craftingTable) return false;
+    }
+
+    if (craftingTable) {
       const distance = craftingTable.position.distanceTo(bot.entity.position);
       if (distance > 3.5) {
         await bot.pathfinder.goto(new goals.GoalNear(
