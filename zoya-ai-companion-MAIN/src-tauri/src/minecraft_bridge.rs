@@ -77,6 +77,13 @@ pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
     let mut command = Command::new(&exe);
     command.current_dir(exe.parent().unwrap_or_else(|| std::path::Path::new(".")))
         .env("ZOYA_MINECRAFT_CONFIG", &config_json_path(&config))
+        // Developer-only capability testing: create this marker file next to
+        // the persistent Minecraft config to launch the interactive tester.
+        // Normal ZOYA launches remain on the Groq brain.
+        .env(
+            "ZOYA_CAPABILITY_DEBUG",
+            if config.parent().map(|p| p.join("capability-debug.flag").is_file()).unwrap_or(false) { "1" } else { "0" }
+        )
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit());
