@@ -13,8 +13,38 @@ const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
   path.join(process.env.APPDATA || process.cwd(), "com.zoya.aicompanion", "minecraft", "config.json");
 
 function debugTimestamp() { return new Date().toISOString(); }
-function debugLog(message) { process.stdout.write("[" + debugTimestamp() + "] " + message + "\n"); }
-function debugWarn(message) { process.stderr.write("[" + debugTimestamp() + "] " + message + "\n"); }
+const CAPABILITY_NOISE_PREFIXES = [
+  "[HEARTBEAT]",
+  "[STATE]",
+  "[EVENT] Position changed",
+  "[EVENT] Health changed",
+  "[EVENT] Hunger changed",
+  "[EVENT] Held item changed",
+  "[EVENT] XP changed",
+  "[EVENT] Inventory changed",
+  "[EVENT] Block below changed",
+  "[EVENT] Entity detected",
+  "[EVENT] Entity left nearby range",
+  "[EVENT] Rain changed",
+  "[EVENT] Thunder changed",
+  "[EVENT] Zoya died. Waiting for respawn/state recovery.",
+  "[EVENT] Zoya respawned."
+];
+
+function isCapabilityNoise(message) {
+  if (!capabilityDebugMode) return false;
+  const text = String(message);
+  return CAPABILITY_NOISE_PREFIXES.some(prefix => text.startsWith(prefix));
+}
+
+function debugLog(message) {
+  if (isCapabilityNoise(message)) return;
+  process.stdout.write("[" + debugTimestamp() + "] " + message + "\n");
+}
+function debugWarn(message) {
+  if (isCapabilityNoise(message)) return;
+  process.stderr.write("[" + debugTimestamp() + "] " + message + "\n");
+}
 function debugError(message) { process.stderr.write("[" + debugTimestamp() + "] " + message + "\n"); }
 
 const state = { status: "DISCONNECTED", connected: false, host: null, port: null, username: null, version: null, error: null, startedAt: new Date().toISOString() };
