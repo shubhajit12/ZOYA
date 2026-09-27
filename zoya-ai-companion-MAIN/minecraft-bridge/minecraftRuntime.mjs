@@ -352,8 +352,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
     // One-shot follow/return uses GoalNear deliberately: it has a fixed
     // destination and should resolve when the bot reaches the requested range.
+    const targetPosition = target.position.clone();
     try {
-      await bot.pathfinder.goto(new goals.GoalFollow(target, distance));
+      await bot.pathfinder.goto(new goals.GoalNear(
+        targetPosition.x,
+        targetPosition.y,
+        targetPosition.z,
+        distance
+      ));
       return taskIsActive(task);
     } catch (error) {
       if (taskIsActive(task)) {
