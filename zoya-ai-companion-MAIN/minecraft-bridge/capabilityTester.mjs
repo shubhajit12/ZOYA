@@ -164,7 +164,12 @@ function angleDelta(a,b) {
   let d=Math.abs(a-b)%(Math.PI*2);
   return d>Math.PI ? Math.PI*2-d : d;
 }
-async function verifyCapability({bot,id,arg,before,log,result,ask}) {
+function runtimeMemoryFactAvailable(bot,name,fact) {
+  const key=String(name||"").trim().toLowerCase();
+  const players=bot.__zoyaRuntimeMemoryPlayers;
+  return Boolean(players?.[key]?.facts?.some(value=>String(value)===String(fact)));
+}
+async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
   if (result === false) return false;
   const after = inventorySnapshot(bot);
   const moved = before.position && after.position ? before.position.distanceTo(after.position) : 0;
@@ -268,8 +273,23 @@ async function verifyCapability({bot,id,arg,before,log,result,ask}) {
     return answer === "y" || answer === "yes";
   }
 
-  if (["ask_permission","remember_player","sort_inventory","op_command"].includes(id)) {
-    log("[VERIFY] " + id + " is not a fully verifiable physical capability in the current tester; refusing false PASS.");
+  if (id==="remember_player") {
+    const m=String(arg||"").trim().split(/\s+/), name=m.shift(), fact=m.join(" ").trim();
+    const saved=runtimeMemoryFactAvailable(bot,name,fact);
+    if (saved) return true;
+    log("[VERIFY] remember_player did not persist the requested fact.");
+    return false;
+  }
+  if (id==="ask_permission") {
+    const answer = ask ? String(await ask("[VERIFY] Confirm the permission request was visibly delivered to the owner? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+  if (id==="op_command") {
+    const answer = ask ? String(await ask("[VERIFY] Confirm the OP command produced the intended visible server result? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+  if (id==="sort_inventory") {
+    log("[VERIFY] sort_inventory remains unsupported; it cannot be marked PASS.");
     return false;
   }
 
@@ -671,7 +691,8 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
         const started=Date.now();
         const before=inventorySnapshot(bot);
         const result=await directCapability({bot,runtime,id:cap.id,arg,log});
-        const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result,ask});
+        if (cap.id==="remember_player" && runtime?.memory?.players) bot.__zoyaRuntimeMemoryPlayers=runtime.memory.players;
+        const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result,ask,runtime});
         const status=verified?"PASS":"FAIL";
         log("[CAPABILITY] Mode: " + cap.id + " | Status: " + status + " | Duration: " + (Date.now()-started) + " ms");
       }catch(error){
