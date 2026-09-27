@@ -279,7 +279,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return activeTask === task && !task.cancelled;
   }
 
-  async function moveToPlayer(username, distance = 3, task = activeTask) {
+  async function moveToPlayer(username, distance = 3, task = activeTask, continuous = false) {
     if (!task) return false;
     while (taskIsActive(task)) {
       const target = findPlayerByUsername(username)?.entity;
@@ -296,6 +296,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         try { bot.setControlState("sprint", false); } catch {}
       }
       if (!taskIsActive(task)) return false;
+      if (!continuous) {
+        const remaining = findPlayerByUsername(username)?.entity?.position?.distanceTo(bot.entity.position) ?? Infinity;
+        return remaining <= distance + 0.75;
+      }
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     return false;
@@ -553,8 +557,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
       else if (action === "gather_basic_resources") result = await gatherResources(options.resourceName || "oak_log", options.amount || 1, task);
        else if (action === "chop_tree") result = await gatherWood(task);
-      else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task);
-      else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5, task) : false;
+      else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task, true);
+      else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5, task, false) : false;
       else if (action === "eat") result = await eat(options.itemName || "");
       else if (action === "collect") result = await collectNearestDrop(task, options.itemName || "", options.amount || 1);
       else if (action === "investigate_entity") result = await investigateEntity(task, options.entityName || "");
