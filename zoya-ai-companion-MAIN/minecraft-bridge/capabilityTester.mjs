@@ -615,8 +615,9 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(!target) throw new Error("No hostile target nearby."); return attackLoop(bot,target);
   }
   if(id==="guard"||id==="guard_location") {
-    const p=parseCoords(arg); log("[GUARD] Holding area at "+JSON.stringify(p));
-    await goto(bot,p.x,p.y,p.z,2); for(let i=0;i<20;i++){ if(HOSTILES.size){ const h=findEntity(bot,"",e=>HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=12); if(h){await equipMatching(bot,WEAPON_WORDS); await attackLoop(bot,h,5000);} } await sleep(500); } return true;
+    const p=parseCoords(arg);
+    log("[GUARD] Holding area at "+JSON.stringify(p)+" until STOP.");
+    return runtime.execute("guard_location",{x:p.x,y:p.y,z:p.z,position:p,permissionGranted:true});
   }
   if(id==="escape"||id==="find_safe_location") {
     const origin=bot.entity.position.clone();
@@ -1127,7 +1128,7 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
         const started=Date.now();
         const before=inventorySnapshot(bot);
 
-        if (["follow_player","pvp"].includes(cap.id)) {
+        if (["follow_player","pvp","guard","guard_location"].includes(cap.id)) {
           const promise=directCapability({bot,runtime,id:cap.id,arg,log});
           backgroundRun={id:cap.id,promise};
           log("[CAPABILITY] Mode: " + cap.id + " | Status: RUNNING IN BACKGROUND");
