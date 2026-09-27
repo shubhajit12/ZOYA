@@ -314,20 +314,37 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return true;
   }
 
-  async function gatherWood() {
-    const origin = bot.entity.position;
-    const names = new Set(["oak_log","birch_log","spruce_log","jungle_log","acacia_log","dark_oak_log","mangrove_log","cherry_log"]);
-    let best = null;
-    let bestDistance = Infinity;
-    for (let dx = -16; dx <= 16; dx++) for (let dy = -4; dy <= 8; dy++) for (let dz = -16; dz <= 16; dz++) {
-      const block = bot.blockAt(origin.offset(dx, dy, dz));
-      if (!block || !names.has(block.name)) continue;
-      const d = block.position.distanceTo(origin);
-      if (d < bestDistance) { best = block; bestDistance = d; }
+  async function gatherResources(resourceName = "oak_log", amount = 1, task = activeTask) {
+    if (!task) return false;
+    const wanted = String(resourceName || "").trim().toLowerCase();
+    const targetAmount = Math.max(1, Math.floor(Number(amount) || 1));
+    const allowedLogs = new Set(["oak_log","birch_log","spruce_log","jungle_log","acacia_log","dark_oak_log","mangrove_log","cherry_log"]);
+    const names = wanted ? new Set([wanted]) : allowedLogs;
+    let gathered = 0;
+
+    while (taskIsActive(task) && gathered < targetAmount) {
+      const origin = bot.entity.position;
+      let best = null;
+      let bestDistance = Infinity;
+      for (let dx = -24; dx <= 24; dx++) for (let dy = -8; dy <= 12; dy++) for (let dz = -24; dz <= 24; dz++) {
+        const block = bot.blockAt(origin.offset(dx, dy, dz));
+        if (!block || !names.has(block.name)) continue;
+        const d = block.position.distanceTo(origin);
+        if (d < bestDistance) { best = block; bestDistance = d; }
+      }
+      if (!best) break;
+      if (!taskIsActive(task)) return false;
+      const before = bot.inventory.items().filter(i => i.name === wanted).reduce((n,i) => n + i.count, 0);
+      await collectBlock(best);
+      const after = bot.inventory.items().filter(i => i.name === wanted).reduce((n,i) => n + i.count, 0);
+      gathered += Math.max(1, after - before);
     }
-    if (!best) return false;
-    await collectBlock(best);
-    return true;
+    log("[GATHER] Requested " + targetAmount + " " + wanted + "; gathered approximately " + gathered + ".");
+    return gathered >= targetAmount; 
+  }
+
+  async function gatherWood(task = activeTask) {
+    return gatherResources("oak_log", 1, task);
   }
 
   async function investigateEntity(task = activeTask) {
@@ -466,7 +483,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       let result = false;
       if (action === "safe_roam" || action === "explore") result = await explore(task);
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
-      else if (action === "gather_basic_resources" || action === "chop_tree") result = await gatherWood();
+      else if (action === "gather_basic_resources") result = await gatherResources(options.resourceName || "oak_log", options.amount || 1, task);
+       else if (action === "chop_tree") result = await gatherWood(task);
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task);
       else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5, task) : false;
       else if (action === "eat") result = await eat();
