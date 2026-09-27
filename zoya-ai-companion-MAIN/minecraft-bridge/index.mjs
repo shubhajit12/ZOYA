@@ -333,7 +333,13 @@ function connect(config) {
       applyConfiguredSkin(config);
       setMovementEnabled(config.movementEnabled === true);
       try {
-        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), wakeBrain: () => { if (!capabilityDebugMode) void zoyaBrain?.thinkNow(); }, log: debugLog });
+        minecraftRuntime = createMinecraftRuntime({
+          bot,
+          config: { ...config, capabilityDebugMode },
+          stateDir: path.dirname(CONFIG_PATH),
+          wakeBrain: () => { if (!capabilityDebugMode) void zoyaBrain?.thinkNow(); },
+          log: debugLog
+        });
         if (!capabilityDebugMode) ensureZoyaBrain().start();
         if (capabilityDebugMode) {
           capabilityTesterStop?.();
