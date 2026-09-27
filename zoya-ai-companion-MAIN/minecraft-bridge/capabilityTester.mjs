@@ -185,9 +185,22 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return false;
   }
 
-  if (["roam","explore","follow_player","return","investigate_entity","mine","chop_tree","collect","take_item","retrieve_item","escape","find_safe_location","chase_target","escort_player","protect_player","guard","guard_location","harvest_crops","hunt","dig","break_block"].includes(id)) {
+  if (["roam","explore","follow_player","return","investigate_entity","mine","chop_tree","escape","find_safe_location","chase_target","escort_player","protect_player","guard","guard_location","harvest_crops","hunt"].includes(id)) {
     if (moved >= 0.35) return true;
     const answer = ask ? String(await ask("[VERIFY] Did you visibly see Zoya perform the requested movement/world action? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+
+  if (["collect","take_item","retrieve_item"].includes(id)) {
+    if (after.byName.size > before.byName.size || [...after.byName.entries()].some(([name,count]) => count > (before.byName.get(name)||0))) return true;
+    const answer = ask ? String(await ask("[VERIFY] Did Zoya visibly pick up the requested item? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+
+  if (["dig","break_block"].includes(id)) {
+    const p=parseCoords(arg), block=bot.blockAt(p);
+    if (!block || block.name==="air") return true;
+    const answer = ask ? String(await ask("[VERIFY] Did the target block visibly break? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
   }
 
@@ -211,11 +224,15 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return false;
   }
 
-  if (["craft","craft_workbench","multi_step_craft","do_task","gather_missing_materials"].includes(id)) {
-    const requested = id==="do_task" ? "" : parts.slice(0,-1).join("_") || parts[0] || "";
+  if (["craft","craft_workbench","multi_step_craft","gather_missing_materials"].includes(id)) {
+    const requested = parts.slice(0,-1).join("_") || parts[0] || "";
     if (requested && inventoryDelta(before,after,requested) > 0) return true;
     log("[VERIFY] " + id + " did not increase the requested inventory item.");
     return false;
+  }
+  if (id==="do_task") {
+    const answer=ask ? String(await ask("[VERIFY] Did the requested task visibly complete in Minecraft? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
   }
 
   if (["eat"].includes(id)) {
@@ -267,7 +284,22 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return answer === "y" || answer === "yes";
   }
 
-  if (["open_door","close_door","use_button","use_lever","use_block","use_item","sleep","use_shield","use_ranged_weapon","place_block","build"].includes(id)) {
+  if (id==="place_block") {
+    const {prefix,...p}=parseCoordsFromEnd(arg);
+    const block=bot.blockAt(p);
+    if (block && block.name.toLowerCase().includes(prefix.trim().toLowerCase().replace(/ /g,"_"))) return true;
+    const answer=ask ? String(await ask("[VERIFY] Did the requested block visibly appear at the target location? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
+
+  if (id==="build") {
+    const m=String(arg||"").toLowerCase().match(/(?:pillar|tower|line)\s+(\w+)\s+(\d+)/);
+    if(m && inventoryDelta(before,after,m[1])<0) return true;
+    const answer=ask ? String(await ask("[VERIFY] Did the requested build visibly appear in Minecraft? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
+
+  if (["open_door","close_door","use_button","use_lever","use_block","use_item","sleep","use_shield","use_ranged_weapon"].includes(id)) {
     if (moved >= 0.1 || after.held !== before.held || after.food !== before.food) return true;
     const answer = ask ? String(await ask("[VERIFY] Confirm the requested Minecraft change/action was visibly successful? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
