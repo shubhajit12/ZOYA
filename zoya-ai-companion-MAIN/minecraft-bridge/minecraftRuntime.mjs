@@ -347,10 +347,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return gatherResources("oak_log", 1, task);
   }
 
-  async function investigateEntity(task = activeTask) {
+  async function investigateEntity(task = activeTask, entityName = "") {
     if (!task) return false;
+    const wanted = String(entityName || "").trim().toLowerCase();
     const p = bot.entity.position;
-    const entities = Object.values(bot.entities || {}).filter(e => e && e !== bot.entity && e.position && e.position.distanceTo(p) <= 16);
+    const entities = Object.values(bot.entities || {}).filter(e => e && e !== bot.entity && e.position && e.position.distanceTo(p) <= 16 &&
+      (!wanted || String(e.username || e.name || e.displayName || "").toLowerCase().includes(wanted)));
     entities.sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
     const target = entities[0];
     if (!target) return false;
@@ -364,9 +366,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
   }
 
-  async function mineNearest() {
+  async function mineNearest(blockName = "") {
     const origin = bot.entity.position;
-    const names = new Set(["stone","cobblestone","coal_ore","deepslate_coal_ore","iron_ore","deepslate_iron_ore","copper_ore","deepslate_copper_ore"]);
+    const requested = String(blockName || "").trim().toLowerCase();
+    const names = requested
+      ? new Set([requested])
+      : new Set(["stone","cobblestone","coal_ore","deepslate_coal_ore","iron_ore","deepslate_iron_ore","copper_ore","deepslate_copper_ore"]);
     let best = null;
     let bestDistance = Infinity;
     for (let dx = -8; dx <= 8; dx++) for (let dy = -4; dy <= 6; dy++) for (let dz = -8; dz <= 8; dz++) {
@@ -380,30 +385,43 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return true;
   }
 
-  async function craftBasic() {
-    const logs = bot.inventory.items().find(i => /_log$/.test(i.name));
-    if (!logs) return false;
-    const plankName = logs.name.replace(/_log$/, "_planks");
-    const plankId = bot.registry.itemsByName[plankName]?.id;
-    if (!plankId) return false;
+  async function craftBasic(itemName = "", amount = 1) {
+    const requested = String(itemName || "").trim().toLowerCase().replace(/ /g, "_");
+    let item = requested ? bot.registry.itemsByName[requested] : null;
+    if (!item) {
+      const logs = bot.inventory.items().find(i => /_log$/.test(i.name));
+      if (!logs) return false;
+      const plankName = logs.name.replace(/_log$/, "_planks");
+      item = bot.registry.itemsByName[plankName];
+    }
+    if (!item) return false;
+    const targetAmount = Math.max(1, Math.floor(Number(amount) || 1));
+    const recipes = bot.recipesFor(item.id, null, targetAmount, null);
+    if (!recipes.length) return false;
 
     if (typeof bot.craftItem === "function") {
-      const plan = await bot.craftItem(plankId, 4, null, { includeRecursion: true, multipleRecipes: true }, { strict: true });
+      const plan = await bot.craftItem(item.id, targetAmount, null, { includeRecursion: true, multipleRecipes: true }, { strict: true });
       return plan?.success === true;
     }
 
-    const recipe = bot.recipesFor(plankId, null, 1, null)[0];
-    if (!recipe) return false;
-    await bot.craft(recipe, 1, null);
+    await bot.craft(recipes[0], targetAmount, null);
     return true;
   }
 
-  async function collectNearestDrop(task = activeTask) {
+  async function collectNearestDrop(task = activeTask, itemName = "", amount = 1) {
     if (!task) return false;
+    const wanted = String(itemName || "").trim().toLowerCase();
+    const targetAmount = Math.max(1, Math.floor(Number(amount) || 1));
     const p = bot.entity.position;
-    const target = Object.values(bot.entities || {})
-      .filter(e => e && e.position && e !== bot.entity && (e.name === "item" || e.type === "object"))
-      .sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p))[0];
+    const targets = Object.values(bot.entities || {})
+      .filter(e => {
+        if (!e || !e.position || e === bot.entity || (e.name !== "item" && e.type !== "object")) return false;
+        if (!wanted) return true;
+        const itemStackName = String(e.itemStack?.name || e.metadata?.[8]?.name || e.metadata?.[7]?.name || e.displayName || "").toLowerCase();
+        return itemStackName === wanted || itemStackName.includes(wanted);
+      })
+      .sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
+    const target = targets[0];
     if (!target || target.position.distanceTo(p) > 24) return false;
     bot.setControlState("sprint", true);
     try {
@@ -415,8 +433,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
   }
 
-  async function eat() {
-    const item = bot.inventory.items().find(i => /bread|apple|carrot|potato|beef|porkchop|chicken|mutton|salmon|cod|steak|cooked/.test(i.name));
+  async function eat(itemName = "") {
+    const wanted = String(itemName || "").trim().toLowerCase();
+    const item = bot.inventory.items().find(i =>
+      wanted ? (i.name.toLowerCase() === wanted || i.name.toLowerCase().includes(wanted)) :
+      /bread|apple|carrot|potato|beef|porkchop|chicken|mutton|salmon|cod|steak|cooked/.test(i.name)
+    );
     if (!item || (bot.food ?? 20) >= 16) return false;
     await bot.equip(item, "hand");
     await bot.consume();
@@ -487,11 +509,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
        else if (action === "chop_tree") result = await gatherWood(task);
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task);
       else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5, task) : false;
-      else if (action === "eat") result = await eat();
-      else if (action === "collect") result = await collectNearestDrop(task);
-      else if (action === "investigate_entity") result = await investigateEntity(task);
-      else if (action === "mine") result = await mineNearest();
-      else if (action === "craft") result = await craftBasic();
+      else if (action === "eat") result = await eat(options.itemName || "");
+      else if (action === "collect") result = await collectNearestDrop(task, options.itemName || "", options.amount || 1);
+      else if (action === "investigate_entity") result = await investigateEntity(task, options.entityName || "");
+      else if (action === "mine") result = await mineNearest(options.blockName || "");
+      else if (action === "craft") result = await craftBasic(options.itemName || "", options.amount || 1);
       else if (action === "pvp") result = await pvp(options.targetUsername, task);
       else if (action === "idle") result = true;
       else {
