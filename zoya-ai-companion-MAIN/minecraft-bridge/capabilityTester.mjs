@@ -164,7 +164,7 @@ function angleDelta(a,b) {
   let d=Math.abs(a-b)%(Math.PI*2);
   return d>Math.PI ? Math.PI*2-d : d;
 }
-async function verifyCapability({bot,id,arg,before,log,result}) {
+async function verifyCapability({bot,id,arg,before,log,result,ask}) {
   if (result === false) return false;
   const after = inventorySnapshot(bot);
   const moved = before.position && after.position ? before.position.distanceTo(after.position) : 0;
@@ -189,7 +189,9 @@ async function verifyCapability({bot,id,arg,before,log,result}) {
   }
 
   if (["chat","private_chat","whisper_player","report_result","ask_clarification","coordinate_with_player","coordinate"].includes(id)) {
-    log("[VERIFY] " + id + " cannot be confirmed from a local API return alone. This mode requires a matching server-visible chat event.");
+    const answer = ask ? String(await ask("[VERIFY] Confirm the message was visible in Minecraft? (y/n): ")).trim().toLowerCase() : "n";
+    if (answer === "y" || answer === "yes") return true;
+    log("[VERIFY] Human confirmation was negative; capability marked FAIL.");
     return false;
   }
 
@@ -239,16 +241,20 @@ async function verifyCapability({bot,id,arg,before,log,result}) {
 
   if (["check_inventory","find_item","count_item","find_item_world","find_player","find_entity","check_nearby","check_environment","detect_hostiles","check_health","check_food","check_equipment","observe","search"].includes(id)) return true;
 
-  if (["open_chest","open_barrel","deposit","retrieve","smelt","craft_furnace"].includes(id)) {
-    if (inventoryDelta(before,after,targetName) !== 0 || after.held !== before.held || moved >= 0.35) return true;
-    log("[VERIFY] " + id + " has no sufficient post-condition; refusing a false PASS.");
-    return false;
+  if (["open_chest","open_barrel"].includes(id)) {
+    const answer = ask ? String(await ask("[VERIFY] Confirm the container opened in Minecraft? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+  if (["deposit","retrieve","smelt","craft_furnace"].includes(id)) {
+    if (inventoryDelta(before,after,targetName) !== 0) return true;
+    const answer = ask ? String(await ask("[VERIFY] Confirm the requested inventory/furnace change is visible? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
   }
 
   if (["open_door","close_door","use_button","use_lever","use_block","use_item","sleep","use_shield","use_ranged_weapon","place_block","build"].includes(id)) {
     if (moved >= 0.1 || after.held !== before.held || after.food !== before.food) return true;
-    log("[VERIFY] " + id + " did not produce a measurable post-condition.");
-    return false;
+    const answer = ask ? String(await ask("[VERIFY] Confirm the requested Minecraft change/action was visibly successful? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
   }
 
   if (["ask_permission","remember_player","sort_inventory","op_command"].includes(id)) {
@@ -636,7 +642,7 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
         const started=Date.now();
         const before=inventorySnapshot(bot);
         const result=await directCapability({bot,runtime,id:cap.id,arg,log});
-        const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result});
+        const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result,ask});
         const status=verified?"PASS":"FAIL";
         log("[CAPABILITY] Mode: " + cap.id + " | Status: " + status + " | Duration: " + (Date.now()-started) + " ms");
       }catch(error){
