@@ -493,7 +493,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         currentGoal = null;
       }
       busy = false;
-      log("[TASK] Finished #" + task.id + " " + action + " -> " + (task.cancelled ? "cancelled" : "completed") + ".");
+      log("[TASK] Finished #" + task.id + " " + action + " -> " + (task.cancelled ? "cancelled" : (result === true ? "completed" : "failed")) + ".");
       if (wasActive) wakeBrain();
     }
   }
