@@ -499,8 +499,16 @@ async function directCapability({bot,runtime,id,arg,log}) {
   }
 
   if(id==="hit") {
-    const target=findPlayer(bot,arg)?.entity; if(!target) throw new Error("Player not found.");
-    await bot.lookAt(target.position.offset(0,target.height||1.5,0),true); bot.attack(target); return true;
+    const target=findPlayer(bot,arg)?.entity;
+    if(!target) throw new Error("Player not found.");
+    if (dist(bot.entity.position, target.position) > 3.1) {
+      await goto(bot,target.position.x,target.position.y,target.position.z,2.6,10000);
+    }
+    const liveTarget=findPlayer(bot,arg)?.entity;
+    if(!liveTarget) throw new Error("Player left before the hit.");
+    await bot.lookAt(liveTarget.position.offset(0,liveTarget.height||1.5,0),true);
+    bot.attack(liveTarget);
+    return true;
   }
   if(id==="chat") {
     const message=String(arg||"").trim();
