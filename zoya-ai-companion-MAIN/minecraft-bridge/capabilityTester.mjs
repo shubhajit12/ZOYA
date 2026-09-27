@@ -176,7 +176,7 @@ async function attackLoop(bot,target,timeout=15000) {
 async function directCapability({bot,runtime,id,arg,log}) {
   if(DELEGATED.has(id)) {
     if(["pvp","follow_player","look_at_player"].includes(id) && !arg) throw new Error("A player username is required.");
-    return runtime.execute(DELEGATED.get(id),{targetUsername:arg,permissionGranted:true});
+    if (["follow_player","pvp"].includes(id)) { const target=String(arg||"").trim(); if(!target) throw new Error("A player username is required."); log("[CAPABILITY] "+id+" will run for 15 seconds in the manual tester."); const run=runtime.execute(DELEGATED.get(id),{targetUsername:target,permissionGranted:true}); await Promise.race([run,sleep(15000)]); if(runtime.getActiveTask?.()) runtime.cancelCurrentTask("manual capability test duration complete"); return true; } return runtime.execute(DELEGATED.get(id),{targetUsername:arg,permissionGranted:true});
   }
 
   if(id==="hit") {
