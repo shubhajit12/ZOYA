@@ -246,8 +246,10 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
   }
 
   if (["equip_item","equip_best_weapon"].includes(id)) {
-    if (after.held && after.held !== before.held) return true;
-    log("[VERIFY] equip did not change the held item.");
+    const requested=String(arg||"").trim().toLowerCase();
+    if (after.held && (!requested || after.held.toLowerCase().includes(requested) || WEAPON_WORDS.some(word=>requested==="" && after.held.toLowerCase().includes(word)))) return true;
+    if (after.held && after.held !== before.held && id==="equip_best_weapon") return true;
+    log("[VERIFY] equip did not leave the requested item equipped.");
     return false;
   }
 
@@ -263,10 +265,19 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return false;
   }
 
-  if (["jump","sprint"].includes(id)) {
-    if (moved >= 0.1 || id==="jump" && !bot.entity.onGround) return true;
-    log("[VERIFY] " + id + " produced no observable movement/state change.");
+  if (id==="sprint") {
+    if (moved >= 0.1) return true;
+    log("[VERIFY] sprint produced no observable movement.");
     return false;
+  }
+  if (id==="jump") {
+    if (!before.position || !after.position) return false;
+    if (Math.abs(after.position.y-before.position.y)>=0.15 || moved>=0.25) {
+      const answer=ask ? String(await ask("[VERIFY] Did you visibly see Zoya jump? (y/n): ")).trim().toLowerCase() : "n";
+      return answer==="y" || answer==="yes";
+    }
+    const answer=ask ? String(await ask("[VERIFY] Did you visibly see Zoya jump? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
   }
 
   if (id==="sneak") {
