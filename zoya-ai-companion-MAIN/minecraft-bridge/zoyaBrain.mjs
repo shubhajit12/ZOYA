@@ -95,6 +95,10 @@ export function createZoyaBrain({
     queuedReason = null;
 
     const config = getConfig() || {};
+    if (config.capabilityDebugMode === true) {
+      log("[BRAIN] Capability test mode is active; Groq request blocked.");
+      return;
+    }
     const apiKey = typeof config.groqApiKey === "string" ? config.groqApiKey.trim() : "";
     const minecraftState = getMinecraftState();
 
