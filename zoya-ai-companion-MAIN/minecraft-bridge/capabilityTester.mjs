@@ -309,9 +309,22 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return answer==="y" || answer==="yes";
   }
 
-  if (["open_door","close_door","use_button","use_lever","use_block","use_item","sleep","use_shield","use_ranged_weapon"].includes(id)) {
-    if (moved >= 0.1 || after.held !== before.held || after.food !== before.food) return true;
-    const answer = ask ? String(await ask("[VERIFY] Confirm the requested Minecraft change/action was visibly successful? (y/n): ")).trim().toLowerCase() : "n";
+  if (id==="open_door" || id==="close_door") {
+    const p=parseCoords(arg), block=bot.blockAt(p), open=block?.getProperties?.().open;
+    const expected=id==="open_door";
+    if (open===expected) return true;
+    const answer=ask ? String(await ask("[VERIFY] Did the door visibly " + (expected?"open":"close") + "? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
+
+  if (id==="sleep") {
+    if (bot.isSleeping===true) return true;
+    const answer=ask ? String(await ask("[VERIFY] Did Zoya visibly enter the bed/sleep state? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
+
+  if (["use_button","use_lever","use_block","use_item","use_shield","use_ranged_weapon"].includes(id)) {
+    const answer = ask ? String(await ask("[VERIFY] Confirm the requested Minecraft action visibly happened? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
   }
 
