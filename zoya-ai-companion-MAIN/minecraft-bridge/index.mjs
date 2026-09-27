@@ -67,6 +67,7 @@ let lastEntityIds = new Set();
 let lastHostileNearby = false;
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
+const CAPABILITY_BUILD_VERSION = "manual-capability-v2-2026-09-27";
 // Autonomous movement is a brain capability, not a second movement loop.
 // Keeping one movement writer prevents natural-walk timers from fighting pathfinder actions.
 let movementEnabled = false;
@@ -344,6 +345,7 @@ function connect(config) {
   disconnect();
   currentConfig = { ...config, capabilityDebugMode: true };
   debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is HARD-DISABLED for this build.");
+  debugLog("[CAPABILITY TESTER] Build marker: " + CAPABILITY_BUILD_VERSION);
   debugLog("[CAPABILITY TESTER] Effective config: capabilityDebugMode=true; Groq planner unavailable.");
   const host = String(config.host || "127.0.0.1");
   const port = Number(config.port || 25565);
