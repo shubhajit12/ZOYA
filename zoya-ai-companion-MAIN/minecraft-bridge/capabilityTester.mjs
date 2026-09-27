@@ -403,10 +403,41 @@ function nearestBlock(bot,names,max=24) {
   }
   return best;
 }
-async function goto(bot,x,y,z,r=1.5) {
+async function goto(bot,x,y,z,r=1.5,timeoutMs=30000) {
   if(!goals?.GoalNear) throw new Error("GoalNear unavailable.");
-  await bot.pathfinder.goto(new goals.GoalNear(x,y,z,r));
-  return dist(bot.entity.position,{x,y,z})<=r+1.25;
+  const goal = new goals.GoalNear(x,y,z,r);
+  let timer = null;
+  let timedOut = false;
+  const pathPromise = bot.pathfinder.goto(goal).then(
+    () => true,
+    error => {
+      if (timedOut) return false;
+      throw error;
+    }
+  );
+  const timeoutPromise = new Promise(resolve => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      try { bot.pathfinder.setGoal(null); } catch {}
+      resolve(false);
+    }, Math.max(1000, timeoutMs));
+  });
+
+  try {
+    const reached = await Promise.race([pathPromise, timeoutPromise]);
+    const remaining = dist(bot.entity.position,{x,y,z});
+    if (!reached) {
+      throw new Error("Pathfinding timed out after " + Math.round(timeoutMs / 1000) + "s; remaining=" + remaining.toFixed(2));
+    }
+    return remaining <= r + 1.25;
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (timedOut) {
+      // The path promise may reject after the timeout; its rejection is already
+      // consumed above and the goal has been explicitly cancelled.
+      try { bot.pathfinder.setGoal(null); } catch {}
+    }
+  }
 }
 async function equipMatching(bot,words,dest="hand") {
   const item=bot.inventory.items().find(i=>words.some(w=>i.name.toLowerCase().includes(w)));
@@ -534,8 +565,28 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="chase_target"||id==="escort_player"||id==="protect_player") {
     const pl=findPlayer(bot,arg); const target=pl?.entity||findEntity(bot,arg);
     if(!target) throw new Error("Target not found.");
-    for(let i=0;i<20;i++){ if(target.isValid===false) break; if(dist(bot.entity.position,target.position)>3) await goto(bot,target.position.x,target.position.y,target.position.z,2.5); await sleep(300); }
-    return true;
+
+    // Dynamic GoalFollow is the correct primitive for a moving target. Use it
+    // for these continuous movement capabilities instead of repeatedly chasing
+    // stale coordinates with GoalNear.
+    if (goals?.GoalFollow) {
+      bot.pathfinder.setGoal(new goals.GoalFollow(target, 3), true);
+      const deadline = Date.now() + 30000;
+      while (Date.now() < deadline && target.isValid !== false) {
+        if (dist(bot.entity.position,target.position) <= 3.5) break;
+        await sleep(150);
+      }
+      try { bot.pathfinder.setGoal(null); } catch {}
+      return target.isValid !== false && dist(bot.entity.position,target.position) <= 4.5;
+    }
+
+    // Compatibility fallback for an older pathfinder.
+    for(let i=0;i<20;i++){
+      if(target.isValid===false) break;
+      if(dist(bot.entity.position,target.position)>3) await goto(bot,target.position.x,target.position.y,target.position.z,2.5);
+      await sleep(300);
+    }
+    return target.isValid !== false;
   }
   if(id==="equip_best_weapon") { return equipMatching(bot,WEAPON_WORDS); }
   if(id==="use_shield") {
