@@ -723,14 +723,22 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(id==="gather_missing_materials"){ return runtime.execute("gather_basic_resources",{permissionGranted:true}); }
     const recipeItem=bot.registry.itemsByName[target.replace(/ /g,"_")]||bot.registry.itemsByName[target];
     if(!recipeItem) throw new Error("Unknown craft item: "+target);
-    const recipes=bot.recipesFor(recipeItem.id,null,1,null);
-    if(!recipes.length) throw new Error("No available recipe for "+target);
     let craftingTable=null;
-    if(id==="craft_workbench" || recipes[0].requiresTable) {
+    let recipes=bot.recipesFor(recipeItem.id,null,1,null);
+
+    if(!recipes.length || id==="craft_workbench") {
       craftingTable=nearestBlock(bot,"crafting_table",16);
       if(!craftingTable) throw new Error("Crafting table not found.");
-      await goto(bot,craftingTable.position.x,craftingTable.position.y,craftingTable.position.z,3);
+      recipes=bot.recipesFor(recipeItem.id,null,1,craftingTable);
     }
+    if(!recipes.length) throw new Error("No available recipe for "+target);
+    if(recipes[0].requiresTable && !craftingTable) {
+      craftingTable=nearestBlock(bot,"crafting_table",16);
+      if(!craftingTable) throw new Error("Crafting table not found.");
+      recipes=bot.recipesFor(recipeItem.id,null,1,craftingTable);
+      if(!recipes.length) throw new Error("No table recipe available for "+target);
+    }
+    if(craftingTable) await goto(bot,craftingTable.position.x,craftingTable.position.y,craftingTable.position.z,3);
     await bot.craft(recipes[0],1,craftingTable);
     return true;
   }
