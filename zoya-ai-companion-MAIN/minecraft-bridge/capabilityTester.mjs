@@ -392,6 +392,18 @@ function findInventoryItem(bot,name) {
 }
 function nearestBlock(bot,names,max=24) {
   const wanted=Array.isArray(names)?names.map(x=>String(x).toLowerCase()):[String(names||"").toLowerCase()];
+  const ids=wanted.map(name=>bot.registry?.blocksByName?.[name]?.id).filter(id=>Number.isInteger(id));
+  if (typeof bot.findBlocks==="function" && ids.length) {
+    const positions=bot.findBlocks({matching:ids,maxDistance:max,count:32});
+    let best=null,bestD=Infinity;
+    for (const position of positions) {
+      const block=bot.blockAt(position);
+      if (!block || block.name==="air") continue;
+      const d=block.position.distanceTo(bot.entity.position);
+      if(d<bestD && (!wanted.length || wanted.some(n=>block.name.toLowerCase().includes(n)))) { best=block; bestD=d; }
+    }
+    return best;
+  }
   const p=bot.entity.position;
   let best=null,bestD=max;
   const r=Math.ceil(max);
@@ -402,6 +414,37 @@ function nearestBlock(bot,names,max=24) {
     if(!wanted.length || wanted.some(n=>b.name.toLowerCase().includes(n))) { best=b; bestD=d; }
   }
   return best;
+}
+
+function isSolidBlock(block) {
+  return Boolean(block && block.name !== "air" && block.boundingBox !== "empty");
+}
+
+function isStandable(bot, position) {
+  const feet=bot.blockAt(position);
+  const head=bot.blockAt(position.offset(0,1,0));
+  const floor=bot.blockAt(position.offset(0,-1,0));
+  return isSolidBlock(floor) && (!feet || feet.name==="air" || feet.boundingBox==="empty") && (!head || head.name==="air" || head.boundingBox==="empty");
+}
+
+function findSafePosition(bot, origin=bot.entity.position, radius=20, shelter=false) {
+  const candidates=[];
+  const base=origin.floored();
+  for(let dx=-radius;dx<=radius;dx++) for(let dz=-radius;dz<=radius;dz++) {
+    if (dx===0 && dz===0) continue;
+    for(let dy=-3;dy<=3;dy++) {
+      const p=base.offset(dx,dy,dz);
+      if (!isStandable(bot,p)) continue;
+      if (shelter) {
+        const roof=bot.blockAt(p.offset(0,2,0));
+        if (!isSolidBlock(roof)) continue;
+        const wallCount=[bot.blockAt(p.offset(1,0,0)),bot.blockAt(p.offset(-1,0,0)),bot.blockAt(p.offset(0,0,1)),bot.blockAt(p.offset(0,0,-1))].filter(isSolidBlock).length;
+        if (wallCount < 1) continue;
+      }
+      candidates.push(p);
+    }
+  }
+  return candidates.sort((a,b)=>a.distanceTo(origin)-b.distanceTo(origin))[0] || null;
 }
 async function goto(bot,x,y,z,r=1.5,timeoutMs=30000) {
   if(!goals?.GoalNear) throw new Error("GoalNear unavailable.");
@@ -565,10 +608,24 @@ async function directCapability({bot,runtime,id,arg,log}) {
     await goto(bot,p.x,p.y,p.z,2); for(let i=0;i<20;i++){ if(HOSTILES.size){ const h=findEntity(bot,"",e=>HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=12); if(h){await equipMatching(bot,WEAPON_WORDS); await attackLoop(bot,h,5000);} } await sleep(500); } return true;
   }
   if(id==="escape"||id==="find_safe_location") {
-    const p=bot.entity.position; const candidates=[[16,0,0],[-16,0,0],[0,0,16],[0,0,-16],[10,0,10],[-10,0,-10]];
-    const safe=candidates.map(([x,y,z])=>p.offset(x,y,z)).find(q=>!Object.values(bot.entities||{}).some(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,q)<10));
-    if(!safe) throw new Error("No safe location found nearby.");
-    await goto(bot,safe.x,safe.y,safe.z,2); return true;
+    const origin=bot.entity.position.clone();
+    const safeCandidates=[];
+    const radius=20;
+    for(let dx=-radius;dx<=radius;dx+=4) for(let dz=-radius;dz<=radius;dz+=4) for(let dy=-3;dy<=3;dy++) {
+      const q=origin.floored().offset(dx,dy,dz);
+      if(!isStandable(bot,q)) continue;
+      const hostileDistance=Math.min(...Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())).map(e=>dist(e.position,q)).concat([Infinity]));
+      safeCandidates.push({q,hostileDistance,travel:dist(origin,q)});
+    }
+    safeCandidates.sort((a,b)=>b.hostileDistance-a.hostileDistance || a.travel-b.travel);
+    for(const candidate of safeCandidates.slice(0,20)){
+      try {
+        await goto(bot,candidate.q.x,candidate.q.y,candidate.q.z,2,12000);
+        const stillThreatened=Object.values(bot.entities||{}).some(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<10);
+        if(!stillThreatened) return true;
+      } catch {}
+    }
+    throw new Error("No reachable safe location found nearby.");
   }
   if(id==="chase_target"||id==="escort_player"||id==="protect_player") {
     const pl=findPlayer(bot,arg); const target=pl?.entity||findEntity(bot,arg);
@@ -645,9 +702,10 @@ async function directCapability({bot,runtime,id,arg,log}) {
   }
   if(id==="fish") { if(typeof bot.fish!=="function") throw new Error("Fishing API unavailable."); await bot.fish(); return true; }
   if(id==="find_shelter") {
-    const p=bot.entity.position; const block=nearestBlock(bot,["stone","dirt","grass_block"],10);
-    if(block) { const q=block.position.offset(0,1,0); await goto(bot,q.x,q.y,q.z,2); return true; }
-    throw new Error("No nearby shelter material/location found.");
+    const shelter=findSafePosition(bot,bot.entity.position,20,true);
+    if(!shelter) throw new Error("No reachable sheltered position found nearby.");
+    await goto(bot,shelter.x,shelter.y,shelter.z,2,15000);
+    return true;
   }
   if(id==="recover_after_death") {
     if(bot.health>0) return true;
