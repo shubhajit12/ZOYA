@@ -308,6 +308,7 @@ function disconnect() {
 
 function connect(config) {
   currentConfig = config;
+  capabilityDebugMode = CAPABILITY_DEBUG_ENV || config.capabilityDebugMode === true;
   ensureZoyaBrain();
   disconnect();
   const host = String(config.host || "127.0.0.1");
