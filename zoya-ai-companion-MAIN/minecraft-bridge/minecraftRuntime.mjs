@@ -478,9 +478,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const task = { id: ++taskSequence, action, targetUsername: options.targetUsername || null, startedAt: Date.now(), cancelled: false, token: 0 };
     activeTask = task;
     currentGoal = action;
+    let result = false;
     log("[TASK] Started #" + task.id + " " + action + (task.targetUsername ? " -> " + task.targetUsername : "") + ".");
     try {
-      let result = false;
       if (action === "safe_roam" || action === "explore") result = await explore(task);
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
       else if (action === "gather_basic_resources") result = await gatherResources(options.resourceName || "oak_log", options.amount || 1, task);
