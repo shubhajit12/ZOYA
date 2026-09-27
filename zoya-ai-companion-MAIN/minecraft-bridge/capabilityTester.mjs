@@ -621,7 +621,10 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const before=inventoryCount(bot,"furnace");
     const recipes=bot.recipesFor(furnaceItem.id,null,1,null);
     if(!recipes.length) throw new Error("No furnace recipe available.");
-    await bot.craft(recipes[0],1,null);
+    const table=nearestBlock(bot,"crafting_table",16);
+    if(!table) throw new Error("Crafting table not found; furnace crafting requires a table.");
+    await goto(bot,table.position.x,table.position.y,table.position.z,3);
+    await bot.craft(recipes[0],1,table);
     return inventoryCount(bot,"furnace")>=before+1;
   }
   if(id==="craft"||id==="craft_workbench"||id==="multi_step_craft"||id==="do_task"||id==="gather_missing_materials"){
