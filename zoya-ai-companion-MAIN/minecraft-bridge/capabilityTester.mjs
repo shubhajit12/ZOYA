@@ -459,7 +459,11 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="equip_best_weapon") { return equipMatching(bot,WEAPON_WORDS); }
   if(id==="use_shield") {
     const shield=findInventoryItem(bot,"shield"); if(!shield) throw new Error("Shield not found.");
-    await bot.equip(shield,"off-hand"); bot.setControlState("sneak",true); await sleep(2000); bot.setControlState("sneak",false); return true;
+    await bot.equip(shield,"off-hand");
+    bot.activateItem();
+    await sleep(2000);
+    bot.deactivateItem();
+    return true;
   }
   if(id==="use_ranged_weapon") {
     const target=findPlayer(bot,arg)?.entity||findEntity(bot,arg); if(!target) throw new Error("Target not found.");
@@ -552,8 +556,11 @@ async function directCapability({bot,runtime,id,arg,log}) {
   }
   if(["open_door","close_door","use_button","use_lever","use_block"].includes(id)){
     const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found."); await goto(bot,p.x,p.y,p.z,3); await bot.lookAt(b.position.offset(.5,.5,.5),true);
-    if(id==="close_door"&&b.name.includes("door")&&b.getProperties?.().open) { await bot.activateBlock(b); return true; }
-    await bot.activateBlock(b); return true;
+    if((id==="open_door"||id==="close_door") && !b.name.includes("door")) throw new Error("Target is not a door.");
+    if(id==="open_door" && b.getProperties?.().open===true) return true;
+    if(id==="close_door" && b.getProperties?.().open===false) return true;
+    await bot.activateBlock(b);
+    return true;
   }
   if(id==="use_item"){
     const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); bot.activateItem(); await sleep(500); bot.deactivateItem(); return true;
