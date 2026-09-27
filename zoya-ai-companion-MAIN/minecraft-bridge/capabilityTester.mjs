@@ -132,6 +132,133 @@ function findEntity(bot,name,predicate=()=>true) {
   return Object.values(bot.entities||{}).filter(e=>e?.position && predicate(e) && (!wanted || String(e.username||e.name||e.displayName||"").toLowerCase().includes(wanted)))
     .sort((a,b)=>dist(a.position,bot.entity.position)-dist(b.position,bot.entity.position))[0] || null;
 }
+function inventorySnapshot(bot) {
+  const items = bot.inventory.items();
+  const byName = new Map();
+  for (const item of items) byName.set(item.name, (byName.get(item.name) || 0) + item.count);
+  return {
+    byName,
+    held: bot.heldItem?.name || null,
+    food: Number(bot.food ?? 20),
+    health: Number(bot.health ?? 20),
+    position: bot.entity?.position?.clone?.() || null,
+    yaw: Number(bot.entity?.yaw ?? 0),
+    pitch: Number(bot.entity?.pitch ?? 0),
+    vehicle: bot.vehicle || null
+  };
+}
+function inventoryDelta(before, after, name) {
+  const wanted = String(name || "").toLowerCase();
+  if (!wanted) return 0;
+  let total = 0;
+  for (const [n, count] of after.byName.entries()) {
+    if (n.toLowerCase() === wanted || n.toLowerCase().includes(wanted)) total += count;
+  }
+  let old = 0;
+  for (const [n, count] of before.byName.entries()) {
+    if (n.toLowerCase() === wanted || n.toLowerCase().includes(wanted)) old += count;
+  }
+  return total - old;
+}
+function angleDelta(a,b) {
+  let d=Math.abs(a-b)%(Math.PI*2);
+  return d>Math.PI ? Math.PI*2-d : d;
+}
+async function verifyCapability({bot,id,arg,before,log,result}) {
+  if (result === false) return false;
+  const after = inventorySnapshot(bot);
+  const moved = before.position && after.position ? before.position.distanceTo(after.position) : 0;
+  const turned = angleDelta(before.yaw,after.yaw) > 0.15 || Math.abs(before.pitch-after.pitch) > 0.15;
+  const parts = String(arg || "").trim().split(/\s+/);
+  const targetName = parts[0] || "";
+
+  if (["go_to","return_to_coordinates","roam","explore","follow_player","return","investigate_entity","mine","chop_tree","collect","take_item","retrieve_item","escape","find_safe_location","chase_target","escort_player","protect_player","guard","guard_location","harvest_crops","hunt","attack_mob","defend","pvp","dig","break_block"].includes(id)) {
+    if (moved >= 0.35) return true;
+    if (["attack_mob","defend","pvp","hunt"].includes(id)) {
+      const target = findPlayer(bot, targetName)?.entity || findEntity(bot,targetName);
+      if (target && before.health > 0 && target.health != null && target.health < before.health) return true;
+    }
+    log("[VERIFY] " + id + " produced no measurable Minecraft-world change (movement=" + moved.toFixed(2) + ").");
+    return false;
+  }
+
+  if (["look_at_player","look_at_coordinates","watch","investigate_entity"].includes(id)) {
+    if (turned) return true;
+    log("[VERIFY] " + id + " did not produce a measurable camera rotation.");
+    return false;
+  }
+
+  if (["chat","private_chat","whisper_player","report_result","ask_clarification","coordinate_with_player","coordinate"].includes(id)) {
+    log("[VERIFY] " + id + " cannot be confirmed from a local API return alone. This mode requires a matching server-visible chat event.");
+    return false;
+  }
+
+  if (["craft","craft_workbench","multi_step_craft","do_task","gather_missing_materials"].includes(id)) {
+    const requested = id==="do_task" ? "" : parts.slice(0,-1).join("_") || parts[0] || "";
+    if (requested && inventoryDelta(before,after,requested) > 0) return true;
+    log("[VERIFY] " + id + " did not increase the requested inventory item.");
+    return false;
+  }
+
+  if (["eat"].includes(id)) {
+    if (after.food > before.food) return true;
+    log("[VERIFY] eat did not increase hunger.");
+    return false;
+  }
+
+  if (["equip_item","equip_best_weapon"].includes(id)) {
+    if (after.held && after.held !== before.held) return true;
+    log("[VERIFY] equip did not change the held item.");
+    return false;
+  }
+
+  if (["drop_item","give_item","deliver_item"].includes(id)) {
+    if (inventoryDelta(before,after,targetName) < 0) return true;
+    log("[VERIFY] " + id + " did not reduce the source inventory item.");
+    return false;
+  }
+
+  if (id==="enter_exit_vehicle") {
+    if (Boolean(before.vehicle) !== Boolean(after.vehicle)) return true;
+    log("[VERIFY] vehicle state did not change.");
+    return false;
+  }
+
+  if (["jump","sprint"].includes(id)) {
+    if (moved >= 0.1 || id==="jump" && !bot.entity.onGround) return true;
+    log("[VERIFY] " + id + " produced no observable movement/state change.");
+    return false;
+  }
+
+  if (id==="sneak") {
+    const sneaking = bot.entity?.metadata?.some?.(v => v === 0 || v === true);
+    if (moved >= 0.1 || sneaking) return true;
+    log("[VERIFY] sneak could not be confirmed; control-state API success is not enough.");
+    return false;
+  }
+
+  if (["check_inventory","find_item","count_item","find_item_world","find_player","find_entity","check_nearby","check_environment","detect_hostiles","check_health","check_food","check_equipment","observe","search"].includes(id)) return true;
+
+  if (["open_chest","open_barrel","deposit","retrieve","smelt","craft_furnace"].includes(id)) {
+    if (inventoryDelta(before,after,targetName) !== 0 || after.held !== before.held || moved >= 0.35) return true;
+    log("[VERIFY] " + id + " has no sufficient post-condition; refusing a false PASS.");
+    return false;
+  }
+
+  if (["open_door","close_door","use_button","use_lever","use_block","use_item","sleep","use_shield","use_ranged_weapon","place_block","build"].includes(id)) {
+    if (moved >= 0.1 || after.held !== before.held || after.food !== before.food) return true;
+    log("[VERIFY] " + id + " did not produce a measurable post-condition.");
+    return false;
+  }
+
+  if (["ask_permission","remember_player","sort_inventory","op_command"].includes(id)) {
+    log("[VERIFY] " + id + " is not a fully verifiable physical capability in the current tester; refusing false PASS.");
+    return false;
+  }
+
+  return false;
+}
+
 function inventoryCount(bot,name) {
   const wanted=String(name||"").trim().toLowerCase();
   return bot.inventory.items().filter(i=>i.name.toLowerCase().includes(wanted)).reduce((n,i)=>n+i.count,0);
@@ -326,7 +453,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="equip_item"){ const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); return true; }
   if(id==="drop_item"){ const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.tossStack(i); return true; }
   if(id==="sort_inventory"){
-    const items=bot.inventory.items().slice().sort((a,b)=>a.name.localeCompare(b.name)); log("[INVENTORY] Sorted view: "+items.map(i=>i.name+" x"+i.count).join(", ")); return true;
+    throw new Error("sort_inventory is unsupported: Mineflayer inventory slot reordering needs an explicit slot plan and is not implemented yet.");
   }
   if(id==="give_item"||id==="deliver_item"){
     const parts=String(arg||"").trim().split(/\s+/); const player=findPlayer(bot,parts.pop())?.entity; const item=findInventoryItem(bot,parts.join(" "));
@@ -410,8 +537,24 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(id==="whisper_player"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p) throw new Error("Player not found."); bot.whisper(p.username,m.join(" ")); return true; }
     if(id==="report_result"){ bot.chat(String(arg||"")); return true; }
     if(id==="ask_clarification"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p) throw new Error("Player not found."); bot.whisper(p.username,"I need clarification: "+m.join(" ")); return true; }
-    if(id==="remember_player"){ const m=String(arg||"").trim().split(/\s+/); const name=m.shift(); log("[MEMORY] Tester cannot write production memory directly; player="+name+" fact="+m.join(" ")); return true; }
-    if(id==="ask_permission"){ log("[PERMISSION] Use the existing Minecraft permission/chat flow for this capability."); return true; }
+    if(id==="remember_player"){
+      const m=String(arg||"").trim().split(/\s+/); const name=m.shift(); const fact=m.join(" ").trim();
+      if(!name||!fact) throw new Error("Usage: remember_player <username> <fact>");
+      if(typeof runtime?.rememberPlayer!=="function") throw new Error("Runtime memory API unavailable.");
+      const key=name.toLowerCase();
+      const existing=runtime.memory?.players?.[key] || {};
+      const facts=Array.isArray(existing.facts)?existing.facts.slice():[];
+      if(!facts.includes(fact)) facts.push(fact);
+      runtime.rememberPlayer(name,{facts});
+      log("[MEMORY] Remembered fact for "+name+": "+fact);
+      return true;
+    }
+    if(id==="ask_permission"){
+      const m=String(arg||"").trim().split(/\s+/); const name=m.shift(); const action=m.join(" ").trim();
+      if(!name||!action) throw new Error("Usage: ask_permission <username> <action>");
+      if(typeof runtime?.askOwner!=="function") throw new Error("Permission API unavailable.");
+      return runtime.askOwner(name,action,action);
+    }
   }
 
   if(id==="retrieve_item"){ return directCapability({bot,runtime,id:"collect",arg,log}); }
@@ -444,7 +587,8 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
     log("[CAPABILITY TESTER] PREFLIGHT FAIL: " + failed.join(", "));
     return ()=>{};
   }
-  log("[CAPABILITY TESTER] PREFLIGHT PASS: movement, look, chat, and runtime execution APIs are ready.");
+  log("[CAPABILITY TESTER] PREFLIGHT PASS: required Mineflayer/runtime APIs are available.");
+  log("[CAPABILITY TESTER] IMPORTANT: API availability is not a capability PASS; every action is post-verified.");
   if(!process.stdin.isTTY||!process.stdout.isTTY){ log("[CAPABILITY TESTER] Interactive terminal unavailable."); return ()=>{}; }
   let stopped=false;
   const rl=readline.createInterface({input:process.stdin,output:process.stdout,terminal:true});
@@ -482,12 +626,18 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
       const arg=String(await ask("Enter arguments: ")).trim();
 
       try{
-        if(runtime?.getActiveTask?.()) runtime.cancelCurrentTask("manual capability tester");
+        if(runtime?.getActiveTask?.()) {
+          runtime.cancelCurrentTask("manual capability tester");
+          const idle = await runtime.waitForTaskIdle?.(5000);
+          if (idle === false) throw new Error("Previous task did not finish cancellation within 5 seconds.");
+        }
         log("[CAPABILITY] Mode: " + cap.id);
         log("[CAPABILITY] Status: RUNNING");
         const started=Date.now();
+        const before=inventorySnapshot(bot);
         const result=await directCapability({bot,runtime,id:cap.id,arg,log});
-        const status=result===false?"FAIL":"PASS";
+        const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result});
+        const status=verified?"PASS":"FAIL";
         log("[CAPABILITY] Mode: " + cap.id + " | Status: " + status + " | Duration: " + (Date.now()-started) + " ms");
       }catch(error){
         log("[CAPABILITY] Mode: " + cap.id + " | Status: FAIL | Error: " + (error instanceof Error?error.message:String(error)));
