@@ -272,7 +272,10 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return answer==="y" || answer==="yes";
   }
 
-  if (id==="stop") return !bot.pathfinder?.isMoving?.() && !bot.entity?.velocity?.x && !bot.entity?.velocity?.z;
+  if (id==="stop") {
+    const answer=ask ? String(await ask("[VERIFY] Did Zoya visibly stop moving immediately? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
   if (id==="wait") return true;
   if (id==="find_shelter") {
     if (moved >= 0.35) return true;
