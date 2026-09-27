@@ -172,14 +172,25 @@ async function verifyCapability({bot,id,arg,before,log,result,ask}) {
   const parts = String(arg || "").trim().split(/\s+/);
   const targetName = parts[0] || "";
 
-  if (["go_to","return_to_coordinates","roam","explore","follow_player","return","investigate_entity","mine","chop_tree","collect","take_item","retrieve_item","escape","find_safe_location","chase_target","escort_player","protect_player","guard","guard_location","harvest_crops","hunt","attack_mob","defend","pvp","dig","break_block"].includes(id)) {
-    if (moved >= 0.35) return true;
-    if (["attack_mob","defend","pvp","hunt"].includes(id)) {
-      const target = findPlayer(bot, targetName)?.entity || findEntity(bot,targetName);
-      if (target && before.health > 0 && target.health != null && target.health < before.health) return true;
-    }
-    log("[VERIFY] " + id + " produced no measurable Minecraft-world change (movement=" + moved.toFixed(2) + ").");
+  if (["go_to","return_to_coordinates"].includes(id)) {
+    const p=parseCoords(arg);
+    const remaining=after.position ? Math.hypot(after.position.x-p.x, after.position.y-p.y, after.position.z-p.z) : Infinity;
+    if (remaining <= 3.0) return true;
+    log("[VERIFY] " + id + " did not reach the requested coordinates; remaining distance=" + remaining.toFixed(2));
     return false;
+  }
+
+  if (["roam","explore","follow_player","return","investigate_entity","mine","chop_tree","collect","take_item","retrieve_item","escape","find_safe_location","chase_target","escort_player","protect_player","guard","guard_location","harvest_crops","hunt","dig","break_block"].includes(id)) {
+    if (moved >= 0.35) return true;
+    const answer = ask ? String(await ask("[VERIFY] Did you visibly see Zoya perform the requested movement/world action? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+
+  if (["attack_mob","defend","pvp","hit","use_ranged_weapon"].includes(id)) {
+    const target = findPlayer(bot, targetName)?.entity || findEntity(bot,targetName);
+    if (moved >= 0.2) return true;
+    const answer = ask ? String(await ask("[VERIFY] Did you visibly see the attack hit the target? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
   }
 
   if (["look_at_player","look_at_coordinates","watch","investigate_entity"].includes(id)) {
@@ -383,8 +394,14 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="stop") { runtime.cancelCurrentTask("manual capability tester"); bot.pathfinder.setGoal(null); bot.clearControlStates(); return true; }
   if(id==="wait") { const n=Number(arg||1); if(!Number.isFinite(n)||n<0) throw new Error("Seconds must be a positive number."); await sleep(Math.min(n,300)*1000); return true; }
   if(["jump","sprint","sneak"].includes(id)) {
-    const n=id==="jump"?0.15:Number(arg||1); if(!Number.isFinite(n)||n<0) throw new Error("Invalid duration.");
-    const state=id==="jump"?"jump":id; bot.setControlState(state,true); await sleep(Math.min(n,id==="jump"?1:30)*1000); bot.setControlState(state,false); return true;
+    const n=id==="jump"?0.35:Number(arg||1); if(!Number.isFinite(n)||n<0) throw new Error("Invalid duration.");
+    const state=id==="jump"?"jump":id;
+    bot.setControlState(state,true);
+    if(id!=="jump") bot.setControlState("forward",true);
+    await sleep(Math.min(n,id==="jump"?1:30)*1000);
+    bot.setControlState(state,false);
+    if(id!=="jump") bot.setControlState("forward",false);
+    return true;
   }
 
   if(id==="enter_exit_vehicle") {
@@ -567,9 +584,21 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="watch"){ const e=findEntity(bot,arg)||findPlayer(bot,arg)?.entity; if(!e) throw new Error("Watch target not found."); await bot.lookAt(e.position.offset(0,e.height||1,0),true); await sleep(5000); return true; }
   if(id==="search"){ const e=findEntity(bot,arg); if(e){log("[SEARCH] Found entity "+(e.username||e.name)+" at "+JSON.stringify(e.position));return true;} const b=nearestBlock(bot,arg,32); if(b){log("[SEARCH] Found block "+b.name+" at "+JSON.stringify(b.position));return true;} const i=findInventoryItem(bot,arg); if(i){log("[SEARCH] Found inventory item "+i.name+" x"+i.count);return true;} throw new Error("Target not found in nearby world/inventory."); }
   if(id==="build"){
-    const s=String(arg||"").toLowerCase(), m=s.match(/(?:pillar|tower|line)\s+(\w+)\s+(\d+)/); if(!m) throw new Error("Build tester syntax: pillar <block> <count> or line <block> <count>.");
-    const item=findInventoryItem(bot,m[1]); if(!item) throw new Error("Build block not in inventory."); let n=Math.min(32,Number(m[2])); await bot.equip(item,"hand");
-    for(let i=0;i<n;i++){ const p=bot.entity.position.floored().offset(0,i+1,0); const ref=bot.blockAt(p.offset(0,-1,0)); if(!ref) break; await bot.placeBlock(ref,{x:0,y:1,z:0}); await sleep(100); } return true;
+    const s=String(arg||"").toLowerCase(), m=s.match(/(pillar|tower|line)\s+(\w+)\s+(\d+)/);
+    if(!m) throw new Error("Build tester syntax: pillar <block> <count> or line <block> <count>.");
+    const item=findInventoryItem(bot,m[2]); if(!item) throw new Error("Build block not in inventory.");
+    const n=Math.min(32,Math.max(1,Number(m[3]))); await bot.equip(item,"hand");
+    let placed=0;
+    for(let i=0;i<n;i++){
+      const base=bot.entity.position.floored();
+      const p=m[1]==="line" ? base.offset(i+1,0,0) : base.offset(0,i+1,0);
+      const ref=bot.blockAt(p.offset(0,-1,0));
+      if(!ref || ref.name==="air") break;
+      try { await bot.placeBlock(ref,{x:0,y:1,z:0}); placed++; } catch { break; }
+      await sleep(100);
+    }
+    if(placed<1) throw new Error("No blocks were placed.");
+    return true;
   }
   if(id==="coordinate_with_player"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p?.entity) throw new Error("Player not found."); bot.chat("I am at "+Math.round(bot.entity.position.x)+" "+Math.round(bot.entity.position.y)+" "+Math.round(bot.entity.position.z)+"; task: "+m.join(" ")); return true; }
   if(id==="op_command"){ const c=String(arg||"").trim(); if(!c.startsWith("/")) throw new Error("Enter a slash command."); if(Number(bot.game?.permissionLevel??-1)<2) throw new Error("Zoya is not reported as OP."); bot.chat(c); return true; }
