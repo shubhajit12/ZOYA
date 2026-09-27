@@ -37,16 +37,20 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   bot.loadPlugin(toolPlugin);
   bot.loadPlugin(collectBlockPlugin);
   bot.loadPlugin(craftingUtilPlugin());
+
+  // One movement configuration is shared by every movement-capable plugin.
+  // collectblock otherwise creates/uses its own Movements instance, which can
+  // silently disagree with the main Pathfinder configuration.
   const movements = new Movements(bot);
   movements.canDig = true;
   movements.allow1by1towers = false;
   movements.allowParkour = false;
   movements.allowSprinting = true;
-  // Let Pathfinder optimize clear straight segments. Parkour remains disabled
-  // so follow does not turn into unnecessary gap-jumping.
   movements.allowFreeMotion = true;
   movements.allowEntityDetection = true;
+  movements.maxDropDown = 3;
   bot.pathfinder.setMovements(movements);
+  if (bot.collectBlock) bot.collectBlock.movements = movements;
 
   const memoryPath = path.join(stateDir, MEMORY_FILE);
   const memory = readJson(memoryPath, DEFAULT_MEMORY);
@@ -412,11 +416,32 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       const origin = bot.entity.position;
       let best = null;
       let bestDistance = Infinity;
-      for (let dx = -24; dx <= 24; dx++) for (let dy = -8; dy <= 12; dy++) for (let dz = -24; dz <= 24; dz++) {
-        const block = bot.blockAt(origin.offset(dx, dy, dz));
-        if (!block || !names.has(block.name)) continue;
-        const d = block.position.distanceTo(origin);
-        if (d < bestDistance) { best = block; bestDistance = d; }
+
+      // Use Mineflayer's indexed block search instead of scanning tens of
+      // thousands of block coordinates every iteration.
+      const matchingIds = [...names]
+        .map(name => bot.registry?.blocksByName?.[name]?.id)
+        .filter(id => Number.isInteger(id));
+      if (matchingIds.length && typeof bot.findBlocks === "function") {
+        const found = bot.findBlocks({
+          matching: matchingIds,
+          maxDistance: 24,
+          count: 32
+        });
+        for (const position of found) {
+          const block = bot.blockAt(position);
+          if (!block || !names.has(block.name)) continue;
+          const d = block.position.distanceTo(origin);
+          if (d < bestDistance) { best = block; bestDistance = d; }
+        }
+      } else {
+        // Fallback for an older/incomplete Mineflayer build.
+        for (let dx = -24; dx <= 24; dx++) for (let dy = -8; dy <= 12; dy++) for (let dz = -24; dz <= 24; dz++) {
+          const block = bot.blockAt(origin.offset(dx, dy, dz));
+          if (!block || !names.has(block.name)) continue;
+          const d = block.position.distanceTo(origin);
+          if (d < bestDistance) { best = block; bestDistance = d; }
+        }
       }
       if (!best) break;
       if (!taskIsActive(task)) return false;
