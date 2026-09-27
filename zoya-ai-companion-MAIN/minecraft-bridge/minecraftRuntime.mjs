@@ -293,14 +293,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return false;
   }
 
-  async function explore() {
+  async function explore(task = activeTask) {
+    if (!task) return false;
     const p = bot.entity.position;
     const angle = Math.random() * Math.PI * 2;
     const radius = 16;
     bot.setControlState("sprint", true);
     try {
+      if (!taskIsActive(task)) return false;
       await bot.pathfinder.goto(new goals.GoalNear(p.x + Math.cos(angle) * radius, p.y, p.z + Math.sin(angle) * radius, 2));
-      return true;
+      return taskIsActive(task);
     } finally {
       bot.setControlState("sprint", false);
     }
@@ -328,7 +330,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return true;
   }
 
-  async function investigateEntity() {
+  async function investigateEntity(task = activeTask) {
+    if (!task) return false;
     const p = bot.entity.position;
     const entities = Object.values(bot.entities || {}).filter(e => e && e !== bot.entity && e.position && e.position.distanceTo(p) <= 16);
     entities.sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
@@ -336,8 +339,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     if (!target) return false;
     bot.setControlState("sprint", true);
     try {
+      if (!taskIsActive(task)) return false;
       await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 3));
-      return true;
+      return taskIsActive(task);
     } finally {
       bot.setControlState("sprint", false);
     }
@@ -377,7 +381,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return true;
   }
 
-  async function collectNearestDrop() {
+  async function collectNearestDrop(task = activeTask) {
+    if (!task) return false;
     const p = bot.entity.position;
     const target = Object.values(bot.entities || {})
       .filter(e => e && e.position && e !== bot.entity && (e.name === "item" || e.type === "object"))
@@ -385,8 +390,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     if (!target || target.position.distanceTo(p) > 24) return false;
     bot.setControlState("sprint", true);
     try {
+      if (!taskIsActive(task)) return false;
       await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
-      return true;
+      return taskIsActive(task);
     } finally {
       bot.setControlState("sprint", false);
     }
@@ -442,7 +448,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
     const unsafeActions = new Set(["safe_roam","explore","gather_basic_resources","mine","chop_tree","investigate_entity","pvp"]);
     if (unsafeActions.has(action) && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
-      log("[SAFETY] Refusing safe_roam: health=" + bot.health + ", hostileMobs=" + nearbyHostileCount(12) + ".");
+      log("[SAFETY] Refusing " + action + ": health=" + bot.health + ", hostileMobs=" + nearbyHostileCount(12) + ".");
       wakeBrain();
       return false;
     }
@@ -458,14 +464,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     log("[TASK] Started #" + task.id + " " + action + (task.targetUsername ? " -> " + task.targetUsername : "") + ".");
     try {
       let result = false;
-      if (action === "safe_roam" || action === "explore") result = await explore();
+      if (action === "safe_roam" || action === "explore") result = await explore(task);
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
       else if (action === "gather_basic_resources" || action === "chop_tree") result = await gatherWood();
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task);
-      else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5) : false;
+      else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5, task) : false;
       else if (action === "eat") result = await eat();
-      else if (action === "collect") result = await collectNearestDrop();
-      else if (action === "investigate_entity") result = await investigateEntity();
+      else if (action === "collect") result = await collectNearestDrop(task);
+      else if (action === "investigate_entity") result = await investigateEntity(task);
       else if (action === "mine") result = await mineNearest();
       else if (action === "craft") result = await craftBasic();
       else if (action === "pvp") result = await pvp(options.targetUsername, task);
