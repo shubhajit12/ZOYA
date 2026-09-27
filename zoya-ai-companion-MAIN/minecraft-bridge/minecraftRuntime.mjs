@@ -263,8 +263,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     try { bot.pathfinder?.setGoal(null); } catch {}
     try { bot.clearControlStates(); } catch {}
     currentGoal = null;
-    log("[TASK] Cancelled " + activeTask.action + ": " + reason);
+    log("[TASK] Cancelled #" + activeTask.id + " " + activeTask.action + ": " + reason);
     return true;
+  }
+
+  async function waitForTaskIdle(timeoutMs = 5000) {
+    const deadline = Date.now() + Math.max(0, Number(timeoutMs) || 0);
+    while (activeTask && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    return !activeTask;
   }
 
   function taskIsActive(task) {
@@ -618,6 +626,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     cancelCurrentTask,
     answerPlayer,
     getActiveTask: () => activeTask,
+    waitForTaskIdle,
     getStatus: () => ({ ownerUsername: owner || null, pendingPermissions: pending.size, currentGoal, busy, activeTask: activeTask ? { id: activeTask.id, action: activeTask.action, targetUsername: activeTask.targetUsername, startedAt: activeTask.startedAt } : null, memoryPlayers: Object.keys(memory.players).length, memoryEvents: memory.events.length })
   };
 }
