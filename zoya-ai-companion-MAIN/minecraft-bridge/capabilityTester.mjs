@@ -415,12 +415,17 @@ async function equipMatching(bot,words,dest="hand") {
 }
 async function attackLoop(bot,target,timeout=15000) {
   const started=Date.now();
+  let attacked=false;
   while(target && target.isValid!==false && (target.health==null || target.health>0) && Date.now()-started<timeout) {
     if(dist(bot.entity.position,target.position)>3.2) await goto(bot,target.position.x,target.position.y,target.position.z,2.4);
     await bot.lookAt(target.position.offset(0,target.height||1,0),true);
-    bot.attack(target); await sleep(450);
+    bot.attack(target);
+    attacked=true;
+    await sleep(450);
   }
-  return !target || target.health==null || target.health<=0 || target.isValid===false;
+  // An attack action does not require killing the target. The tester performs
+  // the final visible-hit verification separately.
+  return attacked;
 }
 
 async function directCapability({bot,runtime,id,arg,log}) {
@@ -596,8 +601,16 @@ async function directCapability({bot,runtime,id,arg,log}) {
     throw new Error("No nearby shelter material/location found.");
   }
   if(id==="recover_after_death") {
-    if(bot.health<=0 && typeof bot.respawn==="function") bot.respawn();
-    await sleep(2000); return bot.health>0;
+    if(bot.health>0) return true;
+    const deadline=Date.now()+15000;
+    if(typeof bot.respawn==="function") {
+      try { bot.respawn(); } catch {}
+    }
+    while(Date.now()<deadline) {
+      if(Number(bot.health||0)>0) return true;
+      await sleep(500);
+    }
+    return false;
   }
 
   if(id==="check_inventory"){ log("[INVENTORY] "+(bot.inventory.items().map(i=>i.name+" x"+i.count).join(", ")||"empty")); return true; }
