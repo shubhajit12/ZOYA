@@ -4,39 +4,97 @@ import readline from "node:readline";
 const { goals } = pathfinderPackage;
 
 const CAPABILITIES = [
-  ["follow_player","Follow Player","player username"],["roam","Roam",null],["pvp","PvP","player username"],
-  ["hit","Hit","player username"],["gather_resources","Gather Resources",null],["do_task","Do Task","task description"],
-  ["coordinate","Coordinate","player username (or blank for Zoya)"],["explore","Explore",null],["observe","Observe",null],
-  ["return","Return","owner"],["investigate_entity","Investigate Entity","entity name"],["mine","Mine","block name (or blank)"],
-  ["chop_tree","Chop Tree",null],["craft","Craft","item"],["eat","Eat","food (or blank)"],["collect","Collect","item (or blank)"],
-  ["look_at_player","Look At Player","player username"],["go_to","Go To","x y z"],["look_at_coordinates","Look At Coordinates","x y z"],
-  ["stop","Stop / Cancel",null],["wait","Wait","seconds"],["return_to_coordinates","Return To Coordinates","x y z"],
-  ["sprint","Sprint","seconds"],["sneak","Sneak","seconds"],["jump","Jump",null],
-  ["enter_exit_vehicle","Enter / Exit Vehicle",null],["attack_mob","Attack Mob","mob name"],["defend","Defend",null],
-  ["guard","Guard","x y z"],["escape","Escape",null],["chase_target","Chase Target","player/entity name"],
-  ["equip_best_weapon","Equip Best Weapon",null],["use_shield","Use Shield",null],["use_ranged_weapon","Use Ranged Weapon","target name"],
-  ["dig","Dig","x y z (or blank for block below)"],["harvest_crops","Harvest Crops",null],["fish","Fish",null],
-  ["hunt","Hunt Animals",null],["find_shelter","Find Shelter",null],["recover_after_death","Recover After Death",null],
-  ["find_safe_location","Find Safe Location",null],["check_inventory","Check Inventory",null],["find_item","Find Item","item"],
-  ["count_item","Count Item","item"],["equip_item","Equip Item","item"],["drop_item","Drop Item","item"],
-  ["give_item","Give Item","item + player"],["take_item","Take Item","item"],["deposit","Deposit","item + chest/barrel coords"],
-  ["retrieve","Retrieve","item + chest/barrel coords"],["sort_inventory","Sort Inventory",null],["smelt","Smelt","item"],
-  ["craft_workbench","Craft With Workbench","item"],["craft_furnace","Craft With Furnace","item"],
-  ["gather_missing_materials","Gather Missing Materials","item"],["multi_step_craft","Multi-Step Craft","item"],
-  ["place_block","Place Block","block + x y z"],["break_block","Break Block","x y z"],
-  ["open_chest","Open Chest","x y z"],["open_barrel","Open Barrel","x y z"],["open_door","Open Door","x y z"],
-  ["close_door","Close Door","x y z"],["use_button","Use Button","x y z"],["use_lever","Use Lever","x y z"],
-  ["use_block","Use Block","x y z"],["use_item","Use Item","item"],["sleep","Sleep",null],
-  ["find_player","Find Player","player username"],["find_entity","Find Entity","entity name"],["find_item_world","Find Item In World","item"],
-  ["check_nearby","Check Nearby Area",null],["check_environment","Check Environment",null],["detect_hostiles","Detect Hostiles",null],
-  ["check_health","Check Health",null],["check_food","Check Food",null],["check_equipment","Check Equipment",null],
-  ["ask_permission","Ask Permission","player + action"],["whisper_player","Whisper Player","player + message"],
-  ["remember_player","Remember Player","player + fact"],["report_result","Report Result","message"],
-  ["ask_clarification","Ask Clarification","player + question"],["retrieve_item","Retrieve Item","item"],
-  ["deliver_item","Deliver Item","item + player"],["escort_player","Escort Player","player"],
-  ["protect_player","Protect Player","player"],["guard_location","Guard Location","x y z"],["build","Build","plan"],
-  ["search","Search For Something","target"],["watch","Watch","target"],["coordinate_with_player","Coordinate With Player","player + task"],
-  ["op_command","Use OP Command","validated command"]
+  { id: "follow_player", label: "Follow Player", usage: "follow_player {username}" },
+  { id: "roam", label: "Roam", usage: "roam" },
+  { id: "pvp", label: "PvP", usage: "pvp {username}" },
+  { id: "hit", label: "Hit", usage: "hit {username}" },
+  { id: "gather_resources", label: "Gather Resources", usage: "gather_resources {item} {amount}" },
+  { id: "do_task", label: "Do Task", usage: "do_task {task}" },
+  { id: "coordinate", label: "Coordinate", usage: "coordinate {username}" },
+  { id: "explore", label: "Explore", usage: "explore" },
+  { id: "observe", label: "Observe", usage: "observe" },
+  { id: "return", label: "Return", usage: "return" },
+  { id: "investigate_entity", label: "Investigate Entity", usage: "investigate_entity {name}" },
+  { id: "mine", label: "Mine", usage: "mine {block}" },
+  { id: "chop_tree", label: "Chop Tree", usage: "chop_tree" },
+  { id: "craft", label: "Craft", usage: "craft {item} {amount}" },
+  { id: "eat", label: "Eat", usage: "eat {item}" },
+  { id: "collect", label: "Collect", usage: "collect {item} {amount}" },
+  { id: "look_at_player", label: "Look At Player", usage: "look_at_player {username}" },
+  { id: "go_to", label: "Go To", usage: "go_to {x} {y} {z}" },
+  { id: "look_at_coordinates", label: "Look At Coordinates", usage: "look_at_coordinates {x} {y} {z}" },
+  { id: "stop", label: "Stop / Cancel", usage: "stop" },
+  { id: "wait", label: "Wait", usage: "wait {seconds}" },
+  { id: "return_to_coordinates", label: "Return To Coordinates", usage: "return_to_coordinates {x} {y} {z}" },
+  { id: "sprint", label: "Sprint", usage: "sprint {seconds}" },
+  { id: "sneak", label: "Sneak", usage: "sneak {seconds}" },
+  { id: "jump", label: "Jump", usage: "jump" },
+  { id: "enter_exit_vehicle", label: "Enter / Exit Vehicle", usage: "enter_exit_vehicle" },
+  { id: "attack_mob", label: "Attack Mob", usage: "attack_mob {mob}" },
+  { id: "defend", label: "Defend", usage: "defend" },
+  { id: "guard", label: "Guard", usage: "guard {x} {y} {z}" },
+  { id: "escape", label: "Escape", usage: "escape" },
+  { id: "chase_target", label: "Chase Target", usage: "chase_target {target}" },
+  { id: "equip_best_weapon", label: "Equip Best Weapon", usage: "equip_best_weapon" },
+  { id: "use_shield", label: "Use Shield", usage: "use_shield" },
+  { id: "use_ranged_weapon", label: "Use Ranged Weapon", usage: "use_ranged_weapon {target}" },
+  { id: "dig", label: "Dig", usage: "dig {x} {y} {z}" },
+  { id: "harvest_crops", label: "Harvest Crops", usage: "harvest_crops" },
+  { id: "fish", label: "Fish", usage: "fish" },
+  { id: "hunt", label: "Hunt Animals", usage: "hunt" },
+  { id: "find_shelter", label: "Find Shelter", usage: "find_shelter" },
+  { id: "recover_after_death", label: "Recover After Death", usage: "recover_after_death" },
+  { id: "find_safe_location", label: "Find Safe Location", usage: "find_safe_location" },
+  { id: "check_inventory", label: "Check Inventory", usage: "check_inventory" },
+  { id: "find_item", label: "Find Item", usage: "find_item {item}" },
+  { id: "count_item", label: "Count Item", usage: "count_item {item}" },
+  { id: "equip_item", label: "Equip Item", usage: "equip_item {item}" },
+  { id: "drop_item", label: "Drop Item", usage: "drop_item {item}" },
+  { id: "give_item", label: "Give Item", usage: "give_item {item} {username}" },
+  { id: "take_item", label: "Take Item", usage: "take_item {item}" },
+  { id: "deposit", label: "Deposit", usage: "deposit {item} {x} {y} {z}" },
+  { id: "retrieve", label: "Retrieve", usage: "retrieve {item} {x} {y} {z}" },
+  { id: "sort_inventory", label: "Sort Inventory", usage: "sort_inventory" },
+  { id: "smelt", label: "Smelt", usage: "smelt {item}" },
+  { id: "craft_workbench", label: "Craft With Workbench", usage: "craft_workbench {item}" },
+  { id: "craft_furnace", label: "Craft With Furnace", usage: "craft_furnace {item}" },
+  { id: "gather_missing_materials", label: "Gather Missing Materials", usage: "gather_missing_materials {item}" },
+  { id: "multi_step_craft", label: "Multi-Step Craft", usage: "multi_step_craft {item}" },
+  { id: "place_block", label: "Place Block", usage: "place_block {block} {x} {y} {z}" },
+  { id: "break_block", label: "Break Block", usage: "break_block {x} {y} {z}" },
+  { id: "open_chest", label: "Open Chest", usage: "open_chest {x} {y} {z}" },
+  { id: "open_barrel", label: "Open Barrel", usage: "open_barrel {x} {y} {z}" },
+  { id: "open_door", label: "Open Door", usage: "open_door {x} {y} {z}" },
+  { id: "close_door", label: "Close Door", usage: "close_door {x} {y} {z}" },
+  { id: "use_button", label: "Use Button", usage: "use_button {x} {y} {z}" },
+  { id: "use_lever", label: "Use Lever", usage: "use_lever {x} {y} {z}" },
+  { id: "use_block", label: "Use Block", usage: "use_block {x} {y} {z}" },
+  { id: "use_item", label: "Use Item", usage: "use_item {item}" },
+  { id: "sleep", label: "Sleep", usage: "sleep" },
+  { id: "find_player", label: "Find Player", usage: "find_player {username}" },
+  { id: "find_entity", label: "Find Entity", usage: "find_entity {name}" },
+  { id: "find_item_world", label: "Find Item In World", usage: "find_item_world {item}" },
+  { id: "check_nearby", label: "Check Nearby Area", usage: "check_nearby" },
+  { id: "check_environment", label: "Check Environment", usage: "check_environment" },
+  { id: "detect_hostiles", label: "Detect Hostiles", usage: "detect_hostiles" },
+  { id: "check_health", label: "Check Health", usage: "check_health" },
+  { id: "check_food", label: "Check Food", usage: "check_food" },
+  { id: "check_equipment", label: "Check Equipment", usage: "check_equipment" },
+  { id: "ask_permission", label: "Ask Permission", usage: "ask_permission {username} {action}" },
+  { id: "whisper_player", label: "Whisper Player", usage: "whisper_player {username} {message}" },
+  { id: "remember_player", label: "Remember Player", usage: "remember_player {username} {fact}" },
+  { id: "report_result", label: "Report Result", usage: "report_result {message}" },
+  { id: "ask_clarification", label: "Ask Clarification", usage: "ask_clarification {username} {question}" },
+  { id: "retrieve_item", label: "Retrieve Item", usage: "retrieve_item {item}" },
+  { id: "deliver_item", label: "Deliver Item", usage: "deliver_item {item} {username}" },
+  { id: "escort_player", label: "Escort Player", usage: "escort_player {username}" },
+  { id: "protect_player", label: "Protect Player", usage: "protect_player {username}" },
+  { id: "guard_location", label: "Guard Location", usage: "guard_location {x} {y} {z}" },
+  { id: "build", label: "Build", usage: "build {plan}" },
+  { id: "search", label: "Search For Something", usage: "search {target}" },
+  { id: "watch", label: "Watch", usage: "watch {target}" },
+  { id: "coordinate_with_player", label: "Coordinate With Player", usage: "coordinate_with_player {username} {task}" },
+  { id: "op_command", label: "Use OP Command", usage: "op_command {command}" }
 ];
 
 const DELEGATED = new Map([
@@ -311,27 +369,47 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
   let stopped=false;
   const rl=readline.createInterface({input:process.stdin,output:process.stdout,terminal:true});
   const ask=q=>new Promise(resolve=>rl.question(q,resolve));
+
   async function menu(){
     while(!stopped&&bot&&bot.entity){
-      log(""); log("========================================"); log("       ZOYA CAPABILITY DEBUGGER"); log("========================================");
-      CAPABILITIES.forEach(([id,label,args],i)=>log((i+1)+". "+label+(args?" -> {"+args+"}":"")));
+      log("");
+      log("========================================");
+      log("       ZOYA CAPABILITY DEBUGGER");
+      log("========================================");
+      CAPABILITIES.forEach((cap,i)=>log(String(i+1).padStart(2," ") + ". " + cap.label));
       log("0. Exit capability tester");
+
       const answer=String(await ask("Choose a capability to run (0-"+CAPABILITIES.length+"): ")).trim();
       if(answer==="0") break;
+
       const index=Number(answer)-1;
-      if(!Number.isInteger(index)||index<0||index>=CAPABILITIES.length){log("[CAPABILITY TESTER] Invalid selection.");continue;}
-      const [id,label,args]=CAPABILITIES[index]; log("[CAPABILITY] "+label+" selected.");
-      const arg=args?String(await ask("Enter "+args+": ")).trim():"";
+      if(!Number.isInteger(index)||index<0||index>=CAPABILITIES.length){
+        log("[CAPABILITY TESTER] Invalid selection.");
+        continue;
+      }
+
+      const cap=CAPABILITIES[index];
+      log("");
+      log("[CAPABILITY] " + cap.label + " selected.");
+      log("Usage: " + cap.usage);
+
+      const arg=String(await ask("Enter arguments: ")).trim();
+
       try{
         if(runtime?.getActiveTask?.()) runtime.cancelCurrentTask("manual capability tester");
-        log("[CAPABILITY] Starting "+label+"..."); const started=Date.now();
-        const result=await directCapability({bot,runtime,id,arg,log});
-        log("[CAPABILITY] "+label+" -> "+(result===false?"FAILED":"SUCCESS")+" ("+(Date.now()-started)+" ms)");
-      }catch(error){log("[CAPABILITY] "+label+" -> FAILED: "+(error instanceof Error?error.message:String(error)));}
+        log("[CAPABILITY] Starting " + cap.label + "...");
+        const started=Date.now();
+        const result=await directCapability({bot,runtime,id:cap.id,arg,log});
+        log("[CAPABILITY] " + cap.label + " -> " + (result===false?"FAILED":"SUCCESS") + " (" + (Date.now()-started) + " ms)");
+      }catch(error){
+        log("[CAPABILITY] " + cap.label + " -> FAILED: " + (error instanceof Error?error.message:String(error)));
+      }
     }
-    rl.close(); log("[CAPABILITY TESTER] Exited. No capability is selected automatically.");
+    rl.close();
+    log("[CAPABILITY TESTER] Exited. No capability is selected automatically.");
   }
+
   void menu();
   return ()=>{stopped=true;try{rl.close();}catch{}};
 }
-export function getCapabilityRegistry(){return CAPABILITIES.map(([id,label,args])=>({id,label,args}));}
+export function getCapabilityRegistry(){return CAPABILITIES.map(cap=>({...cap}));}
