@@ -834,30 +834,136 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(id==="do_task"){
       if(/follow/.test(target)){ const m=target.match(/follow\s+(\w+)/); if(!m) throw new Error("Specify player."); return directCapability({bot,runtime,id:"follow_player",arg:m[1],log}); }
       if(/(wood|log|stone|cobblestone|resource)/.test(target)) return runtime.execute("gather_basic_resources",{permissionGranted:true});
-      if(/craft|make/.test(target)){ const m=target.match(/(?:craft|make)\s+(?:me\s+)?([a-z_ ]+)/); if(m) return directCapability({bot,runtime,id:"craft",arg:m[1].trim(),log}); }
+      if(/craft|make/.test(target)){ const m=target.match(/(?:craft|make)\s+(?:me\s+)?([a-z_ ]+)/); if(m) return directCapability({bot,runtime,id:"multi_step_craft",arg:m[1].trim(),log}); }
       throw new Error("Do Task tester understands follow/gather/craft tasks; add a concrete task.");
     }
-    if(id==="gather_missing_materials"){ return runtime.execute("gather_basic_resources",{permissionGranted:true}); }
-    const recipeItem=bot.registry.itemsByName[target.replace(/ /g,"_")]||bot.registry.itemsByName[target];
-    if(!recipeItem) throw new Error("Unknown craft item: "+target);
-    let craftingTable=null;
-    let recipes=bot.recipesFor(recipeItem.id,null,1,null);
 
-    if(!recipes.length || id==="craft_workbench") {
-      craftingTable=nearestBlock(bot,"crafting_table",16);
-      if(!craftingTable) throw new Error("Crafting table not found.");
-      recipes=bot.recipesFor(recipeItem.id,null,1,craftingTable);
+    const craftTarget=target.replace(/\s+/g,"_").trim();
+    if(!craftTarget) throw new Error("Craft target is required.");
+    const recipeItem=bot.registry.itemsByName[craftTarget]||bot.registry.itemsByName[target];
+    if(!recipeItem) throw new Error("Unknown craft item: "+target);
+    const findTable=()=>nearestBlock(bot,"crafting_table",16);
+
+    function ingredientEntries(recipe) {
+      if (Array.isArray(recipe?.ingredients) && recipe.ingredients.length) return recipe.ingredients;
+      const out=[];
+      for (const row of (recipe?.inShape||[])) for (const entry of row||[]) {
+        if (entry==null) continue;
+        const id=Array.isArray(entry)?entry[0]:(typeof entry==="object"?entry.id:entry);
+        const metadata=Array.isArray(entry)?entry[1]:(typeof entry==="object"?entry.metadata:null);
+        if (id!=null) out.push({id,metadata});
+      }
+      return out;
     }
+    function ingredientId(entry) {
+      if (typeof entry==="number") return entry;
+      if (Array.isArray(entry)) return entry[0];
+      return entry?.id;
+    }
+    function ingredientName(id) {
+      return Number.isInteger(id) ? Object.values(bot.registry.itemsByName||{}).find(item=>item.id===id)?.name : null;
+    }
+
+    async function craftRecursive(item,count,stack=new Set()) {
+      if(stack.has(item.id)) throw new Error("Crafting dependency cycle detected for "+item.name+".");
+      const desired=Math.max(1,Math.floor(Number(count)||1));
+      const current=inventoryCount(bot,item.name);
+      if(current>=desired) return true;
+
+      let table=findTable();
+      let recipes=bot.recipesFor(item.id,null,desired,table||null);
+      if(!recipes.length && typeof bot.recipesAll==="function") recipes=bot.recipesAll(item.id,null,table||null);
+      if(!recipes.length) throw new Error("No recipe available for "+item.name+".");
+      let recipe=recipes.find(r=>!r.requiresTable || table)||recipes[0];
+
+      if(recipe.requiresTable && !table){
+        table=findTable();
+        if(!table) throw new Error("Crafting table required for "+item.name+".");
+        recipes=bot.recipesFor(item.id,null,desired,table);
+        if(!recipes.length && typeof bot.recipesAll==="function") recipes=bot.recipesAll(item.id,null,table);
+        recipe=recipes.find(r=>!r.requiresTable || table);
+      }
+      if(!recipe) throw new Error("No usable recipe available for "+item.name+".");
+
+      const resultPerCraft=Math.max(1,Number(recipe.count)||1);
+      const craftsNeeded=Math.ceil((desired-current)/resultPerCraft);
+      const nextStack=new Set(stack);
+      nextStack.add(item.id);
+
+      // Recursively craft missing intermediate ingredients. Raw world materials
+      // are intentionally not fabricated; gather_missing_materials handles the
+      // small set of gatherable basics separately.
+      const needed=new Map();
+      for(const entry of ingredientEntries(recipe)){
+        const id=ingredientId(entry);
+        const name=ingredientName(id);
+        if(name) needed.set(name,(needed.get(name)||0)+1);
+      }
+      for(const [name,required] of needed){
+        if(inventoryCount(bot,name)>=required) continue;
+        const dep=bot.registry.itemsByName[name];
+        if(!dep || typeof bot.recipesAll!=="function") throw new Error("Missing ingredient: "+name);
+        await craftRecursive(dep,required,nextStack);
+        if(inventoryCount(bot,name)<required) throw new Error("Could not prepare ingredient: "+name);
+      }
+
+      table=recipe.requiresTable?(table||findTable()):null;
+      if(recipe.requiresTable&&!table) throw new Error("Crafting table required for "+item.name+" but none is nearby.");
+      if(table) await goto(bot,table.position.x,table.position.y,table.position.z,3,15000);
+      const before=inventoryCount(bot,item.name);
+      await bot.craft(recipe,craftsNeeded,table);
+      const after=inventoryCount(bot,item.name);
+      return after>=before+resultPerCraft*craftsNeeded;
+    }
+
+    if(id==="gather_missing_materials"){
+      const table=findTable();
+      let recipes=bot.recipesAll?.(recipeItem.id,null,table||null)||[];
+      if(!recipes.length) throw new Error("No recipe available to inspect for "+craftTarget+".");
+      const entries=recipes[0].ingredients||[];
+      const missing=[];
+      for(const entry of entries){
+        const id=ingredientId(entry), name=ingredientName(id);
+        if(name && inventoryCount(bot,name)<1) missing.push(name);
+      }
+      if(!missing.length) return true;
+      for(const name of [...new Set(missing)]){
+        if(/_log$/.test(name)){
+          const ok=await runtime.execute("gather_basic_resources",{resourceName:name,amount:1,permissionGranted:true});
+          if(!ok) throw new Error("Failed to gather missing "+name+".");
+        } else if(["stone","cobblestone"].includes(name)){
+          const before=inventoryCount(bot,name);
+          const block=nearestBlock(bot,name,16);
+          if(!block) throw new Error("Missing material "+name+" not found nearby.");
+          await goto(bot,block.position.x,block.position.y,block.position.z,3,12000);
+          await bot.dig(block);
+          if(inventoryCount(bot,name)<=before) throw new Error("Failed to gather missing "+name+".");
+        } else {
+          throw new Error("Missing material "+name+" cannot be gathered automatically by this capability.");
+        }
+      }
+      return true;
+    }
+
+    if(id==="multi_step_craft") return craftRecursive(recipeItem,1);
+
+    let craftingTable=id==="craft_workbench"?findTable():null;
+    let recipes=bot.recipesFor(recipeItem.id,null,1,craftingTable||null);
+    if(!recipes.length && typeof bot.recipesAll==="function") recipes=bot.recipesAll(recipeItem.id,null,craftingTable||null);
     if(!recipes.length) throw new Error("No available recipe for "+target);
-    if(recipes[0].requiresTable && !craftingTable) {
-      craftingTable=nearestBlock(bot,"crafting_table",16);
+    let recipe=recipes.find(r=>!r.requiresTable||craftingTable)||recipes[0];
+    if(recipe.requiresTable&&!craftingTable){
+      craftingTable=findTable();
       if(!craftingTable) throw new Error("Crafting table not found.");
       recipes=bot.recipesFor(recipeItem.id,null,1,craftingTable);
-      if(!recipes.length) throw new Error("No table recipe available for "+target);
+      if(!recipes.length&&typeof bot.recipesAll==="function") recipes=bot.recipesAll(recipeItem.id,null,craftingTable);
+      recipe=recipes.find(r=>!r.requiresTable||craftingTable)||recipes[0];
     }
-    if(craftingTable) await goto(bot,craftingTable.position.x,craftingTable.position.y,craftingTable.position.z,3);
-    await bot.craft(recipes[0],1,craftingTable);
-    return true;
+    if(!recipe || (recipe.requiresTable&&!craftingTable)) throw new Error("No usable recipe for "+target+".");
+    if(craftingTable) await goto(bot,craftingTable.position.x,craftingTable.position.y,craftingTable.position.z,3,15000);
+    const before=inventoryCount(bot,recipeItem.name);
+    await bot.craft(recipe,1,craftingTable);
+    return inventoryCount(bot,recipeItem.name)>before;
   }
 
   if(id==="place_block"){
