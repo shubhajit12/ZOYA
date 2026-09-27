@@ -57,11 +57,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   let busy = false;
   let chatBusy = false;
 
-  // Minecraft 1.21.x can deliver the server's knockback velocity and then
-  // immediately overwrite the entity velocity during position-sync handling.
-  // Keep a short, damage-scoped copy of the authoritative velocity so the
-  // normal Mineflayer physics loop gets the knockback instead of losing it.
-  let knockbackUntil = 0;
+  // Combat physics must remain authoritative to Minecraft/Mineflayer.
+  // We only observe the server velocity for diagnostics; we never write a
+  // second velocity into bot.entity. Re-applying the same velocity after a
+  // damage event can amplify knockback and is especially unsafe on 1.21.x.
   let lastServerVelocity = null;
 
   function packetVelocity(packet) {
@@ -74,37 +73,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return { x: x * scale, y: y * scale, z: z * scale, at: Date.now() };
   }
 
-  function restoreServerKnockback() {
-    if (!bot.entity || !lastServerVelocity || Date.now() > knockbackUntil) return false;
-    const velocity = lastServerVelocity;
-    if (Math.max(Math.abs(velocity.x), Math.abs(velocity.y), Math.abs(velocity.z)) < 0.001) return false;
-    try {
-      bot.entity.velocity.set(velocity.x, velocity.y, velocity.z);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   if (bot._client?.on) {
     bot._client.on("entity_velocity", packet => {
       if (!bot.entity || Number(packet?.entityId) !== Number(bot.entity.id)) return;
       const velocity = packetVelocity(packet);
       if (!velocity) return;
       lastServerVelocity = velocity;
-      if (Date.now() <= knockbackUntil) {
-        setTimeout(() => restoreServerKnockback(), 0);
-      }
-    });
-
-    // 1.21.3+ uses sync_entity_position. If it arrives immediately after a
-    // hit, restore the server velocity after Mineflayer's packet handlers have
-    // finished so the physics tick can consume the knockback normally.
-    bot._client.on("sync_entity_position", packet => {
-      if (!bot.entity || Number(packet?.entityId) !== Number(bot.entity.id)) return;
-      if (Date.now() <= knockbackUntil && lastServerVelocity) {
-        setTimeout(() => restoreServerKnockback(), 0);
-      }
+      log("[PHYSICS] Server knockback velocity: x=" + velocity.x.toFixed(4) +
+        " y=" + velocity.y.toFixed(4) + " z=" + velocity.z.toFixed(4));
     });
   }
 
@@ -599,12 +575,15 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const drop = previousHealth - health;
     rememberEvent("health", { health, food: bot.food ?? null });
     if (drop >= 1) {
-      knockbackUntil = Date.now() + 350;
-      // Give Mineflayer one packet turn to receive the server velocity before
-      // the fallback restore runs. We never invent a knockback direction or
-      // magnitude; only the server-provided velocity is restored.
-      setTimeout(() => restoreServerKnockback(), 0);
-      setTimeout(() => restoreServerKnockback(), 50);
+      if (lastServerVelocity) {
+        const v = lastServerVelocity;
+        log("[PHYSICS] Damage " + drop + " health; observed server velocity = (" +
+          v.x.toFixed(4) + ", " + v.y.toFixed(4) + ", " + v.z.toFixed(4) + ").");
+      } else {
+        log("[PHYSICS] Damage " + drop + " health; no server velocity packet observed yet.");
+      }
+      // Do not modify bot.entity.velocity here. Mineflayer owns the physics
+      // integration and must consume exactly the velocity supplied by the server.
       interruptMovement("damage received (" + drop + " health)");
     }
     if (health <= 0) wakeBrain();
