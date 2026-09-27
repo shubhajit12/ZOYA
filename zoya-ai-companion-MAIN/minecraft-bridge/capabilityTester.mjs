@@ -176,7 +176,27 @@ async function attackLoop(bot,target,timeout=15000) {
 async function directCapability({bot,runtime,id,arg,log}) {
   if(DELEGATED.has(id)) {
     if(["pvp","follow_player","look_at_player"].includes(id) && !arg) throw new Error("A player username is required.");
-    if (["follow_player","pvp"].includes(id)) { const target=String(arg||"").trim(); if(!target) throw new Error("A player username is required."); log("[CAPABILITY] "+id+" will run for 15 seconds in the manual tester."); const run=runtime.execute(DELEGATED.get(id),{targetUsername:target,permissionGranted:true}); await Promise.race([run,sleep(15000)]); if(runtime.getActiveTask?.()) runtime.cancelCurrentTask("manual capability test duration complete"); return true; } return runtime.execute(DELEGATED.get(id),{targetUsername:arg,permissionGranted:true});
+    if (["follow_player","pvp"].includes(id)) {
+      const target=String(arg||"").trim();
+      if(!target) throw new Error("A player username is required.");
+      log("[CAPABILITY] "+id+" will run for 15 seconds in the manual tester.");
+      const run=runtime.execute(DELEGATED.get(id),{targetUsername:target,permissionGranted:true});
+      let timedOut=false;
+      const timeout=sleep(15000).then(()=>{ timedOut=true; return "__CAPABILITY_TIMEOUT__"; });
+      const result=await Promise.race([run,timeout]);
+      if (result === "__CAPABILITY_TIMEOUT__") {
+        if(runtime.getActiveTask?.()) runtime.cancelCurrentTask("manual capability test duration complete");
+        log("[CAPABILITY] "+id+" remained active for the full 15-second test window.");
+        return true;
+      }
+      if (result !== true) {
+        log("[CAPABILITY] "+id+" FAILED before the 15-second window completed. Check target/player availability and runtime logs.");
+        return false;
+      }
+      return true;
+    }
+    const result=await runtime.execute(DELEGATED.get(id),{targetUsername:arg,permissionGranted:true});
+    return result === true;
   }
 
   if(id==="hit") {
