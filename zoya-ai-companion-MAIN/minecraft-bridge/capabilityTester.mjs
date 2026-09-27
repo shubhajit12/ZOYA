@@ -524,13 +524,31 @@ async function directCapability({bot,runtime,id,arg,log}) {
     else { const slot=c.containerItems().find(i=>i.name.toLowerCase().includes(name.toLowerCase())); if(!slot) throw new Error("Item not in container."); await c.withdraw(slot.type,null,Math.min(slot.count,slot.stackSize||slot.count)); }
     c.close(); return true;
   }
-  if(id==="smelt"||id==="craft_furnace"){
+  if(id==="smelt"){
     const itemName=String(arg||"").trim().toLowerCase(); const furnace=nearestBlock(bot,["furnace","blast_furnace","smoker"],24); if(!furnace) throw new Error("Furnace not found.");
     await goto(bot,furnace.position.x,furnace.position.y,furnace.position.z,3); const f=await bot.openFurnace(furnace);
     const input=findInventoryItem(bot,itemName); if(!input) throw new Error("Smelt input not found.");
     const fuel=findInventoryItem(bot,"coal")||findInventoryItem(bot,"charcoal")||findInventoryItem(bot,"wood");
     if(!fuel) throw new Error("Fuel not found.");
-    await f.putFuel(fuel.type,null,Math.min(fuel.count,8)); await f.putInput(input.type,null,Math.min(input.count,8)); await sleep(1000); f.close(); return true;
+    const before=bot.inventory.items().reduce((n,i)=>n+i.count,0);
+    await f.putFuel(fuel.type,null,Math.min(fuel.count,8));
+    await f.putInput(input.type,null,Math.min(input.count,8));
+    await sleep(2500);
+    const output=f.outputItem?.();
+    const outputReady=Boolean(output);
+    f.close();
+    if(!outputReady) throw new Error("Furnace did not produce output during the verification window.");
+    const after=bot.inventory.items().reduce((n,i)=>n+i.count,0);
+    return after !== before || outputReady;
+  }
+  if(id==="craft_furnace"){
+    const furnaceItem=bot.registry.itemsByName.furnace;
+    if(!furnaceItem) throw new Error("Furnace item is unavailable in this Minecraft version.");
+    const before=inventoryCount(bot,"furnace");
+    const recipes=bot.recipesFor(furnaceItem.id,null,1,null);
+    if(!recipes.length) throw new Error("No furnace recipe available.");
+    await bot.craft(recipes[0],1,null);
+    return inventoryCount(bot,"furnace")>=before+1;
   }
   if(id==="craft"||id==="craft_workbench"||id==="multi_step_craft"||id==="do_task"||id==="gather_missing_materials"){
     const target=id==="do_task"?String(arg||"").toLowerCase():String(arg||"").toLowerCase();
