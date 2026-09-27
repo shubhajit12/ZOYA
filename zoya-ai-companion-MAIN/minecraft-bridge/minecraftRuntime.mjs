@@ -425,16 +425,33 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const recipes = bot.recipesFor(item.id, null, targetAmount, null);
     if (!recipes.length) return false;
 
+    const recipe = recipes[0];
+    let craftingTable = null;
+    if (recipe.requiresTable) {
+      craftingTable = bot.findBlock?.({
+        matching: block => block?.name === "crafting_table",
+        maxDistance: 16
+      }) || null;
+      if (!craftingTable) return false;
+      const distance = craftingTable.position.distanceTo(bot.entity.position);
+      if (distance > 3.5) {
+        await bot.pathfinder.goto(new goals.GoalNear(
+          craftingTable.position.x,
+          craftingTable.position.y,
+          craftingTable.position.z,
+          3
+        ));
+      }
+    }
+
     const before = bot.inventory.items()
       .filter(i => i.name === item.name)
       .reduce((n, i) => n + i.count, 0);
 
-    if (typeof bot.craftItem === "function") {
-      const plan = await bot.craftItem(item.id, targetAmount, null, { includeRecursion: true, multipleRecipes: true }, { strict: true });
-      if (plan?.success !== true) return false;
-    } else {
-      await bot.craft(recipes[0], targetAmount, null);
-    }
+    // Mineflayer's documented craft() API completes only after the inventory
+    // has been updated. Keep this as the single crafting primitive so the
+    // runtime does not depend on an optional/non-core craftItem API.
+    await bot.craft(recipe, targetAmount, craftingTable);
 
     const after = bot.inventory.items()
       .filter(i => i.name === item.name)
