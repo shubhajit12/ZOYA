@@ -318,8 +318,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
   async function collectBlock(block) {
     if (!block || !bot.collectBlock?.collect) return false;
-    await bot.collectBlock.collect(block);
-    return true;
+    const before = bot.inventory.items().reduce((n, item) => n + item.count, 0);
+    try {
+      await bot.collectBlock.collect(block);
+    } catch (error) {
+      log("[ACTION] collectBlock failed: " + (error instanceof Error ? error.message : String(error)));
+      return false;
+    }
+    const after = bot.inventory.items().reduce((n, item) => n + item.count, 0);
+    const remaining = bot.blockAt(block.position);
+    return after > before || !remaining || remaining.name === "air";
   }
 
   async function gatherResources(resourceName = "oak_log", amount = 1, task = activeTask) {
@@ -346,9 +354,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         .filter(i => wanted ? i.name === wanted : allowedLogs.has(i.name))
         .reduce((n, i) => n + i.count, 0);
       const before = countMatching();
-      await collectBlock(best);
+      const collected = await collectBlock(best);
       const after = countMatching();
-      gathered += Math.max(1, after - before);
+      if (!collected || after <= before) break;
+      gathered += after - before;
     }
     log("[GATHER] Requested " + targetAmount + " " + (wanted || "wood log") + "; gathered approximately " + gathered + ".");
     return gathered >= targetAmount; 
@@ -392,8 +401,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       if (d < bestDistance) { best = block; bestDistance = d; }
     }
     if (!best) return false;
-    await collectBlock(best);
-    return true;
+    const before = bot.inventory.items().reduce((n, item) => n + item.count, 0);
+    const collected = await collectBlock(best);
+    const after = bot.inventory.items().reduce((n, item) => n + item.count, 0);
+    return collected && after > before;
   }
 
   async function craftBasic(itemName = "", amount = 1) {
@@ -410,13 +421,21 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const recipes = bot.recipesFor(item.id, null, targetAmount, null);
     if (!recipes.length) return false;
 
+    const before = bot.inventory.items()
+      .filter(i => i.name === item.name)
+      .reduce((n, i) => n + i.count, 0);
+
     if (typeof bot.craftItem === "function") {
       const plan = await bot.craftItem(item.id, targetAmount, null, { includeRecursion: true, multipleRecipes: true }, { strict: true });
-      return plan?.success === true;
+      if (plan?.success !== true) return false;
+    } else {
+      await bot.craft(recipes[0], targetAmount, null);
     }
 
-    await bot.craft(recipes[0], targetAmount, null);
-    return true;
+    const after = bot.inventory.items()
+      .filter(i => i.name === item.name)
+      .reduce((n, i) => n + i.count, 0);
+    return after >= before + targetAmount;
   }
 
   async function collectNearestDrop(task = activeTask, itemName = "", amount = 1) {
@@ -438,7 +457,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     try {
       if (!taskIsActive(task)) return false;
       await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
-      return taskIsActive(task);
+      if (!taskIsActive(task)) return false;
+      // Mineflayer normally auto-picks a nearby dropped stack once the bot
+      // reaches it. Verify the target disappeared before reporting success.
+      await new Promise(resolve => setTimeout(resolve, 300));
+      return !target.isValid || target.position.distanceTo(bot.entity.position) <= 2 && !Object.values(bot.entities || {}).includes(target);
     } finally {
       bot.setControlState("sprint", false);
     }
@@ -448,12 +471,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const wanted = String(itemName || "").trim().toLowerCase();
     const item = bot.inventory.items().find(i =>
       wanted ? (i.name.toLowerCase() === wanted || i.name.toLowerCase().includes(wanted)) :
-      /bread|apple|carrot|potato|beef|porkchop|chicken|mutton|salmon|cod|steak|cooked/.test(i.name)
+      /bread|apple|carrot|potato|beef|porkchop|chicken|mutton|salmon|cod|steak|cooked|melon|berries|stew/.test(i.name)
     );
     if (!item || (bot.food ?? 20) >= 16) return false;
+    const beforeFood = Number(bot.food ?? 20);
     await bot.equip(item, "hand");
     await bot.consume();
-    return true;
+    return Number(bot.food ?? beforeFood) > beforeFood;
   }
 
   async function pvp(targetUsername, task) {
