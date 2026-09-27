@@ -334,17 +334,20 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       }
       if (!best) break;
       if (!taskIsActive(task)) return false;
-      const before = bot.inventory.items().filter(i => i.name === wanted).reduce((n,i) => n + i.count, 0);
+      const countMatching = () => bot.inventory.items()
+        .filter(i => wanted ? i.name === wanted : allowedLogs.has(i.name))
+        .reduce((n, i) => n + i.count, 0);
+      const before = countMatching();
       await collectBlock(best);
-      const after = bot.inventory.items().filter(i => i.name === wanted).reduce((n,i) => n + i.count, 0);
+      const after = countMatching();
       gathered += Math.max(1, after - before);
     }
-    log("[GATHER] Requested " + targetAmount + " " + wanted + "; gathered approximately " + gathered + ".");
+    log("[GATHER] Requested " + targetAmount + " " + (wanted || "wood log") + "; gathered approximately " + gathered + ".");
     return gathered >= targetAmount; 
   }
 
   async function gatherWood(task = activeTask) {
-    return gatherResources("oak_log", 1, task);
+    return gatherResources("", 1, task);
   }
 
   async function investigateEntity(task = activeTask, entityName = "") {
