@@ -144,7 +144,8 @@ function inventorySnapshot(bot) {
     position: bot.entity?.position?.clone?.() || null,
     yaw: Number(bot.entity?.yaw ?? 0),
     pitch: Number(bot.entity?.pitch ?? 0),
-    vehicle: bot.vehicle || null
+    vehicle: bot.vehicle || null,
+    slotOrder: items.filter(i=>i.slot>=9 && i.slot<=44).sort((a,b)=>a.slot-b.slot).map(i=>i.name)
   };
 }
 function inventoryDelta(before, after, name) {
@@ -363,7 +364,10 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return answer === "y" || answer === "yes";
   }
   if (id==="sort_inventory") {
-    log("[VERIFY] sort_inventory remains unsupported; it cannot be marked PASS.");
+    const order=after.slotOrder || [];
+    const sorted=order.every((name,i)=>i===0 || String(order[i-1]).localeCompare(String(name))<=0);
+    if (sorted) return true;
+    log("[VERIFY] Inventory slot order is not sorted.");
     return false;
   }
 
@@ -574,7 +578,27 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="equip_item"){ const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); return true; }
   if(id==="drop_item"){ const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.tossStack(i); return true; }
   if(id==="sort_inventory"){
-    throw new Error("sort_inventory is unsupported: Mineflayer inventory slot reordering needs an explicit slot plan and is not implemented yet.");
+    if(typeof bot.moveSlotItem!=="function") throw new Error("Mineflayer inventory moveSlotItem API is unavailable.");
+    const slots=bot.inventory.items().filter(i=>i.slot>=9&&i.slot<=44).sort((a,b)=>a.slot-b.slot);
+    if(slots.length<2) return true;
+    const empty=[];
+    for(let slot=9;slot<=44;slot++) if(!bot.inventory.slots?.[slot]) empty.push(slot);
+    if(!empty.length) throw new Error("Inventory is full; safe slot-by-slot sorting requires at least one empty storage slot.");
+    const temp=empty[0];
+    const targets=slots.map(i=>({slot:i.slot,name:i.name,count:i.count})).sort((a,b)=>a.name.localeCompare(b.name)||a.count-b.count);
+    for(let index=0;index<targets.length;index++){
+      const dest=slots[index].slot;
+      const desired=targets[index];
+      const current=bot.inventory.slots?.[dest];
+      if(current?.name===desired.name && current.count===desired.count) continue;
+      const source=slots.find(i=>bot.inventory.slots?.[i.slot]?.name===desired.name && bot.inventory.slots?.[i.slot]?.count===desired.count && i.slot!==dest)?.slot;
+      if(source==null) continue;
+      await bot.moveSlotItem(source,temp);
+      const displaced=bot.inventory.slots?.[dest];
+      if(displaced) await bot.moveSlotItem(dest,source);
+      await bot.moveSlotItem(temp,dest);
+    }
+    return true;
   }
   if(id==="give_item"||id==="deliver_item"){
     const parts=String(arg||"").trim().split(/\s+/); const player=findPlayer(bot,parts.pop())?.entity; const item=findInventoryItem(bot,parts.join(" "));
