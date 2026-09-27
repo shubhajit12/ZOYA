@@ -428,10 +428,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const recipe = recipes[0];
     let craftingTable = null;
     if (recipe.requiresTable) {
-      craftingTable = bot.findBlock?.({
-        matching: block => block?.name === "crafting_table",
-        maxDistance: 16
-      }) || null;
+      const tableId = bot.registry?.blocksByName?.crafting_table?.id;
+      craftingTable = tableId != null
+        ? bot.findBlock?.({ matching: tableId, maxDistance: 16 }) || null
+        : null;
       if (!craftingTable) return false;
       const distance = craftingTable.position.distanceTo(bot.entity.position);
       if (distance > 3.5) {
