@@ -633,19 +633,23 @@ async function directCapability({bot,runtime,id,arg,log}) {
     await goto(bot,player.position.x,player.position.y,player.position.z,2.5); await bot.tossStack(item); return true;
   }
   if(id==="take_item" || id==="collect") {
-    const item=findEntity(bot,arg,e=>e.name==="item");
-    if(!item) throw new Error("Dropped item not found.");
+    const parts=String(arg||"").trim().split(/\s+/);
+    const requested=parts[0] || "";
+    const requestedAmount=Math.max(1,Math.floor(Number(parts[1])||1));
+    if(!requested) throw new Error("Item name is required.");
     if(typeof bot.collectBlock?.collect !== "function") throw new Error("Mineflayer collect-block item API is unavailable.");
+
     const before = inventorySnapshot(bot);
-    await bot.collectBlock.collect(item);
-    const after = inventorySnapshot(bot);
-    const requested = String(arg || "").trim();
-    if (requested && inventoryDelta(before, after, requested) <= 0) {
-      throw new Error("Reached the dropped item but did not confirm the requested inventory increase.");
+    let collected = inventoryDelta(before, inventorySnapshot(bot), requested);
+    while(collected < requestedAmount) {
+      const item=findEntity(bot,requested,e=>e.name==="item");
+      if(!item) break;
+      await bot.collectBlock.collect(item);
+      await sleep(250);
+      collected = inventoryDelta(before, inventorySnapshot(bot), requested);
     }
-    if (!requested && after.byName.size <= before.byName.size &&
-        ![...after.byName.entries()].some(([name,count])=>count>(before.byName.get(name)||0))) {
-      throw new Error("Dropped item was not confirmed as collected.");
+    if(collected < requestedAmount) {
+      throw new Error("Did not collect the requested amount of " + requested + " (got " + Math.max(0,collected) + "/" + requestedAmount + ").");
     }
     return true;
   }
@@ -681,14 +685,16 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
     const deadline=Date.now()+30000;
     while(!f.outputItem?.() && Date.now()<deadline) await sleep(500);
-    if(!f.outputItem?.()) { await f.close(); throw new Error("Furnace did not produce output within 30 seconds."); }
+    const output=f.outputItem?.();
+    if(!output) { await f.close(); throw new Error("Furnace did not produce output within 30 seconds."); }
 
+    const outputName=output.name;
     await f.takeOutput();
     await f.close();
     const after=inventorySnapshot(bot);
-    const totalBefore=[...before.byName.values()].reduce((n,c)=>n+c,0);
-    const totalAfter=[...after.byName.values()].reduce((n,c)=>n+c,0);
-    if(totalAfter<=totalBefore) throw new Error("Furnace output was not collected into inventory.");
+    if(inventoryDelta(before,after,outputName)<=0) {
+      throw new Error("Furnace output was not collected into inventory: " + outputName);
+    }
     return true;
   }
   if(id==="craft_furnace"){
