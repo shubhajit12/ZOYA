@@ -7,7 +7,8 @@ import { createMinecraftRuntime } from "./minecraftRuntime.mjs";
 import { startCapabilityTester } from "./capabilityTester.mjs";
 
 const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
-const CAPABILITY_DEBUG_MODE = process.env.ZOYA_CAPABILITY_DEBUG === "1";
+const CAPABILITY_DEBUG_ENV = process.env.ZOYA_CAPABILITY_DEBUG === "1";
+let capabilityDebugMode = CAPABILITY_DEBUG_ENV;
 const CONFIG_PATH = process.env.ZOYA_MINECRAFT_CONFIG ||
   path.join(process.env.APPDATA || process.cwd(), "com.zoya.aicompanion", "minecraft", "config.json");
 
@@ -198,7 +199,7 @@ function collectMinecraftState() {
   if (hostileNearby && !lastHostileNearby) {
     debugLog("[SAFETY] Hostile mob entered Zoya's danger range; waking brain.");
     try { bot.pathfinder?.setGoal(null); bot.clearControlStates(); } catch {}
-    if (!CAPABILITY_DEBUG_MODE) void zoyaBrain?.thinkNow();
+    if (!capabilityDebugMode) void zoyaBrain?.thinkNow();
   }
   lastHostileNearby = hostileNearby;
 
@@ -328,12 +329,13 @@ function connect(config) {
       applyConfiguredSkin(config);
       setMovementEnabled(config.movementEnabled === true);
       try {
-        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), wakeBrain: () => { if (!CAPABILITY_DEBUG_MODE) void zoyaBrain?.thinkNow(); }, log: debugLog });
-        if (!CAPABILITY_DEBUG_MODE) ensureZoyaBrain().start();
-        if (CAPABILITY_DEBUG_MODE) {
+        minecraftRuntime = createMinecraftRuntime({ bot, config, stateDir: path.dirname(CONFIG_PATH), wakeBrain: () => { if (!capabilityDebugMode) void zoyaBrain?.thinkNow(); }, log: debugLog });
+        if (!capabilityDebugMode) ensureZoyaBrain().start();
+        if (capabilityDebugMode) {
           capabilityTesterStop?.();
           capabilityTesterStop = startCapabilityTester({ bot, runtime: minecraftRuntime, log: debugLog });
           debugLog("[CAPABILITY TESTER] Developer capability tester enabled. Groq does not select capabilities in this tester.");
+          debugLog("[CAPABILITY TESTER] Set capabilityDebugMode=false or remove ZOYA_CAPABILITY_DEBUG=1 to return to normal Zoya brain mode.");
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
