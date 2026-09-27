@@ -119,6 +119,17 @@ jobs:
             Pop-Location
           }
 
+          # Static guardrails for the current manual capability-testing phase.
+          $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
+          $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
+          if ($indexSource -notmatch 'manual-capability-v3-2026-09-27') { throw 'Manual capability build marker is missing or stale.' }
+          if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
+          if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
+          if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
+          $registeredCapabilities = [regex]::Matches($testerSource, '\{ id: "[^"]+", label:').Count
+          if ($registeredCapabilities -ne 93) { throw "Expected 93 registered capability modes, found $registeredCapabilities." }
+          Write-Host "Manual capability static guardrails passed: $registeredCapabilities modes, Groq direct calls absent."
+
           Push-Location $bridgeDist
           try {
             node --input-type=module -e "await import('mineflayer'); await import('mineflayer-pathfinder'); await import('mineflayer-tool'); await import('mineflayer-collectblock'); await import('mineflayer-crafting-util'); await import('./minecraftRuntime.mjs'); await import('./zoyaBrain.mjs'); await import('./capabilityTester.mjs'); console.log('Minecraft bridge ESM/plugin smoke test passed.')"
