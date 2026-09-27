@@ -563,8 +563,14 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(!recipeItem) throw new Error("Unknown craft item: "+target);
     const recipes=bot.recipesFor(recipeItem.id,null,1,null);
     if(!recipes.length) throw new Error("No available recipe for "+target);
-    if(id==="craft_workbench"){ const table=nearestBlock(bot,"crafting_table",16); if(!table) throw new Error("Crafting table not found."); await goto(bot,table.position.x,table.position.y,table.position.z,3); }
-    await bot.craft(recipes[0],1,null); return true;
+    let craftingTable=null;
+    if(id==="craft_workbench" || recipes[0].requiresTable) {
+      craftingTable=nearestBlock(bot,"crafting_table",16);
+      if(!craftingTable) throw new Error("Crafting table not found.");
+      await goto(bot,craftingTable.position.x,craftingTable.position.y,craftingTable.position.z,3);
+    }
+    await bot.craft(recipes[0],1,craftingTable);
+    return true;
   }
 
   if(id==="place_block"){
