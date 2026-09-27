@@ -619,6 +619,51 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return Number(bot.food ?? beforeFood) > beforeFood;
   }
 
+  async function guardLocation(position, task) {
+    if (!task) return false;
+    await bot.pathfinder.goto(new goals.GoalNear(position.x, position.y, position.z, 2));
+    while (taskIsActive(task)) {
+      const hostile = Object.values(bot.entities || {})
+        .filter(entity => entity?.position &&
+          new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]).has(String(entity.name || "").toLowerCase()) &&
+          entity.position.distanceTo(bot.entity.position) <= 12)
+        .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
+
+      if (hostile) {
+        await equipMatchingForGuard();
+        const beforeHealth=Number(hostile.health ?? 1);
+        await attackLoopForGuard(hostile);
+        if (hostile.health != null && hostile.health >= beforeHealth && taskIsActive(task)) {
+          log("[GUARD] Attack attempt did not reduce target health; continuing guard.");
+        }
+      } else {
+        await new Promise(resolve=>setTimeout(resolve,300));
+      }
+    }
+    try { bot.pathfinder.setGoal(null); } catch {}
+    return false;
+  }
+
+  async function equipMatchingForGuard() {
+    const item=bot.inventory.items().find(i=>["sword","axe","trident","mace"].some(word=>i.name.toLowerCase().includes(word)));
+    if (item) await bot.equip(item,"hand");
+  }
+
+  async function attackLoopForGuard(target) {
+    const deadline=Date.now()+3000;
+    while (taskIsActive(activeTask) && target && target.isValid!==false && (target.health==null || target.health>0) && Date.now()<deadline) {
+      if (dist(bot.entity.position,target.position)>3.1) {
+        bot.pathfinder.setGoal(new goals.GoalFollow(target,2.7),true);
+        await new Promise(resolve=>setTimeout(resolve,250));
+        try { bot.pathfinder.setGoal(null); } catch {}
+      }
+      if (!target.isValid) break;
+      await bot.lookAt(target.position.offset(0,target.height||1,0),true);
+      bot.attack(target);
+      await new Promise(resolve=>setTimeout(resolve,450));
+    }
+  }
+
   async function pvp(targetUsername, task) {
     if (!targetUsername) return false;
     let hadTarget = false;
@@ -701,6 +746,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       else if (action === "mine") result = await mineNearest(options.blockName || "");
       else if (action === "craft") result = await craftBasic(options.itemName || "", options.amount || 1);
       else if (action === "pvp") result = await pvp(options.targetUsername, task);
+      else if (action === "guard" || action === "guard_location") {
+        const position=options.position || bot.entity.position;
+        result = await guardLocation(position, task);
+      }
       else if (action === "idle") result = true;
       else {
         log("[ACTION] Capability not implemented yet: " + action);
