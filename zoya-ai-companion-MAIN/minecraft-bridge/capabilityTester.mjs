@@ -442,21 +442,11 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if (["follow_player","pvp"].includes(id)) {
       const target=String(arg||"").trim();
       if(!target) throw new Error("A player username is required.");
-      log("[CAPABILITY] "+id+" will run for 15 seconds in the manual tester.");
-      const run=runtime.execute(DELEGATED.get(id),{targetUsername:target,permissionGranted:true});
-      let timedOut=false;
-      const timeout=sleep(15000).then(()=>{ timedOut=true; return "__CAPABILITY_TIMEOUT__"; });
-      const result=await Promise.race([run,timeout]);
-      if (result === "__CAPABILITY_TIMEOUT__") {
-        if(runtime.getActiveTask?.()) runtime.cancelCurrentTask("manual capability test duration complete");
-        log("[CAPABILITY] "+id+" remained active for the full 15-second test window.");
-        return true;
-      }
-      if (result !== true) {
-        log("[CAPABILITY] "+id+" FAILED before the 15-second window completed. Check target/player availability and runtime logs.");
-        return false;
-      }
-      return true;
+      // These are intentionally continuous capabilities. Do not hide them
+      // behind a fixed timeout: the tester must be able to select STOP and
+      // exercise the real cancellation path.
+      log("[CAPABILITY] "+id+" is continuous until the target disappears or STOP is selected.");
+      return runtime.execute(DELEGATED.get(id),{targetUsername:target,permissionGranted:true});
     }
     const options={permissionGranted:true};
     if (id==="mine") options.blockName=String(arg||"").trim();
@@ -849,6 +839,7 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
   log("[CAPABILITY TESTER] IMPORTANT: API availability is not a capability PASS; every action is post-verified.");
   if(!process.stdin.isTTY||!process.stdout.isTTY){ log("[CAPABILITY TESTER] Interactive terminal unavailable."); return ()=>{}; }
   let stopped=false;
+  let backgroundRun=null;
   const rl=readline.createInterface({input:process.stdin,output:process.stdout,terminal:true});
   const ask=q=>new Promise(resolve=>rl.question(q,resolve));
 
@@ -893,6 +884,21 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
         log("[CAPABILITY] Status: RUNNING");
         const started=Date.now();
         const before=inventorySnapshot(bot);
+
+        if (["follow_player","pvp"].includes(cap.id)) {
+          const promise=directCapability({bot,runtime,id:cap.id,arg,log});
+          backgroundRun={id:cap.id,promise};
+          log("[CAPABILITY] Mode: " + cap.id + " | Status: RUNNING IN BACKGROUND");
+          void promise.then(result=>{
+            log("[CAPABILITY] Background mode: " + cap.id + " ended -> " + (result===true ? "completed" : "stopped/failed"));
+            if (backgroundRun?.promise===promise) backgroundRun=null;
+          }).catch(error=>{
+            log("[CAPABILITY] Background mode: " + cap.id + " crashed: " + (error instanceof Error?error.message:String(error)));
+            if (backgroundRun?.promise===promise) backgroundRun=null;
+          });
+          continue;
+        }
+
         const result=await directCapability({bot,runtime,id:cap.id,arg,log});
         if (cap.id==="remember_player" && runtime?.memory?.players) bot.__zoyaRuntimeMemoryPlayers=runtime.memory.players;
         const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result,ask,runtime});
@@ -907,6 +913,13 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
   }
 
   void menu();
-  return ()=>{stopped=true;try{rl.close();}catch{}};
+  return ()=>{
+    stopped=true;
+    if(runtime?.getActiveTask?.()) runtime.cancelCurrentTask("capability tester exited");
+    try { bot?.pathfinder?.setGoal?.(null); } catch {}
+    try { bot?.clearControlStates?.(); } catch {}
+    backgroundRun=null;
+    try{rl.close();}catch{}
+  };
 }
 export function getCapabilityRegistry(){return CAPABILITIES.map(cap=>({...cap}));}
