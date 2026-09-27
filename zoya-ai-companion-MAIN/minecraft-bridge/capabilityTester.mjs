@@ -206,8 +206,11 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
   }
 
   if (["attack_mob","defend","pvp","hit","use_ranged_weapon"].includes(id)) {
+    // Movement toward a target is not proof of a hit. Combat is PASS only
+    // when the target's health/entity state changed or the tester confirms
+    // the visible hit.
     const target = findPlayer(bot, targetName)?.entity || findEntity(bot,targetName);
-    if (moved >= 0.2) return true;
+    if (target?.health != null && target.health <= 0) return true;
     const answer = ask ? String(await ask("[VERIFY] Did you visibly see the attack hit the target? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
   }
@@ -304,8 +307,13 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return answer === "y" || answer === "yes";
   }
   if (id==="smelt") {
-    if (after.byName.size > before.byName.size || [...after.byName.entries()].some(([name,count])=>count>(before.byName.get(name)||0))) return true;
-    const answer=ask ? String(await ask("[VERIFY] Confirm the furnace produced the requested output? (y/n): ")).trim().toLowerCase() : "n";
+    const requested = String(arg || "").trim().toLowerCase();
+    if (requested && inventoryDelta(before, after, requested) < 0) {
+      // The input is expected to decrease, while the output is checked by
+      // the action itself. A visible confirmation remains required because
+      // the output name is not necessarily derivable from the input string.
+    }
+    const answer=ask ? String(await ask("[VERIFY] Confirm the furnace produced and collected the requested output? (y/n): ")).trim().toLowerCase() : "n";
     return answer==="y" || answer==="yes";
   }
   if (id==="craft_furnace") {
@@ -538,7 +546,9 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="use_shield") {
     const shield=findInventoryItem(bot,"shield"); if(!shield) throw new Error("Shield not found.");
     await bot.equip(shield,"off-hand");
-    bot.activateItem();
+    // Mineflayer uses activateItem(true) for the off-hand; calling the
+    // default main-hand activation does not actually raise the shield.
+    bot.activateItem(true);
     await sleep(2000);
     bot.deactivateItem();
     return true;
@@ -547,9 +557,26 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const target=findPlayer(bot,arg)?.entity||findEntity(bot,arg); if(!target) throw new Error("Target not found.");
     const ranged=findInventoryItem(bot,"bow")||findInventoryItem(bot,"crossbow")||findInventoryItem(bot,"trident");
     if(!ranged) throw new Error("No ranged weapon found.");
-    await bot.equip(ranged,"hand"); await bot.lookAt(target.position.offset(0,target.height||1,0),true);
-    if(ranged.name==="bow") { const arrow=findInventoryItem(bot,"arrow"); if(!arrow) throw new Error("No arrows."); await bot.activateItem(); await sleep(1200); bot.deactivateItem(); }
-    else bot.activateItem();
+    await bot.equip(ranged,"hand");
+    await bot.lookAt(target.position.offset(0,target.height||1,0),true);
+    if(ranged.name==="bow") {
+      const arrow=findInventoryItem(bot,"arrow"); if(!arrow) throw new Error("No arrows.");
+      bot.activateItem();
+      await sleep(1200);
+      bot.deactivateItem();
+    } else if(ranged.name==="crossbow") {
+      bot.activateItem();
+      await sleep(1200);
+      bot.deactivateItem();
+      await sleep(150);
+      bot.activateItem();
+      await sleep(150);
+      bot.deactivateItem();
+    } else {
+      bot.activateItem();
+      await sleep(600);
+      bot.deactivateItem();
+    }
     return true;
   }
   if(id==="dig"||id==="break_block") {
@@ -605,9 +632,22 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(!player||!item) throw new Error("Need an online player and an inventory item.");
     await goto(bot,player.position.x,player.position.y,player.position.z,2.5); await bot.tossStack(item); return true;
   }
-  if(id==="take_item") { const item=findEntity(bot,arg,e=>e.name==="item"); if(!item) throw new Error("Dropped item not found."); await goto(bot,item.position.x,item.position.y,item.position.z,1.5); return true; }
-  if(id==="collect") {
-    const item=findEntity(bot,arg,e=>e.name==="item"); if(!item) throw new Error("Dropped item not found."); await goto(bot,item.position.x,item.position.y,item.position.z,1.5); return true;
+  if(id==="take_item" || id==="collect") {
+    const item=findEntity(bot,arg,e=>e.name==="item");
+    if(!item) throw new Error("Dropped item not found.");
+    if(typeof bot.collectBlock?.collect !== "function") throw new Error("Mineflayer collect-block item API is unavailable.");
+    const before = inventorySnapshot(bot);
+    await bot.collectBlock.collect(item);
+    const after = inventorySnapshot(bot);
+    const requested = String(arg || "").trim();
+    if (requested && inventoryDelta(before, after, requested) <= 0) {
+      throw new Error("Reached the dropped item but did not confirm the requested inventory increase.");
+    }
+    if (!requested && after.byName.size <= before.byName.size &&
+        ![...after.byName.entries()].some(([name,count])=>count>(before.byName.get(name)||0))) {
+      throw new Error("Dropped item was not confirmed as collected.");
+    }
+    return true;
   }
   if(id==="find_item_world"){ const item=findEntity(bot,arg,e=>e.name==="item" || e.displayName?.toLowerCase().includes(String(arg||"").toLowerCase())); if(!item) throw new Error("World item not found."); log("[WORLD ITEM] "+JSON.stringify(item.position)); return true; }
 
@@ -623,21 +663,33 @@ async function directCapability({bot,runtime,id,arg,log}) {
     c.close(); return true;
   }
   if(id==="smelt"){
-    const itemName=String(arg||"").trim().toLowerCase(); const furnace=nearestBlock(bot,["furnace","blast_furnace","smoker"],24); if(!furnace) throw new Error("Furnace not found.");
-    await goto(bot,furnace.position.x,furnace.position.y,furnace.position.z,3); const f=await bot.openFurnace(furnace);
-    const input=findInventoryItem(bot,itemName); if(!input) throw new Error("Smelt input not found.");
+    const itemName=String(arg||"").trim().toLowerCase();
+    const furnace=nearestBlock(bot,["furnace","blast_furnace","smoker"],24);
+    if(!furnace) throw new Error("Furnace not found.");
+    await goto(bot,furnace.position.x,furnace.position.y,furnace.position.z,3);
+    const f=await bot.openFurnace(furnace);
+    const input=findInventoryItem(bot,itemName); if(!input) { await f.close(); throw new Error("Smelt input not found."); }
     const fuel=findInventoryItem(bot,"coal")||findInventoryItem(bot,"charcoal")||findInventoryItem(bot,"wood");
-    if(!fuel) throw new Error("Fuel not found.");
-    const before=bot.inventory.items().reduce((n,i)=>n+i.count,0);
+    if(!fuel) { await f.close(); throw new Error("Fuel not found."); }
+
+    // Clear an old output first so this run can prove it produced a fresh one.
+    if (f.outputItem?.()) await f.takeOutput();
+
+    const before=inventorySnapshot(bot);
     await f.putFuel(fuel.type,null,Math.min(fuel.count,8));
     await f.putInput(input.type,null,Math.min(input.count,8));
-    await sleep(2500);
-    const output=f.outputItem?.();
-    const outputReady=Boolean(output);
-    f.close();
-    if(!outputReady) throw new Error("Furnace did not produce output during the verification window.");
-    const after=bot.inventory.items().reduce((n,i)=>n+i.count,0);
-    return after !== before || outputReady;
+
+    const deadline=Date.now()+30000;
+    while(!f.outputItem?.() && Date.now()<deadline) await sleep(500);
+    if(!f.outputItem?.()) { await f.close(); throw new Error("Furnace did not produce output within 30 seconds."); }
+
+    await f.takeOutput();
+    await f.close();
+    const after=inventorySnapshot(bot);
+    const totalBefore=[...before.byName.values()].reduce((n,c)=>n+c,0);
+    const totalAfter=[...after.byName.values()].reduce((n,c)=>n+c,0);
+    if(totalAfter<=totalBefore) throw new Error("Furnace output was not collected into inventory.");
+    return true;
   }
   if(id==="craft_furnace"){
     const furnaceItem=bot.registry.itemsByName.furnace;
