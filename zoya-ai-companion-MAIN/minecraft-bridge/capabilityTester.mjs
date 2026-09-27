@@ -203,7 +203,22 @@ async function directCapability({bot,runtime,id,arg,log}) {
       }
       return true;
     }
-    const result=await runtime.execute(DELEGATED.get(id),{targetUsername:arg,permissionGranted:true});
+    const options={permissionGranted:true};
+    if (id==="mine") options.blockName=String(arg||"").trim();
+    if (id==="eat") options.itemName=String(arg||"").trim();
+    if (id==="collect") {
+      const parts=String(arg||"").trim().split(/\s+/);
+      options.itemName=parts[0] || "";
+      options.amount=Math.max(1,Math.floor(Number(parts[1])||1));
+    }
+    if (id==="investigate_entity") options.entityName=String(arg||"").trim();
+    if (id==="craft") {
+      const parts=String(arg||"").trim().split(/\s+/);
+      options.itemName=parts.slice(0,-1).join("_") || parts[0] || "";
+      options.amount=Math.max(1,Math.floor(Number(parts.at(-1))||1));
+    }
+    if (["follow_player","pvp","look_at_player"].includes(id)) options.targetUsername=String(arg||"").trim();
+    const result=await runtime.execute(DELEGATED.get(id),options);
     return result === true;
   }
 
