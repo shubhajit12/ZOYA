@@ -622,35 +622,47 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   async function pvp(targetUsername, task) {
     if (!targetUsername) return false;
     let hadTarget = false;
+
     while (taskIsActive(task)) {
       const target = findPlayerByUsername(targetUsername)?.entity;
       if (!target) return hadTarget;
       if (target.health != null && target.health <= 0) return hadTarget;
       hadTarget = true;
 
-      const distance = target.position.distanceTo(bot.entity.position);
-      try {
-        await bot.lookAt(target.position.offset(0, target.height ? target.height * 0.75 : 1.4, 0), true);
-      } catch {}
-
+      let distance = target.position.distanceTo(bot.entity.position);
       if (distance > 3.1) {
-        bot.setControlState("sprint", true);
-        try {
-          await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 2.6));
-        } catch (error) {
-          if (taskIsActive(task)) log("[PVP] Pathing retry: " + (error instanceof Error ? error.message : String(error)));
-        } finally {
-          try { bot.setControlState("sprint", false); } catch {}
+        // A moving player is a dynamic target. GoalFollow avoids chasing stale
+        // coordinate snapshots and lets Pathfinder continuously track them.
+        bot.pathfinder.setGoal(new goals.GoalFollow(target, 2.7), true);
+        const deadline = Date.now() + 5000;
+        while (taskIsActive(task) && Date.now() < deadline) {
+          const liveTarget = findPlayerByUsername(targetUsername)?.entity;
+          if (!liveTarget) break;
+          distance = liveTarget.position.distanceTo(bot.entity.position);
+          if (distance <= 3.1) break;
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
-      } else {
-        try { bot.attack(target); } catch (error) {
-          log("[PVP] Attack failed: " + (error instanceof Error ? error.message : String(error)));
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        try { bot.pathfinder.setGoal(null); } catch {}
+        if (!taskIsActive(task)) return false;
       }
 
+      const liveTarget = findPlayerByUsername(targetUsername)?.entity;
+      if (!liveTarget) return hadTarget;
+      try {
+        await bot.lookAt(
+          liveTarget.position.offset(0, liveTarget.height ? liveTarget.height * 0.75 : 1.4, 0),
+          true
+        );
+        bot.attack(liveTarget);
+      } catch (error) {
+        log("[PVP] Attack failed: " + (error instanceof Error ? error.message : String(error)));
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
       if ((bot.health ?? 20) <= 0) return false;
     }
+
+    try { bot.pathfinder.setGoal(null); } catch {}
     return false;
   }
 
