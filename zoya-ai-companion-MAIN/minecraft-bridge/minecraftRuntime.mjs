@@ -42,6 +42,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   movements.allow1by1towers = false;
   movements.allowParkour = false;
   movements.allowSprinting = true;
+  // Let Pathfinder optimize clear straight segments. Parkour remains disabled
+  // so follow does not turn into unnecessary gap-jumping.
+  movements.allowFreeMotion = true;
+  movements.allowEntityDetection = true;
   bot.pathfinder.setMovements(movements);
 
   const memoryPath = path.join(stateDir, MEMORY_FILE);
@@ -281,28 +285,84 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
   async function moveToPlayer(username, distance = 3, task = activeTask, continuous = false) {
     if (!task) return false;
-    while (taskIsActive(task)) {
-      const target = findPlayerByUsername(username)?.entity;
-      if (!target) return false;
-      const targetPosition = target.position.clone();
-      bot.setControlState("sprint", true);
-      try {
-        await bot.pathfinder.goto(new goals.GoalNear(targetPosition.x, targetPosition.y, targetPosition.z, distance));
-      } catch (error) {
-        if (!taskIsActive(task)) return false;
-        log("[TASK] follow_player pathing retry: " + (error instanceof Error ? error.message : String(error)));
-        await new Promise(resolve => setTimeout(resolve, 250));
-      } finally {
-        try { bot.setControlState("sprint", false); } catch {}
-      }
-      if (!taskIsActive(task)) return false;
-      if (!continuous) {
-        const remaining = findPlayerByUsername(username)?.entity?.position?.distanceTo(bot.entity.position) ?? Infinity;
-        return remaining <= distance + 0.75;
-      }
-      await new Promise(resolve => setTimeout(resolve, 250));
+    const targetPlayer = findPlayerByUsername(username);
+    const target = targetPlayer?.entity;
+    if (!target) {
+      log("[TASK] follow_player target not found: " + String(username || "unknown"));
+      return false;
     }
-    return false;
+
+    // Continuous follow must use GoalFollow + dynamic=true. Repeated GoalNear
+    // snapshots chase stale coordinates and are the main cause of stop/start
+    // behavior, same-level dependence, and getting stuck one block behind.
+    if (continuous) {
+      const goal = new goals.GoalFollow(target, distance);
+      currentGoal = "follow_player";
+      bot.pathfinder.setGoal(goal, true);
+
+      let lastBotPosition = bot.entity.position.clone();
+      let lastTargetPosition = target.position.clone();
+      let lastProgressAt = Date.now();
+      let lastRecoveryAt = 0;
+
+      while (taskIsActive(task)) {
+        const liveTarget = findPlayerByUsername(username)?.entity;
+        if (!liveTarget) {
+          try { bot.pathfinder.setGoal(null); } catch {}
+          return true;
+        }
+
+        const now = Date.now();
+        const botPosition = bot.entity.position;
+        const targetPosition = liveTarget.position;
+        const botMoved = botPosition.distanceTo(lastBotPosition);
+        const targetMoved = targetPosition.distanceTo(lastTargetPosition);
+        const remaining = botPosition.distanceTo(targetPosition);
+
+        if (botMoved >= 0.12 || targetMoved >= 0.12 || remaining <= distance + 0.5) {
+          lastProgressAt = now;
+          lastBotPosition = botPosition.clone();
+          lastTargetPosition = targetPosition.clone();
+        }
+
+        // A bounded recovery for genuine stalls. Do not spam jumps or create a
+        // second movement controller: briefly reset the same dynamic GoalFollow
+        // so Pathfinder rebuilds from the bot's actual current position.
+        if (
+          now - lastProgressAt >= 2500 &&
+          now - lastRecoveryAt >= 2500 &&
+          remaining > distance + 1
+        ) {
+          lastRecoveryAt = now;
+          log("[TASK] follow_player stuck recovery: replanning from current position.");
+          try { bot.pathfinder.setGoal(null); } catch {}
+          if (!taskIsActive(task)) return false;
+          bot.pathfinder.setGoal(new goals.GoalFollow(liveTarget, distance), true);
+          lastProgressAt = now;
+          lastBotPosition = botPosition.clone();
+          lastTargetPosition = targetPosition.clone();
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+
+      try { bot.pathfinder.setGoal(null); } catch {}
+      return false;
+    }
+
+    // One-shot follow/return uses GoalNear deliberately: it has a fixed
+    // destination and should resolve when the bot reaches the requested range.
+    try {
+      await bot.pathfinder.goto(new goals.GoalFollow(target, distance));
+      return taskIsActive(task);
+    } catch (error) {
+      if (taskIsActive(task)) {
+        log("[TASK] follow_player pathing failed: " + (error instanceof Error ? error.message : String(error)));
+      }
+      return false;
+    } finally {
+      try { bot.pathfinder.setGoal(null); } catch {}
+    }
   }
 
   async function explore(task = activeTask) {
