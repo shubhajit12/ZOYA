@@ -307,10 +307,13 @@ function disconnect() {
 }
 
 function connect(config) {
-  currentConfig = config;
   capabilityDebugMode = CAPABILITY_DEBUG_ENV || config.capabilityDebugMode === true;
-  ensureZoyaBrain();
+  currentConfig = config;
   disconnect();
+  currentConfig = config;
+  if (capabilityDebugMode) {
+    debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is hard-disabled.");
+  }
   const host = String(config.host || "127.0.0.1");
   const port = Number(config.port || 25565);
   const username = String(config.username || "Zoya");
@@ -398,8 +401,15 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET" && url.pathname === "/status") return send(res, 200, snapshot());
   if (req.method === "GET" && url.pathname === "/health") return send(res, 200, { ok: true, service: "zoya-minecraft-bridge", ...snapshot() });
   if (req.method === "GET" && url.pathname === "/state") return send(res, 200, collectMinecraftState());
-  if (req.method === "GET" && url.pathname === "/brain") return send(res, 200, ensureZoyaBrain().status());
-  if (req.method === "POST" && url.pathname === "/brain/think") { void ensureZoyaBrain().thinkNow(); return send(res, 202, { ok: true }); }
+  if (req.method === "GET" && url.pathname === "/brain") {
+    if (capabilityDebugMode) return send(res, 409, { ok: false, error: "Groq brain is disabled in capability test mode.", capabilityDebugMode: true });
+    return send(res, 200, ensureZoyaBrain().status());
+  }
+  if (req.method === "POST" && url.pathname === "/brain/think") {
+    if (capabilityDebugMode) return send(res, 409, { ok: false, error: "Groq brain is disabled in capability test mode.", capabilityDebugMode: true });
+    void ensureZoyaBrain().thinkNow();
+    return send(res, 202, { ok: true });
+  }
   if (req.method === "POST" && url.pathname === "/connect") {
     let body = "";
     req.on("data", chunk => { body += chunk; });
