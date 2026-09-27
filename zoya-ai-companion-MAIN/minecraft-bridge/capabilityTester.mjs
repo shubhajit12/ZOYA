@@ -21,6 +21,8 @@ const CAPABILITIES = [
   { id: "eat", label: "Eat", usage: "eat {item}" },
   { id: "collect", label: "Collect", usage: "collect {item} {amount}" },
   { id: "look_at_player", label: "Look At Player", usage: "look_at_player {username}" },
+  { id: "chat", label: "Public Chat", usage: "chat {message}" },
+  { id: "private_chat", label: "Private Chat", usage: "private_chat {username} {message}" },
   { id: "go_to", label: "Go To", usage: "go_to {x} {y} {z}" },
   { id: "look_at_coordinates", label: "Look At Coordinates", usage: "look_at_coordinates {x} {y} {z}" },
   { id: "stop", label: "Stop / Cancel", usage: "stop" },
@@ -180,6 +182,25 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="hit") {
     const target=findPlayer(bot,arg)?.entity; if(!target) throw new Error("Player not found.");
     await bot.lookAt(target.position.offset(0,target.height||1.5,0),true); bot.attack(target); return true;
+  }
+  if(id==="chat") {
+    const message=String(arg||"").trim();
+    if(!message) throw new Error("Message is required.");
+    bot.chat(message.slice(0,256));
+    log("[CHAT] Public chat sent: " + message.slice(0,256));
+    return true;
+  }
+  if(id==="private_chat") {
+    const parts=String(arg||"").trim().split(/\s+/);
+    const username=parts.shift();
+    const message=parts.join(" ").trim();
+    if(!username) throw new Error("Username is required.");
+    if(!message) throw new Error("Message is required.");
+    const target=findPlayer(bot,username);
+    if(!target?.username) throw new Error("Player not found.");
+    bot.whisper(target.username,message.slice(0,256));
+    log("[CHAT] Private chat sent to " + target.username + ": " + message.slice(0,256));
+    return true;
   }
   if(id==="go_to"||id==="return_to_coordinates") { const p=parseCoords(arg); log("[CAPABILITY] Target "+JSON.stringify(p)); return goto(bot,p.x,p.y,p.z); }
   if(id==="look_at_coordinates") { const p=parseCoords(arg); await bot.lookAt(p,true); return true; }
@@ -365,6 +386,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
 }
 
 export function startCapabilityTester({bot,runtime,log=console.log}) {
+  log("[CAPABILITY TESTER] Local-only mode: no Groq calls are made.");
   if(!process.stdin.isTTY||!process.stdout.isTTY){ log("[CAPABILITY TESTER] Interactive terminal unavailable."); return ()=>{}; }
   let stopped=false;
   const rl=readline.createInterface({input:process.stdin,output:process.stdout,terminal:true});
@@ -376,6 +398,8 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
       log("========================================");
       log("       ZOYA CAPABILITY DEBUGGER");
       log("========================================");
+      log("Groq: DISABLED | Manual mode execution: ENABLED");
+      log("Registered modes: " + CAPABILITIES.length);
       CAPABILITIES.forEach((cap,i)=>log(String(i+1).padStart(2," ") + ". " + cap.label));
       log("0. Exit capability tester");
 
@@ -397,12 +421,14 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
 
       try{
         if(runtime?.getActiveTask?.()) runtime.cancelCurrentTask("manual capability tester");
-        log("[CAPABILITY] Starting " + cap.label + "...");
+        log("[CAPABILITY] Mode: " + cap.id);
+        log("[CAPABILITY] Status: RUNNING");
         const started=Date.now();
         const result=await directCapability({bot,runtime,id:cap.id,arg,log});
-        log("[CAPABILITY] " + cap.label + " -> " + (result===false?"FAILED":"SUCCESS") + " (" + (Date.now()-started) + " ms)");
+        const status=result===false?"FAIL":"PASS";
+        log("[CAPABILITY] Mode: " + cap.id + " | Status: " + status + " | Duration: " + (Date.now()-started) + " ms");
       }catch(error){
-        log("[CAPABILITY] " + cap.label + " -> FAILED: " + (error instanceof Error?error.message:String(error)));
+        log("[CAPABILITY] Mode: " + cap.id + " | Status: FAIL | Error: " + (error instanceof Error?error.message:String(error)));
       }
     }
     rl.close();
