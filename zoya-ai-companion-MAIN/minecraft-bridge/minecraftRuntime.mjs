@@ -442,29 +442,40 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     if (!task) return false;
     const wanted = String(itemName || "").trim().toLowerCase();
     const targetAmount = Math.max(1, Math.floor(Number(amount) || 1));
-    const p = bot.entity.position;
-    const targets = Object.values(bot.entities || {})
-      .filter(e => {
-        if (!e || !e.position || e === bot.entity || (e.name !== "item" && e.type !== "object")) return false;
-        if (!wanted) return true;
-        const itemStackName = String(e.itemStack?.name || e.metadata?.[8]?.name || e.metadata?.[7]?.name || e.displayName || "").toLowerCase();
-        return itemStackName === wanted || itemStackName.includes(wanted);
-      })
-      .sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
-    const target = targets[0];
-    if (!target || target.position.distanceTo(p) > 24) return false;
-    bot.setControlState("sprint", true);
-    try {
+    let collected = 0;
+
+    while (taskIsActive(task) && collected < targetAmount) {
+      const p = bot.entity.position;
+      const targets = Object.values(bot.entities || {})
+        .filter(e => {
+          if (!e || !e.position || e === bot.entity || (e.name !== "item" && e.type !== "object")) return false;
+          if (!wanted) return true;
+          const itemStackName = String(e.itemStack?.name || e.metadata?.[8]?.name || e.metadata?.[7]?.name || e.displayName || "").toLowerCase();
+          return itemStackName === wanted || itemStackName.includes(wanted);
+        })
+        .sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
+      const target = targets[0];
+      if (!target || target.position.distanceTo(p) > 24) break;
+
+      const before = bot.inventory.items().reduce((n, item) => n + item.count, 0);
+      bot.setControlState("sprint", true);
+      try {
+        if (!taskIsActive(task)) return false;
+        await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
+      } catch (error) {
+        if (taskIsActive(task)) log("[ACTION] collect pathing failed: " + (error instanceof Error ? error.message : String(error)));
+        return false;
+      } finally {
+        bot.setControlState("sprint", false);
+      }
       if (!taskIsActive(task)) return false;
-      await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
-      if (!taskIsActive(task)) return false;
-      // Mineflayer normally auto-picks a nearby dropped stack once the bot
-      // reaches it. Verify the target disappeared before reporting success.
-      await new Promise(resolve => setTimeout(resolve, 300));
-      return !target.isValid || target.position.distanceTo(bot.entity.position) <= 2 && !Object.values(bot.entities || {}).includes(target);
-    } finally {
-      bot.setControlState("sprint", false);
+      await new Promise(resolve => setTimeout(resolve, 350));
+      const after = bot.inventory.items().reduce((n, item) => n + item.count, 0);
+      if (after <= before) break;
+      collected += after - before;
     }
+
+    return collected >= targetAmount;
   }
 
   async function eat(itemName = "") {
