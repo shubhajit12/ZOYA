@@ -612,7 +612,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       wanted ? (i.name.toLowerCase() === wanted || i.name.toLowerCase().includes(wanted)) :
       /bread|apple|carrot|potato|beef|porkchop|chicken|mutton|salmon|cod|steak|cooked|melon|berries|stew/.test(i.name)
     );
-    if (!item || (bot.food ?? 20) >= 16) return false;
+    if (!item || (bot.food ?? 20) >= 20) return false;
     const beforeFood = Number(bot.food ?? 20);
     await bot.equip(item, "hand");
     await bot.consume();
