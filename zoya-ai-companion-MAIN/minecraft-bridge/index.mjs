@@ -466,8 +466,11 @@ server.listen(PORT, "127.0.0.1", () => {
     username: "Zoya",
     auth: "offline",
     autoConnect: true,
-    autoReconnect: true
+    autoReconnect: true,
+    capabilityDebugMode: true
   };
+  // Current developer phase: never silently fall back to Groq when the capability flag is omitted.
+  if (config.capabilityDebugMode === undefined) config.capabilityDebugMode = true;
   if (config.autoConnect === true) connect(config);
 });
 function shutdown() { clearInterval(stateTicker); disconnect(); server.close(() => process.exit(0)); }
