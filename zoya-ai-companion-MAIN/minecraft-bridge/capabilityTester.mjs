@@ -278,10 +278,20 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     const answer = ask ? String(await ask("[VERIFY] Confirm the container opened in Minecraft? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
   }
-  if (["deposit","retrieve","smelt","craft_furnace"].includes(id)) {
+  if (["deposit","retrieve"].includes(id)) {
     if (inventoryDelta(before,after,targetName) !== 0) return true;
-    const answer = ask ? String(await ask("[VERIFY] Confirm the requested inventory/furnace change is visible? (y/n): ")).trim().toLowerCase() : "n";
+    const answer = ask ? String(await ask("[VERIFY] Confirm the requested container inventory change is visible? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
+  }
+  if (id==="smelt") {
+    if (after.byName.size > before.byName.size || [...after.byName.entries()].some(([name,count])=>count>(before.byName.get(name)||0))) return true;
+    const answer=ask ? String(await ask("[VERIFY] Confirm the furnace produced the requested output? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
+  if (id==="craft_furnace") {
+    if (inventoryDelta(before,after,"furnace") > 0) return true;
+    log("[VERIFY] craft_furnace did not add a furnace to inventory.");
+    return false;
   }
 
   if (id==="place_block") {
