@@ -64,13 +64,31 @@ pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
     let address: std::net::SocketAddr = "127.0.0.1:32123"
         .parse()
         .map_err(|e: std::net::AddrParseError| e.to_string())?;
+    let capability_debug = config
+        .parent()
+        .map(|p| p.join("capability-debug.flag").is_file())
+        .unwrap_or(false);
+
     if std::net::TcpStream::connect_timeout(
         &address,
         Duration::from_millis(150),
     ).is_ok() {
         // The bridge is already running. Apply the newly saved settings to it
         // instead of silently leaving the old bot connection/config in place.
-        post_bridge("/connect", Some(config_json))?;
+        // capabilityDebugMode is deliberately added only to the live request,
+        // not to the persistent config file, so the developer flag can be
+        // removed without permanently forcing debug mode on future launches.
+        let mut live_config: serde_json::Value = serde_json::from_str(config_json)
+            .map_err(|e| format!("Invalid Minecraft configuration: {e}"))?;
+        if let Some(object) = live_config.as_object_mut() {
+            object.insert(
+                "capabilityDebugMode".to_string(),
+                serde_json::Value::Bool(capability_debug),
+            );
+        }
+        let live_config_json = serde_json::to_string(&live_config)
+            .map_err(|e| format!("Failed to prepare Minecraft configuration: {e}"))?;
+        post_bridge("/connect", Some(&live_config_json))?;
         return Ok(());
     }
 
@@ -82,7 +100,7 @@ pub fn launch(app: &AppHandle, config_json: &str) -> Result<(), String> {
         // Normal ZOYA launches remain on the Groq brain.
         .env(
             "ZOYA_CAPABILITY_DEBUG",
-            if config.parent().map(|p| p.join("capability-debug.flag").is_file()).unwrap_or(false) { "1" } else { "0" }
+            if capability_debug { "1" } else { "0" }
         )
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
