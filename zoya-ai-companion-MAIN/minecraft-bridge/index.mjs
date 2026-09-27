@@ -307,13 +307,14 @@ function disconnect() {
 }
 
 function connect(config) {
-  capabilityDebugMode = CAPABILITY_DEBUG_ENV || config.capabilityDebugMode === true;
-  currentConfig = config;
+  // Manual capability verification is the active development phase.
+  // It must be impossible for a stale packaged config to silently enable Groq.
+  capabilityDebugMode = true;
+  currentConfig = { ...config, capabilityDebugMode: true };
   disconnect();
-  currentConfig = config;
-  if (capabilityDebugMode) {
-    debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is hard-disabled.");
-  }
+  currentConfig = { ...config, capabilityDebugMode: true };
+  debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is HARD-DISABLED for this build.");
+  debugLog("[CAPABILITY TESTER] Effective config: capabilityDebugMode=true; Groq planner unavailable.");
   const host = String(config.host || "127.0.0.1");
   const port = Number(config.port || 25565);
   const username = String(config.username || "Zoya");
@@ -471,7 +472,7 @@ server.listen(PORT, "127.0.0.1", () => {
   };
   // Current developer phase: never silently fall back to Groq when the capability flag is omitted.
   if (config.capabilityDebugMode === undefined) config.capabilityDebugMode = true;
-  if (config.autoConnect === true) connect(config);
+  if (config.autoConnect === true) connect({ ...config, capabilityDebugMode: true });
 });
 function shutdown() { clearInterval(stateTicker); disconnect(); server.close(() => process.exit(0)); }
 process.on("SIGINT", shutdown);
