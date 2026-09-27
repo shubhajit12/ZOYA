@@ -268,8 +268,24 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
   if (id==="sneak") {
     const sneaking = bot.entity?.metadata?.some?.(v => v === 0 || v === true);
     if (moved >= 0.1 || sneaking) return true;
-    log("[VERIFY] sneak could not be confirmed; control-state API success is not enough.");
+    const answer=ask ? String(await ask("[VERIFY] Did Zoya visibly crouch/sneak? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
+
+  if (id==="stop") return !bot.pathfinder?.isMoving?.() && !bot.entity?.velocity?.x && !bot.entity?.velocity?.z;
+  if (id==="wait") return true;
+  if (id==="find_shelter") {
+    if (moved >= 0.35) return true;
+    const answer=ask ? String(await ask("[VERIFY] Did Zoya visibly move to the selected shelter location? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
+  }
+  if (id==="recover_after_death") {
+    if (Number(bot.health??0)>0) return true;
     return false;
+  }
+  if (id==="fish") {
+    const answer=ask ? String(await ask("[VERIFY] Did Zoya visibly perform the fishing action and get a catch? (y/n): ")).trim().toLowerCase() : "n";
+    return answer==="y" || answer==="yes";
   }
 
   if (["check_inventory","find_item","count_item","find_item_world","find_player","find_entity","check_nearby","check_environment","detect_hostiles","check_health","check_food","check_equipment","observe","search"].includes(id)) return true;
