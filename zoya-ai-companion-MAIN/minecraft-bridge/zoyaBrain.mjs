@@ -53,6 +53,7 @@ export function createZoyaBrain({
   let consecutiveFailures = 0;
   let queuedReason = null;
   let lastThinkAt = 0;
+  let noApiKeyLogged = false;
 
   function status() {
     const task = getActiveTask?.() || null;
@@ -98,9 +99,13 @@ export function createZoyaBrain({
     const minecraftState = getMinecraftState();
 
     if (!apiKey) {
-      log("[BRAIN] Groq API key is not available; Minecraft brain is idle.");
+      if (!noApiKeyLogged) {
+        log("[BRAIN] Groq API key is not available; Minecraft brain is idle.");
+        noApiKeyLogged = true;
+      }
       return;
     }
+    noApiKeyLogged = false;
     if (!minecraftState?.available || !minecraftState.player) return;
 
     // Never ask Groq to micromanage an active task. The local task engine owns
