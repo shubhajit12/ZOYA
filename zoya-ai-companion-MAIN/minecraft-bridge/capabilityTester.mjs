@@ -738,25 +738,27 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="drop_item"){ const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.tossStack(i); return true; }
   if(id==="sort_inventory"){
     if(typeof bot.moveSlotItem!=="function") throw new Error("Mineflayer inventory moveSlotItem API is unavailable.");
-    const slots=bot.inventory.items().filter(i=>i.slot>=9&&i.slot<=44).sort((a,b)=>a.slot-b.slot);
-    if(slots.length<2) return true;
-    const empty=[];
-    for(let slot=9;slot<=44;slot++) if(!bot.inventory.slots?.[slot]) empty.push(slot);
-    if(!empty.length) throw new Error("Inventory is full; safe slot-by-slot sorting requires at least one empty storage slot.");
-    const temp=empty[0];
-    const targets=slots.map(i=>({slot:i.slot,name:i.name,count:i.count})).sort((a,b)=>a.name.localeCompare(b.name)||a.count-b.count);
-    for(let index=0;index<targets.length;index++){
-      const dest=slots[index].slot;
-      const desired=targets[index];
+    const slots=Array.from({length:36},(_,i)=>i+9);
+    const items=bot.inventory.items().filter(i=>i.slot>=9&&i.slot<=44).map(i=>({
+      name:i.name,count:i.count,metadata:i.metadata??null,slot:i.slot
+    })).sort((a,b)=>a.name.localeCompare(b.name)||a.count-b.count||Number(a.metadata??0)-Number(b.metadata??0));
+    for(let index=0;index<items.length;index++){
+      const dest=slots[index];
+      const desired=items[index];
       const current=bot.inventory.slots?.[dest];
-      if(current?.name===desired.name && current.count===desired.count) continue;
-      const source=slots.find(i=>bot.inventory.slots?.[i.slot]?.name===desired.name && bot.inventory.slots?.[i.slot]?.count===desired.count && i.slot!==dest)?.slot;
-      if(source==null) continue;
-      await bot.moveSlotItem(source,temp);
-      const displaced=bot.inventory.slots?.[dest];
-      if(displaced) await bot.moveSlotItem(dest,source);
-      await bot.moveSlotItem(temp,dest);
+      if(current?.name===desired.name && current.count===desired.count && (current.metadata??null)===(desired.metadata??null)) continue;
+      const source=slots.find(slot=>{
+        if(slot===dest) return false;
+        const item=bot.inventory.slots?.[slot];
+        return item?.name===desired.name && item.count===desired.count && (item.metadata??null)===(desired.metadata??null);
+      });
+      if(source==null) throw new Error("Inventory sort could not locate the requested stack for destination slot "+dest+".");
+      await bot.moveSlotItem(source,dest);
     }
+    const finalItems=bot.inventory.items().filter(i=>i.slot>=9&&i.slot<=44).sort((a,b)=>a.slot-b.slot);
+    const finalNames=finalItems.map(i=>i.name+":"+i.count+":"+(i.metadata??0));
+    const expected=items.map(i=>i.name+":"+i.count+":"+(i.metadata??0));
+    if(finalNames.join("|")!==expected.join("|")) throw new Error("Inventory sort verification failed.");
     return true;
   }
   if(id==="give_item"||id==="deliver_item"){
