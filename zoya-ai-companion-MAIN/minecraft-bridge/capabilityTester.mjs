@@ -421,17 +421,21 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
   const ask=q=>new Promise(resolve=>rl.question(q,resolve));
 
   async function menu(){
+    let menuShown = false;
     while(!stopped&&bot&&bot.entity){
-      log("");
-      log("========================================");
-      log("       ZOYA CAPABILITY DEBUGGER");
-      log("========================================");
-      log("Groq: DISABLED | Manual mode execution: ENABLED");
-      log("Registered modes: " + CAPABILITIES.length);
-      CAPABILITIES.forEach((cap,i)=>log(String(i+1).padStart(2," ") + ". " + cap.label));
-      log("0. Exit capability tester");
+      if (!menuShown) {
+        log("");
+        log("========================================");
+        log("       ZOYA CAPABILITY DEBUGGER");
+        log("========================================");
+        log("Groq: DISABLED | Manual mode execution: ENABLED");
+        log("Registered modes: " + CAPABILITIES.length);
+        CAPABILITIES.forEach((cap,i)=>log(String(i+1).padStart(2," ") + ". " + cap.label));
+        log("0. Exit capability tester");
+        menuShown = true;
+      }
 
-      const answer=String(await ask("Choose a capability to run (0-"+CAPABILITIES.length+"): ")).trim();
+      const answer=String(await ask("Choose a capability (0-"+CAPABILITIES.length+"): ")).trim();
       if(answer==="0") break;
 
       const index=Number(answer)-1;
