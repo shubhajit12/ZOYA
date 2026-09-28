@@ -418,12 +418,15 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
   }
 
-  async function collectBlock(block) {
+  async function collectBlock(block, task = activeTask) {
     if (!block || !bot.collectBlock?.collect) return false;
+    if (task) assertTaskActive(task, "collect");
     const before = bot.inventory.items().reduce((n, item) => n + item.count, 0);
     try {
       await bot.collectBlock.collect(block);
+      if (task) assertTaskActive(task, "collect completion");
     } catch (error) {
+      if (task && !taskIsActive(task)) return false;
       log("[ACTION] collectBlock failed: " + (error instanceof Error ? error.message : String(error)));
       return false;
     }
@@ -477,7 +480,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         .filter(i => wanted ? i.name === wanted : allowedLogs.has(i.name))
         .reduce((n, i) => n + i.count, 0);
       const before = countMatching();
-      const collected = await collectBlock(best);
+      const collected = await collectBlock(best, task);
       const after = countMatching();
       if (!collected || after <= before) break;
       gathered += after - before;
@@ -532,7 +535,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     log("[GATHER] Chopping tree: " + treeBlocks.length + " connected log block(s).");
     for (const block of treeBlocks) {
       assertTaskActive(task, "tree chopping");
-      const collected = await collectBlock(block);
+      const collected = await collectBlock(block, task);
       if (!collected) return false;
     }
     return true;
@@ -557,7 +560,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
   }
 
-  async function mineNearest(blockName = "") {
+  async function mineNearest(blockName = "", task = activeTask) {
+    if (task) assertTaskActive(task, "mine");
     const origin = bot.entity.position;
     const requested = String(blockName || "").trim().toLowerCase();
     const names = requested
@@ -576,12 +580,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
     if (!best) return false;
     const before = bot.inventory.items().reduce((n, item) => n + item.count, 0);
-    const collected = await collectBlock(best);
+    const collected = await collectBlock(best, task);
+    if (task) assertTaskActive(task, "mine completion");
     const after = bot.inventory.items().reduce((n, item) => n + item.count, 0);
     return collected && after > before;
   }
 
-  async function craftBasic(itemName = "", amount = 1) {
+  async function craftBasic(itemName = "", amount = 1, task = activeTask) {
+    if (task) assertTaskActive(task, "craft");
     const requested = String(itemName || "").trim().toLowerCase().replace(/ /g, "_");
     let item = requested ? bot.registry.itemsByName[requested] : null;
     if (!item) {
@@ -639,7 +645,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     // Mineflayer's documented craft() API completes only after the inventory
     // has been updated. Keep this as the single crafting primitive so the
     // runtime does not depend on an optional/non-core craftItem API.
+    if (task) assertTaskActive(task, "craft start");
     await bot.craft(recipe, craftsNeeded, craftingTable);
+    if (task) assertTaskActive(task, "craft completion");
 
     const after = bot.inventory.items()
       .filter(i => i.name === item.name)
@@ -688,7 +696,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return collected >= targetAmount;
   }
 
-  async function eat(itemName = "") {
+  async function eat(itemName = "", task = activeTask) {
+    if (task) assertTaskActive(task, "eat");
     const wanted = String(itemName || "").trim().toLowerCase();
     const item = bot.inventory.items().find(i =>
       wanted ? (i.name.toLowerCase() === wanted || i.name.toLowerCase().includes(wanted)) :
@@ -696,14 +705,19 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     );
     if (!item || (bot.food ?? 20) >= 20) return false;
     const beforeFood = Number(bot.food ?? 20);
+    if (task) assertTaskActive(task, "eat start");
     await bot.equip(item, "hand");
+    if (task) assertTaskActive(task, "eat equipped");
     await bot.consume();
+    if (task) assertTaskActive(task, "eat completion");
     return Number(bot.food ?? beforeFood) > beforeFood;
   }
 
   async function guardLocation(position, task) {
     if (!task) return false;
+    assertTaskActive(task, "guard navigation");
     await bot.pathfinder.goto(new goals.GoalNear(position.x, position.y, position.z, 2));
+    assertTaskActive(task, "guard navigation completion");
     while (taskIsActive(task)) {
       const hostile = Object.values(bot.entities || {})
         .filter(entity => entity?.position &&
@@ -841,11 +855,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
        else if (action === "chop_tree") result = await gatherWood(task);
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task, true);
       else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5, task, false) : false;
-      else if (action === "eat") result = await eat(options.itemName || "");
+      else if (action === "eat") result = await eat(options.itemName || "", task);
       else if (action === "collect") result = await collectNearestDrop(task, options.itemName || "", options.amount || 1);
       else if (action === "investigate_entity") result = await investigateEntity(task, options.entityName || "");
-      else if (action === "mine") result = await mineNearest(options.blockName || "");
-      else if (action === "craft") result = await craftBasic(options.itemName || "", options.amount || 1);
+      else if (action === "mine") result = await mineNearest(options.blockName || "", task);
+      else if (action === "craft") result = await craftBasic(options.itemName || "", options.amount || 1, task);
       else if (action === "pvp") result = await pvp(options.targetUsername, task);
       else if (action === "guard" || action === "guard_location") {
         const position=options.position || bot.entity.position;
