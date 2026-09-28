@@ -1171,50 +1171,48 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const c=String(arg||"").trim();
     if(!c.startsWith("/")) throw new Error("Enter a slash command.");
 
-    // Do not gate OP commands on bot.game.permissionLevel. Mineflayer exposes
-    // that value as the client's last reported game state, but granting/revoking
-    // OP while the bot is already connected may leave that cached value stale.
-    // The server is authoritative: send the command and let its command
-    // dispatcher/feedback determine whether it was accepted.
-    const reportedLevel = Number(bot.game?.permissionLevel);
-    log("[OP] Sending command: " + c + " | reported permissionLevel=" +
-      (Number.isFinite(reportedLevel) ? reportedLevel : "unknown") +
-      " (not used as an execution gate).");
+    // Mineflayer's permissionLevel can remain stale when OP is granted/revoked
+    // while the bot is already connected. Minecraft's server is authoritative,
+    // so this cached value must never be used as an execution gate.
+    const reportedLevel=Number(bot.game?.permissionLevel);
+    log("[OP] Sending command: "+c+" | reported permissionLevel="+
+      (Number.isFinite(reportedLevel)?reportedLevel:"unknown")+
+      " (informational only).");
 
-    const denialPattern = /(?:unknown|incorrect|incomplete) command|unknown or incomplete command|no permission|permission|not permitted|cannot use|you do not have permission|you don't have permission|not allowed|requires permission|operator privileges/i;
-    let feedback = null;
-    let timer = null;
+    const denialPattern=/(unknown or incomplete command|unknown command|no permission|not permitted|cannot use|you do not have permission|you don't have permission|not allowed|requires permission|operator privileges)/i;
+    let feedback=null;
+    let timer=null;
 
-    const feedbackPromise = new Promise(resolve => {
-      const onMessage = (message) => {
-        const text = typeof message === "string" ? message : String(message ?? "");
-        if (!text) return;
-        if (denialPattern.test(text)) {
-          feedback = text;
-          cleanup();
-          resolve(false);
+    const feedbackPromise=new Promise(resolve=>{
+      let settled=false;
+      const cleanup=()=>{
+        if(timer) clearTimeout(timer);
+        try{bot.removeListener("messagestr",onMessage);}catch{}
+        try{bot.removeListener("message",onMessage);}catch{}
+      };
+      const finish=value=>{
+        if(settled)return;
+        settled=true;
+        cleanup();
+        resolve(value);
+      };
+      const onMessage=message=>{
+        const text=typeof message==="string"?message:String(message??"");
+        if(!text)return;
+        if(denialPattern.test(text)){
+          feedback=text;
+          finish(false);
         }
       };
-      const cleanup = () => {
-        if (timer) clearTimeout(timer);
-        try { bot.removeListener("messagestr", onMessage); } catch {}
-        try { bot.removeListener("message", onMessage); } catch {}
-      };
-      bot.on("messagestr", onMessage);
-      bot.on("message", onMessage);
-      timer = setTimeout(() => {
-        cleanup();
-        resolve(true);
-      }, 1200);
+      bot.on("messagestr",onMessage);
+      bot.on("message",onMessage);
+      timer=setTimeout(()=>finish(true),1500);
     });
 
     bot.chat(c);
-    const accepted = await feedbackPromise;
-    if (!accepted) {
-      throw new Error("Minecraft rejected the OP command: " + feedback);
-    }
-
-    log("[OP] Command sent successfully; server did not report an OP/permission rejection.");
+    const accepted=await feedbackPromise;
+    if(!accepted) throw new Error("Minecraft rejected the OP command: "+feedback);
+    log("[OP] Command sent; no permission/command rejection was reported by the server.");
     return true;
   }
 
