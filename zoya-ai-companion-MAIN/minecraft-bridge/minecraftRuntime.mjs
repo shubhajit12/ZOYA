@@ -340,6 +340,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         const liveTarget = findPlayerByUsername(username)?.entity;
         if (!liveTarget) {
           try { bot.pathfinder.setGoal(null); } catch {}
+          if (taskIsActive(task)) task.terminationReason = "target_lost";
           log("[TASK] follow_player target lost: " + String(username || "unknown"));
           return false;
         }
