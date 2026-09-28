@@ -130,7 +130,7 @@ jobs:
           if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
           $registeredCapabilities = [regex]::Matches($testerSource, '\{ id: "[^"]+", label:').Count
           if ($registeredCapabilities -ne 93) { throw "Expected 93 registered capability modes, found $registeredCapabilities." }
-          foreach ($requiredText in @('GoalFollow','GoalLookAtBlock','gotoBlockInteraction','multi_step_craft','gather_missing_materials','find_shelter','find_safe_location','guard_location','runtime.cancelCurrentTask')) {
+          foreach ($requiredText in @('GoalFollow','GoalLookAtBlock','GoalPlaceBlock','gotoBlockInteraction','gotoPlaceBlock','getDroppedItem','multi_step_craft','gather_missing_materials','find_shelter','find_safe_location','guard_location','runtime.cancelCurrentTask')) {
             if ($testerSource -notmatch [regex]::Escape($requiredText)) { throw "Capability audit guard is missing required implementation marker: $requiredText" }
           }
           $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
