@@ -937,6 +937,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const name=prefix.trim();
     if(!name) throw new Error("Item name is required.");
     const before=inventorySnapshot(bot);
+    let expectedTransfer=0;
     const itemBefore=findInventoryItem(bot,name);
     if(id==="deposit" && !itemBefore) throw new Error("Item not in inventory.");
     await gotoBlockInteraction(bot,b,3.5,20000);
@@ -945,18 +946,20 @@ async function directCapability({bot,runtime,id,arg,log}) {
       if(id==="deposit"){
         const item=findInventoryItem(bot,name);
         if(!item) throw new Error("Item disappeared from inventory.");
+        expectedTransfer=item.count;
         await container.deposit(item.type,null,item.count);
       } else {
         const slot=container.containerItems().find(i=>i.name.toLowerCase().includes(name.toLowerCase()));
         if(!slot) throw new Error("Item not in container.");
-        await container.withdraw(slot.type,null,Math.min(slot.count,slot.stackSize||slot.count));
+        expectedTransfer=Math.min(slot.count,slot.stackSize||slot.count);
+        await container.withdraw(slot.type,null,expectedTransfer);
       }
     } finally {
       await container.close();
     }
     const delta=inventoryDelta(before,inventorySnapshot(bot),name);
-    if(id==="deposit" && delta >= 0) throw new Error("Deposit completed without removing any " + name + " from inventory.");
-    if(id==="retrieve" && delta <= 0) throw new Error("Retrieve completed without adding any " + name + " to inventory.");
+    if(id==="deposit" && delta > -expectedTransfer) throw new Error("Deposit was partial: removed " + Math.max(0,-delta) + "/" + expectedTransfer + " " + name + ".");
+    if(id==="retrieve" && delta < expectedTransfer) throw new Error("Retrieve was partial: added " + Math.max(0,delta) + "/" + expectedTransfer + " " + name + ".");
     return true;
   }
   if(id==="smelt"){
