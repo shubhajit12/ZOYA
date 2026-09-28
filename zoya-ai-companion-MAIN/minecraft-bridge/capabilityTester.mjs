@@ -123,6 +123,19 @@ function parseCoordsFromEnd(value) {
 }
 function dist(a,b) { return a && b ? a.distanceTo(b) : Infinity; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+let capabilityRuntime = null;
+async function taskSleep(ms) {
+  const owner = capabilityRuntime;
+  const duration = Math.max(0, Number(ms) || 0);
+  const deadline = Date.now() + duration;
+  while (Date.now() < deadline) {
+    const task = owner?.getActiveTask?.();
+    if (!task || task.cancelled) throw new Error("Task cancelled during wait.");
+    await taskSleep(Math.min(100, Math.max(1, deadline - Date.now())));
+  }
+  const task = owner?.getActiveTask?.();
+  if (!task || task.cancelled) throw new Error("Task cancelled during wait.");
+}
 function findPlayer(bot,name) {
   const wanted=String(name||"").trim().toLowerCase();
   return Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===wanted) || null;
@@ -610,7 +623,7 @@ async function attackLoop(bot,target,timeout=15000) {
     await bot.lookAt(target.position.offset(0,target.height||1,0),true);
     bot.attack(target);
     attacked=true;
-    await sleep(450);
+    await taskSleep(450);
   }
   // An attack action does not require killing the target. The tester performs
   // the final visible-hit verification separately.
@@ -693,14 +706,14 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="go_to"||id==="return_to_coordinates") { const p=parseCoords(arg); log("[CAPABILITY] Target "+JSON.stringify(p)); return goto(bot,p.x,p.y,p.z); }
   if(id==="look_at_coordinates") { const p=toVec3(bot,parseCoords(arg)); await bot.lookAt(p,true); return true; }
   if(id==="stop") { runtime.cancelCurrentTask("manual capability tester"); bot.pathfinder.setGoal(null); bot.clearControlStates(); return true; }
-  if(id==="wait") { const n=Number(arg||1); if(!Number.isFinite(n)||n<0) throw new Error("Seconds must be a positive number."); await sleep(Math.min(n,300)*1000); return true; }
+  if(id==="wait") { const n=Number(arg||1); if(!Number.isFinite(n)||n<0) throw new Error("Seconds must be a positive number."); await taskSleep(Math.min(n,300)*1000); return true; }
   if(["jump","sprint","sneak"].includes(id)) {
     const n=id==="jump"?0.35:Number(arg||1); if(!Number.isFinite(n)||n<0) throw new Error("Invalid duration.");
     const state=id==="jump"?"jump":id;
     bot.setControlState(state,true);
     if(id!=="jump") bot.setControlState("forward",true);
     try {
-      await sleep(Math.min(n,id==="jump"?1:30)*1000);
+      await taskSleep(Math.min(n,id==="jump"?1:30)*1000);
       return true;
     } finally {
       try { bot.setControlState(state,false); } catch {}
@@ -766,7 +779,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
       const deadline = Date.now() + 30000;
       while (Date.now() < deadline && target.isValid !== false) {
         if (dist(bot.entity.position,target.position) <= 3.5) break;
-        await sleep(150);
+        await taskSleep(150);
       }
       try { bot.pathfinder.setGoal(null); } catch {}
       return target.isValid !== false && dist(bot.entity.position,target.position) <= 4.5;
@@ -776,7 +789,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     for(let i=0;i<20;i++){
       if(target.isValid===false) break;
       if(dist(bot.entity.position,target.position)>3) await goto(bot,target.position.x,target.position.y,target.position.z,2.5);
-      await sleep(300);
+      await taskSleep(300);
     }
     return target.isValid !== false;
   }
@@ -787,7 +800,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     // Mineflayer uses activateItem(true) for the off-hand; calling the
     // default main-hand activation does not actually raise the shield.
     bot.activateItem(true);
-    await sleep(2000);
+    await taskSleep(2000);
     bot.deactivateItem();
     return true;
   }
@@ -800,19 +813,19 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(ranged.name==="bow") {
       const arrow=findInventoryItem(bot,"arrow"); if(!arrow) throw new Error("No arrows.");
       bot.activateItem();
-      await sleep(1200);
+      await taskSleep(1200);
       bot.deactivateItem();
     } else if(ranged.name==="crossbow") {
       bot.activateItem();
-      await sleep(1200);
+      await taskSleep(1200);
       bot.deactivateItem();
-      await sleep(150);
+      await taskSleep(150);
       bot.activateItem();
-      await sleep(150);
+      await taskSleep(150);
       bot.deactivateItem();
     } else {
       bot.activateItem();
-      await sleep(600);
+      await taskSleep(600);
       bot.deactivateItem();
     }
     return true;
@@ -842,7 +855,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     }
     while(Date.now()<deadline) {
       if(Number(bot.health||0)>0) return true;
-      await sleep(500);
+      await taskSleep(500);
     }
     return false;
   }
@@ -898,9 +911,9 @@ async function directCapability({bot,runtime,id,arg,log}) {
       const target=item.position;
       await goto(bot,target.x,target.y,target.z,1.5,15000);
       if (item.isValid === false) {
-        await sleep(250);
+        await taskSleep(250);
       } else {
-        await sleep(600);
+        await taskSleep(600);
       }
       collected = inventoryDelta(before, inventorySnapshot(bot), requested);
     }
@@ -965,7 +978,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     await f.putInput(input.type,null,Math.min(input.count,8));
 
     const deadline=Date.now()+30000;
-    while(!f.outputItem?.() && Date.now()<deadline) await sleep(500);
+    while(!f.outputItem?.() && Date.now()<deadline) await taskSleep(500);
     const output=f.outputItem?.();
     if(!output) { await f.close(); throw new Error("Furnace did not produce output within 30 seconds."); }
 
@@ -1148,7 +1161,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     return true;
   }
   if(id==="use_item"){
-    const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); bot.activateItem(); await sleep(500); bot.deactivateItem(); return true;
+    const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); bot.activateItem(); await taskSleep(500); bot.deactivateItem(); return true;
   }
   if(id==="sleep"){
     const bed=nearestBlock(bot,["bed"],16);
@@ -1200,7 +1213,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
   }
 
   if(id==="retrieve_item"){ return directCapability({bot,runtime,id:"collect",arg,log}); }
-  if(id==="watch"){ const e=findEntity(bot,arg)||findPlayer(bot,arg)?.entity; if(!e) throw new Error("Watch target not found."); await bot.lookAt(e.position.offset(0,e.height||1,0),true); await sleep(5000); return true; }
+  if(id==="watch"){ const e=findEntity(bot,arg)||findPlayer(bot,arg)?.entity; if(!e) throw new Error("Watch target not found."); await bot.lookAt(e.position.offset(0,e.height||1,0),true); await taskSleep(5000); return true; }
   if(id==="search"){ const item=findWorldItem(bot,arg); if(item){log("[SEARCH] Found world item "+(item.getDroppedItem?.()?.name||arg)+" at "+JSON.stringify(item.position));return true;} const e=findEntity(bot,arg); if(e){log("[SEARCH] Found entity "+(e.username||e.name)+" at "+JSON.stringify(e.position));return true;} const b=nearestBlock(bot,arg,32); if(b){log("[SEARCH] Found block "+b.name+" at "+JSON.stringify(b.position));return true;} const i=findInventoryItem(bot,arg); if(i){log("[SEARCH] Found inventory item "+i.name+" x"+i.count);return true;} throw new Error("Target not found in nearby world/inventory."); }
   if(id==="build"){
     const s=String(arg||"").toLowerCase(), m=s.match(/(pillar|tower|line)\s+(\w+)\s+(\d+)/);
@@ -1224,7 +1237,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
         log("[BUILD] Placement "+(i+1)+" failed: "+(error instanceof Error?error.message:String(error)));
         break;
       }
-      await sleep(100);
+      await taskSleep(100);
     }
     if(placed<1) throw new Error("No blocks were placed.");
     return true;
@@ -1287,7 +1300,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
           log("[OP] Zoya operator state confirmed by server capabilities.");
           return true;
         }
-        await sleep(150);
+        await taskSleep(150);
       }
       throw new Error("OP command was not rejected, but Zoya's operator/permission state was not confirmed.");
     }
@@ -1301,6 +1314,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
 export function startCapabilityTester({bot,runtime,log=console.log}) {
   log("[CAPABILITY TESTER] Local-only mode: no Groq calls are made.");
+  capabilityRuntime = runtime;
   bot.__zoyaCapabilityRuntime = runtime;
   const preflight = [
     ["bot.entity", !!bot?.entity],
