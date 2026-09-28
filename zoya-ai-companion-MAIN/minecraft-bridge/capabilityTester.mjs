@@ -756,6 +756,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
       const q=origin.floored().offset(dx,dy,dz);
       if(!isStandable(bot,q)) continue;
       const hostileDistance=Math.min(...Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())).map(e=>dist(e.position,q)).concat([Infinity]));
+      if(hostileDistance < 10) continue;
       safeCandidates.push({q,hostileDistance,travel:dist(origin,q)});
     }
     safeCandidates.sort((a,b)=>b.hostileDistance-a.hostileDistance || a.travel-b.travel);
