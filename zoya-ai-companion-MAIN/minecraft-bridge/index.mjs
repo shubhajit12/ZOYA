@@ -28,7 +28,11 @@ const CAPABILITY_NOISE_PREFIXES = [
   "[EVENT] Rain changed",
   "[EVENT] Thunder changed",
   "[EVENT] Zoya died. Waiting for respawn/state recovery.",
-  "[EVENT] Zoya respawned."
+  "[EVENT] Zoya respawned.",
+  "[PHYSICS]",
+  "[RECONNECT]",
+  "[ZOYA Minecraft Bridge] HTTP client request was closed by the client.",
+  "[MOVEMENT]"
 ];
 
 function isCapabilityNoise(message) {
