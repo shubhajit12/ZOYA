@@ -1160,6 +1160,11 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(id==="open_door" && b.getProperties?.().open===true) return true;
     if(id==="close_door" && b.getProperties?.().open===false) return true;
     await bot.activateBlock(b);
+    if (id==="use_block") {
+      return true;
+    }
+    if(id==="open_door" && b.getProperties?.().open===true) return true;
+    if(id==="close_door" && b.getProperties?.().open===false) return true;
     return true;
   }
   if(id==="use_item"){
