@@ -275,6 +275,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     activeTask.token += 1;
     try { bot.pathfinder?.setGoal(null); } catch {}
     try { bot.clearControlStates(); } catch {}
+    try { bot.stopDigging?.(); } catch {}
+    try { bot.deactivateItem?.(); } catch {}
+    try { bot.wake?.(); } catch {}
+    try { bot.collectBlock?.cancel?.(); } catch {}
+    try { bot.currentWindow?.close?.(); } catch {}
     currentGoal = null;
     log("[TASK] Cancelled #" + activeTask.id + " " + activeTask.action + ": " + reason);
     return true;
@@ -289,15 +294,31 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   function taskIsActive(task) {
-    return activeTask === task && !task.cancelled;
+    return activeTask === task && !task.cancelled && activeTask.token === task.token;
+  }
+
+  function assertTaskActive(task, stage = "operation") {
+    if (!taskIsActive(task)) {
+      throw new Error("Task cancelled or superseded during " + stage + ".");
+    }
+  }
+
+  async function waitTask(task, ms) {
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+    assertTaskActive(task, "wait");
   }
 
   async function moveToPlayer(username, distance = 3, task = activeTask, continuous = false) {
     if (!task) return false;
-    const targetPlayer = findPlayerByUsername(username);
-    const target = targetPlayer?.entity;
+    let target = null;
+    const lookupDeadline = Date.now() + (continuous ? 3000 : 1500);
+    while (Date.now() < lookupDeadline && taskIsActive(task)) {
+      target = findPlayerByUsername(username)?.entity || null;
+      if (target) break;
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
     if (!target) {
-      log("[TASK] follow_player target not found: " + String(username || "unknown"));
+      log("[TASK] follow_player target not found after retry window: " + String(username || "unknown"));
       return false;
     }
 
@@ -318,7 +339,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         const liveTarget = findPlayerByUsername(username)?.entity;
         if (!liveTarget) {
           try { bot.pathfinder.setGoal(null); } catch {}
-          return true;
+          log("[TASK] follow_player target lost: " + String(username || "unknown"));
+          return false;
         }
 
         const now = Date.now();
@@ -464,7 +486,55 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function gatherWood(task = activeTask) {
-    return gatherResources("", 1, task);
+    if (!task) return false;
+    const logNames = new Set(["oak_log","birch_log","spruce_log","jungle_log","acacia_log","dark_oak_log","mangrove_log","cherry_log"]);
+    const ids = [...logNames].map(name => bot.registry?.blocksByName?.[name]?.id).filter(Number.isInteger);
+    if (!ids.length) return false;
+    const origin = bot.entity.position;
+    const positions = typeof bot.findBlocks === "function"
+      ? bot.findBlocks({ matching: ids, maxDistance: 32, count: 48 })
+      : [];
+    if (!positions.length) {
+      log("[GATHER] No nearby tree logs found within 32 blocks.");
+      return false;
+    }
+    let seed = null;
+    let best = Infinity;
+    for (const position of positions) {
+      const block = bot.blockAt(position);
+      if (!block || !logNames.has(block.name)) continue;
+      const d = block.position.distanceTo(origin);
+      if (d < best) { seed = block; best = d; }
+    }
+    if (!seed) return false;
+
+    const treeBlocks = [];
+    const queue = [seed.position.clone()];
+    const seen = new Set();
+    while (queue.length && treeBlocks.length < 16) {
+      const p = queue.shift();
+      const key = p.x + "," + p.y + "," + p.z;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const block = bot.blockAt(p);
+      if (!block || !logNames.has(block.name)) continue;
+      treeBlocks.push(block);
+      for (const d of [
+        [1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]
+      ]) {
+        const next = p.offset(d[0],d[1],d[2]);
+        if (!seen.has(next.x + "," + next.y + "," + next.z)) queue.push(next);
+      }
+    }
+
+    if (!treeBlocks.length) return false;
+    log("[GATHER] Chopping tree: " + treeBlocks.length + " connected log block(s).");
+    for (const block of treeBlocks) {
+      assertTaskActive(task, "tree chopping");
+      const collected = await collectBlock(block);
+      if (!collected) return false;
+    }
+    return true;
   }
 
   async function investigateEntity(task = activeTask, entityName = "") {
@@ -494,11 +564,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       : new Set(["stone","cobblestone","coal_ore","deepslate_coal_ore","iron_ore","deepslate_iron_ore","copper_ore","deepslate_copper_ore"]);
     let best = null;
     let bestDistance = Infinity;
-    for (let dx = -8; dx <= 8; dx++) for (let dy = -4; dy <= 6; dy++) for (let dz = -8; dz <= 8; dz++) {
-      const block = bot.blockAt(origin.offset(dx, dy, dz));
-      if (!block || !names.has(block.name)) continue;
-      const d = block.position.distanceTo(origin);
-      if (d < bestDistance) { best = block; bestDistance = d; }
+    const ids = [...names].map(name => bot.registry?.blocksByName?.[name]?.id).filter(Number.isInteger);
+    if (ids.length && typeof bot.findBlocks === "function") {
+      for (const position of bot.findBlocks({ matching: ids, maxDistance: 24, count: 48 })) {
+        const block = bot.blockAt(position);
+        if (!block || !names.has(block.name)) continue;
+        const d = block.position.distanceTo(origin);
+        if (d < bestDistance) { best = block; bestDistance = d; }
+      }
     }
     if (!best) return false;
     const before = bot.inventory.items().reduce((n, item) => n + item.count, 0);
@@ -535,6 +608,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
     if (!recipes.length) return false;
     const recipe = recipes[0];
+    const resultPerCraft = Math.max(1, Number(recipe.result?.count || 1));
+    const craftsNeeded = Math.max(1, Math.ceil(targetAmount / resultPerCraft));
 
     if (recipe.requiresTable && !craftingTable) {
       const tableId = bot.registry?.blocksByName?.crafting_table?.id;
@@ -563,7 +638,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     // Mineflayer's documented craft() API completes only after the inventory
     // has been updated. Keep this as the single crafting primitive so the
     // runtime does not depend on an optional/non-core craftItem API.
-    await bot.craft(recipe, targetAmount, craftingTable);
+    await bot.craft(recipe, craftsNeeded, craftingTable);
 
     const after = bot.inventory.items()
       .filter(i => i.name === item.name)
