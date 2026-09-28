@@ -740,12 +740,12 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="dig"||id==="break_block") {
     const p=arg?parseCoords(arg):bot.entity.position.offset(0,-1,0); const block=bot.blockAt(p);
     if(!block||block.name==="air") throw new Error("No breakable block at target.");
-    await goto(bot,block.position.x,block.position.y,block.position.z,3);
+    await gotoBlockInteraction(bot,block,4.5,20000);
     await bot.dig(block); return true;
   }
   if(id==="harvest_crops") {
     const crop=nearestBlock(bot,[...CROPS],24); if(!crop) throw new Error("No crop found nearby.");
-    await goto(bot,crop.position.x,crop.position.y,crop.position.z,3); await bot.dig(crop); return true;
+    await gotoBlockInteraction(bot,crop,4.5,20000); await bot.dig(crop); return true;
   }
   if(id==="fish") { if(typeof bot.fish!=="function") throw new Error("Fishing API unavailable."); await bot.fish(); return true; }
   if(id==="find_shelter") {
@@ -874,7 +874,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     if(!recipes.length) throw new Error("No furnace recipe available.");
     const table=nearestBlock(bot,"crafting_table",16);
     if(!table) throw new Error("Crafting table not found; furnace crafting requires a table.");
-    await goto(bot,table.position.x,table.position.y,table.position.z,3);
+    await gotoBlockInteraction(bot,table,3.5,15000);
     await bot.craft(recipes[0],1,table);
     return inventoryCount(bot,"furnace")>=before+1;
   }
@@ -958,7 +958,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
       table=recipe.requiresTable?(table||findTable()):null;
       if(recipe.requiresTable&&!table) throw new Error("Crafting table required for "+item.name+" but none is nearby.");
-      if(table) await goto(bot,table.position.x,table.position.y,table.position.z,3,15000);
+      if(table) await gotoBlockInteraction(bot,table,3.5,15000);
       const before=inventoryCount(bot,item.name);
       await bot.craft(recipe,craftsNeeded,table);
       const after=inventoryCount(bot,item.name);
@@ -984,7 +984,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
           const before=inventoryCount(bot,name);
           const block=nearestBlock(bot,name,16);
           if(!block) throw new Error("Missing material "+name+" not found nearby.");
-          await goto(bot,block.position.x,block.position.y,block.position.z,3,12000);
+          await gotoBlockInteraction(bot,block,4.5,12000);
           await bot.dig(block);
           if(inventoryCount(bot,name)<=before) throw new Error("Failed to gather missing "+name+".");
         } else {
@@ -1018,7 +1018,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="place_block"){
     const {prefix,...p}=parseCoordsFromEnd(arg); const item=findInventoryItem(bot,prefix); if(!item) throw new Error("Block item not found.");
     const ref=bot.blockAt(new (bot.entity.position.constructor)(p.x,p.y-1,p.z)); if(!ref||ref.name==="air") throw new Error("No solid reference block below target.");
-    await goto(bot,p.x,p.y,p.z,3); await bot.equip(item,"hand"); await bot.placeBlock(ref,{x:0,y:1,z:0}); return true;
+    await goto(bot,p.x,p.y,p.z,2.5,20000); await bot.equip(item,"hand"); await bot.placeBlock(ref,{x:0,y:1,z:0}); return true;
   }
   if(["open_door","close_door","use_button","use_lever","use_block"].includes(id)){
     const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found."); await goto(bot,p.x,p.y,p.z,3); await bot.lookAt(b.position.offset(.5,.5,.5),true);
