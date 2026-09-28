@@ -211,6 +211,11 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return answer === "y" || answer === "yes";
   }
 
+  if (id === "use_shield") {
+    const answer = ask ? String(await ask("[VERIFY] Did Zoya visibly raise the shield and block? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+
   if (["attack_mob","defend","pvp","hit","use_ranged_weapon"].includes(id)) {
     // Movement toward a target is not proof of a hit. Combat is PASS only
     // when the target's health/entity state changed or the tester confirms
@@ -444,10 +449,19 @@ function isSolidBlock(block) {
   return Boolean(block && block.name !== "air" && block.boundingBox !== "empty");
 }
 
+const HAZARD_BLOCKS = new Set([
+  "lava","flowing_lava","fire","soul_fire","cactus","magma_block",
+  "campfire","soul_campfire","sweet_berry_bush","powder_snow"
+]);
+
 function isStandable(bot, position) {
-  const feet=bot.blockAt(position);
-  const head=bot.blockAt(position.offset(0,1,0));
-  const floor=bot.blockAt(position.offset(0,-1,0));
+  const p=toVec3(bot,position);
+  const feet=bot.blockAt(p);
+  const head=bot.blockAt(p.offset(0,1,0));
+  const floor=bot.blockAt(p.offset(0,-1,0));
+  if (HAZARD_BLOCKS.has(String(floor?.name||"").toLowerCase()) ||
+      HAZARD_BLOCKS.has(String(feet?.name||"").toLowerCase()) ||
+      HAZARD_BLOCKS.has(String(head?.name||"").toLowerCase())) return false;
   return isSolidBlock(floor) && (!feet || feet.name==="air" || feet.boundingBox==="empty") && (!head || head.name==="air" || head.boundingBox==="empty");
 }
 
@@ -710,10 +724,14 @@ async function directCapability({bot,runtime,id,arg,log}) {
   }
 
   if(id==="enter_exit_vehicle") {
-    if(bot.vehicle){ bot.dismount(); return true; }
+    if(bot.vehicle){ await bot.dismount(); return true; }
     const v=findEntity(bot,"",e=>["boat","minecart","horse","donkey","mule","llama","pig","camel","strider"].includes(String(e.name||"").toLowerCase()));
     if(!v) throw new Error("No nearby rideable vehicle found.");
-    await goto(bot,v.position.x,v.position.y,v.position.z,2.5); await bot.lookAt(v.position.offset(0,v.height||1,0),true); bot.mount(v); return true;
+    await goto(bot,v.position.x,v.position.y,v.position.z,2.5);
+    await bot.lookAt(v.position.offset(0,v.height||1,0),true);
+    await bot.mount(v);
+    if(!bot.vehicle) throw new Error("Vehicle mount was not observed.");
+    return true;
   }
   if(id==="attack_mob"||id==="hunt") {
     await equipMatching(bot,WEAPON_WORDS);
@@ -1115,8 +1133,11 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); bot.activateItem(); await sleep(500); bot.deactivateItem(); return true;
   }
   if(id==="sleep"){
-    const bed=findEntity(bot,"",e=>String(e.name||"").includes("bed"))||nearestBlock(bot,["bed"],16); if(!bed) throw new Error("No bed found nearby.");
-    if(bed.position) await gotoBlockInteraction(bot,bed,4.5,20000); await bot.sleep(bed); return true;
+    const bed=nearestBlock(bot,["bed"],16);
+    if(!bed) throw new Error("No bed found nearby.");
+    await gotoBlockInteraction(bot,bed,4.5,20000);
+    await bot.sleep(bed);
+    return true;
   }
 
   if(id==="find_player"){ const p=findPlayer(bot,arg); if(!p?.entity) throw new Error("Player not found nearby."); log("[PLAYER] "+p.username+" at "+JSON.stringify(p.entity.position)); return true; }
