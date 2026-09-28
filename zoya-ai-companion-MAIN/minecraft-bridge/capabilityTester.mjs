@@ -867,7 +867,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const before = inventorySnapshot(bot);
     let collected = inventoryDelta(before, inventorySnapshot(bot), requested);
     while(collected < requestedAmount) {
-      const item=findEntity(bot,requested,e=>e.name==="item");
+      const item=findWorldItem(bot,requested);
       if(!item) break;
       await bot.collectBlock.collect(item);
       await sleep(250);
