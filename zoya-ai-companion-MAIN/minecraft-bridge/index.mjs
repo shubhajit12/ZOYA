@@ -67,7 +67,7 @@ let lastEntityIds = new Set();
 let lastHostileNearby = false;
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
-const CAPABILITY_BUILD_VERSION = "manual-capability-v3-2026-09-27";
+const CAPABILITY_BUILD_VERSION = "manual-capability-v4-2026-09-28";
 // Autonomous movement is a brain capability, not a second movement loop.
 // Keeping one movement writer prevents natural-walk timers from fighting pathfinder actions.
 let movementEnabled = false;
@@ -361,6 +361,25 @@ function connect(config) {
       // Keep physics explicitly enabled for combat/knockback. Mineflayer defaults this to true, but Zoya relies on it and should not inherit a disabled state from another layer.
       bot.physicsEnabled = true;
       debugLog("[PHYSICS] Mineflayer physics enabled for movement and knockback.");
+
+      // Minecraft 1.21.x has a known collision-boundary edge case where the
+      // default 0.3-block client hitbox can align exactly with a block face.
+      // The resulting server collision rejection makes Pathfinder appear to
+      // jump but leave the bot glued just short of the step. A tiny client-side
+      // expansion avoids that exact boundary without changing the server-side
+      // player scale or adding a competing movement controller.
+      const physicsVersion = String(bot.version || version || "");
+      if (/^1\\.21(?:\\.\\d+)?$/.test(physicsVersion) && bot.physics) {
+        const halfWidth = Number(bot.physics.playerHalfWidth);
+        const playerHeight = Number(bot.physics.playerHeight);
+        if (halfWidth === 0.3 && playerHeight === 1.8) {
+          bot.physics.playerHalfWidth = 0.30001;
+          bot.physics.playerHeight = 1.80001;
+          debugLog("[PHYSICS] Applied 1.21.x block-boundary collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.");
+        } else {
+          debugLog("[PHYSICS] 1.21.x collision workaround not applied; physics dimensions are halfWidth=" + halfWidth + ", height=" + playerHeight + ".");
+        }
+      }
       reconnectAttempt = 0;
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
       applyConfiguredSkin(config);
