@@ -901,15 +901,22 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const requested=parts[0] || "";
     const requestedAmount=Math.max(1,Math.floor(Number(parts[1])||1));
     if(!requested) throw new Error("Item name is required.");
-    if(typeof bot.collectBlock?.collect !== "function") throw new Error("Mineflayer collect-block item API is unavailable.");
 
+    // Dropped items are entities, not blocks. mineflayer-collectblock.collect()
+    // expects a block target, so use Pathfinder to the item entity and verify
+    // pickup through an inventory delta.
     const before = inventorySnapshot(bot);
     let collected = inventoryDelta(before, inventorySnapshot(bot), requested);
     while(collected < requestedAmount) {
       const item=findWorldItem(bot,requested);
       if(!item) break;
-      await bot.collectBlock.collect(item);
-      await sleep(250);
+      const target=item.position;
+      await goto(bot,target.x,target.y,target.z,1.5,15000);
+      if (item.isValid === false) {
+        await sleep(250);
+      } else {
+        await sleep(600);
+      }
       collected = inventoryDelta(before, inventorySnapshot(bot), requested);
     }
     if(collected < requestedAmount) {
