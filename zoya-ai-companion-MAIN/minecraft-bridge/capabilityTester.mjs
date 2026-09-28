@@ -186,7 +186,13 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return false;
   }
 
-  if (["roam","explore","follow_player","return","investigate_entity","mine","chop_tree","escape","find_safe_location","chase_target","escort_player","protect_player","guard","guard_location","harvest_crops","hunt"].includes(id)) {
+  if (["mine","chop_tree","gather_resources","harvest_crops","hunt"].includes(id)) {
+    if ([...after.byName.entries()].some(([name,count]) => count > (before.byName.get(name)||0))) return true;
+    const answer = ask ? String(await ask("[VERIFY] Did Zoya visibly complete the requested world action? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
+  }
+
+  if (["roam","explore","follow_player","return","investigate_entity","escape","find_safe_location","chase_target","escort_player","protect_player","guard","guard_location"].includes(id)) {
     if (moved >= 0.35) return true;
     const answer = ask ? String(await ask("[VERIFY] Did you visibly see Zoya perform the requested movement/world action? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
@@ -306,7 +312,9 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     return answer==="y" || answer==="yes";
   }
 
-  if (["check_inventory","find_item","count_item","find_item_world","find_player","find_entity","check_nearby","check_environment","detect_hostiles","check_health","check_food","check_equipment","observe","search"].includes(id)) return true;
+  if (["check_inventory","find_item","count_item","find_player","find_entity","check_nearby","check_environment","detect_hostiles","check_health","check_food","check_equipment","observe"].includes(id)) return true;
+  if (id==="find_item_world") return Boolean(findWorldItem(bot,arg));
+  if (id==="search") return Boolean(findWorldItem(bot,arg) || findEntity(bot,arg) || nearestBlock(bot,arg,32) || findInventoryItem(bot,arg));
 
   if (["open_chest","open_barrel"].includes(id)) {
     const answer = ask ? String(await ask("[VERIFY] Confirm the container opened in Minecraft? (y/n): ")).trim().toLowerCase() : "n";
@@ -457,6 +465,54 @@ function findSafePosition(bot, origin=bot.entity.position, radius=20, shelter=fa
   }
   return candidates.sort((a,b)=>a.distanceTo(origin)-b.distanceTo(origin))[0] || null;
 }
+function toVec3(bot, p) {
+  if (!p) throw new Error("Position is required.");
+  const Vec3Ctor = bot.entity?.position?.constructor;
+  return typeof Vec3Ctor === "function" ? new Vec3Ctor(Number(p.x), Number(p.y), Number(p.z)) : p;
+}
+
+function findWorldItem(bot, name) {
+  const wanted = String(name || "").trim().toLowerCase();
+  if (!wanted) return null;
+  return Object.values(bot.entities || {})
+    .filter(e => e?.position && typeof e.getDroppedItem === "function")
+    .map(e => ({ entity: e, item: e.getDroppedItem() }))
+    .filter(({ item }) => item && (item.name?.toLowerCase() === wanted || item.displayName?.toLowerCase() === wanted || item.name?.toLowerCase().includes(wanted)))
+    .sort((a,b) => dist(a.entity.position, bot.entity.position) - dist(b.entity.position, bot.entity.position))[0]?.entity || null;
+}
+
+async function gotoPlaceBlock(bot, position, range=4.5, timeoutMs=30000) {
+  if (!position) throw new Error("Target placement position is required.");
+  if (!goals?.GoalPlaceBlock) throw new Error("GoalPlaceBlock unavailable.");
+  const pos = toVec3(bot, position);
+  const goal = new goals.GoalPlaceBlock(pos, bot.world, { range });
+  let timer = null;
+  let timedOut = false;
+  const pathPromise = bot.pathfinder.goto(goal).then(() => true, error => {
+    if (timedOut) return false;
+    throw error;
+  });
+  const timeoutPromise = new Promise(resolve => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      try { bot.pathfinder.setGoal(null); } catch {}
+      resolve(false);
+    }, Math.max(1000, timeoutMs));
+  });
+  try {
+    if (!await Promise.race([pathPromise, timeoutPromise])) {
+      throw new Error("Could not reach a valid placement position for block at " + pos.x + " " + pos.y + " " + pos.z + ".");
+    }
+    await bot.lookAt(pos.offset(0.5, 0.5, 0.5), true);
+    return true;
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (timedOut) {
+      try { bot.pathfinder.setGoal(null); } catch {}
+    }
+  }
+}
+
 async function goto(bot,x,y,z,r=1.5,timeoutMs=30000) {
   if(!goals?.GoalNear) throw new Error("GoalNear unavailable.");
   const goal = new goals.GoalNear(x,y,z,r);
@@ -619,7 +675,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     return true;
   }
   if(id==="go_to"||id==="return_to_coordinates") { const p=parseCoords(arg); log("[CAPABILITY] Target "+JSON.stringify(p)); return goto(bot,p.x,p.y,p.z); }
-  if(id==="look_at_coordinates") { const p=parseCoords(arg); await bot.lookAt(p,true); return true; }
+  if(id==="look_at_coordinates") { const p=toVec3(bot,parseCoords(arg)); await bot.lookAt(p,true); return true; }
   if(id==="stop") { runtime.cancelCurrentTask("manual capability tester"); bot.pathfinder.setGoal(null); bot.clearControlStates(); return true; }
   if(id==="wait") { const n=Number(arg||1); if(!Number.isFinite(n)||n<0) throw new Error("Seconds must be a positive number."); await sleep(Math.min(n,300)*1000); return true; }
   if(["jump","sprint","sneak"].includes(id)) {
@@ -822,7 +878,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     }
     return true;
   }
-  if(id==="find_item_world"){ const item=findEntity(bot,arg,e=>e.name==="item" || e.displayName?.toLowerCase().includes(String(arg||"").toLowerCase())); if(!item) throw new Error("World item not found."); log("[WORLD ITEM] "+JSON.stringify(item.position)); return true; }
+  if(id==="find_item_world"){ const item=findWorldItem(bot,arg); if(!item) throw new Error("World item not found: "+arg); const dropped=item.getDroppedItem?.(); log("[WORLD ITEM] "+dropped?.name+" x"+(dropped?.count||1)+" at "+JSON.stringify(item.position)); return true; }
 
   if(id==="open_chest"||id==="open_barrel"){
     const p=parseCoords(arg), b=bot.blockAt(p); if(!b||!String(b.name).includes(id==="open_chest"?"chest":"barrel")) throw new Error("Target container not found.");
@@ -1017,11 +1073,12 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
   if(id==="place_block"){
     const {prefix,...p}=parseCoordsFromEnd(arg); const item=findInventoryItem(bot,prefix); if(!item) throw new Error("Block item not found.");
-    const ref=bot.blockAt(new (bot.entity.position.constructor)(p.x,p.y-1,p.z)); if(!ref||ref.name==="air") throw new Error("No solid reference block below target.");
-    await goto(bot,p.x,p.y,p.z,2.5,20000); await bot.equip(item,"hand"); await bot.placeBlock(ref,{x:0,y:1,z:0}); return true;
+    const ref=bot.blockAt(toVec3(bot,{x:p.x,y:p.y-1,z:p.z})); if(!ref||!isSolidBlock(ref)) throw new Error("No solid reference block below target.");
+    await gotoPlaceBlock(bot,{x:p.x,y:p.y,z:p.z},4.5,20000); await bot.equip(item,"hand"); await bot.placeBlock(ref,{x:0,y:1,z:0});
+    const placed=bot.blockAt(toVec3(bot,{x:p.x,y:p.y,z:p.z})); if(!placed||placed.name==="air") throw new Error("Block placement was not observed at the target position."); return true;
   }
   if(["open_door","close_door","use_button","use_lever","use_block"].includes(id)){
-    const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found."); await goto(bot,p.x,p.y,p.z,3); await bot.lookAt(b.position.offset(.5,.5,.5),true);
+    const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found."); await gotoBlockInteraction(bot,b,4.5,20000);
     if((id==="open_door"||id==="close_door") && !b.name.includes("door")) throw new Error("Target is not a door.");
     if(id==="open_door" && b.getProperties?.().open===true) return true;
     if(id==="close_door" && b.getProperties?.().open===false) return true;
@@ -1033,7 +1090,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
   }
   if(id==="sleep"){
     const bed=findEntity(bot,"",e=>String(e.name||"").includes("bed"))||nearestBlock(bot,["bed"],16); if(!bed) throw new Error("No bed found nearby.");
-    if(bed.position) await goto(bot,bed.position.x,bed.position.y,bed.position.z,3); await bot.sleep(bed); return true;
+    if(bed.position) await gotoBlockInteraction(bot,bed,4.5,20000); await bot.sleep(bed); return true;
   }
 
   if(id==="find_player"){ const p=findPlayer(bot,arg); if(!p?.entity) throw new Error("Player not found nearby."); log("[PLAYER] "+p.username+" at "+JSON.stringify(p.entity.position)); return true; }
@@ -1075,19 +1132,29 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
   if(id==="retrieve_item"){ return directCapability({bot,runtime,id:"collect",arg,log}); }
   if(id==="watch"){ const e=findEntity(bot,arg)||findPlayer(bot,arg)?.entity; if(!e) throw new Error("Watch target not found."); await bot.lookAt(e.position.offset(0,e.height||1,0),true); await sleep(5000); return true; }
-  if(id==="search"){ const e=findEntity(bot,arg); if(e){log("[SEARCH] Found entity "+(e.username||e.name)+" at "+JSON.stringify(e.position));return true;} const b=nearestBlock(bot,arg,32); if(b){log("[SEARCH] Found block "+b.name+" at "+JSON.stringify(b.position));return true;} const i=findInventoryItem(bot,arg); if(i){log("[SEARCH] Found inventory item "+i.name+" x"+i.count);return true;} throw new Error("Target not found in nearby world/inventory."); }
+  if(id==="search"){ const item=findWorldItem(bot,arg); if(item){log("[SEARCH] Found world item "+(item.getDroppedItem?.()?.name||arg)+" at "+JSON.stringify(item.position));return true;} const e=findEntity(bot,arg); if(e){log("[SEARCH] Found entity "+(e.username||e.name)+" at "+JSON.stringify(e.position));return true;} const b=nearestBlock(bot,arg,32); if(b){log("[SEARCH] Found block "+b.name+" at "+JSON.stringify(b.position));return true;} const i=findInventoryItem(bot,arg); if(i){log("[SEARCH] Found inventory item "+i.name+" x"+i.count);return true;} throw new Error("Target not found in nearby world/inventory."); }
   if(id==="build"){
     const s=String(arg||"").toLowerCase(), m=s.match(/(pillar|tower|line)\s+(\w+)\s+(\d+)/);
     if(!m) throw new Error("Build tester syntax: pillar <block> <count> or line <block> <count>.");
     const item=findInventoryItem(bot,m[2]); if(!item) throw new Error("Build block not in inventory.");
     const n=Math.min(32,Math.max(1,Number(m[3]))); await bot.equip(item,"hand");
     let placed=0;
+    const base=bot.entity.position.floored();
     for(let i=0;i<n;i++){
-      const base=bot.entity.position.floored();
       const p=m[1]==="line" ? base.offset(i+1,0,0) : base.offset(0,i+1,0);
       const ref=bot.blockAt(p.offset(0,-1,0));
-      if(!ref || ref.name==="air") break;
-      try { await bot.placeBlock(ref,{x:0,y:1,z:0}); placed++; } catch { break; }
+      if(!ref || !isSolidBlock(ref)) break;
+      try {
+        await gotoPlaceBlock(bot,p,4.5,15000);
+        await bot.equip(item,"hand");
+        await bot.placeBlock(ref,{x:0,y:1,z:0});
+        const placedBlock=bot.blockAt(p);
+        if(!placedBlock || placedBlock.name==="air") throw new Error("Placement not observed at "+p.x+" "+p.y+" "+p.z);
+        placed++;
+      } catch (error) {
+        log("[BUILD] Placement "+(i+1)+" failed: "+(error instanceof Error?error.message:String(error)));
+        break;
+      }
       await sleep(100);
     }
     if(placed<1) throw new Error("No blocks were placed.");
