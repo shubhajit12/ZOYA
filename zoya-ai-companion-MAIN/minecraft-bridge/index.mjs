@@ -67,7 +67,7 @@ let lastEntityIds = new Set();
 let lastHostileNearby = false;
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
-const CAPABILITY_BUILD_VERSION = "manual-capability-v5-step-collision-2026-09-28";
+const CAPABILITY_BUILD_VERSION = "manual-capability-v9-task-lifecycle-2026-09-28";
 // Autonomous movement is a brain capability, not a second movement loop.
 // Keeping one movement writer prevents natural-walk timers from fighting pathfinder actions.
 let movementEnabled = false;
@@ -228,8 +228,12 @@ function collectMinecraftState() {
     hostileNames.has(String(entity.name || "").toLowerCase())
   );
   if (hostileNearby && !lastHostileNearby) {
-    debugLog("[SAFETY] Hostile mob entered Zoya's danger range; waking brain.");
-    try { bot.pathfinder?.setGoal(null); bot.clearControlStates(); } catch {}
+    debugLog("[SAFETY] Hostile mob entered Zoya's danger range; cancelling active task and waking brain.");
+    if (minecraftRuntime?.getActiveTask?.()) {
+      minecraftRuntime.cancelCurrentTask("hostile mob entered danger range");
+    } else {
+      try { bot.pathfinder?.setGoal(null); bot.clearControlStates(); } catch {}
+    }
     if (!capabilityDebugMode) void zoyaBrain?.thinkNow();
   }
   lastHostileNearby = hostileNearby;
