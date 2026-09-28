@@ -1,0 +1,136 @@
+name: Build Minecraft Bridge Only
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-minecraft-bridge:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: zoya-ai-companion-MAIN
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout minecraft branch
+        uses: actions/checkout@v4
+        with:
+          ref: minecraft
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Prepare bridge bundle
+        shell: pwsh
+        run: |
+          $bridgeRoot = Join-Path $PWD 'minecraft-bridge'
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          if (Test-Path $bridgeDist) { Remove-Item $bridgeDist -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $bridgeDist | Out-Null
+          Copy-Item -Path (Join-Path $bridgeRoot '*.mjs') -Destination $bridgeDist -Force
+          Copy-Item -Path (Join-Path $bridgeRoot 'package.json') -Destination (Join-Path $bridgeDist 'package.json') -Force
+          Push-Location $bridgeDist
+          try { npm install --omit=dev --ignore-scripts } finally { Pop-Location }
+          foreach ($dependency in @('mineflayer','mineflayer-pathfinder','mineflayer-tool','mineflayer-collectblock','mineflayer-crafting-util')) {
+            if (-not (Test-Path (Join-Path $bridgeDist "node_modules/$dependency"))) { throw "Minecraft dependency was not installed: $dependency" }
+          }
+          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs')) {
+            if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Minecraft bridge runtime file is missing: $required" }
+          }
+
+      - name: Validate bridge source and capability guards
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          Push-Location $bridgeDist
+          try {
+            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs')) {
+              node --check $file
+              if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
+            }
+            $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
+            $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
+            $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
+            if ($indexSource -notmatch 'manual-capability-v10-full-audit-fix-2026-09-28') { throw 'Manual capability build marker is missing or stale.' }
+            if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
+            if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
+            if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
+            if ($indexSource -notmatch 'playerHeight = 1.80001') { throw '1.21.x collision height workaround is missing.' }
+            if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
+            $registeredCapabilities = [regex]::Matches($testerSource, '\{ id: "[^"]+", label:').Count
+            if ($registeredCapabilities -ne 93) { throw "Expected 93 registered capability modes, found $registeredCapabilities." }
+            foreach ($requiredText in @('GoalFollow','GoalLookAtBlock','GoalPlaceBlock','gotoBlockInteraction','runManualCapability','gotoPlaceBlock','getDroppedItem','multi_step_craft','gather_missing_materials','find_shelter','find_safe_location','guard_location','runtime.cancelCurrentTask')) {
+              if ($testerSource -notmatch [regex]::Escape($requiredText)) { throw "Capability guard is missing: $requiredText" }
+            }
+            foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','assertTaskActive','runManualCapability','lastTaskResult','bot.stopDigging?.()','bot.collectBlock.movements = movements','target_lost','target_not_found')) {
+              if ($runtimeSource -notmatch [regex]::Escape($requiredRuntimeText)) { throw "Runtime guard is missing: $requiredRuntimeText" }
+            }
+            foreach ($requiredTesterText in @('toVec3(bot,{x:0,y:1,z:0})','getLastTaskResult','STOPPED (CANCELLED)','TARGET_LOST')) {
+              if ($testerSource -notmatch [regex]::Escape($requiredTesterText)) { throw "Verification guard is missing: $requiredTesterText" }
+            }
+            Write-Host "Bridge static guards passed: $registeredCapabilities capability modes."
+          } finally { Pop-Location }
+
+      - name: Verify Mineflayer plugin imports
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          Push-Location $bridgeDist
+          try {
+            node --input-type=module -e "await import('mineflayer'); await import('mineflayer-pathfinder'); await import('mineflayer-tool'); await import('mineflayer-collectblock'); await import('mineflayer-crafting-util'); await import('./minecraftRuntime.mjs'); await import('./zoyaBrain.mjs'); await import('./capabilityTester.mjs'); console.log('Minecraft bridge ESM/plugin smoke test passed.')"
+            if ($LASTEXITCODE -ne 0) { throw 'Minecraft bridge ESM/plugin smoke test failed.' }
+          } finally { Pop-Location }
+
+      - name: Bundle Node runtime
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          $nodeVersion = '22.14.0'
+          $nodeZip = Join-Path $env:RUNNER_TEMP "node-v$nodeVersion-win-x64.zip"
+          $nodeExtract = Join-Path $env:RUNNER_TEMP 'NodeRuntime'
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip" -OutFile $nodeZip
+          if (Test-Path $nodeExtract) { Remove-Item $nodeExtract -Recurse -Force }
+          Expand-Archive -Path $nodeZip -DestinationPath $nodeExtract -Force
+          $nodeExe = Get-ChildItem -Path $nodeExtract -Filter 'node.exe' -File -Recurse | Select-Object -First 1
+          if (-not $nodeExe) { throw 'node.exe was not found.' }
+          Copy-Item -Path $nodeExe.FullName -Destination (Join-Path $bridgeDist 'node.exe') -Force
+
+      - name: Build standalone MinecraftBridge.exe launcher
+        shell: pwsh
+        run: |
+          $launcherRoot = Join-Path $PWD 'minecraft-bridge-launcher'
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          cargo build --manifest-path (Join-Path $launcherRoot 'Cargo.toml') --release --target x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { throw 'Minecraft bridge launcher build failed.' }
+          Copy-Item -Path (Join-Path $launcherRoot 'target/x86_64-pc-windows-msvc/release/minecraft-bridge-launcher.exe') -Destination (Join-Path $bridgeDist 'MinecraftBridge.exe') -Force
+
+      - name: Verify final standalone bridge bundle
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          foreach ($required in @('MinecraftBridge.exe','node.exe','index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','package.json')) {
+            if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Final bridge bundle is missing: $required" }
+          }
+          if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency is missing from final bridge bundle.' }
+          Write-Host 'Standalone Minecraft bridge bundle verified.'
+
+      - name: Create distributable ZIP
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          $zip = Join-Path $env:RUNNER_TEMP 'MinecraftBridge-Windows-x64.zip'
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $bridgeDist '*') -DestinationPath $zip -CompressionLevel Optimal
+          if (-not (Test-Path $zip)) { throw 'Minecraft bridge ZIP was not created.' }
+
+      - name: Upload Minecraft Bridge artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MinecraftBridge-Windows-x64
+          path: ${{ runner.temp }}/MinecraftBridge-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 7
