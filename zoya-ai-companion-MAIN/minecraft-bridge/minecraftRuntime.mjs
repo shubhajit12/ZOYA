@@ -70,6 +70,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   let taskSequence = 0;
   let busy = false;
   let chatBusy = false;
+  let lastTaskResult = null;
 
   // Combat physics must remain authoritative to Minecraft/Mineflayer.
   // We only observe the server velocity for diagnostics; we never write a
@@ -752,8 +753,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
     while (taskIsActive(task)) {
       const target = findPlayerByUsername(targetUsername)?.entity;
-      if (!target) return hadTarget;
-      if (target.health != null && target.health <= 0) return hadTarget;
+      if (!target) {
+        if (hadTarget && taskIsActive(task)) task.terminationReason = "target_lost";
+        return false;
+      }
+      if (target.health != null && target.health <= 0) {
+        task.terminationReason = "target_defeated";
+        return hadTarget;
+      }
       hadTarget = true;
 
       let distance = target.position.distanceTo(bot.entity.position);
@@ -774,7 +781,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       }
 
       const liveTarget = findPlayerByUsername(targetUsername)?.entity;
-      if (!liveTarget) return hadTarget;
+      if (!liveTarget) {
+        if (hadTarget && taskIsActive(task)) task.terminationReason = "target_lost";
+        return false;
+      }
       try {
         await bot.lookAt(
           liveTarget.position.offset(0, liveTarget.height ? liveTarget.height * 0.75 : 1.4, 0),
@@ -786,7 +796,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       }
 
       await new Promise(resolve => setTimeout(resolve, 100));
-      if ((bot.health ?? 20) <= 0) return false;
+      if (!taskIsActive(task)) return false;
+      const postTarget = findPlayerByUsername(targetUsername)?.entity;
+      if (postTarget?.health != null && postTarget.health <= 0) {
+        task.terminationReason = "target_defeated";
+        return true;
+      }
+      if ((bot.health ?? 20) <= 0) {
+        task.terminationReason = "zoya_died";
+        return false;
+      }
     }
 
     try { bot.pathfinder.setGoal(null); } catch {}
@@ -810,7 +829,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       return false;
     }
     busy = true;
-    const task = { id: ++taskSequence, action, targetUsername: options.targetUsername || null, startedAt: Date.now(), cancelled: false, token: 0 };
+    const task = { id: ++taskSequence, action, targetUsername: options.targetUsername || null, startedAt: Date.now(), cancelled: false, token: 0, terminationReason: null };
     activeTask = task;
     currentGoal = action;
     let result = false;
@@ -932,6 +951,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     cancelCurrentTask,
     answerPlayer,
     getActiveTask: () => activeTask,
+    getLastTaskResult: () => lastTaskResult,
     waitForTaskIdle,
     getStatus: () => ({ ownerUsername: owner || null, pendingPermissions: pending.size, currentGoal, busy, activeTask: activeTask ? { id: activeTask.id, action: activeTask.action, targetUsername: activeTask.targetUsername, startedAt: activeTask.startedAt } : null, memoryPlayers: Object.keys(memory.players).length, memoryEvents: memory.events.length })
   };
