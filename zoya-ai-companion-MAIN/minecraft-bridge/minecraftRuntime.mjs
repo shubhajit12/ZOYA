@@ -827,6 +827,54 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return false;
   }
 
+  async function runManualCapability(action, operation) {
+    if (busy || activeTask) {
+      throw new Error("Another Minecraft task is already active.");
+    }
+    const task = {
+      id: ++taskSequence,
+      action: "manual:" + String(action || "capability"),
+      targetUsername: null,
+      startedAt: Date.now(),
+      cancelled: false,
+      token: 0,
+      terminationReason: null
+    };
+    activeTask = task;
+    busy = true;
+    currentGoal = task.action;
+    log("[TASK] Started #" + task.id + " " + task.action + ".");
+    let result = false;
+    try {
+      result = await operation(task);
+      if (!taskIsActive(task)) return false;
+      return result === true;
+    } catch (error) {
+      if (taskIsActive(task)) {
+        log("[TASK] Manual capability failed: " + (error instanceof Error ? error.message : String(error)));
+      }
+      return false;
+    } finally {
+      const wasActive = activeTask === task;
+      if (wasActive) {
+        activeTask = null;
+        currentGoal = null;
+      }
+      busy = false;
+      lastTaskResult = {
+        id: task.id,
+        action: task.action,
+        targetUsername: null,
+        status: task.cancelled ? "cancelled" : (result === true ? "completed" : "failed"),
+        reason: task.cancelReason || task.terminationReason || null,
+        startedAt: task.startedAt,
+        finishedAt: Date.now()
+      };
+      log("[TASK] Finished #" + task.id + " " + task.action + " -> " + lastTaskResult.status + (lastTaskResult.reason ? " (" + lastTaskResult.reason + ")" : "") + ".");
+      if (wasActive) wakeBrain();
+    }
+  }
+
   async function execute(action, options = {}) {
     if (busy) {
       log("[TASK] Ignoring new task while '" + (currentGoal || "unknown") + "' is active.");
