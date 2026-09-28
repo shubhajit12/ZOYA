@@ -1332,20 +1332,22 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
         const before=inventorySnapshot(bot);
 
         if (["follow_player","pvp","guard","guard_location"].includes(cap.id)) {
-          const promise=directCapability({bot,runtime,id:cap.id,arg,log});
-          backgroundRun={id:cap.id,promise,before,started};
+          const promise = directCapability({bot,runtime,id:cap.id,arg,log});
+          backgroundRun = { id: cap.id, promise, before, started };
           log("[CAPABILITY] Mode: " + cap.id + " | Status: RUNNING IN BACKGROUND");
-          void promise.then(result=>{
-            const lifecycle=runtime?.getLastTaskResult?.() || null;
-            let label = "STOPPED/FAILED";
-            if (result === true && cap.id === "pvp" && lifecycle?.reason === "target_defeated") label = "PASS (TARGET_DEFEATED)";
+          void promise.then(result => {
+            const lifecycle = runtime?.getLastTaskResult?.() || null;
+            let label = "FAIL";
+            if (lifecycle?.status === "cancelled") label = "STOPPED (CANCELLED)";
             else if (lifecycle?.reason === "target_lost") label = "ENDED (TARGET_LOST)";
-            else if (lifecycle?.status === "cancelled") label = "STOPPED (CANCELLED)";
+            else if (lifecycle?.reason === "target_not_found") label = "FAIL (TARGET_NOT_FOUND)";
+            else if (cap.id === "pvp" && lifecycle?.reason === "target_defeated") label = "PASS (TARGET_DEFEATED)";
+            else if (result === true && cap.id !== "pvp") label = "ENDED (COMPLETED)";
             log("[CAPABILITY] Background mode: " + cap.id + " ended -> " + label);
-            if (backgroundRun?.promise===promise) backgroundRun=null;
-          }).catch(error=>{
-            log("[CAPABILITY] Background mode: " + cap.id + " crashed: " + (error instanceof Error?error.message:String(error)));
-            if (backgroundRun?.promise===promise) backgroundRun=null;
+            if (backgroundRun?.promise === promise) backgroundRun = null;
+          }).catch(error => {
+            log("[CAPABILITY] Background mode: " + cap.id + " crashed: " + (error instanceof Error ? error.message : String(error)));
+            if (backgroundRun?.promise === promise) backgroundRun = null;
           });
           continue;
         }
