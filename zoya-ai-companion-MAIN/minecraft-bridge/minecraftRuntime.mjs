@@ -314,6 +314,31 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     assertTaskActive(task, "wait");
   }
 
+  // Task-owned navigation must not depend on pathfinder.goto() resolving after
+  // cancellation. goto() can remain pending while Pathfinder is being stopped,
+  // which leaves activeTask alive and blocks the next manual capability. Drive
+  // the same GoalNear through setGoal() and poll the task token so cancellation
+  // becomes an immediate, deterministic lifecycle transition.
+  async function gotoTask(task, goal, targetPosition, reachDistance = 2, timeoutMs = 30000, label = "navigation") {
+    assertTaskActive(task, label + " start");
+    const deadline = Date.now() + Math.max(1000, Number(timeoutMs) || 30000);
+    bot.pathfinder.setGoal(goal);
+    try {
+      while (taskIsActive(task) && Date.now() < deadline) {
+        const target = targetPosition?.clone?.() || targetPosition;
+        if (target && bot.entity?.position?.distanceTo(target) <= reachDistance) return true;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      if (!taskIsActive(task)) return false;
+      task.terminationReason = "path_timeout";
+      return false;
+    } finally {
+      if (activeTask === task) {
+        try { bot.pathfinder.setGoal(null); } catch {}
+      }
+    }
+  }
+
   async function moveToPlayer(username, distance = 3, task = activeTask, continuous = false) {
     if (!task) return false;
     let target = null;
@@ -393,13 +418,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     // destination and should resolve when the bot reaches the requested range.
     const targetPosition = target.position.clone();
     try {
-      await bot.pathfinder.goto(new goals.GoalNear(
-        targetPosition.x,
-        targetPosition.y,
-        targetPosition.z,
-        distance
-      ));
-      return taskIsActive(task);
+      return await gotoTask(
+        task,
+        new goals.GoalNear(targetPosition.x, targetPosition.y, targetPosition.z, distance),
+        targetPosition,
+        distance,
+        30000,
+        "follow navigation"
+      );
     } catch (error) {
       if (taskIsActive(task)) {
         log("[TASK] follow_player pathing failed: " + (error instanceof Error ? error.message : String(error)));
@@ -418,8 +444,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     bot.setControlState("sprint", true);
     try {
       if (!taskIsActive(task)) return false;
-      await bot.pathfinder.goto(new goals.GoalNear(p.x + Math.cos(angle) * radius, p.y, p.z + Math.sin(angle) * radius, 2));
-      return taskIsActive(task);
+      return await gotoTask(
+        task,
+        new goals.GoalNear(p.x + Math.cos(angle) * radius, p.y, p.z + Math.sin(angle) * radius, 2),
+        new p.constructor(p.x + Math.cos(angle) * radius, p.y, p.z + Math.sin(angle) * radius),
+        2,
+        30000,
+        "explore navigation"
+      );
     } finally {
       bot.setControlState("sprint", false);
     }
@@ -560,8 +592,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     bot.setControlState("sprint", true);
     try {
       if (!taskIsActive(task)) return false;
-      await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 3));
-      return taskIsActive(task);
+      return await gotoTask(
+        task,
+        new goals.GoalNear(target.position.x, target.position.y, target.position.z, 3),
+        target.position,
+        3,
+        30000,
+        "entity investigation navigation"
+      );
     } finally {
       bot.setControlState("sprint", false);
     }
@@ -636,12 +674,20 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     if (craftingTable) {
       const distance = craftingTable.position.distanceTo(bot.entity.position);
       if (distance > 3.5) {
-        await bot.pathfinder.goto(new goals.GoalNear(
-          craftingTable.position.x,
-          craftingTable.position.y,
-          craftingTable.position.z,
-          3
-        ));
+        const reachedTable = await gotoTask(
+          task,
+          new goals.GoalNear(
+            craftingTable.position.x,
+            craftingTable.position.y,
+            craftingTable.position.z,
+            3
+          ),
+          craftingTable.position,
+          3,
+          30000,
+          "crafting-table navigation"
+        );
+        if (!reachedTable) return false;
       }
     }
 
@@ -686,7 +732,15 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       bot.setControlState("sprint", true);
       try {
         if (!taskIsActive(task)) return false;
-        await bot.pathfinder.goto(new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5));
+        const reachedDrop = await gotoTask(
+          task,
+          new goals.GoalNear(target.position.x, target.position.y, target.position.z, 1.5),
+          target.position,
+          1.5,
+          30000,
+          "item collection navigation"
+        );
+        if (!reachedDrop) return false;
       } catch (error) {
         if (taskIsActive(task)) log("[ACTION] collect pathing failed: " + (error instanceof Error ? error.message : String(error)));
         return false;
@@ -723,7 +777,15 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   async function guardLocation(position, task) {
     if (!task) return false;
     assertTaskActive(task, "guard navigation");
-    await bot.pathfinder.goto(new goals.GoalNear(position.x, position.y, position.z, 2));
+    const reachedGuard = await gotoTask(
+      task,
+      new goals.GoalNear(position.x, position.y, position.z, 2),
+      position,
+      2,
+      30000,
+      "guard navigation"
+    );
+    if (!reachedGuard) return false;
     assertTaskActive(task, "guard navigation completion");
     while (taskIsActive(task)) {
       const hostile = Object.values(bot.entities || {})
