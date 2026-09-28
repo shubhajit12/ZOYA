@@ -931,11 +931,33 @@ async function directCapability({bot,runtime,id,arg,log}) {
     await gotoBlockInteraction(bot,b,3.5,20000); const c=await bot.openContainer(b); log("[CONTAINER] Opened "+b.name+" with "+(c.containerItems?.().length||0)+" items."); await c.close(); return true;
   }
   if(id==="deposit"||id==="retrieve"){
-    const {prefix,...p}=parseCoordsFromEnd(arg); const b=bot.blockAt(toVec3(bot,p)); if(!b||!["chest","barrel","shulker_box"].some(n=>b.name.includes(n))) throw new Error("Container not found.");
-    const name=prefix.trim(); if(!name) throw new Error("Item name is required."); const itemBefore=findInventoryItem(bot,name); if(id==="deposit" && !itemBefore) throw new Error("Item not in inventory."); await gotoBlockInteraction(bot,b,3.5,20000); const c=await bot.openContainer(b);
-    if(id==="deposit"){ const item=findInventoryItem(bot,name); if(!item) throw new Error("Item disappeared from inventory."); await c.deposit(item.type,null,item.count); }
-    else { const slot=c.containerItems().find(i=>i.name.toLowerCase().includes(name.toLowerCase())); if(!slot) throw new Error("Item not in container."); await c.withdraw(slot.type,null,Math.min(slot.count,slot.stackSize||slot.count)); }
-    await c.close(); return true;
+    const {prefix,...p}=parseCoordsFromEnd(arg);
+    const b=bot.blockAt(toVec3(bot,p));
+    if(!b||!["chest","barrel","shulker_box"].some(n=>b.name.includes(n))) throw new Error("Container not found.");
+    const name=prefix.trim();
+    if(!name) throw new Error("Item name is required.");
+    const before=inventorySnapshot(bot);
+    const itemBefore=findInventoryItem(bot,name);
+    if(id==="deposit" && !itemBefore) throw new Error("Item not in inventory.");
+    await gotoBlockInteraction(bot,b,3.5,20000);
+    const container=await bot.openContainer(b);
+    try {
+      if(id==="deposit"){
+        const item=findInventoryItem(bot,name);
+        if(!item) throw new Error("Item disappeared from inventory.");
+        await container.deposit(item.type,null,item.count);
+      } else {
+        const slot=container.containerItems().find(i=>i.name.toLowerCase().includes(name.toLowerCase()));
+        if(!slot) throw new Error("Item not in container.");
+        await container.withdraw(slot.type,null,Math.min(slot.count,slot.stackSize||slot.count));
+      }
+    } finally {
+      await container.close();
+    }
+    const delta=inventoryDelta(before,inventorySnapshot(bot),name);
+    if(id==="deposit" && delta >= 0) throw new Error("Deposit completed without removing any " + name + " from inventory.");
+    if(id==="retrieve" && delta <= 0) throw new Error("Retrieve completed without adding any " + name + " to inventory.");
+    return true;
   }
   if(id==="smelt"){
     const itemName=String(arg||"").trim().toLowerCase();
