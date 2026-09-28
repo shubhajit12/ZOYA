@@ -197,6 +197,7 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     const answer = ask ? String(await ask("[VERIFY] Did you visibly see Zoya perform the requested movement/world action? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
   }
+
   if (["collect","take_item","retrieve_item"].includes(id)) {
     if (after.byName.size > before.byName.size || [...after.byName.entries()].some(([name,count]) => count > (before.byName.get(name)||0))) return true;
     const answer = ask ? String(await ask("[VERIFY] Did Zoya visibly pick up the requested item? (y/n): ")).trim().toLowerCase() : "n";
@@ -396,6 +397,7 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
     log("[VERIFY] Inventory slot order is not sorted.");
     return false;
   }
+
   return false;
 }
 
@@ -469,15 +471,9 @@ function toVec3(bot, p) {
   const x = Number(p.x);
   const y = Number(p.y);
   const z = Number(p.z);
-  if (![x, y, z].every(Number.isFinite)) {
-    throw new Error("Position must contain finite x, y, z coordinates.");
-  }
+  if (![x, y, z].every(Number.isFinite)) throw new Error("Position must contain finite x, y, z coordinates.");
   const Vec3Ctor = bot.entity?.position?.constructor;
-  if (typeof Vec3Ctor !== "function") {
-    throw new Error("Mineflayer Vec3 constructor is unavailable.");
-  }
-  // Pathfinder goals call Vec3 methods such as .floored(), .offset(), and
-  // .distanceTo(). Never let plain {x,y,z} objects cross that boundary.
+  if (typeof Vec3Ctor !== "function") throw new Error("Mineflayer Vec3 constructor is unavailable.");
   return new Vec3Ctor(x, y, z);
 }
 
@@ -608,7 +604,8 @@ async function attackLoop(bot,target,timeout=15000) {
     await bot.lookAt(target.position.offset(0,target.height||1,0),true);
     bot.attack(target);
     attacked=true;
-    await sleep(450);  }
+    await sleep(450);
+  }
   // An attack action does not require killing the target. The tester performs
   // the final visible-hit verification separately.
   return attacked;
@@ -807,7 +804,8 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const p=arg?parseCoords(arg):bot.entity.position.offset(0,-1,0); const block=bot.blockAt(p);
     if(!block||block.name==="air") throw new Error("No breakable block at target.");
     await gotoBlockInteraction(bot,block,4.5,20000);
-    await bot.dig(block); return true;  }
+    await bot.dig(block); return true;
+  }
   if(id==="harvest_crops") {
     const crop=nearestBlock(bot,[...CROPS],24); if(!crop) throw new Error("No crop found nearby.");
     await gotoBlockInteraction(bot,crop,4.5,20000); await bot.dig(crop); return true;
@@ -1007,3 +1005,328 @@ async function directCapability({bot,runtime,id,arg,log}) {
       nextStack.add(item.id);
 
       // Recursively craft missing intermediate ingredients. Raw world materials
+      // are intentionally not fabricated; gather_missing_materials handles the
+      // small set of gatherable basics separately.
+      const needed=new Map();
+      for(const entry of ingredientEntries(recipe)){
+        const id=ingredientId(entry);
+        const name=ingredientName(id);
+        if(name) needed.set(name,(needed.get(name)||0)+1);
+      }
+      for(const [name,required] of needed){
+        if(inventoryCount(bot,name)>=required) continue;
+        const dep=bot.registry.itemsByName[name];
+        if(!dep || typeof bot.recipesAll!=="function") throw new Error("Missing ingredient: "+name);
+        await craftRecursive(dep,required,nextStack);
+        if(inventoryCount(bot,name)<required) throw new Error("Could not prepare ingredient: "+name);
+      }
+
+      table=recipe.requiresTable?(table||findTable()):null;
+      if(recipe.requiresTable&&!table) throw new Error("Crafting table required for "+item.name+" but none is nearby.");
+      if(table) await gotoBlockInteraction(bot,table,3.5,15000);
+      const before=inventoryCount(bot,item.name);
+      await bot.craft(recipe,craftsNeeded,table);
+      const after=inventoryCount(bot,item.name);
+      return after>=before+resultPerCraft*craftsNeeded;
+    }
+
+    if(id==="gather_missing_materials"){
+      const table=findTable();
+      let recipes=bot.recipesAll?.(recipeItem.id,null,table||null)||[];
+      if(!recipes.length) throw new Error("No recipe available to inspect for "+craftTarget+".");
+      const entries=recipes[0].ingredients||[];
+      const missing=[];
+      for(const entry of entries){
+        const id=ingredientId(entry), name=ingredientName(id);
+        if(name && inventoryCount(bot,name)<1) missing.push(name);
+      }
+      if(!missing.length) return true;
+      for(const name of [...new Set(missing)]){
+        if(/_log$/.test(name)){
+          const ok=await runtime.execute("gather_basic_resources",{resourceName:name,amount:1,permissionGranted:true});
+          if(!ok) throw new Error("Failed to gather missing "+name+".");
+        } else if(["stone","cobblestone"].includes(name)){
+          const before=inventoryCount(bot,name);
+          const block=nearestBlock(bot,name,16);
+          if(!block) throw new Error("Missing material "+name+" not found nearby.");
+          await gotoBlockInteraction(bot,block,4.5,12000);
+          await bot.dig(block);
+          if(inventoryCount(bot,name)<=before) throw new Error("Failed to gather missing "+name+".");
+        } else {
+          throw new Error("Missing material "+name+" cannot be gathered automatically by this capability.");
+        }
+      }
+      return true;
+    }
+
+    if(id==="multi_step_craft") return craftRecursive(recipeItem,1);
+
+    let craftingTable=id==="craft_workbench"?findTable():null;
+    let recipes=bot.recipesFor(recipeItem.id,null,1,craftingTable||null);
+    if(!recipes.length && typeof bot.recipesAll==="function") recipes=bot.recipesAll(recipeItem.id,null,craftingTable||null);
+    if(!recipes.length) throw new Error("No available recipe for "+target);
+    let recipe=recipes.find(r=>!r.requiresTable||craftingTable)||recipes[0];
+    if(recipe.requiresTable&&!craftingTable){
+      craftingTable=findTable();
+      if(!craftingTable) throw new Error("Crafting table not found.");
+      recipes=bot.recipesFor(recipeItem.id,null,1,craftingTable);
+      if(!recipes.length&&typeof bot.recipesAll==="function") recipes=bot.recipesAll(recipeItem.id,null,craftingTable);
+      recipe=recipes.find(r=>!r.requiresTable||craftingTable)||recipes[0];
+    }
+    if(!recipe || (recipe.requiresTable&&!craftingTable)) throw new Error("No usable recipe for "+target+".");
+    if(craftingTable) await gotoBlockInteraction(bot,craftingTable,3.5,15000);
+    const before=inventoryCount(bot,recipeItem.name);
+    await bot.craft(recipe,1,craftingTable);
+    return inventoryCount(bot,recipeItem.name)>before;
+  }
+
+  if(id==="place_block"){
+    const {prefix,...p}=parseCoordsFromEnd(arg); const item=findInventoryItem(bot,prefix); if(!item) throw new Error("Block item not found.");
+    const ref=bot.blockAt(toVec3(bot,{x:p.x,y:p.y-1,z:p.z})); if(!ref||!isSolidBlock(ref)) throw new Error("No solid reference block below target.");
+    await gotoPlaceBlock(bot,{x:p.x,y:p.y,z:p.z},4.5,20000); await bot.equip(item,"hand"); await bot.placeBlock(ref,{x:0,y:1,z:0});
+    const placed=bot.blockAt(toVec3(bot,{x:p.x,y:p.y,z:p.z})); if(!placed||placed.name==="air") throw new Error("Block placement was not observed at the target position."); return true;
+  }
+  if(["open_door","close_door","use_button","use_lever","use_block"].includes(id)){
+    const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found.");
+    const blockName=String(b.name||"").toLowerCase();
+    if((id==="open_door"||id==="close_door") && !blockName.includes("door")) throw new Error("Target is not a door.");
+    if(id==="use_button" && !blockName.endsWith("_button")) throw new Error("Target is not a button.");
+    if(id==="use_lever" && blockName!=="lever") throw new Error("Target is not a lever.");
+    await gotoBlockInteraction(bot,b,4.5,20000);
+    if(id==="open_door" && b.getProperties?.().open===true) return true;
+    if(id==="close_door" && b.getProperties?.().open===false) return true;
+    await bot.activateBlock(b);
+    return true;
+  }
+  if(id==="use_item"){
+    const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); bot.activateItem(); await sleep(500); bot.deactivateItem(); return true;
+  }
+  if(id==="sleep"){
+    const bed=findEntity(bot,"",e=>String(e.name||"").includes("bed"))||nearestBlock(bot,["bed"],16); if(!bed) throw new Error("No bed found nearby.");
+    if(bed.position) await gotoBlockInteraction(bot,bed,4.5,20000); await bot.sleep(bed); return true;
+  }
+
+  if(id==="find_player"){ const p=findPlayer(bot,arg); if(!p?.entity) throw new Error("Player not found nearby."); log("[PLAYER] "+p.username+" at "+JSON.stringify(p.entity.position)); return true; }
+  if(id==="find_entity"||id==="investigate_entity"){ const e=findEntity(bot,arg); if(!e) throw new Error("Entity not found."); log("[ENTITY] "+(e.username||e.name)+" pos="+JSON.stringify(e.position)+" health="+(e.health??"unknown")); if(id==="investigate_entity") await bot.lookAt(e.position.offset(0,e.height||1,0),true); return true; }
+  if(id==="check_nearby"){ Object.values(bot.entities||{}).filter(e=>e?.position&&e!==bot.entity).sort((a,b)=>dist(a.position,bot.entity.position)-dist(b.position,bot.entity.position)).slice(0,20).forEach(e=>log("[NEARBY] "+(e.username||e.name||e.type)+" distance="+dist(e.position,bot.entity.position).toFixed(2))); return true; }
+  if(id==="check_environment"){ const p=bot.entity.position,b=bot.blockAt(p.offset(0,-1,0)),h=bot.blockAt(p.offset(0,1,0)); log("[ENV] pos="+p.x.toFixed(2)+","+p.y.toFixed(2)+","+p.z.toFixed(2)+" below="+(b?.name||"unknown")+" head="+(h?.name||"unknown")); return true; }
+  if(id==="detect_hostiles"){ const h=Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=24); log("[SAFETY] Hostiles="+h.length); h.forEach(e=>log("[SAFETY] "+e.name+" "+dist(e.position,bot.entity.position).toFixed(2)+"m")); return true; }
+  if(id==="check_health"){ log("[STATUS] Health="+bot.health); return true; }
+  if(id==="check_food"){ log("[STATUS] Food="+bot.food+" saturation="+bot.foodSaturation); return true; }
+  if(id==="check_equipment"){ log("[EQUIPMENT] "+JSON.stringify(bot.inventory.slots?.slice(5,9).filter(Boolean).map(i=>i.name)||[])); return true; }
+  if(id==="coordinate"){
+    const p=findPlayer(bot,arg)?.entity; const q=p?.position||bot.entity.position; log("[COORDINATES] "+(p?"Player":"Zoya")+" = X="+q.x.toFixed(2)+" Y="+q.y.toFixed(2)+" Z="+q.z.toFixed(2)); return true;
+  }
+  if(id==="observe"){ log("[OBSERVE] dimension="+bot.game?.dimension+" time="+bot.time?.time+" entities="+Object.keys(bot.entities||{}).length+" health="+bot.health+" food="+bot.food); return true; }
+
+  if(["ask_permission","whisper_player","remember_player","report_result","ask_clarification"].includes(id)){
+    if(id==="whisper_player"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p) throw new Error("Player not found."); bot.whisper(p.username,m.join(" ")); return true; }
+    if(id==="report_result"){ bot.chat(String(arg||"")); return true; }
+    if(id==="ask_clarification"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p) throw new Error("Player not found."); bot.whisper(p.username,"I need clarification: "+m.join(" ")); return true; }
+    if(id==="remember_player"){
+      const m=String(arg||"").trim().split(/\s+/); const name=m.shift(); const fact=m.join(" ").trim();
+      if(!name||!fact) throw new Error("Usage: remember_player <username> <fact>");
+      if(typeof runtime?.rememberPlayer!=="function") throw new Error("Runtime memory API unavailable.");
+      const key=name.toLowerCase();
+      const existing=runtime.memory?.players?.[key] || {};
+      const facts=Array.isArray(existing.facts)?existing.facts.slice():[];
+      if(!facts.includes(fact)) facts.push(fact);
+      runtime.rememberPlayer(name,{facts});
+      log("[MEMORY] Remembered fact for "+name+": "+fact);
+      return true;
+    }
+    if(id==="ask_permission"){
+      const m=String(arg||"").trim().split(/\s+/); const name=m.shift(); const action=m.join(" ").trim();
+      if(!name||!action) throw new Error("Usage: ask_permission <username> <action>");
+      if(typeof runtime?.askOwner!=="function") throw new Error("Permission API unavailable.");
+      return runtime.askOwner(name,action,action);
+    }
+  }
+
+  if(id==="retrieve_item"){ return directCapability({bot,runtime,id:"collect",arg,log}); }
+  if(id==="watch"){ const e=findEntity(bot,arg)||findPlayer(bot,arg)?.entity; if(!e) throw new Error("Watch target not found."); await bot.lookAt(e.position.offset(0,e.height||1,0),true); await sleep(5000); return true; }
+  if(id==="search"){ const item=findWorldItem(bot,arg); if(item){log("[SEARCH] Found world item "+(item.getDroppedItem?.()?.name||arg)+" at "+JSON.stringify(item.position));return true;} const e=findEntity(bot,arg); if(e){log("[SEARCH] Found entity "+(e.username||e.name)+" at "+JSON.stringify(e.position));return true;} const b=nearestBlock(bot,arg,32); if(b){log("[SEARCH] Found block "+b.name+" at "+JSON.stringify(b.position));return true;} const i=findInventoryItem(bot,arg); if(i){log("[SEARCH] Found inventory item "+i.name+" x"+i.count);return true;} throw new Error("Target not found in nearby world/inventory."); }
+  if(id==="build"){
+    const s=String(arg||"").toLowerCase(), m=s.match(/(pillar|tower|line)\s+(\w+)\s+(\d+)/);
+    if(!m) throw new Error("Build tester syntax: pillar <block> <count> or line <block> <count>.");
+    const item=findInventoryItem(bot,m[2]); if(!item) throw new Error("Build block not in inventory.");
+    const n=Math.min(32,Math.max(1,Number(m[3]))); await bot.equip(item,"hand");
+    let placed=0;
+    const base=bot.entity.position.floored();
+    for(let i=0;i<n;i++){
+      const p=m[1]==="line" ? base.offset(i+1,0,0) : base.offset(0,i+1,0);
+      const ref=bot.blockAt(p.offset(0,-1,0));
+      if(!ref || !isSolidBlock(ref)) break;
+      try {
+        await gotoPlaceBlock(bot,p,4.5,15000);
+        await bot.equip(item,"hand");
+        await bot.placeBlock(ref,{x:0,y:1,z:0});
+        const placedBlock=bot.blockAt(p);
+        if(!placedBlock || placedBlock.name==="air") throw new Error("Placement not observed at "+p.x+" "+p.y+" "+p.z);
+        placed++;
+      } catch (error) {
+        log("[BUILD] Placement "+(i+1)+" failed: "+(error instanceof Error?error.message:String(error)));
+        break;
+      }
+      await sleep(100);
+    }
+    if(placed<1) throw new Error("No blocks were placed.");
+    return true;
+  }
+  if(id==="coordinate_with_player"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p?.entity) throw new Error("Player not found."); bot.chat("I am at "+Math.round(bot.entity.position.x)+" "+Math.round(bot.entity.position.y)+" "+Math.round(bot.entity.position.z)+"; task: "+m.join(" ")); return true; }
+  if(id==="op_command"){
+    const c=String(arg||"").trim();
+    if(!c.startsWith("/")) throw new Error("Enter a slash command.");
+
+    // Mineflayer's permissionLevel can remain stale when OP is granted/revoked
+    // while the bot is already connected. Minecraft's server is authoritative,
+    // so this cached value must never be used as an execution gate.
+    const reportedLevel=Number(bot.game?.permissionLevel);
+    log("[OP] Sending command: "+c+" | reported permissionLevel="+
+      (Number.isFinite(reportedLevel)?reportedLevel:"unknown")+
+      " (informational only).");
+
+    const denialPattern=/(unknown or incomplete command|unknown command|no permission|not permitted|cannot use|you do not have permission|you don't have permission|not allowed|requires permission|operator privileges)/i;
+    let feedback=null;
+    let timer=null;
+
+    const feedbackPromise=new Promise(resolve=>{
+      let settled=false;
+      const cleanup=()=>{
+        if(timer) clearTimeout(timer);
+        try{bot.removeListener("messagestr",onMessage);}catch{}
+        try{bot.removeListener("message",onMessage);}catch{}
+      };
+      const finish=value=>{
+        if(settled)return;
+        settled=true;
+        cleanup();
+        resolve(value);
+      };
+      const onMessage=message=>{
+        const text=typeof message==="string"?message:String(message??"");
+        if(!text)return;
+        if(denialPattern.test(text)){
+          feedback=text;
+          finish(false);
+        }
+      };
+      bot.on("messagestr",onMessage);
+      bot.on("message",onMessage);
+      timer=setTimeout(()=>finish(true),1500);
+    });
+
+    bot.chat(c);
+    const accepted=await feedbackPromise;
+    if(!accepted) throw new Error("Minecraft rejected the OP command: "+feedback);
+    log("[OP] Command sent; no permission/command rejection was reported by the server.");
+    return true;
+  }
+
+  throw new Error("Capability is registered but has no implementation.");
+}
+
+export function startCapabilityTester({bot,runtime,log=console.log}) {
+  log("[CAPABILITY TESTER] Local-only mode: no Groq calls are made.");
+  const preflight = [
+    ["bot.entity", !!bot?.entity],
+    ["bot.pathfinder.goto", typeof bot?.pathfinder?.goto === "function"],
+    ["bot.lookAt", typeof bot?.lookAt === "function"],
+    ["bot.setControlState", typeof bot?.setControlState === "function"],
+    ["bot.chat", typeof bot?.chat === "function"],
+    ["runtime.execute", typeof runtime?.execute === "function"],
+    ["runtime.cancelCurrentTask", typeof runtime?.cancelCurrentTask === "function"]
+  ];
+  const failed = preflight.filter(([, ok]) => !ok).map(([name]) => name);
+  if (failed.length) {
+    log("[CAPABILITY TESTER] PREFLIGHT FAIL: " + failed.join(", "));
+    return ()=>{};
+  }
+  log("[CAPABILITY TESTER] PREFLIGHT PASS: required Mineflayer/runtime APIs are available.");
+  log("[CAPABILITY TESTER] IMPORTANT: API availability is not a capability PASS; every action is post-verified.");
+  if(!process.stdin.isTTY||!process.stdout.isTTY){ log("[CAPABILITY TESTER] Interactive terminal unavailable."); return ()=>{}; }
+  let stopped=false;
+  let backgroundRun=null;
+  const rl=readline.createInterface({input:process.stdin,output:process.stdout,terminal:true});
+  const ask=q=>new Promise(resolve=>rl.question(q,resolve));
+
+  async function menu(){
+    let menuShown = false;
+    while(!stopped&&bot&&bot.entity){
+      if (!menuShown) {
+        log("");
+        log("========================================");
+        log("       ZOYA CAPABILITY DEBUGGER");
+        log("========================================");
+        log("Groq: DISABLED | Manual mode execution: ENABLED");
+        log("Registered modes: " + CAPABILITIES.length);
+        CAPABILITIES.forEach((cap,i)=>log(String(i+1).padStart(2," ") + ". " + cap.label));
+        log("0. Exit capability tester");
+        menuShown = true;
+      }
+
+      const answer=String(await ask("Choose a capability (0-"+CAPABILITIES.length+"): ")).trim();
+      if(answer==="0") break;
+
+      const index=Number(answer)-1;
+      if(!Number.isInteger(index)||index<0||index>=CAPABILITIES.length){
+        log("[CAPABILITY TESTER] Invalid selection.");
+        continue;
+      }
+
+      const cap=CAPABILITIES[index];
+      log("");
+      log("[CAPABILITY] " + cap.label + " selected.");
+      log("Usage: " + cap.usage);
+
+      const arg=String(await ask("Enter arguments: ")).trim();
+
+      try{
+        if(runtime?.getActiveTask?.()) {
+          runtime.cancelCurrentTask("manual capability tester");
+          const idle = await runtime.waitForTaskIdle?.(5000);
+          if (idle === false) throw new Error("Previous task did not finish cancellation within 5 seconds.");
+        }
+        log("[CAPABILITY] Mode: " + cap.id);
+        log("[CAPABILITY] Status: RUNNING");
+        const started=Date.now();
+        const before=inventorySnapshot(bot);
+
+        if (["follow_player","pvp","guard","guard_location"].includes(cap.id)) {
+          const promise=directCapability({bot,runtime,id:cap.id,arg,log});
+          backgroundRun={id:cap.id,promise};
+          log("[CAPABILITY] Mode: " + cap.id + " | Status: RUNNING IN BACKGROUND");
+          void promise.then(result=>{
+            log("[CAPABILITY] Background mode: " + cap.id + " ended -> " + (result===true ? "completed" : "stopped/failed"));
+            if (backgroundRun?.promise===promise) backgroundRun=null;
+          }).catch(error=>{
+            log("[CAPABILITY] Background mode: " + cap.id + " crashed: " + (error instanceof Error?error.message:String(error)));
+            if (backgroundRun?.promise===promise) backgroundRun=null;
+          });
+          continue;
+        }
+
+        const result=await directCapability({bot,runtime,id:cap.id,arg,log});
+        if (cap.id==="remember_player" && runtime?.memory?.players) bot.__zoyaRuntimeMemoryPlayers=runtime.memory.players;
+        const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result,ask,runtime});
+        const status=verified?"PASS":"FAIL";
+        log("[CAPABILITY] Mode: " + cap.id + " | Status: " + status + " | Duration: " + (Date.now()-started) + " ms");
+      }catch(error){
+        log("[CAPABILITY] Mode: " + cap.id + " | Status: FAIL | Error: " + (error instanceof Error?error.message:String(error)));
+      }
+    }
+    rl.close();
+    log("[CAPABILITY TESTER] Exited. No capability is selected automatically.");
+  }
+
+  void menu();
+  return ()=>{
+    stopped=true;
+    if(runtime?.getActiveTask?.()) runtime.cancelCurrentTask("capability tester exited");
+    try { bot?.pathfinder?.setGoal?.(null); } catch {}
+    try { bot?.clearControlStates?.(); } catch {}
+    backgroundRun=null;
+    try{rl.close();}catch{}
+  };
+}
+export function getCapabilityRegistry(){return CAPABILITIES.map(cap=>({...cap}));}
