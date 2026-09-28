@@ -1167,7 +1167,56 @@ async function directCapability({bot,runtime,id,arg,log}) {
     return true;
   }
   if(id==="coordinate_with_player"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p?.entity) throw new Error("Player not found."); bot.chat("I am at "+Math.round(bot.entity.position.x)+" "+Math.round(bot.entity.position.y)+" "+Math.round(bot.entity.position.z)+"; task: "+m.join(" ")); return true; }
-  if(id==="op_command"){ const c=String(arg||"").trim(); if(!c.startsWith("/")) throw new Error("Enter a slash command."); if(Number(bot.game?.permissionLevel??-1)<2) throw new Error("Zoya is not reported as OP."); bot.chat(c); return true; }
+  if(id==="op_command"){
+    const c=String(arg||"").trim();
+    if(!c.startsWith("/")) throw new Error("Enter a slash command.");
+
+    // Do not gate OP commands on bot.game.permissionLevel. Mineflayer exposes
+    // that value as the client's last reported game state, but granting/revoking
+    // OP while the bot is already connected may leave that cached value stale.
+    // The server is authoritative: send the command and let its command
+    // dispatcher/feedback determine whether it was accepted.
+    const reportedLevel = Number(bot.game?.permissionLevel);
+    log("[OP] Sending command: " + c + " | reported permissionLevel=" +
+      (Number.isFinite(reportedLevel) ? reportedLevel : "unknown") +
+      " (not used as an execution gate).");
+
+    const denialPattern = /(?:unknown|incorrect|incomplete) command|unknown or incomplete command|no permission|permission|not permitted|cannot use|you do not have permission|you don't have permission|not allowed|requires permission|operator privileges/i;
+    let feedback = null;
+    let timer = null;
+
+    const feedbackPromise = new Promise(resolve => {
+      const onMessage = (message) => {
+        const text = typeof message === "string" ? message : String(message ?? "");
+        if (!text) return;
+        if (denialPattern.test(text)) {
+          feedback = text;
+          cleanup();
+          resolve(false);
+        }
+      };
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
+        try { bot.removeListener("messagestr", onMessage); } catch {}
+        try { bot.removeListener("message", onMessage); } catch {}
+      };
+      bot.on("messagestr", onMessage);
+      bot.on("message", onMessage);
+      timer = setTimeout(() => {
+        cleanup();
+        resolve(true);
+      }, 1200);
+    });
+
+    bot.chat(c);
+    const accepted = await feedbackPromise;
+    if (!accepted) {
+      throw new Error("Minecraft rejected the OP command: " + feedback);
+    }
+
+    log("[OP] Command sent successfully; server did not report an OP/permission rejection.");
+    return true;
+  }
 
   throw new Error("Capability is registered but has no implementation.");
 }
