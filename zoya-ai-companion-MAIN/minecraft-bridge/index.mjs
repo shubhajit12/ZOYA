@@ -67,7 +67,7 @@ let lastEntityIds = new Set();
 let lastHostileNearby = false;
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
-const CAPABILITY_BUILD_VERSION = "manual-capability-v4-2026-09-28";
+const CAPABILITY_BUILD_VERSION = "manual-capability-v5-step-collision-2026-09-28";
 // Autonomous movement is a brain capability, not a second movement loop.
 // Keeping one movement writer prevents natural-walk timers from fighting pathfinder actions.
 let movementEnabled = false;
@@ -369,16 +369,24 @@ function connect(config) {
       // expansion avoids that exact boundary without changing the server-side
       // player scale or adding a competing movement controller.
       const physicsVersion = String(bot.version || version || "");
-      if (/^1\\.21(?:\\.\\d+)?$/.test(physicsVersion) && bot.physics) {
+      // Mineflayer/Pathfinder has a known 1.21.x collision-boundary issue where
+      // GoalFollow can walk into a one-block step instead of completing the jump.
+      // The previous workaround regex was double-escaped in source and therefore
+      // did not match actual versions such as 1.21.11.
+      if (/^1\.21(?:\.\d+)?$/.test(physicsVersion) && bot.physics) {
         const halfWidth = Number(bot.physics.playerHalfWidth);
         const playerHeight = Number(bot.physics.playerHeight);
-        if (halfWidth === 0.3 && playerHeight === 1.8) {
+        if (halfWidth === 0.3) {
           bot.physics.playerHalfWidth = 0.30001;
-          bot.physics.playerHeight = 1.80001;
-          debugLog("[PHYSICS] Applied 1.21.x block-boundary collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.");
+          if (playerHeight === 1.8) bot.physics.playerHeight = 1.80001;
+          debugLog("[PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=" +
+            bot.physics.playerHalfWidth + ", playerHeight=" + (bot.physics.playerHeight ?? playerHeight) + ".");
         } else {
-          debugLog("[PHYSICS] 1.21.x collision workaround not applied; physics dimensions are halfWidth=" + halfWidth + ", height=" + playerHeight + ".");
+          debugLog("[PHYSICS] 1.21.x workaround already active/custom physics: halfWidth=" +
+            halfWidth + ", height=" + playerHeight + ".");
         }
+      } else {
+        debugLog("[PHYSICS] Step-collision workaround not required for server version " + physicsVersion + ".");
       }
       reconnectAttempt = 0;
       setState("CONNECTED", { host, port, username: bot?.username || username, version: bot?.version || version || null, error: null });
