@@ -926,13 +926,15 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const furnaceItem=bot.registry.itemsByName.furnace;
     if(!furnaceItem) throw new Error("Furnace item is unavailable in this Minecraft version.");
     const before=inventoryCount(bot,"furnace");
-    const recipes=bot.recipesFor(furnaceItem.id,null,1,null);
-    if(!recipes.length) throw new Error("No furnace recipe available.");
     const table=nearestBlock(bot,"crafting_table",16);
     if(!table) throw new Error("Crafting table not found; furnace crafting requires a table.");
+    let recipes=bot.recipesFor(furnaceItem.id,null,1,table);
+    if(!recipes.length && typeof bot.recipesAll==="function") recipes=bot.recipesAll(furnaceItem.id,null,table);
+    if(!recipes.length) throw new Error("No furnace recipe available at the nearby crafting table.");
     await gotoBlockInteraction(bot,table,3.5,15000);
     await bot.craft(recipes[0],1,table);
-    return inventoryCount(bot,"furnace")>=before+1;
+    if(inventoryCount(bot,"furnace")<before+1) throw new Error("Crafting completed without producing a furnace.");
+    return true;
   }
   if(id==="craft"||id==="craft_workbench"||id==="multi_step_craft"||id==="do_task"||id==="gather_missing_materials"){
     const target=id==="do_task"?String(arg||"").toLowerCase():String(arg||"").toLowerCase();
@@ -1078,8 +1080,12 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const placed=bot.blockAt(toVec3(bot,{x:p.x,y:p.y,z:p.z})); if(!placed||placed.name==="air") throw new Error("Block placement was not observed at the target position."); return true;
   }
   if(["open_door","close_door","use_button","use_lever","use_block"].includes(id)){
-    const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found."); await gotoBlockInteraction(bot,b,4.5,20000);
-    if((id==="open_door"||id==="close_door") && !b.name.includes("door")) throw new Error("Target is not a door.");
+    const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found.");
+    const blockName=String(b.name||"").toLowerCase();
+    if((id==="open_door"||id==="close_door") && !blockName.includes("door")) throw new Error("Target is not a door.");
+    if(id==="use_button" && !blockName.endsWith("_button")) throw new Error("Target is not a button.");
+    if(id==="use_lever" && blockName!=="lever") throw new Error("Target is not a lever.");
+    await gotoBlockInteraction(bot,b,4.5,20000);
     if(id==="open_door" && b.getProperties?.().open===true) return true;
     if(id==="close_door" && b.getProperties?.().open===false) return true;
     await bot.activateBlock(b);
