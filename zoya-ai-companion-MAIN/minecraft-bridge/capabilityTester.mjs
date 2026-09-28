@@ -1291,7 +1291,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const accepted=await feedbackPromise;
     if(!accepted) throw new Error("Minecraft rejected the command: "+feedback);
 
-    const opMatch=c.match(/^\\/op\\s+(.+)$/i);
+    const opMatch=c.match(/^\/op\s+(.+)$/i);
     const opTarget=opMatch?.[1]?.trim().toLowerCase();
     if(opTarget==="@s" || opTarget==="me" || opTarget===String(bot.username||"").toLowerCase()){
       const deadline=Date.now()+3000;
