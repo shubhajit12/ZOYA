@@ -122,7 +122,7 @@ jobs:
           # Static guardrails for the current manual capability-testing phase.
           $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
           $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
-          if ($indexSource -notmatch 'manual-capability-v5-step-collision-2026-09-28') { throw 'Manual capability build marker is missing or stale.' }
+          if ($indexSource -notmatch 'manual-capability-v9-task-lifecycle-2026-09-28') { throw 'Manual capability build marker is missing or stale.' }
           if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
           if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
           if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
@@ -134,8 +134,11 @@ jobs:
             if ($testerSource -notmatch [regex]::Escape($requiredText)) { throw "Capability audit guard is missing required implementation marker: $requiredText" }
           }
           $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-          foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','bot.collectBlock.movements = movements')) {
+          foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','assertTaskActive','lastTaskResult','bot.stopDigging?.()','bot.collectBlock.movements = movements','target_lost')) {
             if ($runtimeSource -notmatch [regex]::Escape($requiredRuntimeText)) { throw "Runtime audit guard is missing required marker: $requiredRuntimeText" }
+          }
+          foreach ($requiredTesterText in @('toVec3(bot,{x:0,y:1,z:0})','getLastTaskResult','STOPPED (CANCELLED)','TARGET_LOST')) {
+            if ($testerSource -notmatch [regex]::Escape($requiredTesterText)) { throw "Capability verification guard is missing required marker: $requiredTesterText" }
           }
           Write-Host "Manual capability static guardrails passed: $registeredCapabilities modes, Groq direct calls absent, movement/crafting/guard checks present."
 
