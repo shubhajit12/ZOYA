@@ -1289,7 +1289,24 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
     bot.chat(c);
     const accepted=await feedbackPromise;
-    if(!accepted) throw new Error("Minecraft rejected the OP command: "+feedback);
+    if(!accepted) throw new Error("Minecraft rejected the command: "+feedback);
+
+    const opMatch=c.match(/^\\/op\\s+(.+)$/i);
+    const opTarget=opMatch?.[1]?.trim().toLowerCase();
+    if(opTarget==="@s" || opTarget==="me" || opTarget===String(bot.username||"").toLowerCase()){
+      const deadline=Date.now()+3000;
+      while(Date.now()<deadline){
+        const level=Number(bot.game?.permissionLevel);
+        const abilities=bot.abilities || {};
+        if(level>=2 || abilities?.mayFly===true || abilities?.instantBuild===true){
+          log("[OP] Zoya operator state confirmed by server capabilities.");
+          return true;
+        }
+        await sleep(150);
+      }
+      throw new Error("OP command was not rejected, but Zoya's operator/permission state was not confirmed.");
+    }
+
     log("[OP] Command sent; no permission/command rejection was reported by the server.");
     return true;
   }
