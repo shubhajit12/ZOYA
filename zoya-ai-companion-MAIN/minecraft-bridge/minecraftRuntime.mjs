@@ -46,7 +46,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   movements.allow1by1towers = false;
   movements.allowParkour = false;
   movements.allowSprinting = true;
-  movements.allowFreeMotion = true;
+  // Never bypass Pathfinder's planned nodes during normal navigation.
+  // allowFreeMotion=true can replace the planned jump/step transition with a
+  // raw "forward" control when the target appears line-of-sight reachable.
+  // On 1.21.x this is exactly the failure mode where follow walks into a
+  // one-block obstacle instead of executing the planned jump.
+  movements.allowFreeMotion = false;
   movements.allowEntityDetection = true;
   movements.maxDropDown = 3;
   bot.pathfinder.setMovements(movements);
