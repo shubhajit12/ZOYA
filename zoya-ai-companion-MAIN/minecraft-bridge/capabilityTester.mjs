@@ -131,7 +131,7 @@ async function taskSleep(ms) {
   while (Date.now() < deadline) {
     const task = owner?.getActiveTask?.();
     if (!task || task.cancelled) throw new Error("Task cancelled during wait.");
-    await taskSleep(Math.min(100, Math.max(1, deadline - Date.now())));
+    await sleep(Math.min(100, Math.max(1, deadline - Date.now())));
   }
   const task = owner?.getActiveTask?.();
   if (!task || task.cancelled) throw new Error("Task cancelled during wait.");
@@ -1161,7 +1161,16 @@ async function directCapability({bot,runtime,id,arg,log}) {
     return true;
   }
   if(id==="use_item"){
-    const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); bot.activateItem(); await taskSleep(500); bot.deactivateItem(); return true;
+    const i=findInventoryItem(bot,arg);
+    if(!i) throw new Error("Item not found.");
+    await bot.equip(i,"hand");
+    bot.activateItem();
+    try {
+      await taskSleep(500);
+      return true;
+    } finally {
+      try { bot.deactivateItem(); } catch {}
+    }
   }
   if(id==="sleep"){
     const bed=nearestBlock(bot,["bed"],16);
