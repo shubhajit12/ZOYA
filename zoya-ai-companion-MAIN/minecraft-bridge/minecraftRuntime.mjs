@@ -200,7 +200,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     // The owner can reply naturally ("yes", "yes you can follow ...",
     // "accept 12", etc.). If no request id is supplied, use the oldest
     // pending request rather than interpreting the next word as an id.
-    const requestId = tokens.find(token => /^\\d+$/.test(token));
+    const requestId = tokens.find(token => /^\d+$/.test(token));
     const request = requestId
       ? pending.get(requestId)
       : [...pending.values()].sort((x, y) => x.createdAt - y.createdAt)[0];
