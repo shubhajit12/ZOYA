@@ -122,9 +122,11 @@ jobs:
           # Static guardrails for the current manual capability-testing phase.
           $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
           $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
-          if ($indexSource -notmatch 'manual-capability-v3-2026-09-27') { throw 'Manual capability build marker is missing or stale.' }
+          if ($indexSource -notmatch 'manual-capability-v4-2026-09-28') { throw 'Manual capability build marker is missing or stale.' }
           if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
           if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
+          if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
+          if ($indexSource -notmatch 'playerHeight = 1.80001') { throw '1.21.x collision height workaround is missing.' }
           if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
           $registeredCapabilities = [regex]::Matches($testerSource, '\{ id: "[^"]+", label:').Count
           if ($registeredCapabilities -ne 93) { throw "Expected 93 registered capability modes, found $registeredCapabilities." }
