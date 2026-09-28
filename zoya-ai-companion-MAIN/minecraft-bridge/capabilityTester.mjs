@@ -1328,7 +1328,10 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
           continue;
         }
 
-        const result=await directCapability({bot,runtime,id:cap.id,arg,log});
+        const executeDirect = async () => directCapability({bot,runtime,id:cap.id,arg,log});
+        const result = (DELEGATED.has(cap.id) || cap.id === "gather_resources" || cap.id === "stop")
+          ? await executeDirect()
+          : await runtime.runManualCapability(cap.id, async () => executeDirect());
         if (cap.id==="remember_player" && runtime?.memory?.players) bot.__zoyaRuntimeMemoryPlayers=runtime.memory.players;
         const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result,ask,runtime});
         const status=verified?"PASS":"FAIL";
