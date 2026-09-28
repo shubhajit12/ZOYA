@@ -506,111 +506,96 @@ function findWorldItem(bot, name) {
     .sort((a,b) => dist(a.entity.position, bot.entity.position) - dist(b.entity.position, bot.entity.position))[0]?.entity || null;
 }
 
-async function gotoPlaceBlock(bot, position, range=4.5, timeoutMs=30000) {
+async function waitForPath(bot, runtime, goal, timeoutMs, description) {
+  const owner = runtime || bot.__zoyaCapabilityRuntime;
+  const timeout = Math.max(1000, Number(timeoutMs) || 30000);
+  let timer = null;
+  let finished = false;
+  let cancelled = false;
+
+  // pathfinder.goto() can remain pending after setGoal(null). Never let a
+  // cancelled manual capability wait for that promise to settle.
+  const pathPromise = Promise.resolve()
+    .then(() => bot.pathfinder.goto(goal))
+    .then(
+      () => ({ status: "reached" }),
+      error => cancelled
+        ? ({ status: "cancelled" })
+        : ({ status: "error", error })
+    );
+
+  const cancelPromise = new Promise(resolve => {
+    const check = () => {
+      if (finished) return;
+      const task = owner?.getActiveTask?.();
+      if (!task || task.cancelled) {
+        cancelled = true;
+        try { bot.pathfinder.setGoal(null); } catch {}
+        resolve({ status: "cancelled" });
+        return;
+      }
+      timer = setTimeout(check, 50);
+    };
+    check();
+  });
+
+  const timeoutPromise = new Promise(resolve => {
+    setTimeout(() => {
+      if (finished || cancelled) return;
+      cancelled = true;
+      try { bot.pathfinder.setGoal(null); } catch {}
+      resolve({ status: "timeout" });
+    }, timeout);
+  });
+
+  try {
+    const result = await Promise.race([pathPromise, cancelPromise, timeoutPromise]);
+    if (result.status === "cancelled") throw new Error("Task cancelled during " + description + ".");
+    if (result.status === "timeout") throw new Error(description + " timed out after " + Math.round(timeout / 1000) + "s.");
+    if (result.status === "error") throw result.error;
+    return true;
+  } finally {
+    finished = true;
+    if (timer) clearTimeout(timer);
+    try { bot.pathfinder.setGoal(null); } catch {}
+  }
+}
+
+async function gotoPlaceBlock(bot, position, range=4.5, timeoutMs=30000, runtime=null) {
   if (!position) throw new Error("Target placement position is required.");
   if (!goals?.GoalPlaceBlock) throw new Error("GoalPlaceBlock unavailable.");
   const pos = toVec3(bot, position);
   const goal = new goals.GoalPlaceBlock(pos, bot.world, { range });
-  let timer = null;
-  let timedOut = false;
-  const pathPromise = bot.pathfinder.goto(goal).then(() => true, error => {
-    if (timedOut) return false;
-    throw error;
-  });
-  const timeoutPromise = new Promise(resolve => {
-    timer = setTimeout(() => {
-      timedOut = true;
-      try { bot.pathfinder.setGoal(null); } catch {}
-      resolve(false);
-    }, Math.max(1000, timeoutMs));
-  });
-  try {
-    if (!await Promise.race([pathPromise, timeoutPromise])) {
-      throw new Error("Could not reach a valid placement position for block at " + pos.x + " " + pos.y + " " + pos.z + ".");
-    }
-    await bot.lookAt(pos.offset(0.5, 0.5, 0.5), true);
-    return true;
-  } finally {
-    if (timer) clearTimeout(timer);
-    if (timedOut) {
-      try { bot.pathfinder.setGoal(null); } catch {}
-    }
-  }
+  await waitForPath(bot, runtime, goal, timeoutMs, "block placement navigation");
+  await bot.lookAt(pos.offset(0.5, 0.5, 0.5), true);
+  return true;
 }
 
-async function goto(bot,x,y,z,r=1.5,timeoutMs=30000) {
+async function goto(bot,x,y,z,r=1.5,timeoutMs=30000,runtime=null) {
   if(!goals?.GoalNear) throw new Error("GoalNear unavailable.");
   const targetPosition = toVec3(bot,{x,y,z});
   const goal = new goals.GoalNear(targetPosition.x,targetPosition.y,targetPosition.z,r);
-  let timer = null;
-  let timedOut = false;
-  const pathPromise = bot.pathfinder.goto(goal).then(
-    () => true,
-    error => {
-      if (timedOut) return false;
-      throw error;
-    }
-  );
-  const timeoutPromise = new Promise(resolve => {
-    timer = setTimeout(() => {
-      timedOut = true;
-      try { bot.pathfinder.setGoal(null); } catch {}
-      resolve(false);
-    }, Math.max(1000, timeoutMs));
-  });
-
-  try {
-    const reached = await Promise.race([pathPromise, timeoutPromise]);
-    const targetPosition = toVec3(bot,{x,y,z});
-    const remaining = dist(bot.entity.position,targetPosition);
-    if (!reached) {
-      throw new Error("Pathfinding timed out after " + Math.round(timeoutMs / 1000) + "s; remaining=" + remaining.toFixed(2));
-    }
-    return remaining <= r + 1.25;
-  } finally {
-    if (timer) clearTimeout(timer);
-    if (timedOut) {
-      // The path promise may reject after the timeout; its rejection is already
-      // consumed above and the goal has been explicitly cancelled.
-      try { bot.pathfinder.setGoal(null); } catch {}
-    }
+  await waitForPath(bot, runtime, goal, timeoutMs, "pathfinding");
+  const currentTarget = toVec3(bot,{x,y,z});
+  const remaining = dist(bot.entity.position,currentTarget);
+  if (remaining > r + 1.25) {
+    throw new Error("Pathfinder reported success but bot remains " + remaining.toFixed(2) + " blocks from target.");
   }
+  return true;
 }
 
-async function gotoBlockInteraction(bot, block, range=3.5, timeoutMs=30000) {
+async function gotoBlockInteraction(bot, block, range=3.5, timeoutMs=30000, runtime=null) {
   if (!block?.position) throw new Error("Target block has no valid position.");
   if (!goals?.GoalLookAtBlock) throw new Error("GoalLookAtBlock unavailable.");
   const blockPosition = toVec3(bot, block.position);
   const goal = new goals.GoalLookAtBlock(blockPosition, bot.world, { reach: range });
-  let timer = null;
-  let timedOut = false;
-  const pathPromise = bot.pathfinder.goto(goal).then(
-    () => true,
-    error => {
-      if (timedOut) return false;
-      throw error;
-    }
-  );
-  const timeoutPromise = new Promise(resolve => {
-    timer = setTimeout(() => {
-      timedOut = true;
-      try { bot.pathfinder.setGoal(null); } catch {}
-      resolve(false);
-    }, Math.max(1000, timeoutMs));
-  });
-  try {
-    const reached = await Promise.race([pathPromise, timeoutPromise]);
-    if (!reached) throw new Error("Could not reach a valid interaction position for " + block.name + " at " + blockPosition.x + " " + blockPosition.y + " " + blockPosition.z + " within " + Math.round(timeoutMs / 1000) + "s.");
-    const distance = bot.entity.position.distanceTo(blockPosition.offset(0.5, 0.5, 0.5));
-    if (distance > range + 0.75) throw new Error("Reached path goal but is too far from " + block.name + " (distance=" + distance.toFixed(2) + ").");
-    await bot.lookAt(blockPosition.offset(0.5, 0.5, 0.5), true);
-    return true;
-  } finally {
-    if (timer) clearTimeout(timer);
-    if (timedOut) {
-      try { bot.pathfinder.setGoal(null); } catch {}
-    }
+  await waitForPath(bot, runtime, goal, timeoutMs, "block interaction navigation");
+  const distance = bot.entity.position.distanceTo(blockPosition.offset(0.5, 0.5, 0.5));
+  if (distance > range + 0.75) {
+    throw new Error("Reached path goal but is too far from " + block.name + " (distance=" + distance.toFixed(2) + ").");
   }
+  await bot.lookAt(blockPosition.offset(0.5, 0.5, 0.5), true);
+  return true;
 }
 async function equipMatching(bot,words,dest="hand") {
   const item=bot.inventory.items().find(i=>words.some(w=>i.name.toLowerCase().includes(w)));
@@ -1316,6 +1301,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
 export function startCapabilityTester({bot,runtime,log=console.log}) {
   log("[CAPABILITY TESTER] Local-only mode: no Groq calls are made.");
+  bot.__zoyaCapabilityRuntime = runtime;
   const preflight = [
     ["bot.entity", !!bot?.entity],
     ["bot.pathfinder.goto", typeof bot?.pathfinder?.goto === "function"],
