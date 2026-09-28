@@ -205,7 +205,7 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
   }
 
   if (["dig","break_block"].includes(id)) {
-    const p=parseCoords(arg), block=bot.blockAt(p);
+    const p=parseCoords(arg), block=bot.blockAt(toVec3(bot,p));
     if (!block || block.name==="air") return true;
     const answer = ask ? String(await ask("[VERIFY] Did the target block visibly break? (y/n): ")).trim().toLowerCase() : "n";
     return answer === "y" || answer === "yes";
@@ -343,7 +343,7 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
 
   if (id==="place_block") {
     const {prefix,...p}=parseCoordsFromEnd(arg);
-    const block=bot.blockAt(p);
+    const block=bot.blockAt(toVec3(bot,p));
     if (block && block.name.toLowerCase().includes(prefix.trim().toLowerCase().replace(/ /g,"_"))) return true;
     const answer=ask ? String(await ask("[VERIFY] Did the requested block visibly appear at the target location? (y/n): ")).trim().toLowerCase() : "n";
     return answer==="y" || answer==="yes";
@@ -357,7 +357,7 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
   }
 
   if (id==="open_door" || id==="close_door") {
-    const p=parseCoords(arg), block=bot.blockAt(p), open=block?.getProperties?.().open;
+    const p=parseCoords(arg), block=bot.blockAt(toVec3(bot,p)), open=block?.getProperties?.().open;
     const expected=id==="open_door";
     if (open===expected) return true;
     const answer=ask ? String(await ask("[VERIFY] Did the door visibly " + (expected?"open":"close") + "? (y/n): ")).trim().toLowerCase() : "n";
@@ -428,7 +428,7 @@ function nearestBlock(bot,names,max=24) {
   const r=Math.ceil(max);
   for(let dx=-r;dx<=r;dx++) for(let dy=-r;dy<=r;dy++) for(let dz=-r;dz<=r;dz++) {
     const d=Math.sqrt(dx*dx+dy*dy+dz*dz); if(d>bestD) continue;
-    const b=bot.blockAt(p.offset(dx,dy,dz));
+    const b=bot.blockAt(toVec3(bot,p.offset(dx,dy,dz)));
     if(!b || b.name==="air") continue;
     if(!wanted.length || wanted.some(n=>b.name.toLowerCase().includes(n))) { best=b; bestD=d; }
   }
@@ -456,9 +456,9 @@ function findSafePosition(bot, origin=bot.entity.position, radius=20, shelter=fa
       const p=base.offset(dx,dy,dz);
       if (!isStandable(bot,p)) continue;
       if (shelter) {
-        const roof=bot.blockAt(p.offset(0,2,0));
+        const roof=bot.blockAt(toVec3(bot,p.offset(0,2,0)));
         if (!isSolidBlock(roof)) continue;
-        const wallCount=[bot.blockAt(p.offset(1,0,0)),bot.blockAt(p.offset(-1,0,0)),bot.blockAt(p.offset(0,0,1)),bot.blockAt(p.offset(0,0,-1))].filter(isSolidBlock).length;
+        const wallCount=[bot.blockAt(toVec3(bot,p.offset(1,0,0))),bot.blockAt(toVec3(bot,p.offset(-1,0,0))),bot.blockAt(toVec3(bot,p.offset(0,0,1))),bot.blockAt(toVec3(bot,p.offset(0,0,-1)))].filter(isSolidBlock).length;
         if (wallCount < 1) continue;
       }
       candidates.push(p);
@@ -521,7 +521,8 @@ async function gotoPlaceBlock(bot, position, range=4.5, timeoutMs=30000) {
 
 async function goto(bot,x,y,z,r=1.5,timeoutMs=30000) {
   if(!goals?.GoalNear) throw new Error("GoalNear unavailable.");
-  const goal = new goals.GoalNear(x,y,z,r);
+  const targetPosition = toVec3(bot,{x,y,z});
+  const goal = new goals.GoalNear(targetPosition.x,targetPosition.y,targetPosition.z,r);
   let timer = null;
   let timedOut = false;
   const pathPromise = bot.pathfinder.goto(goal).then(
@@ -541,7 +542,8 @@ async function goto(bot,x,y,z,r=1.5,timeoutMs=30000) {
 
   try {
     const reached = await Promise.race([pathPromise, timeoutPromise]);
-    const remaining = dist(bot.entity.position,{x,y,z});
+    const targetPosition = toVec3(bot,{x,y,z});
+    const remaining = dist(bot.entity.position,targetPosition);
     if (!reached) {
       throw new Error("Pathfinding timed out after " + Math.round(timeoutMs / 1000) + "s; remaining=" + remaining.toFixed(2));
     }
@@ -801,7 +803,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     return true;
   }
   if(id==="dig"||id==="break_block") {
-    const p=arg?parseCoords(arg):bot.entity.position.offset(0,-1,0); const block=bot.blockAt(p);
+    const p=arg?parseCoords(arg):bot.entity.position.offset(0,-1,0); const block=bot.blockAt(toVec3(bot,p));
     if(!block||block.name==="air") throw new Error("No breakable block at target.");
     await gotoBlockInteraction(bot,block,4.5,20000);
     await bot.dig(block); return true;
@@ -888,11 +890,11 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="find_item_world"){ const item=findWorldItem(bot,arg); if(!item) throw new Error("World item not found: "+arg); const dropped=item.getDroppedItem?.(); log("[WORLD ITEM] "+dropped?.name+" x"+(dropped?.count||1)+" at "+JSON.stringify(item.position)); return true; }
 
   if(id==="open_chest"||id==="open_barrel"){
-    const p=parseCoords(arg), b=bot.blockAt(p); if(!b||!String(b.name).includes(id==="open_chest"?"chest":"barrel")) throw new Error("Target container not found.");
+    const p=parseCoords(arg), b=bot.blockAt(toVec3(bot,p)); if(!b||!String(b.name).includes(id==="open_chest"?"chest":"barrel")) throw new Error("Target container not found.");
     await gotoBlockInteraction(bot,b,3.5,20000); const c=await bot.openContainer(b); log("[CONTAINER] Opened "+b.name+" with "+(c.containerItems?.().length||0)+" items."); await c.close(); return true;
   }
   if(id==="deposit"||id==="retrieve"){
-    const {prefix,...p}=parseCoordsFromEnd(arg); const b=bot.blockAt(p); if(!b||!["chest","barrel","shulker_box"].some(n=>b.name.includes(n))) throw new Error("Container not found.");
+    const {prefix,...p}=parseCoordsFromEnd(arg); const b=bot.blockAt(toVec3(bot,p)); if(!b||!["chest","barrel","shulker_box"].some(n=>b.name.includes(n))) throw new Error("Container not found.");
     const name=prefix.trim(); if(!name) throw new Error("Item name is required."); const itemBefore=findInventoryItem(bot,name); if(id==="deposit" && !itemBefore) throw new Error("Item not in inventory."); await gotoBlockInteraction(bot,b,3.5,20000); const c=await bot.openContainer(b);
     if(id==="deposit"){ const item=findInventoryItem(bot,name); if(!item) throw new Error("Item disappeared from inventory."); await c.deposit(item.type,null,item.count); }
     else { const slot=c.containerItems().find(i=>i.name.toLowerCase().includes(name.toLowerCase())); if(!slot) throw new Error("Item not in container."); await c.withdraw(slot.type,null,Math.min(slot.count,slot.stackSize||slot.count)); }
@@ -1087,7 +1089,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const placed=bot.blockAt(toVec3(bot,{x:p.x,y:p.y,z:p.z})); if(!placed||placed.name==="air") throw new Error("Block placement was not observed at the target position."); return true;
   }
   if(["open_door","close_door","use_button","use_lever","use_block"].includes(id)){
-    const p=parseCoords(arg),b=bot.blockAt(p); if(!b) throw new Error("Block not found.");
+    const p=parseCoords(arg),b=bot.blockAt(toVec3(bot,p)); if(!b) throw new Error("Block not found.");
     const blockName=String(b.name||"").toLowerCase();
     if((id==="open_door"||id==="close_door") && !blockName.includes("door")) throw new Error("Target is not a door.");
     if(id==="use_button" && !blockName.endsWith("_button")) throw new Error("Target is not a button.");
@@ -1109,7 +1111,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="find_player"){ const p=findPlayer(bot,arg); if(!p?.entity) throw new Error("Player not found nearby."); log("[PLAYER] "+p.username+" at "+JSON.stringify(p.entity.position)); return true; }
   if(id==="find_entity"||id==="investigate_entity"){ const e=findEntity(bot,arg); if(!e) throw new Error("Entity not found."); log("[ENTITY] "+(e.username||e.name)+" pos="+JSON.stringify(e.position)+" health="+(e.health??"unknown")); if(id==="investigate_entity") await bot.lookAt(e.position.offset(0,e.height||1,0),true); return true; }
   if(id==="check_nearby"){ Object.values(bot.entities||{}).filter(e=>e?.position&&e!==bot.entity).sort((a,b)=>dist(a.position,bot.entity.position)-dist(b.position,bot.entity.position)).slice(0,20).forEach(e=>log("[NEARBY] "+(e.username||e.name||e.type)+" distance="+dist(e.position,bot.entity.position).toFixed(2))); return true; }
-  if(id==="check_environment"){ const p=bot.entity.position,b=bot.blockAt(p.offset(0,-1,0)),h=bot.blockAt(p.offset(0,1,0)); log("[ENV] pos="+p.x.toFixed(2)+","+p.y.toFixed(2)+","+p.z.toFixed(2)+" below="+(b?.name||"unknown")+" head="+(h?.name||"unknown")); return true; }
+  if(id==="check_environment"){ const p=bot.entity.position,b=bot.blockAt(toVec3(bot,p.offset(0,-1,0))),h=bot.blockAt(toVec3(bot,p.offset(0,1,0))); log("[ENV] pos="+p.x.toFixed(2)+","+p.y.toFixed(2)+","+p.z.toFixed(2)+" below="+(b?.name||"unknown")+" head="+(h?.name||"unknown")); return true; }
   if(id==="detect_hostiles"){ const h=Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=24); log("[SAFETY] Hostiles="+h.length); h.forEach(e=>log("[SAFETY] "+e.name+" "+dist(e.position,bot.entity.position).toFixed(2)+"m")); return true; }
   if(id==="check_health"){ log("[STATUS] Health="+bot.health); return true; }
   if(id==="check_food"){ log("[STATUS] Food="+bot.food+" saturation="+bot.foodSaturation); return true; }
@@ -1155,13 +1157,13 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const base=bot.entity.position.floored();
     for(let i=0;i<n;i++){
       const p=m[1]==="line" ? base.offset(i+1,0,0) : base.offset(0,i+1,0);
-      const ref=bot.blockAt(p.offset(0,-1,0));
+      const ref=bot.blockAt(toVec3(bot,p.offset(0,-1,0)));
       if(!ref || !isSolidBlock(ref)) break;
       try {
         await gotoPlaceBlock(bot,p,4.5,15000);
         await bot.equip(item,"hand");
         await bot.placeBlock(ref,{x:0,y:1,z:0});
-        const placedBlock=bot.blockAt(p);
+        const placedBlock=bot.blockAt(toVec3(bot,p));
         if(!placedBlock || placedBlock.name==="air") throw new Error("Placement not observed at "+p.x+" "+p.y+" "+p.z);
         placed++;
       } catch (error) {
