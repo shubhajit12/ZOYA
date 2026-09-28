@@ -943,7 +943,17 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         currentGoal = null;
       }
       busy = false;
-      log("[TASK] Finished #" + task.id + " " + action + " -> " + (task.cancelled ? "cancelled" : (result === true ? "completed" : "failed")) + ".");
+      lastTaskResult = {
+        id: task.id,
+        action: task.action,
+        targetUsername: task.targetUsername,
+        status: task.cancelled ? "cancelled" : (result === true ? "completed" : "failed"),
+        reason: task.cancelReason || task.terminationReason || null,
+        startedAt: task.startedAt,
+        finishedAt: Date.now()
+      };
+      log("[TASK] Finished #" + task.id + " " + action + " -> " + lastTaskResult.status +
+        (lastTaskResult.reason ? " (" + lastTaskResult.reason + ")" : "") + ".");
       if (wasActive) wakeBrain();
     }
   }
@@ -1022,6 +1032,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     permissionFor,
     askOwner,
     execute,
+    runManualCapability,
     cancelCurrentTask,
     answerPlayer,
     getActiveTask: () => activeTask,
