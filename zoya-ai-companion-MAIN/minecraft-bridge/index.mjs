@@ -329,6 +329,9 @@ function disconnect() {
   reconnectAttempt = 0;
   capabilityTesterStop?.();
   capabilityTesterStop = null;
+  if (minecraftRuntime?.getActiveTask?.()) {
+    try { minecraftRuntime.cancelCurrentTask("Minecraft bridge disconnect"); } catch {}
+  }
   if (zoyaBrain) zoyaBrain.stop();
   movementEnabled = false;
   if (bot) { try { bot.clearControlStates(); } catch {} }
