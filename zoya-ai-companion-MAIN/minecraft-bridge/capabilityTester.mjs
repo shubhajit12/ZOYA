@@ -260,9 +260,14 @@ async function verifyCapability({bot,id,arg,before,log,result,ask,runtime}) {
   }
 
   if (["drop_item","give_item","deliver_item"].includes(id)) {
-    if (inventoryDelta(before,after,targetName) < 0) return true;
-    log("[VERIFY] " + id + " did not reduce the source inventory item.");
-    return false;
+    if (id === "drop_item") {
+      const dropped = findWorldItem(bot,targetName);
+      if (dropped || inventoryDelta(before,after,targetName) < 0) return true;
+      log("[VERIFY] drop_item did not produce a visible world drop or inventory decrease.");
+      return false;
+    }
+    const answer = ask ? String(await ask("[VERIFY] Did the receiving player visibly receive the requested item? (y/n): ")).trim().toLowerCase() : "n";
+    return answer === "y" || answer === "yes";
   }
 
   if (id==="enter_exit_vehicle") {
@@ -614,6 +619,9 @@ async function attackLoop(bot,target,timeout=15000) {
 }
 
 async function directCapability({bot,runtime,id,arg,log}) {
+  if (id !== "stop" && runtime?.getActiveTask?.()) {
+    throw new Error("Another runtime task is still active; stop/cancel it before running a direct capability.");
+  }
   if(id==="gather_resources") {
     const parts=String(arg||"").trim().split(/\s+/);
     const resourceName=parts[0] || "oak_log";
@@ -692,10 +700,13 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const state=id==="jump"?"jump":id;
     bot.setControlState(state,true);
     if(id!=="jump") bot.setControlState("forward",true);
-    await sleep(Math.min(n,id==="jump"?1:30)*1000);
-    bot.setControlState(state,false);
-    if(id!=="jump") bot.setControlState("forward",false);
-    return true;
+    try {
+      await sleep(Math.min(n,id==="jump"?1:30)*1000);
+      return true;
+    } finally {
+      try { bot.setControlState(state,false); } catch {}
+      if(id!=="jump") { try { bot.setControlState("forward",false); } catch {} }
+    }
   }
 
   if(id==="enter_exit_vehicle") {
@@ -1085,7 +1096,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="place_block"){
     const {prefix,...p}=parseCoordsFromEnd(arg); const item=findInventoryItem(bot,prefix); if(!item) throw new Error("Block item not found.");
     const ref=bot.blockAt(toVec3(bot,{x:p.x,y:p.y-1,z:p.z})); if(!ref||!isSolidBlock(ref)) throw new Error("No solid reference block below target.");
-    await gotoPlaceBlock(bot,{x:p.x,y:p.y,z:p.z},4.5,20000); await bot.equip(item,"hand"); await bot.placeBlock(ref,{x:0,y:1,z:0});
+    await gotoPlaceBlock(bot,{x:p.x,y:p.y,z:p.z},4.5,20000); await bot.equip(item,"hand"); await bot.placeBlock(ref,toVec3(bot,{x:0,y:1,z:0}));
     const placed=bot.blockAt(toVec3(bot,{x:p.x,y:p.y,z:p.z})); if(!placed||placed.name==="air") throw new Error("Block placement was not observed at the target position."); return true;
   }
   if(["open_door","close_door","use_button","use_lever","use_block"].includes(id)){
@@ -1117,7 +1128,11 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="check_food"){ log("[STATUS] Food="+bot.food+" saturation="+bot.foodSaturation); return true; }
   if(id==="check_equipment"){ log("[EQUIPMENT] "+JSON.stringify(bot.inventory.slots?.slice(5,9).filter(Boolean).map(i=>i.name)||[])); return true; }
   if(id==="coordinate"){
-    const p=findPlayer(bot,arg)?.entity; const q=p?.position||bot.entity.position; log("[COORDINATES] "+(p?"Player":"Zoya")+" = X="+q.x.toFixed(2)+" Y="+q.y.toFixed(2)+" Z="+q.z.toFixed(2)); return true;
+    const p=findPlayer(bot,arg)?.entity;
+    if(!p?.position) throw new Error("Player not found: " + String(arg || ""));
+    const q=p.position;
+    log("[COORDINATES] Player = X="+q.x.toFixed(2)+" Y="+q.y.toFixed(2)+" Z="+q.z.toFixed(2));
+    return true;
   }
   if(id==="observe"){ log("[OBSERVE] dimension="+bot.game?.dimension+" time="+bot.time?.time+" entities="+Object.keys(bot.entities||{}).length+" health="+bot.health+" food="+bot.food); return true; }
 
@@ -1162,7 +1177,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
       try {
         await gotoPlaceBlock(bot,p,4.5,15000);
         await bot.equip(item,"hand");
-        await bot.placeBlock(ref,{x:0,y:1,z:0});
+        await bot.placeBlock(ref,toVec3(bot,{x:0,y:1,z:0}));
         const placedBlock=bot.blockAt(toVec3(bot,p));
         if(!placedBlock || placedBlock.name==="air") throw new Error("Placement not observed at "+p.x+" "+p.y+" "+p.z);
         placed++;
@@ -1296,10 +1311,15 @@ export function startCapabilityTester({bot,runtime,log=console.log}) {
 
         if (["follow_player","pvp","guard","guard_location"].includes(cap.id)) {
           const promise=directCapability({bot,runtime,id:cap.id,arg,log});
-          backgroundRun={id:cap.id,promise};
+          backgroundRun={id:cap.id,promise,before,started};
           log("[CAPABILITY] Mode: " + cap.id + " | Status: RUNNING IN BACKGROUND");
           void promise.then(result=>{
-            log("[CAPABILITY] Background mode: " + cap.id + " ended -> " + (result===true ? "completed" : "stopped/failed"));
+            const lifecycle=runtime?.getLastTaskResult?.() || null;
+            let label = "STOPPED/FAILED";
+            if (result === true && cap.id === "pvp" && lifecycle?.reason === "target_defeated") label = "PASS (TARGET_DEFEATED)";
+            else if (lifecycle?.reason === "target_lost") label = "ENDED (TARGET_LOST)";
+            else if (lifecycle?.status === "cancelled") label = "STOPPED (CANCELLED)";
+            log("[CAPABILITY] Background mode: " + cap.id + " ended -> " + label);
             if (backgroundRun?.promise===promise) backgroundRun=null;
           }).catch(error=>{
             log("[CAPABILITY] Background mode: " + cap.id + " crashed: " + (error instanceof Error?error.message:String(error)));
