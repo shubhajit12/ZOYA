@@ -583,7 +583,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         .filter(e => {
           if (!e || !e.position || e === bot.entity || (e.name !== "item" && e.type !== "object")) return false;
           if (!wanted) return true;
-          const itemStackName = String(e.itemStack?.name || e.metadata?.[8]?.name || e.metadata?.[7]?.name || e.displayName || "").toLowerCase();
+          const dropped = typeof e.getDroppedItem === "function" ? e.getDroppedItem() : null;
+          const itemStackName = String(dropped?.name || dropped?.displayName || e.itemStack?.name || e.displayName || "").toLowerCase();
           return itemStackName === wanted || itemStackName.includes(wanted);
         })
         .sort((a, b) => a.position.distanceTo(p) - b.position.distanceTo(p));
