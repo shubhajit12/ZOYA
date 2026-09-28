@@ -493,6 +493,41 @@ async function goto(bot,x,y,z,r=1.5,timeoutMs=30000) {
     }
   }
 }
+
+async function gotoBlockInteraction(bot, block, range=3.5, timeoutMs=30000) {
+  if (!block?.position) throw new Error("Target block has no valid position.");
+  if (!goals?.GoalLookAtBlock) throw new Error("GoalLookAtBlock unavailable.");
+  const goal = new goals.GoalLookAtBlock(block.position, bot.world, { reach: range });
+  let timer = null;
+  let timedOut = false;
+  const pathPromise = bot.pathfinder.goto(goal).then(
+    () => true,
+    error => {
+      if (timedOut) return false;
+      throw error;
+    }
+  );
+  const timeoutPromise = new Promise(resolve => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      try { bot.pathfinder.setGoal(null); } catch {}
+      resolve(false);
+    }, Math.max(1000, timeoutMs));
+  });
+  try {
+    const reached = await Promise.race([pathPromise, timeoutPromise]);
+    if (!reached) throw new Error("Could not reach a valid interaction position for " + block.name + " at " + block.position.x + " " + block.position.y + " " + block.position.z + " within " + Math.round(timeoutMs / 1000) + "s.");
+    const distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5));
+    if (distance > range + 0.75) throw new Error("Reached path goal but is too far from " + block.name + " (distance=" + distance.toFixed(2) + ").");
+    await bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true);
+    return true;
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (timedOut) {
+      try { bot.pathfinder.setGoal(null); } catch {}
+    }
+  }
+}
 async function equipMatching(bot,words,dest="hand") {
   const item=bot.inventory.items().find(i=>words.some(w=>i.name.toLowerCase().includes(w)));
   if(!item) return false;
@@ -791,20 +826,20 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
   if(id==="open_chest"||id==="open_barrel"){
     const p=parseCoords(arg), b=bot.blockAt(p); if(!b||!String(b.name).includes(id==="open_chest"?"chest":"barrel")) throw new Error("Target container not found.");
-    await goto(bot,p.x,p.y,p.z,3); const c=await bot.openContainer(b); log("[CONTAINER] Opened "+b.name+" with "+(c.containerItems?.().length||0)+" items."); c.close(); return true;
+    await gotoBlockInteraction(bot,b,3.5,20000); const c=await bot.openContainer(b); log("[CONTAINER] Opened "+b.name+" with "+(c.containerItems?.().length||0)+" items."); await c.close(); return true;
   }
   if(id==="deposit"||id==="retrieve"){
     const {prefix,...p}=parseCoordsFromEnd(arg); const b=bot.blockAt(p); if(!b||!["chest","barrel","shulker_box"].some(n=>b.name.includes(n))) throw new Error("Container not found.");
-    await goto(bot,p.x,p.y,p.z,3); const c=await bot.openContainer(b); const name=prefix.trim();
-    if(id==="deposit"){ const item=findInventoryItem(bot,name); if(!item) throw new Error("Item not in inventory."); await c.deposit(item.type,null,item.count); }
+    const name=prefix.trim(); if(!name) throw new Error("Item name is required."); const itemBefore=findInventoryItem(bot,name); if(id==="deposit" && !itemBefore) throw new Error("Item not in inventory."); await gotoBlockInteraction(bot,b,3.5,20000); const c=await bot.openContainer(b);
+    if(id==="deposit"){ const item=findInventoryItem(bot,name); if(!item) throw new Error("Item disappeared from inventory."); await c.deposit(item.type,null,item.count); }
     else { const slot=c.containerItems().find(i=>i.name.toLowerCase().includes(name.toLowerCase())); if(!slot) throw new Error("Item not in container."); await c.withdraw(slot.type,null,Math.min(slot.count,slot.stackSize||slot.count)); }
-    c.close(); return true;
+    await c.close(); return true;
   }
   if(id==="smelt"){
     const itemName=String(arg||"").trim().toLowerCase();
     const furnace=nearestBlock(bot,["furnace","blast_furnace","smoker"],24);
     if(!furnace) throw new Error("Furnace not found.");
-    await goto(bot,furnace.position.x,furnace.position.y,furnace.position.z,3);
+    await gotoBlockInteraction(bot,furnace,3.5,20000);
     const f=await bot.openFurnace(furnace);
     const input=findInventoryItem(bot,itemName); if(!input) { await f.close(); throw new Error("Smelt input not found."); }
     const fuel=findInventoryItem(bot,"coal")||findInventoryItem(bot,"charcoal")||findInventoryItem(bot,"wood");
@@ -974,7 +1009,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
       recipe=recipes.find(r=>!r.requiresTable||craftingTable)||recipes[0];
     }
     if(!recipe || (recipe.requiresTable&&!craftingTable)) throw new Error("No usable recipe for "+target+".");
-    if(craftingTable) await goto(bot,craftingTable.position.x,craftingTable.position.y,craftingTable.position.z,3,15000);
+    if(craftingTable) await gotoBlockInteraction(bot,craftingTable,3.5,15000);
     const before=inventoryCount(bot,recipeItem.name);
     await bot.craft(recipe,1,craftingTable);
     return inventoryCount(bot,recipeItem.name)>before;
