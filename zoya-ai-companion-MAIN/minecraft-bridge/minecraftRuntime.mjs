@@ -284,7 +284,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     try { bot.stopDigging?.(); } catch {}
     try { bot.deactivateItem?.(); } catch {}
     try { bot.wake?.(); } catch {}
-    try { bot.collectBlock?.cancel?.(); } catch {}
+    try { bot.collectBlock?.cancelTask?.().catch?.(() => {}); } catch {}
     try { bot.currentWindow?.close?.(); } catch {}
     currentGoal = null;
     log("[TASK] Cancelled #" + activeTask.id + " " + activeTask.action + ": " + reason);
