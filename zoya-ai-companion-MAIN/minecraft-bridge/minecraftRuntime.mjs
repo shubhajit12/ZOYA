@@ -126,9 +126,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   function findPlayerByUsername(username) {
     const wanted = String(username || "").trim().toLowerCase();
     if (!wanted) return null;
-    return Object.values(bot.players || {}).find(player =>
+    const fromPlayers = Object.values(bot.players || {}).find(player =>
       String(player?.username || "").toLowerCase() === wanted
-    ) || null;
+    );
+    if (fromPlayers) return fromPlayers;
+    const entity = Object.values(bot.entities || {}).find(candidate =>
+      String(candidate?.username || "").toLowerCase() === wanted
+    );
+    return entity ? { username: entity.username, entity } : null;
   }
 
   function permissionFor(username, action) {
@@ -319,6 +324,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       await new Promise(resolve => setTimeout(resolve, 150));
     }
     if (!target) {
+      if (taskIsActive(task)) task.terminationReason = "target_not_found";
       log("[TASK] follow_player target not found after retry window: " + String(username || "unknown"));
       return false;
     }
@@ -457,8 +463,8 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       if (matchingIds.length && typeof bot.findBlocks === "function") {
         const found = bot.findBlocks({
           matching: matchingIds,
-          maxDistance: 24,
-          count: 32
+          maxDistance: 32,
+          count: 48
         });
         for (const position of found) {
           const block = bot.blockAt(position);
@@ -497,7 +503,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     if (!ids.length) return false;
     const origin = bot.entity.position;
     const positions = typeof bot.findBlocks === "function"
-      ? bot.findBlocks({ matching: ids, maxDistance: 32, count: 48 })
+      ? bot.findBlocks({ matching: ids, maxDistance: 32, count: 64 })
       : [];
     if (!positions.length) {
       log("[GATHER] No nearby tree logs found within 32 blocks.");
@@ -572,7 +578,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     let bestDistance = Infinity;
     const ids = [...names].map(name => bot.registry?.blocksByName?.[name]?.id).filter(Number.isInteger);
     if (ids.length && typeof bot.findBlocks === "function") {
-      for (const position of bot.findBlocks({ matching: ids, maxDistance: 24, count: 48 })) {
+      for (const position of bot.findBlocks({ matching: ids, maxDistance: 32, count: 64 })) {
         const block = bot.blockAt(position);
         if (!block || !names.has(block.name)) continue;
         const d = block.position.distanceTo(origin);
@@ -769,7 +775,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     while (taskIsActive(task)) {
       const target = findPlayerByUsername(targetUsername)?.entity;
       if (!target) {
-        if (hadTarget && taskIsActive(task)) task.terminationReason = "target_lost";
+        if (hadTarget && taskIsActive(task)) {
+          task.terminationReason = "target_lost";
+          log("[TASK] pvp target lost: " + String(targetUsername || "unknown"));
+        } else if (taskIsActive(task)) {
+          task.terminationReason = "target_not_found";
+        }
         return false;
       }
       if (target.health != null && target.health <= 0) {
