@@ -1,38 +1,21 @@
 {
-	"schemaVersion": 1,
-	"id": "zoya",
-	"version": "${version}",
-	"name": "ZOYA",
-	"description": "This is an example description! Tell everyone what your mod is about!",
-	"authors": [
-		"Me!"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/zoya/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"com.zoya.ZOYA"
-		],
-		"client": [
-			"com.zoya.client.ZOYAClient"
-		]
-	},
-	"mixins": [
-		"zoya.mixins.json",
-		{
-			"config": "zoya.client.mixins.json",
-			"environment": "client"
-		}
-	],
-	"depends": {
-		"fabricloader": ">=0.19.5",
-		"minecraft": "~1.21.11",
-		"java": ">=21",
-		"fabric-api": "*"
-	}
+  "schemaVersion": 1,
+  "id": "zoya",
+  "version": "${version}",
+  "name": "ZOYA Minecraft Control",
+  "description": "Client-side ZOYA control console for launching and testing the ZOYA Minecraft Bridge.",
+  "authors": ["ZOYA"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.zoya.client.ZOYAClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
 }
