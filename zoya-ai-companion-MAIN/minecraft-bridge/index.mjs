@@ -71,7 +71,7 @@ let lastEntityIds = new Set();
 let lastHostileNearby = false;
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
-const CAPABILITY_BUILD_VERSION = "manual-capability-v15-container-preflight-2026-09-29";
+const CAPABILITY_BUILD_VERSION = "manual-capability-v16-connection-recovery-2026-09-29";
 // Autonomous movement is a brain capability, not a second movement loop.
 // Keeping one movement writer prevents natural-walk timers from fighting pathfinder actions.
 let movementEnabled = false;
@@ -328,9 +328,9 @@ function applyConfiguredSkin(config) {
   }, 750);
 }
 
-function disconnect() {
+function disconnect({ resetReconnect = true } = {}) {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-  reconnectAttempt = 0;
+  if (resetReconnect) reconnectAttempt = 0;
   capabilityTesterStop?.();
   capabilityTesterStop = null;
   if (minecraftRuntime?.getActiveTask?.()) {
@@ -344,16 +344,24 @@ function disconnect() {
   lastEntityIds = new Set();
   lastHostileNearby = false;
   lastHeartbeatAt = 0;
-  if (bot) { try { bot.quit(); } catch {} bot = null; }
+
+  // Detach the current bot before asking Mineflayer to quit. Its asynchronous
+  // "end" event must not be mistaken for a real network disconnect and start
+  // a second reconnect loop during an intentional replacement/shutdown.
+  const botToClose = bot;
+  bot = null;
+  if (botToClose) {
+    try { botToClose.quit(); } catch {}
+  }
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
 }
 
-function connect(config) {
+function connect(config, { preserveReconnectAttempt = false } = {}) {
   // Manual capability verification is the active development phase.
   // It must be impossible for a stale packaged config to silently enable Groq.
   capabilityDebugMode = true;
   currentConfig = { ...config, capabilityDebugMode: true };
-  disconnect();
+  disconnect({ resetReconnect: !preserveReconnectAttempt });
   currentConfig = { ...config, capabilityDebugMode: true };
   debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is HARD-DISABLED for this build.");
   debugLog("[CAPABILITY TESTER] Build marker: " + CAPABILITY_BUILD_VERSION);
@@ -366,6 +374,7 @@ function connect(config) {
   setState("CONNECTING", { host, port, username, version: version || null, error: null });
   try {
     bot = mineflayer.createBot({ host, port, username, auth, physicsEnabled: true, ...(version ? { version } : {}) });
+    const botInstance = bot;
     bot.once("login", () => {
       debugLog("[EVENT] Zoya joined the Minecraft world.");
       debugLog(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
@@ -439,25 +448,40 @@ function connect(config) {
       collectMinecraftState();
     });
     bot.once("end", reason => {
+      // Ignore a stale bot instance that was intentionally replaced or shut down.
+      if (bot !== botInstance) return;
+
       bot = null;
       minecraftRuntime = null;
       const message = reason ? String(reason) : state.error;
-      if (state.status === "ERROR" || state.error) {
-        setState("ERROR", { error: state.error || message || "Minecraft connection ended." });
-      } else {
-        setState("DISCONNECTED", { error: message || null });
-        if (currentConfig?.autoReconnect !== false) {
-          const delay = Math.min(30000, 2000 * Math.max(1, 2 ** Math.min(reconnectAttempt, 4)));
-          reconnectAttempt += 1;
-          debugLog("[RECONNECT] Minecraft connection ended; retrying in " + Math.round(delay / 1000) + "s.");
-          reconnectTimer = setTimeout(() => connect(currentConfig), delay);
-        }
+      setState("DISCONNECTED", { error: message || null });
+
+      // ECONNREFUSED, transient login failures, kicks, and ordinary disconnects
+      // are recoverable connection states. Mineflayer documents "end" as the
+      // terminal connection event, so the bridge owns the retry loop here.
+      // Do not let a preceding "error" event permanently disable reconnect.
+      if (currentConfig?.autoReconnect !== false) {
+        const delay = Math.min(30000, 2000 * Math.max(1, 2 ** Math.min(reconnectAttempt, 4)));
+        reconnectAttempt += 1;
+        debugLog("[RECONNECT] Minecraft connection ended (" + (message || "connection ended") +
+          "); retrying in " + Math.round(delay / 1000) + "s (attempt " + reconnectAttempt + ").");
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          if (currentConfig?.autoReconnect !== false) {
+            connect(currentConfig, { preserveReconnectAttempt: true });
+          }
+        }, delay);
       }
     });
     bot.once("error", error => {
       const message = error instanceof Error ? error.message : String(error);
-      debugError(`[ZOYA Minecraft Bridge] Mineflayer error: ${message}`);
-      setState("ERROR", { error: message });
+      // Mineflayer can emit an error before the terminal "end" event. Keep the
+      // bridge in a recoverable CONNECTING state so a transient ECONNREFUSED
+      // does not suppress the retry scheduled by "end".
+      debugWarn(`[ZOYA Minecraft Bridge] Mineflayer connection error: ${message}`);
+      if (bot === botInstance) {
+        setState("CONNECTING", { error: message });
+      }
     });
   } catch (error) {
     setState("ERROR", { error: error instanceof Error ? error.message : String(error) });
