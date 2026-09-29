@@ -13,26 +13,26 @@ public class ZOYAClient implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, buildContext) -> {
             dispatcher.register(ClientCommandManager.literal("zoya")
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    reply(context, "/zoya launch | stop | restart | status | task | cancel | modes list | modes <mode> <arguments...>");
+                    reply("/zoya launch | stop | restart | status | task | cancel | modes list | modes <mode> <arguments...>");
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("launch").executes(context -> {
-                    reply(context, "Launching Minecraft Bridge...");
+                    reply("Launching Minecraft Bridge...");
                     BridgeClient.launch().thenAccept(response -> replyOnClient("§a[ZOYA] §f" + response));
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("stop").executes(context -> {
-                    reply(context, "Stopping Minecraft Bridge...");
+                    reply("Stopping Minecraft Bridge...");
                     BridgeClient.stop().thenAccept(response -> replyOnClient("§e[ZOYA] §f" + BridgeClient.compact(response)));
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("restart").executes(context -> {
-                    reply(context, "Restarting Minecraft Bridge...");
+                    reply("Restarting Minecraft Bridge...");
                     BridgeClient.restart().thenAccept(response -> replyOnClient("§a[ZOYA] §f" + response));
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("status").executes(context -> {
-                    reply(context, "Checking Bridge status...");
+                    reply("Checking Bridge status...");
                     BridgeClient.status().thenAccept(response -> replyOnClient("§b[ZOYA] §f" + BridgeClient.compact(response)));
                     return 1;
                 }))
@@ -61,7 +61,7 @@ public class ZOYAClient implements ClientModInitializer {
                         .then(ClientCommandManager.argument("arguments", StringArgumentType.greedyString()).executes(context -> {
                             String mode = StringArgumentType.getString(context, "mode").toLowerCase();
                             String args = StringArgumentType.getString(context, "arguments");
-                            reply(context, "Running capability: " + mode + (args.isBlank() ? "" : " " + args));
+                            reply("Running capability: " + mode + (args.isBlank() ? "" : " " + args));
                             BridgeClient.runCapability(mode, args).thenAccept(response ->
                                 replyOnClient("§b[ZOYA] §f" + BridgeClient.compact(response)));
                             return 1;
@@ -76,8 +76,8 @@ public class ZOYAClient implements ClientModInitializer {
         });
     }
 
-    private static void reply(com.mojang.brigadier.context.CommandContext<?> context, String message) {
-        context.getSource().sendFeedback(Component.literal("§d[ZOYA] §f" + message));
+    private static void reply(String message) {
+        replyOnClient("§d[ZOYA] §f" + message);
     }
 
     private static void replyOnClient(String message) {
