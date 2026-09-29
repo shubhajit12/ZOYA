@@ -613,83 +613,63 @@ async function gotoBlockInteraction(bot, block, range=3.5, timeoutMs=30000, runt
 
 async function openContainerForTask(bot, block, runtime=null, label="container", log=console.log) {
   if (!block?.position) throw new Error("Container block has no valid position.");
-  const center = toVec3(bot, block.position).offset(0.5, 0.5, 0.5);
   const owner = runtime || bot.__zoyaCapabilityRuntime;
-  const maxAttempts = 3;
-  const interactionTimeoutMs = 5000;
-  let lastError = null;
+  const position = toVec3(bot, block.position);
+  const center = position.offset(0.5, 0.5, 0.5);
+  const task = owner?.getActiveTask?.();
+  if (!task || task.cancelled) throw new Error("Task cancelled before opening " + label + ".");
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const task = owner?.getActiveTask?.();
-    if (!task || task.cancelled) throw new Error("Task cancelled before opening " + label + ".");
+  const liveBlock = bot.blockAt(position);
+  if (!liveBlock || liveBlock.name !== block.name) {
+    throw new Error("Container changed before interaction: expected " + String(block.name) + ", found " + String(liveBlock?.name || "air") + ".");
+  }
 
-    await bot.lookAt(center, true);
-    await taskSleep(350);
-
-    let timer = null;
-    let timeoutTimer = null;
-    let finished = false;
-
-    const openPromise = Promise.resolve()
-      .then(() => bot.openContainer(
-        block,
-        new (center.constructor)(0, 1, 0),
-        new (center.constructor)(0.5, 0.5, 0.5)
-      ))
-      .then(
-        container => ({ status: "opened", container }),
-        error => ({ status: "error", error })
-      );
-
-    const cancelPromise = new Promise(resolve => {
-      const check = () => {
-        if (finished) return;
-        const current = owner?.getActiveTask?.();
-        if (!current || current.cancelled) {
-          resolve({ status: "cancelled" });
-          return;
-        }
-        timer = setTimeout(check, 50);
-      };
-      check();
-    });
-
-    const timeoutPromise = new Promise(resolve => {
-      timeoutTimer = setTimeout(() => {
-        resolve({
-          status: "timeout",
-          error: new Error("windowOpen did not fire within " + interactionTimeoutMs + "ms")
-        });
-      }, interactionTimeoutMs);
-    });
-
+  if (bot.currentWindow) {
     try {
-      const result = await Promise.race([openPromise, cancelPromise, timeoutPromise]);
-      if (result.status === "opened") return result.container;
-      if (result.status === "cancelled") {
-        throw new Error("Task cancelled while opening " + label + ".");
-      }
-      lastError = result.error;
-    } finally {
-      finished = true;
-      if (timer) clearTimeout(timer);
-      if (timeoutTimer) clearTimeout(timeoutTimer);
-    }
-
-    if (attempt < maxAttempts) {
-      log("[CONTAINER] " + label + " interaction attempt " + attempt + "/" + maxAttempts +
-        " failed: " + String(lastError?.message || lastError || "unknown error") +
-        ". Retrying.");
-      try { await bot.lookAt(center, true); } catch {}
-      await taskSleep(250);
+      await bot.closeWindow(bot.currentWindow);
+      await taskSleep(150);
+    } catch (error) {
+      log("[CONTAINER] Existing window could not be closed cleanly: " + String(error?.message || error));
     }
   }
 
-  const blockName = String(block.name || "container");
-  throw new Error("Could not open " + blockName + " at " +
-    Math.floor(block.position.x) + " " + Math.floor(block.position.y) + " " + Math.floor(block.position.z) +
-    " after " + maxAttempts + " interaction attempts: " +
-    String(lastError?.message || lastError || "windowOpen did not fire") + ".");
+  await bot.lookAt(center, true);
+  await taskSleep(350);
+
+  const distance = bot.entity.position.distanceTo(center);
+  if (distance > 4.5) {
+    throw new Error("Too far from " + label + " to interact: " + distance.toFixed(2) + " blocks.");
+  }
+
+  if (typeof bot.canSeeBlock === "function" && !bot.canSeeBlock(liveBlock)) {
+    throw new Error("No line of sight to " + label + " at " +
+      Math.floor(position.x) + " " + Math.floor(position.y) + " " + Math.floor(position.z) + ".");
+  }
+
+  if (typeof bot.blockAtCursor === "function") {
+    const cursorBlock = bot.blockAtCursor(5);
+    if (!cursorBlock || !cursorBlock.position || !cursorBlock.position.equals(position)) {
+      throw new Error("Interaction ray is not on " + label + " after lookAt; cursor is on " +
+        String(cursorBlock?.name || "no block") + ".");
+    }
+  }
+
+  log("[CONTAINER] Ready to open " + liveBlock.name +
+    " at " + Math.floor(position.x) + " " + Math.floor(position.y) + " " + Math.floor(position.z) +
+    " | distance=" + distance.toFixed(2) +
+    " | visible=" + (typeof bot.canSeeBlock === "function" ? bot.canSeeBlock(liveBlock) : "unknown") + ".");
+
+  try {
+    return await bot.openContainer(
+      liveBlock,
+      new (center.constructor)(0, 1, 0),
+      new (center.constructor)(0.5, 0.5, 0.5)
+    );
+  } catch (error) {
+    throw new Error("Could not open " + liveBlock.name + " at " +
+      Math.floor(position.x) + " " + Math.floor(position.y) + " " + Math.floor(position.z) +
+      ": " + String(error?.message || error));
+  }
 }
 async function equipMatching(bot,words,dest="hand") {
   const item=bot.inventory.items().find(i=>words.some(w=>i.name.toLowerCase().includes(w)));
