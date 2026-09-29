@@ -87,9 +87,9 @@ final class BridgeClient {
                     try { process.waitFor(); }
                     catch (InterruptedException error) { Thread.currentThread().interrupt(); }
                 });
-                return waitForHealth(8000).thenApply(ok ->
+                return waitForHealth(20000).thenApply(ok ->
                     ok ? "Minecraft Bridge launched: " + executable
-                       : "Bridge process started, but /health did not become ready within 8 seconds.");
+                       : "Bridge process started, but /health did not become ready within 20 seconds.");
             } catch (Exception error) {
                 return CompletableFuture.completedFuture("Launch failed: " + message(error));
             }
