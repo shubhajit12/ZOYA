@@ -16,11 +16,11 @@ jobs:
         with:
           ref: minecraft
 
-      - name: Setup Java 21
+      - name: Setup Java 25 for Fabric Loom
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
           cache: gradle
 
       - name: Make Gradle wrapper executable
@@ -35,7 +35,6 @@ jobs:
         shell: bash
         run: |
           test -f zoya-template-1.21.11/build/libs/zoya-1.0.0.jar
-          test ! -f zoya-template-1.21.11/build/libs/zoya-1.0.0-sources.jar || true
           echo "Compiled mod:"
           ls -lh zoya-template-1.21.11/build/libs/zoya-1.0.0.jar
 
