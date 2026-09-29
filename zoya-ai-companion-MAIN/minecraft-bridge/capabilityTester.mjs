@@ -1386,6 +1386,44 @@ async function directCapability({bot,runtime,id,arg,log}) {
   throw new Error("Capability is registered but has no implementation.");
 }
 
+export async function dispatchCapability({bot, runtime, id, arg = "", log = console.log}) {
+  const capability = CAPABILITIES.find(cap => cap.id === String(id || "").trim().toLowerCase());
+  if (!capability) {
+    throw new Error("Unknown capability: " + String(id || "") + ". Use /zoya modes list.");
+  }
+
+  capabilityRuntime = runtime;
+  bot.__zoyaCapabilityRuntime = runtime;
+
+  if (capability.id === "stop") {
+    if (!runtime?.getActiveTask?.()) return { accepted: true, status: "idle", message: "No active capability task." };
+    runtime.cancelCurrentTask("manual capability command");
+    return { accepted: true, status: "cancel_requested", message: "Cancellation requested." };
+  }
+
+  if (runtime?.getActiveTask?.()) {
+    throw new Error("Another capability is already running. Use /zoya cancel first.");
+  }
+
+  const execute = async () => {
+    const executeDirect = async () => directCapability({ bot, runtime, id: capability.id, arg, log });
+    if (["follow_player", "pvp", "guard", "guard_location"].includes(capability.id)) {
+      void executeDirect().catch(error => {
+        log("[CAPABILITY] Background mode " + capability.id + " crashed: " +
+          (error instanceof Error ? error.message : String(error)));
+      });
+      return { accepted: true, status: "running", background: true, mode: capability.id };
+    }
+    const delegated = DELEGATED.has(capability.id) || capability.id === "gather_resources" || capability.id === "stop";
+    const result = delegated
+      ? await executeDirect()
+      : await runtime.runManualCapability(capability.id, executeDirect);
+    return { accepted: true, status: "finished", mode: capability.id, result: result === true ? true : result };
+  };
+
+  return execute();
+}
+
 export function startCapabilityTester({bot,runtime,log=console.log}) {
   log("[CAPABILITY TESTER] Local-only mode: no Groq calls are made.");
   capabilityRuntime = runtime;
