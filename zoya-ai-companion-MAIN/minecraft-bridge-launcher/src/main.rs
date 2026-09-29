@@ -1,4 +1,5 @@
 use std::env;
+use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -50,7 +51,15 @@ fn main() {
 
     match command.spawn() {
         Ok(mut child) => match child.wait() {
-            Ok(status) => println!("Minecraft Bridge exited: {status}"),
+            Ok(status) => {
+                println!("Minecraft Bridge exited: {status}");
+                if !status.success() {
+                    eprintln!("Minecraft Bridge terminated abnormally.");
+                    eprintln!("Press Enter to close this Minecraft Bridge window...");
+                    let mut input = String::new();
+                    let _ = std::io::stdin().read_to_string(&mut input);
+                }
+            },
             Err(error) => eprintln!("ERROR waiting for Minecraft Bridge: {error}"),
         },
         Err(error) => eprintln!("ERROR starting bundled Node runtime: {error}"),
