@@ -4,7 +4,7 @@ import path from "node:path";
 import mineflayer from "mineflayer";
 import { createZoyaBrain } from "./zoyaBrain.mjs";
 import { createMinecraftRuntime } from "./minecraftRuntime.mjs";
-import { startCapabilityTester } from "./capabilityTester.mjs";
+import { startCapabilityTester, getCapabilityRegistry, dispatchCapability } from "./capabilityTester.mjs";
 
 const PORT = Number(process.env.ZOYA_MINECRAFT_BRIDGE_PORT || 32123);
 const CAPABILITY_DEBUG_ENV = process.env.ZOYA_CAPABILITY_DEBUG === "1";
@@ -487,6 +487,71 @@ const server = http.createServer((req, res) => {
     void ensureZoyaBrain().thinkNow();
     return send(res, 202, { ok: true });
   }
+  if (req.method === "GET" && url.pathname === "/task") {
+    return send(res, 200, {
+      ok: true,
+      activeTask: minecraftRuntime?.getActiveTask?.() || null,
+      lastTaskResult: minecraftRuntime?.getLastTaskResult?.() || null
+    });
+  }
+  if (req.method === "GET" && url.pathname === "/capabilities") {
+    return send(res, 200, {
+      ok: true,
+      count: getCapabilityRegistry().length,
+      capabilities: getCapabilityRegistry()
+    });
+  }
+  if (req.method === "POST" && url.pathname === "/cancel") {
+    if (!minecraftRuntime?.getActiveTask?.()) {
+      return send(res, 200, { ok: true, status: "idle", message: "No active capability task." });
+    }
+    minecraftRuntime.cancelCurrentTask("Minecraft command cancellation");
+    return send(res, 202, { ok: true, status: "cancel_requested" });
+  }
+  if (req.method === "POST" && url.pathname === "/capability") {
+    let body = "";
+    req.on("data", chunk => {
+      body += chunk;
+      if (body.length > 65536) req.destroy();
+    });
+    req.on("end", () => {
+      try {
+        const payload = JSON.parse(body || "{}");
+        const mode = String(payload.mode || "").trim().toLowerCase();
+        const arg = String(payload.args || "").trim();
+        const capability = getCapabilityRegistry().find(item => item.id === mode);
+        if (!capability) {
+          return send(res, 400, { ok: false, error: "Unknown capability: " + mode });
+        }
+        if (mode !== "stop" && minecraftRuntime?.getActiveTask?.()) {
+          return send(res, 409, {
+            ok: false,
+            error: "Another capability is already running. Use /zoya cancel first.",
+            activeTask: minecraftRuntime.getActiveTask()
+          });
+        }
+        if (!minecraftRuntime || !bot) {
+          return send(res, 409, { ok: false, error: "Minecraft bot is not connected." });
+        }
+
+        void dispatchCapability({ bot, runtime: minecraftRuntime, id: mode, arg, log: debugLog })
+          .then(result => debugLog("[CAPABILITY API] " + mode + " -> " + JSON.stringify(result)))
+          .catch(error => debugError("[CAPABILITY API] " + mode + " failed: " + (error instanceof Error ? error.message : String(error))));
+
+        return send(res, 202, {
+          ok: true,
+          accepted: true,
+          mode,
+          args: arg,
+          message: "Capability accepted. Use /task or /zoya task for lifecycle/result."
+        });
+      } catch (error) {
+        return send(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/connect") {
     let body = "";
     req.on("data", chunk => { body += chunk; });
