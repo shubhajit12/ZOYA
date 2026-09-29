@@ -611,11 +611,12 @@ async function gotoBlockInteraction(bot, block, range=3.5, timeoutMs=30000, runt
   return true;
 }
 
-async function openContainerForTask(bot, block, runtime=null, label="container") {
+async function openContainerForTask(bot, block, runtime=null, label="container", log=console.log) {
   if (!block?.position) throw new Error("Container block has no valid position.");
   const center = toVec3(bot, block.position).offset(0.5, 0.5, 0.5);
   const owner = runtime || bot.__zoyaCapabilityRuntime;
   const maxAttempts = 3;
+  const interactionTimeoutMs = 5000;
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -625,16 +626,16 @@ async function openContainerForTask(bot, block, runtime=null, label="container")
     await bot.lookAt(center, true);
     await taskSleep(350);
 
-    // Mineflayer's openContainer waits for the server's window-open packet.
-    // On some servers/anti-cheat setups, the first interaction can be lost
-    // if the bot has only just arrived or has not finished turning. Retry the
-    // actual interaction instead of waiting on one permanently pending call.
     let timer = null;
+    let timeoutTimer = null;
     let finished = false;
-    let cancelled = false;
 
     const openPromise = Promise.resolve()
-      .then(() => bot.openContainer(block, new (center.constructor)(0, 1, 0), new (center.constructor)(0.5, 0.5, 0.5)))
+      .then(() => bot.openContainer(
+        block,
+        new (center.constructor)(0, 1, 0),
+        new (center.constructor)(0.5, 0.5, 0.5)
+      ))
       .then(
         container => ({ status: "opened", container }),
         error => ({ status: "error", error })
@@ -645,7 +646,6 @@ async function openContainerForTask(bot, block, runtime=null, label="container")
         if (finished) return;
         const current = owner?.getActiveTask?.();
         if (!current || current.cancelled) {
-          cancelled = true;
           resolve({ status: "cancelled" });
           return;
         }
@@ -654,8 +654,17 @@ async function openContainerForTask(bot, block, runtime=null, label="container")
       check();
     });
 
+    const timeoutPromise = new Promise(resolve => {
+      timeoutTimer = setTimeout(() => {
+        resolve({
+          status: "timeout",
+          error: new Error("windowOpen did not fire within " + interactionTimeoutMs + "ms")
+        });
+      }, interactionTimeoutMs);
+    });
+
     try {
-      const result = await Promise.race([openPromise, cancelPromise]);
+      const result = await Promise.race([openPromise, cancelPromise, timeoutPromise]);
       if (result.status === "opened") return result.container;
       if (result.status === "cancelled") {
         throw new Error("Task cancelled while opening " + label + ".");
@@ -664,10 +673,13 @@ async function openContainerForTask(bot, block, runtime=null, label="container")
     } finally {
       finished = true;
       if (timer) clearTimeout(timer);
+      if (timeoutTimer) clearTimeout(timeoutTimer);
     }
 
     if (attempt < maxAttempts) {
-      log("[CONTAINER] " + label + " window did not open; retrying interaction (" + (attempt + 1) + "/" + maxAttempts + ").");
+      log("[CONTAINER] " + label + " interaction attempt " + attempt + "/" + maxAttempts +
+        " failed: " + String(lastError?.message || lastError || "unknown error") +
+        ". Retrying.");
       try { await bot.lookAt(center, true); } catch {}
       await taskSleep(250);
     }
@@ -676,7 +688,8 @@ async function openContainerForTask(bot, block, runtime=null, label="container")
   const blockName = String(block.name || "container");
   throw new Error("Could not open " + blockName + " at " +
     Math.floor(block.position.x) + " " + Math.floor(block.position.y) + " " + Math.floor(block.position.z) +
-    " after " + maxAttempts + " interaction attempts: " + String(lastError?.message || lastError || "windowOpen did not fire") + ".");
+    " after " + maxAttempts + " interaction attempts: " +
+    String(lastError?.message || lastError || "windowOpen did not fire") + ".");
 }
 async function equipMatching(bot,words,dest="hand") {
   const item=bot.inventory.items().find(i=>words.some(w=>i.name.toLowerCase().includes(w)));
@@ -998,7 +1011,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
 
   if(id==="open_chest"||id==="open_barrel"){
     const p=parseCoords(arg), b=bot.blockAt(toVec3(bot,p)); if(!b||!String(b.name).includes(id==="open_chest"?"chest":"barrel")) throw new Error("Target container not found.");
-    await gotoBlockInteraction(bot,b,3.5,20000,runtime); const c=await openContainerForTask(bot,b,runtime,"chest"); log("[CONTAINER] Opened "+b.name+" with "+(c.containerItems?.().length||0)+" items."); await c.close(); return true;
+    await gotoBlockInteraction(bot,b,3.5,20000,runtime); const c=await openContainerForTask(bot,b,runtime,b.name,log); log("[CONTAINER] Opened "+b.name+" with "+(c.containerItems?.().length||0)+" items."); await c.close(); return true;
   }
   if(id==="deposit"||id==="retrieve"){
     const {prefix,...p}=parseCoordsFromEnd(arg);
@@ -1010,8 +1023,8 @@ async function directCapability({bot,runtime,id,arg,log}) {
     let expectedTransfer=0;
     const itemBefore=findInventoryItem(bot,name);
     if(id==="deposit" && !itemBefore) throw new Error("Item not in inventory.");
-    await gotoBlockInteraction(bot,b,3.5,20000);
-    const container=await bot.openContainer(b);
+    await gotoBlockInteraction(bot,b,3.5,20000,runtime);
+    const container=await openContainerForTask(bot,b,runtime,b.name,log);
     try {
       if(id==="deposit"){
         const item=findInventoryItem(bot,name);
