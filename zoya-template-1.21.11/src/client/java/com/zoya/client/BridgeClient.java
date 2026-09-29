@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Properties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ final class BridgeClient {
     static final int PORT = 32123;
     private static final URI BASE = URI.create("http://127.0.0.1:" + PORT);
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(2)).build();
+    private static final String CONFIG_KEY = "bridge.folder";
 
     private BridgeClient() {}
 
@@ -44,6 +46,32 @@ final class BridgeClient {
 
     static CompletableFuture<Boolean> isOnline() {
         return get("/health").thenApply(response -> response.startsWith("200 ")).exceptionally(error -> false);
+    }
+
+    static String setBridgeFolder(String rawPath) {
+        String cleaned = stripOuterQuotes(rawPath == null ? "" : rawPath.trim());
+        if (cleaned.isBlank()) return "Bridge folder cannot be empty.";
+        try {
+            Path path = Path.of(cleaned).toAbsolutePath().normalize();
+            if (Files.isRegularFile(path)) {
+                if (!path.getFileName().toString().equalsIgnoreCase("MinecraftBridge.exe"))
+                    return "Selected file is not MinecraftBridge.exe.";
+                path = path.getParent();
+            }
+            if (!Files.isDirectory(path)) return "Bridge folder does not exist: " + path;
+            Path executable = path.resolve("MinecraftBridge.exe");
+            if (!Files.isRegularFile(executable))
+                return "MinecraftBridge.exe was not found in: " + path;
+            saveConfiguredBridgeFolder(path);
+            return "Bridge folder saved: " + path;
+        } catch (Exception error) {
+            return "Invalid bridge folder: " + message(error);
+        }
+    }
+
+    static String configuredBridgeFolder() {
+        Path path = loadConfiguredBridgeFolder();
+        return path == null ? "No bridge folder configured." : "Bridge folder: " + path;
     }
 
     static CompletableFuture<String> launch() {
@@ -162,6 +190,9 @@ final class BridgeClient {
 
     private static Optional<Path> findBridgeExecutable() {
         List<Path> candidates = new ArrayList<>();
+        Path configuredFolder = loadConfiguredBridgeFolder();
+        if (configuredFolder != null) candidates.add(configuredFolder.resolve("MinecraftBridge.exe"));
+
         String configured = System.getenv("ZOYA_MINECRAFT_BRIDGE_EXE");
         if (configured != null && !configured.isBlank()) candidates.add(Path.of(configured));
         String property = System.getProperty("zoya.minecraft.bridge");
@@ -182,6 +213,46 @@ final class BridgeClient {
 
         return candidates.stream().map(Path::toAbsolutePath).filter(Files::isRegularFile)
             .filter(path -> path.getFileName().toString().equalsIgnoreCase("MinecraftBridge.exe")).findFirst();
+    }
+
+    private static Path configFile() {
+        return Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve("zoya-minecraft-bridge.properties");
+    }
+
+    private static void saveConfiguredBridgeFolder(Path folder) throws IOException {
+        Path file = configFile();
+        Files.createDirectories(file.getParent());
+        Properties properties = new Properties();
+        properties.setProperty(CONFIG_KEY, folder.toString());
+        try (var writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+            properties.store(writer, "ZOYA Minecraft Bridge configuration");
+        }
+    }
+
+    private static Path loadConfiguredBridgeFolder() {
+        Path file = configFile();
+        if (!Files.isRegularFile(file)) return null;
+        Properties properties = new Properties();
+        try (var reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            properties.load(reader);
+            String value = properties.getProperty(CONFIG_KEY);
+            if (value == null || value.isBlank()) return null;
+            Path folder = Path.of(value).toAbsolutePath().normalize();
+            return Files.isDirectory(folder) ? folder : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static String stripOuterQuotes(String value) {
+        if (value.length() >= 2) {
+            char first = value.charAt(0);
+            char last = value.charAt(value.length() - 1);
+            if ((first == '"' && last == '"') || (first == 39 && last == 39)) {
+                return value.substring(1, value.length() - 1).trim();
+            }
+        }
+        return value;
     }
 
     private static int parseStatus(String value) {
