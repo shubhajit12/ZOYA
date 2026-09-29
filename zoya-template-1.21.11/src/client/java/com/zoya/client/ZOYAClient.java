@@ -13,9 +13,19 @@ public class ZOYAClient implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, buildContext) -> {
             dispatcher.register(ClientCommandManager.literal("zoya")
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    reply("/zoya launch | stop | restart | status | task | cancel | modes list | modes <mode> <arguments...>");
+                    reply("/zoya launch | stop | restart | status | task | cancel | set <bridge folder> | modes list | modes <mode> <arguments...>");
                     return 1;
                 }))
+                .then(ClientCommandManager.literal("set")
+                    .then(ClientCommandManager.argument("folder", StringArgumentType.greedyString()).executes(context -> {
+                        String folder = StringArgumentType.getString(context, "folder");
+                        reply(BridgeClient.setBridgeFolder(folder));
+                        return 1;
+                    }))
+                    .executes(context -> {
+                        reply(BridgeClient.configuredBridgeFolder());
+                        return 1;
+                    }))
                 .then(ClientCommandManager.literal("launch").executes(context -> {
                     reply("Launching Minecraft Bridge...");
                     BridgeClient.launch().thenAccept(response -> replyOnClient("§a[ZOYA] §f" + response));
