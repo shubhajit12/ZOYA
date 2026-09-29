@@ -615,7 +615,6 @@ async function openContainerForTask(bot, block, runtime=null, label="container",
   if (!block?.position) throw new Error("Container block has no valid position.");
   const owner = runtime || bot.__zoyaCapabilityRuntime;
   const position = toVec3(bot, block.position);
-  const center = position.offset(0.5, 0.5, 0.5);
   const task = owner?.getActiveTask?.();
   if (!task || task.cancelled) throw new Error("Task cancelled before opening " + label + ".");
 
@@ -633,15 +632,14 @@ async function openContainerForTask(bot, block, runtime=null, label="container",
     }
   }
 
-  // Mineflayer's openContainer() delegates to activateBlock(), whose
-  // documented/default interaction geometry is internally consistent: it looks
-  // at the selected face and sends a cursor position on that face. Do not pass
-  // a direction/cursor pair that claims the TOP face while the cursor is at the
-  // BLOCK CENTER. That mismatch can make the server reject the interaction and
-  // leave Mineflayer waiting forever for windowOpen.
-  const interactionPoint = position.offset(0.5, 1, 0.5);
+  // Let Mineflayer own the interaction geometry. openContainer() delegates to
+  // activateBlock(), which computes a valid face/cursor pair and performs its
+  // own lookAt(). A client-side blockAtCursor() check here is not equivalent
+  // to the packet Mineflayer sends and can reject a valid interaction when the
+  // ray lands on a face boundary or the target is vertically aligned.
+  const interactionPoint = position.offset(0.5, 0.5, 0.5);
   await bot.lookAt(interactionPoint, false);
-  await taskSleep(350);
+  await taskSleep(250);
 
   const distance = bot.entity.position.distanceTo(interactionPoint);
   if (distance > 4.5) {
@@ -653,19 +651,11 @@ async function openContainerForTask(bot, block, runtime=null, label="container",
       Math.floor(position.x) + " " + Math.floor(position.y) + " " + Math.floor(position.z) + ".");
   }
 
-  if (typeof bot.blockAtCursor === "function") {
-    const cursorBlock = bot.blockAtCursor(5);
-    if (!cursorBlock || !cursorBlock.position || !cursorBlock.position.equals(position)) {
-      throw new Error("Interaction ray is not on " + label + " after lookAt; cursor is on " +
-        String(cursorBlock?.name || "no block") + ".");
-    }
-  }
-
   log("[CONTAINER] Ready to open " + liveBlock.name +
     " at " + Math.floor(position.x) + " " + Math.floor(position.y) + " " + Math.floor(position.z) +
     " | distance=" + distance.toFixed(2) +
     " | visible=" + (typeof bot.canSeeBlock === "function" ? bot.canSeeBlock(liveBlock) : "unknown") +
-    " | face=top | cursor=0.5,1,0.5.");
+    " | native-interaction-geometry=yes.");
 
   try {
     // Use Mineflayer's own default direction/cursor calculation. Its inventory
