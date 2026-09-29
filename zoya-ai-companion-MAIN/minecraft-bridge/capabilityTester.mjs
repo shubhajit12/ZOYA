@@ -631,9 +631,13 @@ async function attackLoop(bot,target,timeout=15000) {
 }
 
 async function directCapability({bot,runtime,id,arg,log}) {
-  if (id !== "stop" && runtime?.getActiveTask?.()) {
-    throw new Error("Another runtime task is still active; stop/cancel it before running a direct capability.");
-  }
+  // directCapability is also the operation callback executed *inside*
+  // runtime.runManualCapability(). In that path the current runtime task is
+  // expected to exist, so treating any active task as a conflicting task
+  // rejects the capability's own owner and produces the false
+  // "another task is already active" error.
+  // Cross-capability arbitration belongs to the runtime entry points
+  // (execute/runManualCapability), not this operation dispatcher.
   if(id==="gather_resources") {
     const parts=String(arg||"").trim().split(/\s+/);
     const resourceName=parts[0] || "oak_log";
