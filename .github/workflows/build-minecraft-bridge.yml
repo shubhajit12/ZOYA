@@ -55,7 +55,7 @@ jobs:
             $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
             $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-            if ($indexSource -notmatch 'manual-capability-v12-task-dispatch-lock-fix-2026-09-29') { throw 'Manual capability build marker is missing or stale.' }
+            if ($indexSource -notmatch 'manual-capability-v13-container-window-hardening-2026-09-29') { throw 'Manual capability build marker is missing or stale.' }
             if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
             if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
             if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
@@ -63,7 +63,8 @@ jobs:
             if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
             $registeredCapabilities = [regex]::Matches($testerSource, '\{ id: "[^"]+", label:').Count
             if ($registeredCapabilities -ne 93) { throw "Expected 93 registered capability modes, found $registeredCapabilities." }
-            foreach ($requiredText in @('GoalFollow','GoalLookAtBlock','GoalPlaceBlock','gotoBlockInteraction','runManualCapability','gotoPlaceBlock','getDroppedItem','multi_step_craft','gather_missing_materials','find_shelter','find_safe_location','guard_location','runtime.cancelCurrentTask','taskSleep','waitForPath')) {
+            foreach ($requiredText in @('GoalFollow','GoalLookAtBlock','GoalPlaceBlock','gotoBlockInteraction','runManualCapability','gotoPlaceBlock','getDroppedItem','multi_step_craft','gather_missing_materials','find_shelter','find_safe_location','guard_location','runtime.cancelCurrentTask','taskSleep','openContainerForTask
+          waitForPath')) {
               if ($testerSource -notmatch [regex]::Escape($requiredText)) { throw "Capability guard is missing: $requiredText" }
             }
             foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','assertTaskActive','runManualCapability','lastTaskResult','bot.stopDigging?.()','bot.collectBlock.movements = movements','bot.collectBlock?.cancelTask?.()','target_lost','target_not_found')) {
