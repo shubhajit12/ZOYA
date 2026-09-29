@@ -283,7 +283,23 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     try { bot.clearControlStates(); } catch {}
     try { bot.stopDigging?.(); } catch {}
     try { bot.deactivateItem?.(); } catch {}
-    try { bot.wake?.(); } catch {}
+    // bot.wake() throws synchronously when the bot is already awake on
+    // Mineflayer versions that enforce the bed state. Cancellation can happen
+    // from a health event at any time, so never call wake() unless the bot is
+    // actually sleeping. If the state changes between the check and the call,
+    // swallow both synchronous and Promise rejection paths so a safety event
+    // can never terminate the bridge process.
+    if (bot.isSleeping === true && typeof bot.wake === "function") {
+      try {
+        void Promise.resolve(bot.wake()).catch(error => {
+          log("[SAFETY] Wake during task cancellation was ignored: " +
+            (error instanceof Error ? error.message : String(error)));
+        });
+      } catch (error) {
+        log("[SAFETY] Wake during task cancellation was ignored: " +
+          (error instanceof Error ? error.message : String(error)));
+      }
+    }
     try { bot.collectBlock?.cancelTask?.().catch?.(() => {}); } catch {}
     try { void Promise.resolve(bot.currentWindow?.close?.()).catch(() => {}); } catch {}
     currentGoal = null;
