@@ -633,10 +633,17 @@ async function openContainerForTask(bot, block, runtime=null, label="container",
     }
   }
 
-  await bot.lookAt(center, true);
+  // Mineflayer's openContainer() delegates to activateBlock(), whose
+  // documented/default interaction geometry is internally consistent: it looks
+  // at the selected face and sends a cursor position on that face. Do not pass
+  // a direction/cursor pair that claims the TOP face while the cursor is at the
+  // BLOCK CENTER. That mismatch can make the server reject the interaction and
+  // leave Mineflayer waiting forever for windowOpen.
+  const interactionPoint = position.offset(0.5, 1, 0.5);
+  await bot.lookAt(interactionPoint, false);
   await taskSleep(350);
 
-  const distance = bot.entity.position.distanceTo(center);
+  const distance = bot.entity.position.distanceTo(interactionPoint);
   if (distance > 4.5) {
     throw new Error("Too far from " + label + " to interact: " + distance.toFixed(2) + " blocks.");
   }
@@ -657,14 +664,13 @@ async function openContainerForTask(bot, block, runtime=null, label="container",
   log("[CONTAINER] Ready to open " + liveBlock.name +
     " at " + Math.floor(position.x) + " " + Math.floor(position.y) + " " + Math.floor(position.z) +
     " | distance=" + distance.toFixed(2) +
-    " | visible=" + (typeof bot.canSeeBlock === "function" ? bot.canSeeBlock(liveBlock) : "unknown") + ".");
+    " | visible=" + (typeof bot.canSeeBlock === "function" ? bot.canSeeBlock(liveBlock) : "unknown") +
+    " | face=top | cursor=0.5,1,0.5.");
 
   try {
-    return await bot.openContainer(
-      liveBlock,
-      new (center.constructor)(0, 1, 0),
-      new (center.constructor)(0.5, 0.5, 0.5)
-    );
+    // Use Mineflayer's own default direction/cursor calculation. Its inventory
+    // plugin requires the cursor point to lie on the clicked face.
+    return await bot.openContainer(liveBlock);
   } catch (error) {
     throw new Error("Could not open " + liveBlock.name + " at " +
       Math.floor(position.x) + " " + Math.floor(position.y) + " " + Math.floor(position.z) +
