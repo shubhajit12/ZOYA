@@ -486,13 +486,45 @@ async function navigate(ctx,position,range=2,label="navigation"){
   try{while(Date.now()<deadline){ctx.assertActive();if(ctx.bot.entity.position.distanceTo(target)<=range)return true;await ctx.sleep(100);}throw new Error(label+" timed out.");}
   finally{try{ctx.bot.pathfinder.setGoal(null)}catch{}}
 }
+
+async function followPlayer(ctx,username,range=2){
+  const target=findPlayer(ctx.bot,username)?.entity;
+  if(!target)throw new Error("Player not found.");
+  const goal=new goals.GoalFollow(target,range);
+  ctx.bot.pathfinder.setGoal(goal,true);
+  try{
+    while(true){
+      ctx.assertActive();
+      if(!target.isValid || !ctx.bot.players[username])throw new Error("Follow target is no longer available.");
+      await ctx.sleep(150);
+    }
+  }finally{
+    try{ctx.bot.pathfinder.setGoal(null);}catch{}
+  }
+}
+
+async function lookAtBlockGoal(ctx,position,reach=4.5,label="block interaction"){
+  const target=vec(ctx.bot,position);
+  const goal=new goals.GoalLookAtBlock(target,ctx.bot.world,{reach});
+  ctx.bot.pathfinder.setGoal(goal);
+  const deadline=Date.now()+30000;
+  try{
+    while(Date.now()<deadline){
+      ctx.assertActive();
+      if(ctx.bot.entity.position.distanceTo(target)<=reach+1)return true;
+      await ctx.sleep(100);
+    }
+    throw new Error(label+" timed out.");
+  }finally{try{ctx.bot.pathfinder.setGoal(null)}catch{}}
+}
 async function combatHit(ctx,target){
   if(target.position.distanceTo(ctx.bot.entity.position)>3.1)await navigate(ctx,target.position,2.6,"combat navigation");
   ctx.assertActive();await ctx.bot.lookAt(target.position.offset(0,target.height||1.4,0),true);ctx.bot.attack(target);return true;
 }
 async function runtimeAction(ctx,id,arg){
   const options={permissionGranted:true};const p=split(arg);
-  if(id==="follow_player"||id==="pvp"||id==="look_at_player")options.targetUsername=required(arg,"Username is required.");
+  if(id==="follow_player")return followPlayer(ctx,required(arg,"Username is required."));
+  if(id==="pvp"||id==="look_at_player")options.targetUsername=required(arg,"Username is required.");
   if(id==="mine")options.blockName=required(arg,"Block is required.");
   if(id==="eat")options.itemName=String(arg||"").trim();
   if(id==="collect"||id==="gather_resources"){options.itemName=p[0]||"";options.amount=Math.max(1,Number(p[1])||1);}
@@ -549,9 +581,18 @@ async function lowLevel(ctx,id,arg){
     case "op_command":{const c=required(arg,"Command is required.");bot.chat(c.startsWith("/")?c:"/"+c);return true;}
     case "use_ranged_weapon":{const t=findPlayer(bot,arg)?.entity||findEntity(bot,arg);if(!t)throw new Error("Target not found.");const i=item(bot,"bow")||item(bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await bot.equip(i,"hand");await bot.lookAt(t.position.offset(0,t.height||1.4,0),true);bot.activateItem();await ctx.sleep(1200);bot.deactivateItem();return true;}
     case "dig":case "break_block":{const p=coords(arg),b=bot.blockAt(vec(bot,p));if(!b||b.name==="air")throw new Error("Target block is air.");await navigate(ctx,p,3.5,id);await bot.dig(b);return true;}
-    case "open_chest":case "open_barrel":{const p=coords(arg),b=bot.blockAt(vec(bot,p)),name=id==="open_chest"?"chest":"barrel";if(!b||!b.name.includes(name))throw new Error("Expected "+name+".");await navigate(ctx,p,3.5,id);await bot.openContainer(b);return true;}
-    case "open_door":case "close_door":case "use_button":case "use_lever":case "use_block":{const p=coords(arg),b=bot.blockAt(vec(bot,p));if(!b)throw new Error("Block not found.");await navigate(ctx,p,3.5,id);await bot.activateBlock(b);return true;}
-    case "place_block":{const a=split(arg),name=required(a.shift(),"Block is required."),p=coords(a.join(" ")),i=item(bot,name),target=bot.blockAt(vec(bot,p)),ref=bot.blockAt(vec(bot,{x:p.x,y:p.y-1,z:p.z}));if(!i)throw new Error("Placement item not found.");if(!target||target.name!=="air"||!ref)throw new Error("Placement target is not empty/valid.");await navigate(ctx,p,3.5,"place_block");await bot.equip(i,"hand");await bot.placeBlock(ref,new (bot.entity.position.constructor)(0,1,0));return true;}
+    case "open_chest":case "open_barrel":{const p=coords(arg),b=bot.blockAt(vec(bot,p)),name=id==="open_chest"?"chest":"barrel";if(!b||!b.name.includes(name))throw new Error("Expected "+name+".");await lookAtBlockGoal(ctx,p,4.5,id);await bot.openContainer(b);return true;}
+    case "open_door":case "close_door":case "use_button":case "use_lever":case "use_block":{const p=coords(arg),b=bot.blockAt(vec(bot,p));if(!b)throw new Error("Block not found.");await lookAtBlockGoal(ctx,p,4.5,id);await bot.activateBlock(b);return true;}
+    case "place_block":{const a=split(arg),name=required(a.shift(),"Block is required."),p=coords(a.join(" ")),i=item(bot,name),target=bot.blockAt(vec(bot,p)),ref=bot.blockAt(vec(bot,{x:p.x,y:p.y-1,z:p.z}));if(!i)throw new Error("Placement item not found.");if(!target||target.name!=="air"||!ref)throw new Error("Placement target is not empty/valid.");const V=bot.entity.position.constructor;
+    const faces=[new V(0,1,0),new V(0,-1,0),new V(1,0,0),new V(-1,0,0),new V(0,0,1),new V(0,0,-1)];
+    const placeGoal=new goals.GoalPlaceBlock(vec(bot,p),bot.world,{range:4.5,LOS:true,faces});
+    bot.pathfinder.setGoal(placeGoal);
+    try{
+      const deadline=Date.now()+30000;
+      while(Date.now()<deadline){ctx.assertActive();if(bot.entity.position.distanceTo(vec(bot,p))<=4.5)break;await ctx.sleep(100);}
+      if(Date.now()>=deadline)throw new Error("place_block navigation timed out.");
+    }finally{try{bot.pathfinder.setGoal(null)}catch{}}
+    await bot.equip(i,"hand");await bot.placeBlock(ref,new V(0,1,0));return true;}
     case "sleep":{const bed=bot.findBlock?.({matching:b=>String(b.name||"").endsWith("_bed"),maxDistance:16});if(!bed)throw new Error("No nearby bed found.");await navigate(ctx,bed.position,3.5,"sleep");await bot.sleep(bed);return true;}
     case "recover_after_death":await ctx.sleep(750);return true;
     case "observe":case "search":{const e=findEntity(bot,arg);if(e)await bot.lookAt(e.position.offset(0,e.height||1.4,0),true);ctx.log("[OBSERVE] "+(e?(e.name||e.username||"target"):"No matching target in loaded entities."));return true;}
