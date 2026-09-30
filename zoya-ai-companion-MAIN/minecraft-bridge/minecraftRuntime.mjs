@@ -835,31 +835,41 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       "silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"
     ]);
 
+    const findGuardHostile = () => Object.values(bot.entities || {})
+      .filter(entity =>
+        entity?.position &&
+        entity !== bot.entity &&
+        guardHostiles.has(String(entity.name || "").toLowerCase()) &&
+        entity.isValid !== false &&
+        (entity.health == null || entity.health > 0) &&
+        entity.position.distanceTo(bot.entity.position) <= 12
+      )
+      .sort((a, b) =>
+        a.position.distanceTo(bot.entity.position) -
+        b.position.distanceTo(bot.entity.position)
+      )[0];
+
     while (taskIsActive(task)) {
-      const hostile = Object.values(bot.entities || {})
-        .filter(entity =>
-          entity?.position &&
-          guardHostiles.has(String(entity.name || "").toLowerCase()) &&
-          entity.position.distanceTo(bot.entity.position) <= 12
-        )
-        .sort((a, b) =>
-          a.position.distanceTo(bot.entity.position) -
-          b.position.distanceTo(bot.entity.position)
-        )[0];
+      const hostile = findGuardHostile();
 
       if (hostile) {
         await equipMatchingForGuard();
         const beforeHealth = Number(hostile.health ?? 1);
         await attackLoopForGuard(hostile);
+
         if (hostile.health != null && hostile.health >= beforeHealth && taskIsActive(task)) {
           log("[GUARD] Attack attempt did not reduce target health; continuing guard.");
         }
 
-        // Re-establish the guard position after combat if knockback/pathing
-        // moved Zoya away from the post. This uses the same task-owned
-        // Pathfinder controller and never creates a second movement loop.
-        if (taskIsActive(task) &&
-            bot.entity.position.distanceTo(position) > 3) {
+        // Combat is cluster-aware: if another hostile is already in range,
+        // immediately select it instead of travelling back to the guard post.
+        // The guard position is restored only after the local threat cluster
+        // has been cleared.
+        if (taskIsActive(task) && findGuardHostile()) {
+          continue;
+        }
+
+        if (taskIsActive(task) && bot.entity.position.distanceTo(position) > 3) {
           await gotoTask(
             task,
             new goals.GoalNear(position.x, position.y, position.z, 2),
@@ -871,7 +881,20 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
           if (taskIsActive(task)) await equipMatchingForGuard();
         }
       } else {
-        await new Promise(resolve => setTimeout(resolve, 250));
+        // No hostile is currently in the guard radius. Remain at the post.
+        if (bot.entity.position.distanceTo(position) > 2.5) {
+          await gotoTask(
+            task,
+            new goals.GoalNear(position.x, position.y, position.z, 2),
+            position,
+            2,
+            10000,
+            "guard position maintenance"
+          );
+          if (taskIsActive(task)) await equipMatchingForGuard();
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
       }
     }
     try { bot.pathfinder.setGoal(null); } catch {}
