@@ -441,7 +441,7 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
         });
         if (!capabilityDebugMode) ensureZoyaBrain().start();
         if (capabilityDebugMode) {
-          capabilityTesterStop?.();
+          try { capabilityTesterStop?.close?.(); } catch {}
           capabilityTesterStop = startCapabilityTester({ bot, runtime: minecraftRuntime, log: debugLog });
           debugLog("[CAPABILITY TESTER] Developer capability tester enabled. Groq does not select capabilities in this tester.");
           debugLog("[CAPABILITY TESTER] Set capabilityDebugMode=false or remove ZOYA_CAPABILITY_DEBUG=1 to return to normal Zoya brain mode.");
