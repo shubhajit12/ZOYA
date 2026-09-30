@@ -154,19 +154,10 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
     print("▶ ["+String(index).padStart(2,"0")+"] "+capability.label+" :: "+capability.usage);
     print("  args: "+(arg||"(none)"));
     try{
-      const context=contextFor(capability.id,before);
-      bot.__zoyaCapabilityRuntime = runtime;
-      let result;
-      const runtimeOwned=RUNTIME_EXECUTED;
-      if(runtimeOwned.has(capability.id)){
-        result=await executeCapability(capability.id,arg,context);
-      }else{
-        result=await runtime.runManualCapability("clean:"+capability.id,async task=>{
-          context.task=task;
-          return executeCapability(capability.id,arg,context);
-        });
-      }
-      if(result===true && !capabilityVerificationProbe(bot,runtime,capability.id,arg)) throw new Error("Capability verification probe failed.");\n      print((result===true?"✓ SUCCESS ":"✗ FAILED ")+capability.id);\n      print("  task result: "+taskResultLabel(runtime));
+      let result=await dispatchCapability({bot,runtime,id:capability.id,arg,log});
+      if(result===true && !capabilityVerificationProbe(bot,runtime,capability.id,arg)) throw new Error("Capability verification probe failed.");
+      print((result===true?"✓ SUCCESS ":"✗ FAILED ")+capability.id);
+      print("  task result: "+taskResultLabel(runtime));
       return result;
     }catch(error){
       print("✗ ERROR "+(error instanceof Error?error.message:String(error)));
