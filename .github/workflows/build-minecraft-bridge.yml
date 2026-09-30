@@ -124,7 +124,7 @@ jobs:
         shell: pwsh
         run: |
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
-          foreach ($required in @('MinecraftBridge.exe','node.exe','index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','package.json')) {
+          foreach ($required in @('MinecraftBridge.exe','node.exe','index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityEngine.mjs','capabilityTester.mjs','package.json')) {
             if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Final bridge bundle is missing: $required" }
           }
           if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency is missing from final bridge bundle.' }
