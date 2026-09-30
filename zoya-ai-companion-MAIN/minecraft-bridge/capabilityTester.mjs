@@ -38,6 +38,52 @@ function inventorySnapshot(bot){
   return {byName,position:bot.entity?.position?.clone?.()||null,health:Number(bot.health??20),food:Number(bot.food??20),held:bot.heldItem?.name||null};
 }
 
+
+export function getCapabilityRegistry(){
+  return CAPABILITIES.map(capability=>({...capability}));
+}
+
+export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}){
+  const mode=String(id||"").trim().toLowerCase();
+  const capability=CAPABILITIES.find(item=>item.id===mode);
+  if(!capability)throw new Error("Unknown capability: "+mode);
+  if(mode==="stop"){
+    runtime.cancelCurrentTask?.("manual capability tester");
+    return true;
+  }
+  const before=inventorySnapshot(bot);
+  const context={
+    bot,runtime,before,
+    task:runtime.getActiveTask?.()||null,
+    log:message=>log("[MODE] "+message),
+    sleep:async ms=>{
+      const deadline=Date.now()+Math.max(0,Number(ms)||0);
+      while(Date.now()<deadline){
+        const task=runtime.getActiveTask?.();
+        if(!task||task.cancelled)throw new Error("Task cancelled.");
+        await sleep(Math.min(100,Math.max(1,deadline-Date.now())));
+      }
+      const task=runtime.getActiveTask?.();
+      if(!task||task.cancelled)throw new Error("Task cancelled.");
+    },
+    assertActive:()=>{
+      const task=runtime.getActiveTask?.();
+      if(!task||task.cancelled)throw new Error("Task cancelled.");
+    },
+    terminate:reason=>{const task=runtime.getActiveTask?.();if(task)task.terminationReason=reason;}
+  };
+  bot.__zoyaCapabilityRuntime = runtime;
+  try{
+    if(RUNTIME_EXECUTED.has(mode))return executeCapability(mode,arg,context);
+    return runtime.runManualCapability("clean:"+mode,async task=>{
+      context.task=task;
+      return executeCapability(mode,arg,context);
+    });
+  }finally{
+    if(bot.__zoyaCapabilityRuntime===runtime){try{delete bot.__zoyaCapabilityRuntime;}catch{}}
+  }
+}
+
 export function startCapabilityTester({bot,runtime,log=console.log}){
   let closed=false;
   let currentRun=null;
