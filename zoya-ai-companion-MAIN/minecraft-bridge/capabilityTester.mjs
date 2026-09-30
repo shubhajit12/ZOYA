@@ -124,6 +124,9 @@ function parseCoordsFromEnd(value) {
 function dist(a,b) { return a && b ? a.distanceTo(b) : Infinity; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 let capabilityRuntime = null;
+function getLastTaskResult() {
+  return capabilityRuntime?.getLastTaskResult?.() || null;
+}
 async function taskSleep(ms) {
   const owner = capabilityRuntime;
   const duration = Math.max(0, Number(ms) || 0);
