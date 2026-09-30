@@ -1024,32 +1024,55 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function execute(action, options = {}) {
-    if (busy) {
+    const reusedTask = options.__task && activeTask === options.__task;
+    if (busy && !reusedTask) {
       log("[TASK] Ignoring new task while '" + (currentGoal || "unknown") + "' is active.");
       return false;
     }
+
     const unsafeActions = new Set(["safe_roam","explore","gather_basic_resources","mine","chop_tree","investigate_entity","pvp"]);
-    if (unsafeActions.has(action) && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
+    if (!reusedTask && unsafeActions.has(action) && bot.health != null && (bot.health < 10 || nearbyHostileCount(12) > 0)) {
       log("[SAFETY] Refusing " + action + ": health=" + bot.health + ", hostileMobs=" + nearbyHostileCount(12) + ".");
       wakeBrain();
       return false;
     }
+
     const movementActions = new Set(["safe_roam","explore","gather_basic_resources","follow_player","return_to_owner","collect","investigate_entity","mine","chop_tree","pvp"]);
-    if (movementActions.has(action) && config.movementEnabled !== true && !options.permissionGranted) {
+    if (!reusedTask && movementActions.has(action) && config.movementEnabled !== true && !options.permissionGranted) {
       log("[PERMISSION] Autonomous movement is disabled; action blocked: " + action);
       return false;
     }
-    busy = true;
-    const task = { id: ++taskSequence, action, targetUsername: options.targetUsername || null, startedAt: Date.now(), cancelled: false, token: 0, terminationReason: null };
-    activeTask = task;
-    currentGoal = action;
+
+    const task = reusedTask
+      ? options.__task
+      : { id: ++taskSequence, action, targetUsername: options.targetUsername || null, startedAt: Date.now(), cancelled: false, token: 0, terminationReason: null };
+
+    if (!reusedTask) {
+      busy = true;
+      activeTask = task;
+      currentGoal = action;
+      log("[TASK] Started #" + task.id + " " + action + (task.targetUsername ? " -> " + task.targetUsername : "") + ".");
+    }
+
     let result = false;
-    log("[TASK] Started #" + task.id + " " + action + (task.targetUsername ? " -> " + task.targetUsername : "") + ".");
     try {
-      if (action === "safe_roam" || action === "explore") result = await explore(task);
+      if (action === "safe_roam" || action === "explore") {
+        if (options.continuous) {
+          while (taskIsActive(task)) {
+            const reached = await explore(task);
+            if (!taskIsActive(task)) return false;
+            if (!reached) {
+              task.terminationReason = "path_timeout";
+              await new Promise(resolve => setTimeout(resolve, 250));
+            }
+          }
+          return false;
+        }
+        result = await explore(task);
+      }
       else if (action === "look_at_player") result = await lookAtPlayer(options.targetUsername || owner);
-      else if (action === "gather_basic_resources") result = await gatherResources(options.resourceName || "oak_log", options.amount || 1, task);
-       else if (action === "chop_tree") result = await gatherWood(task);
+      else if (action === "gather_basic_resources") result = await gatherResources(options.resourceName || options.itemName || "oak_log", options.amount || 1, task);
+      else if (action === "chop_tree") result = await gatherWood(task);
       else if (action === "follow_player") result = await moveToPlayer(options.targetUsername || owner, 3, task, true);
       else if (action === "return_to_owner") result = owner ? await moveToPlayer(owner, 5, task, false) : false;
       else if (action === "eat") result = await eat(options.itemName || "", task);
@@ -1074,26 +1097,29 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       rememberEvent("action_error", { action, error: error instanceof Error ? error.message : String(error) });
       return false;
     } finally {
-      const wasActive = activeTask === task;
-      if (wasActive) {
-        activeTask = null;
-        currentGoal = null;
+      if (!reusedTask) {
+        const wasActive = activeTask === task;
+        if (wasActive) {
+          activeTask = null;
+          currentGoal = null;
+        }
+        busy = false;
+        lastTaskResult = {
+          id: task.id,
+          action: task.action,
+          targetUsername: task.targetUsername,
+          status: task.cancelled ? "cancelled" : (result === true ? "completed" : "failed"),
+          reason: task.cancelReason || task.terminationReason || null,
+          startedAt: task.startedAt,
+          finishedAt: Date.now()
+        };
+        log("[TASK] Finished #" + task.id + " " + action + " -> " + lastTaskResult.status +
+          (lastTaskResult.reason ? " (" + lastTaskResult.reason + ")" : "") + ".");
+        if (wasActive) wakeBrain();
       }
-      busy = false;
-      lastTaskResult = {
-        id: task.id,
-        action: task.action,
-        targetUsername: task.targetUsername,
-        status: task.cancelled ? "cancelled" : (result === true ? "completed" : "failed"),
-        reason: task.cancelReason || task.terminationReason || null,
-        startedAt: task.startedAt,
-        finishedAt: Date.now()
-      };
-      log("[TASK] Finished #" + task.id + " " + action + " -> " + lastTaskResult.status +
-        (lastTaskResult.reason ? " (" + lastTaskResult.reason + ")" : "") + ".");
-      if (wasActive) wakeBrain();
     }
   }
+
 
   async function answerPlayer(username, message, channel = "public") {
     const rawMessage = String(message || "").trim();
