@@ -85,6 +85,11 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
   }
 }
 
+const CONTINUOUS_TEST_MODES = new Set([
+  "follow_player","roam","pvp","guard","guard_location","defend","chase_target",
+  "escort_player","protect_player","watch","coordinate_with_player"
+]);
+
 export function startCapabilityTester({bot,runtime,log=console.log}){
   let closed=false;
   let currentRun=null;
@@ -185,7 +190,12 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
       if(!Number.isInteger(index)||index<0||index>=CAPABILITIES.length){print("Enter a mode number from 0 to "+(CAPABILITIES.length-1)+".");continue;}
       const capability=CAPABILITIES[index];
       const arg=String(await ask("Args for "+capability.label+" ["+capability.usage+"]: ")).trim();
-      await run(index,arg);
+      const execution = run(index,arg);
+      if(CONTINUOUS_TEST_MODES.has(capability.id)){
+        void execution;
+      }else{
+        await execution;
+      }
     }
   };
 
