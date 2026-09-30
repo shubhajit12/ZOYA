@@ -845,8 +845,14 @@ async function directCapability({bot,runtime,id,arg,log}) {
     return attackLoop(bot,target);
   }
   if(id==="defend") {
-    await equipMatching(bot,WEAPON_WORDS); const target=findEntity(bot,"",e=>HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=16);
-    if(!target) throw new Error("No hostile target nearby."); return attackLoop(bot,target);
+    await equipMatching(bot,WEAPON_WORDS);
+    while (runtime?.getActiveTask?.() && !runtime.getActiveTask().cancelled) {
+      const target=findEntity(bot,"",e=>HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=16);
+      if(!target) { await taskSleep(300); continue; }
+      await equipMatching(bot,WEAPON_WORDS);
+      await attackLoop(bot,target,7000);
+    }
+    return false;
   }
   if(id==="guard"||id==="guard_location") {
     const p=parseCoords(arg);
@@ -878,27 +884,73 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const pl=findPlayer(bot,arg); const target=pl?.entity||findEntity(bot,arg);
     if(!target) throw new Error("Target not found.");
 
-    // Dynamic GoalFollow is the correct primitive for a moving target. Use it
-    // for these continuous movement capabilities instead of repeatedly chasing
-    // stale coordinates with GoalNear.
+    const protectMode = id==="escort_player" || id==="protect_player";
+    const relatedHostiles = new Set([
+      "zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider",
+      "witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube",
+      "silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"
+    ]);
+
+    await equipMatching(bot, WEAPON_WORDS);
+
     if (goals?.GoalFollow) {
-      bot.pathfinder.setGoal(new goals.GoalFollow(target, 3), true);
-      const deadline = Date.now() + 30000;
-      while (Date.now() < deadline && target.isValid !== false) {
-        if (dist(bot.entity.position,target.position) <= 3.5) break;
+      while (target.isValid !== false) {
+        const liveTarget = findPlayer(bot,arg)?.entity || target;
+        if (!liveTarget || liveTarget.isValid === false) break;
+
+        if (protectMode) {
+          const hostile = Object.values(bot.entities || {})
+            .filter(entity =>
+              entity?.position &&
+              relatedHostiles.has(String(entity.name || "").toLowerCase()) &&
+              entity.position.distanceTo(liveTarget.position) <= 8
+            )
+            .sort((a,b) =>
+              a.position.distanceTo(liveTarget.position) -
+              b.position.distanceTo(liveTarget.position)
+            )[0];
+
+          if (hostile) {
+            await equipMatching(bot, WEAPON_WORDS);
+            await attackLoop(bot, hostile, 7000);
+            continue;
+          }
+        }
+
+        bot.pathfinder.setGoal(new goals.GoalFollow(liveTarget, 3), true);
         await taskSleep(150);
+
+        if (protectMode && dist(bot.entity.position, liveTarget.position) > 6) {
+          continue;
+        }
+        if (!protectMode && dist(bot.entity.position, liveTarget.position) > 4.5) {
+          continue;
+        }
       }
       try { bot.pathfinder.setGoal(null); } catch {}
-      return target.isValid !== false && dist(bot.entity.position,target.position) <= 4.5;
+      return false;
     }
 
-    // Compatibility fallback for an older pathfinder.
-    for(let i=0;i<20;i++){
-      if(target.isValid===false) break;
-      if(dist(bot.entity.position,target.position)>3) await goto(bot,target.position.x,target.position.y,target.position.z,2.5);
-      await taskSleep(300);
+    for (;;) {
+      if (target.isValid === false) break;
+      if (protectMode) {
+        const hostile = Object.values(bot.entities || {})
+          .filter(entity =>
+            entity?.position &&
+            relatedHostiles.has(String(entity.name || "").toLowerCase()) &&
+            entity.position.distanceTo(target.position) <= 8
+          )
+          .sort((a,b) => a.position.distanceTo(target.position)-b.position.distanceTo(target.position))[0];
+        if (hostile) {
+          await equipMatching(bot, WEAPON_WORDS);
+          await attackLoop(bot, hostile, 7000);
+          continue;
+        }
+      }
+      if (dist(bot.entity.position,target.position)>3) await goto(bot,target.position.x,target.position.y,target.position.z,2.5);
+      await taskSleep(150);
     }
-    return target.isValid !== false;
+    return false;
   }
   if(id==="equip_best_weapon") { return equipMatching(bot,WEAPON_WORDS); }
   if(id==="use_shield") {
