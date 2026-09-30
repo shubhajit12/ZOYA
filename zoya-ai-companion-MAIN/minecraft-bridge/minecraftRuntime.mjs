@@ -803,22 +803,51 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     );
     if (!reachedGuard) return false;
     assertTaskActive(task, "guard navigation completion");
+    await equipMatchingForGuard();
+
+    const guardHostiles = new Set([
+      "zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider",
+      "witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube",
+      "silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"
+    ]);
+
     while (taskIsActive(task)) {
       const hostile = Object.values(bot.entities || {})
-        .filter(entity => entity?.position &&
-          new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]).has(String(entity.name || "").toLowerCase()) &&
-          entity.position.distanceTo(bot.entity.position) <= 12)
-        .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
+        .filter(entity =>
+          entity?.position &&
+          guardHostiles.has(String(entity.name || "").toLowerCase()) &&
+          entity.position.distanceTo(bot.entity.position) <= 12
+        )
+        .sort((a, b) =>
+          a.position.distanceTo(bot.entity.position) -
+          b.position.distanceTo(bot.entity.position)
+        )[0];
 
       if (hostile) {
         await equipMatchingForGuard();
-        const beforeHealth=Number(hostile.health ?? 1);
+        const beforeHealth = Number(hostile.health ?? 1);
         await attackLoopForGuard(hostile);
         if (hostile.health != null && hostile.health >= beforeHealth && taskIsActive(task)) {
           log("[GUARD] Attack attempt did not reduce target health; continuing guard.");
         }
+
+        // Re-establish the guard position after combat if knockback/pathing
+        // moved Zoya away from the post. This uses the same task-owned
+        // Pathfinder controller and never creates a second movement loop.
+        if (taskIsActive(task) &&
+            bot.entity.position.distanceTo(position) > 3) {
+          await gotoTask(
+            task,
+            new goals.GoalNear(position.x, position.y, position.z, 2),
+            position,
+            2,
+            15000,
+            "guard position recovery"
+          );
+          if (taskIsActive(task)) await equipMatchingForGuard();
+        }
       } else {
-        await new Promise(resolve=>setTimeout(resolve,300));
+        await new Promise(resolve => setTimeout(resolve, 250));
       }
     }
     try { bot.pathfinder.setGoal(null); } catch {}
@@ -826,8 +855,38 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function equipMatchingForGuard() {
-    const item=bot.inventory.items().find(i=>["sword","axe","trident","mace"].some(word=>i.name.toLowerCase().includes(word)));
-    if (item) await bot.equip(item,"hand");
+    const materialRank = [
+      ["netherite", 7],
+      ["diamond", 6],
+      ["iron", 5],
+      ["stone", 4],
+      ["golden", 3],
+      ["wooden", 2]
+    ];
+    const weaponRank = [
+      ["mace", 4],
+      ["sword", 3],
+      ["axe", 2],
+      ["trident", 1]
+    ];
+    const candidates = bot.inventory.items().filter(item => {
+      const name = String(item.name || "").toLowerCase();
+      return weaponRank.some(([weapon]) => name.includes(weapon));
+    });
+    candidates.sort((a, b) => {
+      const score = item => {
+        const name = String(item.name || "").toLowerCase();
+        const material = materialRank.find(([prefix]) => name.includes(prefix))?.[1] || 0;
+        const weapon = weaponRank.find(([kind]) => name.includes(kind))?.[1] || 0;
+        return material * 10 + weapon;
+      };
+      return score(b) - score(a);
+    });
+    const best = candidates[0];
+    if (!best) return false;
+    await bot.equip(best, "hand");
+    log("[GUARD] Equipped best available weapon: " + best.name + ".");
+    return true;
   }
 
   async function attackLoopForGuard(target) {
