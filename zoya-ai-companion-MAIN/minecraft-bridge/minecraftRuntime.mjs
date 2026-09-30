@@ -1147,9 +1147,17 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       } else {
         log("[PHYSICS] Damage " + drop + " health; no server velocity packet observed yet.");
       }
-      // Do not modify bot.entity.velocity here. Mineflayer owns the physics
-      // integration and must consume exactly the velocity supplied by the server.
-      interruptMovement("damage received (" + drop + " health)");
+      // Taking a hit is a normal Minecraft event, not a task cancellation.
+      // In particular PvP, guard, defend, escort and protection tasks are
+      // expected to receive damage while their task is active. The previous
+      // global interrupt here cancelled the active task on every health drop,
+      // which made PvP stop as soon as the opponent hit Zoya.
+      //
+      // Mineflayer remains the sole owner of physics/knockback. We only record
+      // the event and let the active task's own safety/termination rules decide
+      // whether it should continue or end. Death still cancels through the
+      // dedicated death handler above.
+      log("[SAFETY] Damage observed; preserving active task ownership.");
     }
     if (health <= 0) wakeBrain();
     else if (health < 10) wakeBrain();
