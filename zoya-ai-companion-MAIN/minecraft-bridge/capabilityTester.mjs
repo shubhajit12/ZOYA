@@ -832,6 +832,51 @@ async function directCapability({bot,runtime,id,arg,log}) {
     bot.attack(liveTarget);
     return true;
   }
+  if(id==="check_equipment"){
+    const items = bot.inventory.items().filter(item => item.slot >= 5 && item.slot <= 8);
+    const held = bot.heldItem?.name || "empty";
+    log("[EQUIPMENT] Armor: " + (items.map(item => item.name + " x" + item.count).join(", ") || "none") + "; held=" + held + ".");
+    return true;
+  }
+  if(id==="whisper_player" || id==="report_result" || id==="ask_clarification"){
+    const parts=String(arg||"").trim().split(/\s+/);
+    const username=parts.shift();
+    const message=parts.join(" ").trim();
+    if(!username) throw new Error("Username is required.");
+    if(!message) throw new Error("Message is required.");
+    if(!findPlayer(bot,username)?.username) throw new Error("Player not found.");
+    bot.whisper(username,message.slice(0,256));
+    log("[CHAT] Whisper sent to " + username + ": " + message.slice(0,256));
+    return true;
+  }
+  if(id==="coordinate_with_player"){
+    const parts=String(arg||"").trim().split(/\s+/);
+    const username=parts.shift();
+    const task=parts.join(" ").trim();
+    if(!username) throw new Error("Username is required.");
+    const player=findPlayer(bot,username);
+    if(!player?.entity) throw new Error("Player not found.");
+    const message=task || "I am ready to coordinate.";
+    bot.whisper(username,message.slice(0,256));
+    await goto(bot,player.entity.position.x,player.entity.position.y,player.entity.position.z,3,20000);
+    await bot.lookAt(player.entity.position.offset(0,player.entity.height||1.5,0),true);
+    log("[COORDINATE] Reached " + username + " and sent coordination message.");
+    return true;
+  }
+  if(id==="watch"){
+    const wanted=String(arg||"").trim();
+    if(!wanted) throw new Error("Watch target is required.");
+    while(runtime?.getActiveTask?.() && !runtime.getActiveTask().cancelled){
+      const target=findPlayer(bot,wanted)?.entity || findEntity(bot,wanted);
+      if(!target){
+        runtime.getActiveTask().terminationReason="target_lost";
+        return false;
+      }
+      await bot.lookAt(target.position.offset(0,target.height||1.5,0),true);
+      await taskSleep(250);
+    }
+    return false;
+  }
   if(id==="chat") {
     const message=String(arg||"").trim();
     if(!message) throw new Error("Message is required.");
