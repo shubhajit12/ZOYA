@@ -469,7 +469,7 @@ export const CAPABILITIES = [
   }
 ];
 const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
-const RUNTIME_ACTIONS = new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","craft","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
+const RUNTIME_ACTIONS = new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
 
 const required=(value,message="Argument is required.")=>{const v=String(value??"").trim();if(!v)throw new Error(message);return v;};
 const split=(value)=>String(value??"").trim().split(/\s+/).filter(Boolean);
@@ -521,6 +521,41 @@ async function combatHit(ctx,target){
   if(target.position.distanceTo(ctx.bot.entity.position)>3.1)await navigate(ctx,target.position,2.6,"combat navigation");
   ctx.assertActive();await ctx.bot.lookAt(target.position.offset(0,target.height||1.4,0),true);ctx.bot.attack(target);return true;
 }
+async function nativeCraft(ctx,itemName,amount=1){
+  const {bot}=ctx;
+  const requested=required(itemName,"Item is required.").toLowerCase().replace(/\\s+/g,"_");
+  const targetItem=bot.registry?.itemsByName?.[requested];
+  if(!targetItem)throw new Error("Craft item not found: "+requested);
+  const targetAmount=Math.max(1,Math.floor(Number(amount)||1));
+  let table=null;
+  let recipes=bot.recipesFor(targetItem.id,null,targetAmount,null);
+  if(!recipes.length){
+    const tableId=bot.registry?.blocksByName?.crafting_table?.id;
+    table=tableId!=null?bot.findBlock?.({matching:tableId,maxDistance:16})||null:null;
+    if(!table)throw new Error("No crafting recipe available nearby.");
+    recipes=bot.recipesFor(targetItem.id,null,targetAmount,table);
+  }
+  if(!recipes.length)throw new Error("No crafting recipe available for "+requested+".");
+  const recipe=recipes[0];
+  const resultPerCraft=Math.max(1,Number(recipe.result?.count||1));
+  const craftsNeeded=Math.max(1,Math.ceil(targetAmount/resultPerCraft));
+  if(recipe.requiresTable&&!table){
+    const tableId=bot.registry?.blocksByName?.crafting_table?.id;
+    table=tableId!=null?bot.findBlock?.({matching:tableId,maxDistance:16})||null:null;
+    if(!table)throw new Error("Crafting table required but none is nearby.");
+  }
+  if(table&&bot.entity.position.distanceTo(table.position)>3.5){
+    await navigate(ctx,table.position,3,"crafting-table navigation");
+  }
+  const before=bot.inventory.items().filter(i=>i.name===targetItem.name).reduce((n,i)=>n+i.count,0);
+  ctx.assertActive();
+  await bot.craft(recipe,craftsNeeded,table);
+  ctx.assertActive();
+  const after=bot.inventory.items().filter(i=>i.name===targetItem.name).reduce((n,i)=>n+i.count,0);
+  if(after<before+targetAmount)throw new Error("Craft completed without producing the requested amount.");
+  return true;
+}
+
 async function runtimeAction(ctx,id,arg){
   const options={permissionGranted:true};const p=split(arg);
   if(id==="follow_player")return followPlayer(ctx,required(arg,"Username is required."));
@@ -528,7 +563,7 @@ async function runtimeAction(ctx,id,arg){
   if(id==="mine")options.blockName=required(arg,"Block is required.");
   if(id==="eat")options.itemName=String(arg||"").trim();
   if(id==="collect"||id==="gather_resources"){options.itemName=p[0]||"";options.amount=Math.max(1,Number(p[1])||1);}
-  if(id==="craft"){options.itemName=p.slice(0,-1).join("_")||p[0]||"";options.amount=Math.max(1,Number(p.at(-1))||1);}
+  if(id==="craft")return nativeCraft(ctx,p.slice(0,-1).join("_")||p[0]||"",Math.max(1,Number(p.at(-1))||1));
   if(id==="investigate_entity")options.entityName=required(arg,"Entity name is required.");
   if(id==="guard"||id==="guard_location")options.position=coords(arg);
   const mapped=id==="roam"?"safe_roam":id==="return"?"return_to_owner":id;
