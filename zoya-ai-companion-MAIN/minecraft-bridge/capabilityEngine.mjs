@@ -665,4 +665,9 @@ export const HANDLERS = {
   "coordinate_with_player": async (ctx, arg) => ctx.run("coordinate_with_player", arg),
   "op_command": async (ctx, arg) => ctx.run("op_command", arg),
 };
-export async function executeCapability(id,arg,ctx){\n  const h=HANDLERS[id];\n  if(!h)throw new Error("Capability has no handler: "+id);\n  ctx.run=ctx.run||((mode,value)=>lowLevel(ctx,mode,value));\n  return h(ctx,arg);\n}
+export async function executeCapability(id,arg,ctx){
+  const h=HANDLERS[id];
+  if(!h)throw new Error("Capability has no handler: "+id);
+  ctx.run=ctx.run||((mode,value)=>lowLevel(ctx,mode,value));
+  return h(ctx,arg);
+}
