@@ -892,12 +892,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   async function attackLoopForGuard(target) {
     const deadline=Date.now()+5000;
     while (taskIsActive(activeTask) && target && target.isValid!==false && (target.health==null || target.health>0) && Date.now()<deadline) {
-      while (taskIsActive(activeTask) && target.isValid!==false && dist(bot.entity.position,target.position)>3.1 && Date.now()<deadline) {
+      while (taskIsActive(activeTask) && target.isValid!==false && bot.entity.position.distanceTo(target.position)>3.1 && Date.now()<deadline) {
         bot.pathfinder.setGoal(new goals.GoalFollow(target,2.7),true);
         await new Promise(resolve=>setTimeout(resolve,150));
       }
       try { bot.pathfinder.setGoal(null); } catch {}
-      if (!taskIsActive(activeTask) || !target.isValid || dist(bot.entity.position,target.position)>3.2) break;
+      if (!taskIsActive(activeTask) || !target.isValid || bot.entity.position.distanceTo(target.position)>3.2) break;
       await bot.lookAt(target.position.offset(0,target.height||1,0),true);
       bot.attack(target);
       await new Promise(resolve=>setTimeout(resolve,450));
