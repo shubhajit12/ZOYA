@@ -790,6 +790,30 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return Number(bot.food ?? beforeFood) > beforeFood;
   }
 
+  async function protectOrEscortPlayer(targetUsername, task, mode) {
+    if (!targetUsername) throw new Error("Username is required.");
+    while (taskIsActive(task)) {
+      const target = findPlayerByUsername(targetUsername)?.entity;
+      if (!target) { task.terminationReason = "target_lost"; return false; }
+      const hostile = Object.values(bot.entities || {})
+        .filter(entity => entity?.position && entity !== bot.entity &&
+          HOSTILES.has(String(entity.name || "").toLowerCase()) &&
+          entity.position.distanceTo(target.position) <= 8)
+        .sort((a,b) => a.position.distanceTo(target.position) - b.position.distanceTo(target.position))[0];
+      if (hostile) { await equipMatchingForGuard(); await attackLoopForGuard(hostile); }
+      if (!taskIsActive(task)) return false;
+      const liveTarget = findPlayerByUsername(targetUsername)?.entity;
+      if (!liveTarget) { task.terminationReason = "target_lost"; return false; }
+      const desired = mode === "escort" ? 3.5 : 5;
+      if (bot.entity.position.distanceTo(liveTarget.position) > desired) {
+        bot.pathfinder.setGoal(new goals.GoalFollow(liveTarget, desired), true);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        try { bot.pathfinder.setGoal(null); } catch {}
+      } else await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    return false;
+  }
+
   async function guardLocation(position, task) {
     if (!task) return false;
     assertTaskActive(task, "guard navigation");
@@ -1084,6 +1108,15 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       else if (action === "guard" || action === "guard_location") {
         const position=options.position || bot.entity.position;
         result = await guardLocation(position, task);
+      }
+      else if (action === "escort_player" || action === "protect_player") {
+        result = await protectOrEscortPlayer(options.targetUsername, task, action === "escort_player" ? "escort" : "protect");
+      }
+      else if (action === "defend") {
+        result = await guardLocation(bot.entity.position.clone(), task);
+      }
+      else if (action === "chase_target") {
+        result = await protectOrEscortPlayer(options.targetUsername, task, "escort");
       }
       else if (action === "idle") result = true;
       else {
