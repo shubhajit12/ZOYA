@@ -233,7 +233,7 @@ function collectMinecraftState() {
   );
   if (hostileNearby && !lastHostileNearby) {
     const activeTask = minecraftRuntime?.getActiveTask?.();
-    const activeAction = String(activeTask?.action || "").replace(/^manual:/, "");
+    const activeAction = String(activeTask?.action || "").replace(/^manual:(?:clean:)?/, "");
     const combatAwareActions = new Set([
       "guard",
       "guard_location",
