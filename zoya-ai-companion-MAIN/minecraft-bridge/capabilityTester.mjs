@@ -1294,3 +1294,100 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="detect_hostiles"){ const h=Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=24); log("[SAFETY] Hostiles="+h.length); h.forEach(e=>log("[SAFETY] "+e.name+" "+dist(e.position,bot.entity.position).toFixed(2)+"m")); return true; }
   if(id==="check_health"){ log("[STATUS] Health="+bot.health); return true; }
   if(id==="check_food"){ log("[STATUS] Food="+bot.food+" saturation="+bot.foodSaturation); return true; }
+
+  return false;
+}
+
+export function getCapabilityRegistry() {
+  return CAPABILITIES.map(item => ({ ...item }));
+}
+
+export async function dispatchCapability({ bot, runtime, id, arg = "", log = console.log }) {
+  const mode = String(id || "").trim().toLowerCase();
+  if (!CAPABILITIES.some(item => item.id === mode)) {
+    throw new Error("Unknown capability: " + mode);
+  }
+  if (mode === "stop") {
+    runtime.cancelCurrentTask("manual capability tester");
+    return true;
+  }
+  if (!runtime?.runManualCapability) {
+    throw new Error("Minecraft runtime manual capability API is unavailable.");
+  }
+  capabilityRuntime = runtime;
+  try {
+    return await runtime.runManualCapability(mode, async () => {
+      return await directCapability({ bot, runtime, id: mode, arg, log });
+    });
+  } finally {
+    if (capabilityRuntime === runtime) capabilityRuntime = null;
+  }
+}
+
+export function startCapabilityTester({ bot, runtime, log = console.log }) {
+  let closed = false;
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: Boolean(process.stdin.isTTY && process.stdout.isTTY)
+  });
+
+  const ask = question => new Promise(resolve => rl.question(question, resolve));
+
+  const stop = () => {
+    if (closed) return;
+    closed = true;
+    try { rl.close(); } catch {}
+  };
+
+  void (async () => {
+    try {
+      log("[CAPABILITY TESTER] Ready. Groq is disabled in this developer tester.");
+      while (!closed) {
+        const active = runtime?.getActiveTask?.();
+        if (active) {
+          log("[CAPABILITY TESTER] Active task #" + active.id + " " + active.action + ". Use STOP or /cancel.");
+        }
+
+        const answer = String(await ask("\nChoose a capability (0-" + (CAPABILITIES.length - 1) + ") or name: ")).trim();
+        if (closed) break;
+        if (!answer) continue;
+
+        if (/^(q|quit|exit)$/i.test(answer)) {
+          stop();
+          break;
+        }
+
+        let capability = null;
+        const numeric = Number(answer);
+        if (Number.isInteger(numeric) && numeric >= 0 && numeric < CAPABILITIES.length) {
+          capability = CAPABILITIES[numeric];
+        } else {
+          capability = CAPABILITIES.find(item => item.id === answer.toLowerCase());
+        }
+
+        if (!capability) {
+          log("[CAPABILITY] Unknown capability. Choose 0-" + (CAPABILITIES.length - 1) + " or a capability name.");
+          continue;
+        }
+
+        let arg = "";
+        if (capability.id !== "stop") {
+          arg = String(await ask(capability.usage + "\nEnter arguments: ")).trim();
+          if (closed) break;
+        }
+
+        try {
+          const result = await dispatchCapability({ bot, runtime, id: capability.id, arg, log });
+          log("[CAPABILITY] " + capability.id + " -> " + JSON.stringify(result));
+        } catch (error) {
+          log("[CAPABILITY] " + capability.id + " failed: " + (error instanceof Error ? error.message : String(error)));
+        }
+      }
+    } catch (error) {
+      if (!closed) log("[CAPABILITY TESTER] Stopped: " + (error instanceof Error ? error.message : String(error)));
+    }
+  })();
+
+  return stop;
+}
