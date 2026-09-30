@@ -105,6 +105,17 @@ const DELEGATED = new Map([
   ["chop_tree","chop_tree"],["craft","craft"],["eat","eat"],["collect","collect"],["look_at_player","look_at_player"]
 ]);
 
+// These capabilities are implemented by the runtime's own task executor.
+// They must NOT be invoked from inside runManualCapability(), because that
+// executor already owns the active task and would reject its own nested execute().
+const RUNTIME_EXECUTED = new Set([
+  ...DELEGATED.keys(),
+  "gather_resources",
+  "guard",
+  "guard_location",
+  "gather_missing_materials"
+]);
+
 const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
 const ANIMALS = new Set(["cow","pig","sheep","chicken","rabbit","horse","donkey","mule","llama","goat","mooshroom","strider","bee"]);
 const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart","cocoa","sweet_berry_bush"]);
@@ -124,12 +135,13 @@ function parseCoordsFromEnd(value) {
 function dist(a,b) { return a && b ? a.distanceTo(b) : Infinity; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 let capabilityRuntime = null;
-function getLastTaskResult() {
-  return capabilityRuntime?.getLastTaskResult?.() || null;
+function getLastTaskResult(runtimeOverride = null) {
+  const source = runtimeOverride || capabilityRuntime;
+  return source?.getLastTaskResult?.() || null;
 }
 
-function logTaskResult(log) {
-  const result = getLastTaskResult();
+function logTaskResult(log, runtimeOverride = null) {
+  const result = getLastTaskResult(runtimeOverride);
   if (!result) return null;
   if (result.status === "cancelled") {
     log("[TASK RESULT] STOPPED (CANCELLED) #"+result.id+" "+result.action+
@@ -1038,6 +1050,14 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="find_item"||id==="count_item"){ const n=inventoryCount(bot,arg); log("[INVENTORY] "+arg+" = "+n); return true; }
   if(id==="equip_item"){ const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.equip(i,"hand"); return true; }
   if(id==="drop_item"){ const i=findInventoryItem(bot,arg); if(!i) throw new Error("Item not found."); await bot.tossStack(i); return true; }
+  if(id==="op_command"){
+    const command = String(arg || "").trim();
+    if (!command) throw new Error("Command is required.");
+    const serverCommand = command.startsWith("/") ? command : "/" + command;
+    bot.chat(serverCommand.slice(0, 256));
+    log("[OP COMMAND] Sent server command: " + serverCommand.slice(0, 256));
+    return true;
+  }
   if(id==="sort_inventory"){
     if(typeof bot.moveSlotItem!=="function") throw new Error("Mineflayer inventory moveSlotItem API is unavailable.");
     const slots=Array.from({length:36},(_,i)=>i+9);
@@ -1183,7 +1203,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const target=id==="do_task"?String(arg||"").toLowerCase():String(arg||"").toLowerCase();
     if(id==="do_task"){
       if(/follow/.test(target)){ const m=target.match(/follow\s+(\w+)/); if(!m) throw new Error("Specify player."); return directCapability({bot,runtime,id:"follow_player",arg:m[1],log}); }
-      if(/(wood|log|stone|cobblestone|resource)/.test(target)) return runtime.execute("gather_basic_resources",{permissionGranted:true});
+      if(/(wood|log|stone|cobblestone|resource)/.test(target)) return directCapability({bot,runtime,id:"gather_resources",arg:"oak_log 1",log});
       if(/craft|make/.test(target)){ const m=target.match(/(?:craft|make)\s+(?:me\s+)?([a-z_ ]+)/); if(m) return directCapability({bot,runtime,id:"multi_step_craft",arg:m[1].trim(),log}); }
       throw new Error("Do Task tester understands follow/gather/craft tasks; add a concrete task.");
     }
@@ -1377,15 +1397,30 @@ export async function dispatchCapability({ bot, runtime, id, arg = "", log = con
     runtime.cancelCurrentTask("manual capability tester");
     return true;
   }
-  if (!runtime?.runManualCapability) {
+  if (!runtime?.runManualCapability || !runtime?.execute) {
     throw new Error("Minecraft runtime manual capability API is unavailable.");
   }
+
   capabilityRuntime = runtime;
+  const previousRuntime = bot.__zoyaCapabilityRuntime;
+  bot.__zoyaCapabilityRuntime = runtime;
   try {
+    if (RUNTIME_EXECUTED.has(mode)) {
+      // runtime.execute() is the task owner for these capabilities. Starting
+      // another runManualCapability() around it would set busy=true first and
+      // make runtime.execute() reject with "Ignoring new task...".
+      return await directCapability({ bot, runtime, id: mode, arg, log });
+    }
     return await runtime.runManualCapability(mode, async () => {
       return await directCapability({ bot, runtime, id: mode, arg, log });
     });
   } finally {
+    if (bot.__zoyaCapabilityRuntime === runtime) {
+      if (previousRuntime) bot.__zoyaCapabilityRuntime = previousRuntime;
+      else {
+        try { delete bot.__zoyaCapabilityRuntime; } catch {}
+      }
+    }
     if (capabilityRuntime === runtime) capabilityRuntime = null;
   }
 }
@@ -1452,7 +1487,7 @@ export function startCapabilityTester({ bot, runtime, log = console.log }) {
         try {
           const result = await dispatchCapability({ bot, runtime, id: capability.id, arg, log });
           log("[CAPABILITY] " + capability.id + " -> " + JSON.stringify(result));
-          logTaskResult(log);
+          logTaskResult(log, runtime);
         } catch (error) {
           log("[CAPABILITY] " + capability.id + " failed: " + (error instanceof Error ? error.message : String(error)));
         }
