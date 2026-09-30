@@ -814,17 +814,52 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return false;
   }
 
+  async function navigateToGuardPost(position, task) {
+    assertTaskActive(task, "guard navigation start");
+
+    // A guard post is an area, not a requirement to occupy one exact foot-level
+    // block. GoalNear is preferred because it respects the requested Y level,
+    // but a manually supplied Y can legitimately be one level above/below the
+    // traversable surface. In that case GoalNear can spend its whole planning
+    // window searching for an exact Y-compatible route even though the X/Z
+    // location is reachable. Fall back to GoalNearXZ so Guard can establish the
+    // post on the nearest reachable terrain at that X/Z location.
+    const near = await gotoTask(
+      task,
+      new goals.GoalNear(position.x, position.y, position.z, 3),
+      position,
+      3,
+      15000,
+      "guard navigation"
+    );
+    if (near) return true;
+    if (!taskIsActive(task)) return false;
+
+    const previousReason = task.terminationReason;
+    task.terminationReason = null;
+    log("[GUARD] Exact guard-post Y was not reached; retrying the same X/Z with Y-independent navigation.");
+
+    const nearXZ = await gotoTask(
+      task,
+      new goals.GoalNearXZ(position.x, position.z, 3),
+      bot.entity.position,
+      3,
+      12000,
+      "guard XZ navigation"
+    );
+    if (nearXZ) return true;
+
+    // Preserve the most useful path failure reason from the final attempt.
+    if (taskIsActive(task) && !task.terminationReason) {
+      task.terminationReason = previousReason || "path_timeout";
+    }
+    return false;
+  }
+
   async function guardLocation(position, task) {
     if (!task) return false;
     assertTaskActive(task, "guard navigation");
-    const reachedGuard = await gotoTask(
-      task,
-      new goals.GoalNear(position.x, position.y, position.z, 2),
-      position,
-      2,
-      30000,
-      "guard navigation"
-    );
+    const reachedGuard = await navigateToGuardPost(position, task);
     if (!reachedGuard) return false;
     assertTaskActive(task, "guard navigation completion");
     await equipMatchingForGuard();
