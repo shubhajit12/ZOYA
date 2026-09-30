@@ -835,7 +835,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     if (near) return true;
     if (!taskIsActive(task)) return false;
 
-    const previousReason = task.terminationReason;
     task.terminationReason = null;
     log("[GUARD] Exact guard-post Y was not reached; retrying the same X/Z with Y-independent navigation.");
 
