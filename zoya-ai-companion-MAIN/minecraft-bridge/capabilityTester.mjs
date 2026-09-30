@@ -741,9 +741,23 @@ async function openContainerWithRetry(bot, block, runtime=null, label="container
 }
 
 async function equipMatching(bot,words,dest="hand") {
-  const item=bot.inventory.items().find(i=>words.some(w=>i.name.toLowerCase().includes(w)));
-  if(!item) return false;
-  await bot.equip(item,dest); return true;
+  const weaponTypeScore = { mace: 4, sword: 3, axe: 2, trident: 1 };
+  const materialScore = { netherite: 7, diamond: 6, iron: 5, stone: 4, golden: 3, wooden: 2 };
+  const candidates = bot.inventory.items()
+    .filter(item => words.some(word => item.name.toLowerCase().includes(String(word).toLowerCase())))
+    .map(item => {
+      const name = item.name.toLowerCase();
+      const material = Object.keys(materialScore).find(key => name.includes(key)) || "";
+      const type = Object.keys(weaponTypeScore).find(key => name.includes(key)) || "";
+      return {
+        item,
+        score: (materialScore[material] || 0) * 10 + (weaponTypeScore[type] || 0)
+      };
+    })
+    .sort((a,b) => b.score - a.score)[0];
+  if(!candidates) return false;
+  await bot.equip(candidates.item,dest);
+  return true;
 }
 async function attackLoop(bot,target,timeout=15000) {
   const started=Date.now();
@@ -867,7 +881,19 @@ async function directCapability({bot,runtime,id,arg,log}) {
   }
   if(id==="attack_mob"||id==="hunt") {
     await equipMatching(bot,WEAPON_WORDS);
-    const target=findEntity(bot,id==="hunt"?"":arg,e=>ANIMALS.has(String(e.name||"").toLowerCase()) && !HOSTILES.has(String(e.name||"").toLowerCase()));
+    const wanted = String(arg || "").trim();
+    const target = findEntity(
+      bot,
+      wanted,
+      id==="hunt"
+        ? e => ANIMALS.has(String(e.name || "").toLowerCase()) && !HOSTILES.has(String(e.name || "").toLowerCase())
+        : e => {
+            const name = String(e.name || "").toLowerCase();
+            if (!name || name === "player" || name === "armor_stand") return false;
+            if (wanted) return true;
+            return HOSTILES.has(name);
+          }
+    );
     if(!target) throw new Error("Target mob not found.");
     return attackLoop(bot,target);
   }
