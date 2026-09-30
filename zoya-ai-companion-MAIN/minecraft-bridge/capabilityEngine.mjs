@@ -488,14 +488,16 @@ async function navigate(ctx,position,range=2,label="navigation"){
 }
 
 async function followPlayer(ctx,username,range=2){
-  const target=findPlayer(ctx.bot,username)?.entity;
+  const player=findPlayer(ctx.bot,username);
+  const target=player?.entity;
   if(!target)throw new Error("Player not found.");
+  const targetUsername=player.username;
   const goal=new goals.GoalFollow(target,range);
   ctx.bot.pathfinder.setGoal(goal,true);
   try{
     while(true){
       ctx.assertActive();
-      if(!target.isValid || !ctx.bot.players[username])throw new Error("Follow target is no longer available.");
+      if(!target.isValid || !ctx.bot.players[targetUsername]?.entity)throw new Error("Follow target is no longer available.");
       await ctx.sleep(150);
     }
   }finally{
