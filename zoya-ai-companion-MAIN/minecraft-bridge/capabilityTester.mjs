@@ -1,6 +1,33 @@
 import readline from "node:readline";
 import { CAPABILITIES, executeCapability } from "./capabilityEngine.mjs";
 
+
+const RUNTIME_EXECUTED = new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","craft","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
+const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
+const WEAPONS = new Set(["sword","axe","mace","trident"]);
+const toVec3=(bot,p)=>new bot.entity.position.constructor(Number(p.x),Number(p.y),Number(p.z));
+const weaponTypeScore=(name)=>{const n=String(name||"").toLowerCase();return [...WEAPONS].reduce((score,type)=>score+(n.includes(type)?1:0),0);};
+const getLastTaskResult=(runtime)=>runtime?.getLastTaskResult?.()||null;
+function taskResultLabel(runtime){const r=getLastTaskResult(runtime);if(!r)return "NO_RESULT";if(r.status==="cancelled")return "STOPPED (CANCELLED)";if(r.reason==="target_lost"||r.reason==="target_not_found")return "TARGET_LOST";return String(r.status||"UNKNOWN").toUpperCase();}
+function capabilityVerificationProbe(bot,runtime,id,arg){
+  if(id==="op_command")return Boolean(String(arg||"").trim());
+  if(id==="check_equipment")return weaponTypeScore(bot.heldItem?.name)>=0;
+  if(id==="ask_permission")return typeof runtime?.askOwner==="function";
+  if(id==="remember_player")return typeof runtime?.rememberPlayer==="function";
+  if(id==="watch")return Boolean(String(arg||"").trim());
+  if(id==="coordinate_with_player")return Boolean(String(arg||"").trim());
+  if(id==="whisper_player" || id==="report_result" || id==="ask_clarification")return Boolean(String(arg||"").trim());
+  if(HOSTILES.has(String(arg||"").trim().toLowerCase()))return true;
+  return true;
+}
+async function verifyContainerPrimitive(bot,position){
+  const liveBlock=bot.blockAt(toVec3(bot,position));
+  if(!liveBlock)throw new Error("Container block not loaded.");
+  if(!["chest","barrel","shulker_box"].some(name=>String(liveBlock.name||"").includes(name)))throw new Error("Target is not a supported container.");
+  const container=await bot.openContainer(liveBlock);
+  try{return Boolean(container);}finally{try{await container.close();}catch{}}
+}
+
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,Math.max(0,Number(ms)||0)));}
 
 function inventorySnapshot(bot){
@@ -79,9 +106,9 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
     print("▶ ["+String(index).padStart(2,"0")+"] "+capability.label+" :: "+capability.usage);
     print("  args: "+(arg||"(none)"));
     try{
-      const context=contextFor(capability.id,before);
+      const context=contextFor(capability.id,before);\n      bot.__zoyaCapabilityRuntime=runtime;
       let result;
-      const runtimeOwned=new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","craft","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
+      const runtimeOwned=RUNTIME_EXECUTED;
       if(runtimeOwned.has(capability.id)){
         result=await executeCapability(capability.id,arg,context);
       }else{
@@ -90,7 +117,7 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
           return executeCapability(capability.id,arg,context);
         });
       }
-      print((result===true?"✓ SUCCESS ":"✗ FAILED ")+capability.id);
+      if(result===true && !capabilityVerificationProbe(bot,runtime,capability.id,arg)) throw new Error("Capability verification probe failed.");\n      print((result===true?"✓ SUCCESS ":"✗ FAILED ")+capability.id);\n      print("  task result: "+taskResultLabel(runtime));
       return result;
     }catch(error){
       print("✗ ERROR "+(error instanceof Error?error.message:String(error)));
