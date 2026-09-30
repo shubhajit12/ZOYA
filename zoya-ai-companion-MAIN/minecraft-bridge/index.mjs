@@ -232,13 +232,36 @@ function collectMinecraftState() {
     hostileNames.has(String(entity.name || "").toLowerCase())
   );
   if (hostileNearby && !lastHostileNearby) {
-    debugLog("[SAFETY] Hostile mob entered Zoya's danger range; cancelling active task and waking brain.");
-    if (minecraftRuntime?.getActiveTask?.()) {
-      minecraftRuntime.cancelCurrentTask("hostile mob entered danger range");
+    const activeTask = minecraftRuntime?.getActiveTask?.();
+    const activeAction = String(activeTask?.action || "").replace(/^manual:/, "");
+    const combatAwareActions = new Set([
+      "guard",
+      "guard_location",
+      "protect_player",
+      "escort_player",
+      "defend",
+      "attack_mob",
+      "hunt",
+      "chase_target",
+      "pvp"
+    ]);
+    const taskOwnsHostileResponse = combatAwareActions.has(activeAction);
+
+    if (taskOwnsHostileResponse) {
+      // Guard/protection/combat tasks deliberately own the hostile response.
+      // The global safety watcher must not cancel them before their own combat
+      // loop can acquire and attack the hostile.
+      debugLog("[SAFETY] Hostile mob entered danger range; active task '" +
+        activeAction + "' owns the hostile response.");
     } else {
-      try { bot.pathfinder?.setGoal(null); bot.clearControlStates(); } catch {}
+      debugLog("[SAFETY] Hostile mob entered Zoya's danger range; cancelling active task and waking brain.");
+      if (activeTask) {
+        minecraftRuntime.cancelCurrentTask("hostile mob entered danger range");
+      } else {
+        try { bot.pathfinder?.setGoal(null); bot.clearControlStates(); } catch {}
+      }
+      if (!capabilityDebugMode) void zoyaBrain?.thinkNow();
     }
-    if (!capabilityDebugMode) void zoyaBrain?.thinkNow();
   }
   lastHostileNearby = hostileNearby;
 
