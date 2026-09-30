@@ -790,6 +790,75 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return Number(bot.food ?? beforeFood) > beforeFood;
   }
 
+  const GUARD_HOSTILES = new Set([
+    "zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider",
+    "witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube",
+    "silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"
+  ]);
+
+  function guardWeaponScore(item) {
+    const name = String(item?.name || "").toLowerCase();
+    if (!name || !["sword","axe","trident","mace"].some(word => name.includes(word))) return -1;
+    const tier = name.includes("netherite") ? 50 :
+      name.includes("diamond") ? 40 :
+      name.includes("iron") ? 30 :
+      name.includes("stone") ? 20 :
+      name.includes("golden") ? 10 :
+      name.includes("wooden") ? 5 : 0;
+    const type = name.includes("sword") ? 4 :
+      name.includes("mace") ? 3 :
+      name.includes("axe") ? 2 :
+      name.includes("trident") ? 1 : 0;
+    return tier + type;
+  }
+
+  async function equipMatchingForGuard() {
+    const item = bot.inventory.items()
+      .map(item => ({ item, score: guardWeaponScore(item) }))
+      .filter(entry => entry.score >= 0)
+      .sort((a, b) => b.score - a.score)[0]?.item;
+    if (!item) return false;
+    await bot.equip(item, "hand");
+    return bot.heldItem?.name === item.name;
+  }
+
+  function nearestGuardHostile(maxDistance = 12, origin = bot.entity?.position) {
+    if (!origin) return null;
+    return Object.values(bot.entities || {})
+      .filter(entity =>
+        entity?.position &&
+        entity !== bot.entity &&
+        GUARD_HOSTILES.has(String(entity.name || "").toLowerCase()) &&
+        entity.position.distanceTo(origin) <= maxDistance
+      )
+      .sort((a, b) => a.position.distanceTo(origin) - b.position.distanceTo(origin))[0] || null;
+  }
+
+  async function attackLoopForGuard(target, task = activeTask, maxDurationMs = 7000) {
+    const deadline = Date.now() + maxDurationMs;
+    while (
+      taskIsActive(task) &&
+      target &&
+      target.isValid !== false &&
+      (target.health == null || target.health > 0) &&
+      Date.now() < deadline
+    ) {
+      assertTaskActive(task, "guard combat");
+      if (dist(bot.entity.position, target.position) > 3.1) {
+        bot.pathfinder.setGoal(new goals.GoalFollow(target, 2.7), true);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        continue;
+      }
+
+      try { bot.pathfinder.setGoal(null); } catch {}
+      await bot.lookAt(target.position.offset(0, target.height || 1, 0), true);
+      bot.attack(target);
+      await new Promise(resolve => setTimeout(resolve, 350));
+    }
+    try { bot.pathfinder.setGoal(null); } catch {}
+    return Boolean(target && target.isValid !== false && target.health != null && target.health <= 0);
+  }
+
   async function guardLocation(position, task) {
     if (!task) return false;
     assertTaskActive(task, "guard navigation");
@@ -803,47 +872,86 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     );
     if (!reachedGuard) return false;
     assertTaskActive(task, "guard navigation completion");
-    while (taskIsActive(task)) {
-      const hostile = Object.values(bot.entities || {})
-        .filter(entity => entity?.position &&
-          new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]).has(String(entity.name || "").toLowerCase()) &&
-          entity.position.distanceTo(bot.entity.position) <= 12)
-        .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
 
-      if (hostile) {
-        await equipMatchingForGuard();
-        const beforeHealth=Number(hostile.health ?? 1);
-        await attackLoopForGuard(hostile);
-        if (hostile.health != null && hostile.health >= beforeHealth && taskIsActive(task)) {
-          log("[GUARD] Attack attempt did not reduce target health; continuing guard.");
-        }
-      } else {
-        await new Promise(resolve=>setTimeout(resolve,300));
+    // Guard lifecycle: arrive -> equip immediately -> watch -> engage hostiles
+    // -> return to the post -> resume watching. It must not stand still with a
+    // weapon while ignoring a hostile that enters the guarded area.
+    log("[GUARD] Position secured; best weapon equipped=" + await equipMatchingForGuard() + ".");
+
+    while (taskIsActive(task)) {
+      const hostile = nearestGuardHostile(12);
+      if (!hostile) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        continue;
       }
+
+      log("[GUARD] Hostile detected: " + String(hostile.name || "unknown") +
+        " at " + dist(bot.entity.position, hostile.position).toFixed(2) + "m.");
+      await equipMatchingForGuard();
+      await attackLoopForGuard(hostile, task, 7000);
+      if (!taskIsActive(task)) break;
+
+      // Combat may pull Zoya away from the post. Re-establish the guard
+      // position before returning to passive observation.
+      const returned = await gotoTask(
+        task,
+        new goals.GoalNear(position.x, position.y, position.z, 2),
+        position,
+        2,
+        15000,
+        "guard return"
+      );
+      if (!returned && taskIsActive(task)) {
+        log("[GUARD] Guard return did not reach the post; retrying watch loop.");
+      }
+      if (taskIsActive(task)) await equipMatchingForGuard();
     }
+
     try { bot.pathfinder.setGoal(null); } catch {}
     return false;
   }
 
-  async function equipMatchingForGuard() {
-    const item=bot.inventory.items().find(i=>["sword","axe","trident","mace"].some(word=>i.name.toLowerCase().includes(word)));
-    if (item) await bot.equip(item,"hand");
-  }
-
-  async function attackLoopForGuard(target) {
-    const deadline=Date.now()+5000;
-    while (taskIsActive(activeTask) && target && target.isValid!==false && (target.health==null || target.health>0) && Date.now()<deadline) {
-      while (taskIsActive(activeTask) && target.isValid!==false && dist(bot.entity.position,target.position)>3.1 && Date.now()<deadline) {
-        bot.pathfinder.setGoal(new goals.GoalFollow(target,2.7),true);
-        await new Promise(resolve=>setTimeout(resolve,150));
-      }
-      try { bot.pathfinder.setGoal(null); } catch {}
-      if (!taskIsActive(activeTask) || !target.isValid || dist(bot.entity.position,target.position)>3.2) break;
-      await bot.lookAt(target.position.offset(0,target.height||1,0),true);
-      bot.attack(target);
-      await new Promise(resolve=>setTimeout(resolve,450));
+  async function protectPlayer(username, task) {
+    if (!task || !username) return false;
+    let target = null;
+    const lookupDeadline = Date.now() + 3000;
+    while (Date.now() < lookupDeadline && taskIsActive(task)) {
+      target = findPlayerByUsername(username)?.entity || null;
+      if (target) break;
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
+    if (!target) {
+      task.terminationReason = "target_not_found";
+      return false;
+    }
+
+    log("[PROTECT] Following " + String(username) + "; hostile detection is active.");
+    await equipMatchingForGuard();
+
+    while (taskIsActive(task)) {
+      const liveTarget = findPlayerByUsername(username)?.entity;
+      if (!liveTarget) {
+        task.terminationReason = "target_lost";
+        try { bot.pathfinder.setGoal(null); } catch {}
+        return false;
+      }
+
+      const hostile = nearestGuardHostile(12, liveTarget.position);
+      if (hostile) {
+        log("[PROTECT] Hostile near " + String(username) + ": " + String(hostile.name || "unknown") + ".");
+        await equipMatchingForGuard();
+        await attackLoopForGuard(hostile, task, 7000);
+        if (!taskIsActive(task)) break;
+        await equipMatchingForGuard();
+        continue;
+      }
+
+      bot.pathfinder.setGoal(new goals.GoalFollow(liveTarget, 3), true);
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
     try { bot.pathfinder.setGoal(null); } catch {}
+    return false;
   }
 
   async function pvp(targetUsername, task) {
@@ -1002,6 +1110,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       else if (action === "guard" || action === "guard_location") {
         const position=options.position || bot.entity.position;
         result = await guardLocation(position, task);
+      }
+      else if (action === "protect_player" || action === "escort_player") {
+        result = await protectPlayer(options.targetUsername || owner, task);
       }
       else if (action === "idle") result = true;
       else {
