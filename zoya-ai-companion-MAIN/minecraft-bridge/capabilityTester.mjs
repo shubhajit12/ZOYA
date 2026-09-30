@@ -162,7 +162,8 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
     try{
       let result=await dispatchCapability({bot,runtime,id:capability.id,arg,log});
       if(result===true && !capabilityVerificationProbe(bot,runtime,capability.id,arg)) throw new Error("Capability verification probe failed.");
-      print((result===true?"✓ SUCCESS ":"✗ FAILED ")+capability.id);
+      const stopped = taskResultLabel(runtime) === "STOPPED (CANCELLED)";
+      print((stopped ? "■ STOPPED " : result===true ? "✓ SUCCESS " : "✗ FAILED ")+capability.id);
       print("  task result: "+taskResultLabel(runtime));
       return result;
     }catch(error){
