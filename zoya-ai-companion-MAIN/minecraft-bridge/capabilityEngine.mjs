@@ -557,14 +557,21 @@ async function nativeCraft(ctx,itemName,amount=1){
 }
 
 async function runtimeAction(ctx,id,arg){
-  const options={permissionGranted:true};const p=split(arg);
-  if(id==="follow_player")return followPlayer(ctx,required(arg,"Username is required."));
-  if(id==="pvp"||id==="look_at_player")options.targetUsername=required(arg,"Username is required.");
+  const options={permissionGranted:true};
+  const p=split(arg);
+  if(id==="pvp"||id==="look_at_player"||id==="follow_player")options.targetUsername=required(arg,"Username is required.");
   if(id==="mine")options.blockName=required(arg,"Block is required.");
   if(id==="eat")options.itemName=String(arg||"").trim();
   if(id==="collect"||id==="gather_resources"){options.itemName=p[0]||"";options.amount=Math.max(1,Number(p[1])||1);}
   if(id==="gather_missing_materials"){options.itemName=required(arg,"Item is required.");options.amount=1;}
-  if(id==="craft")return nativeCraft(ctx,p.slice(0,-1).join("_")||p[0]||"",Math.max(1,Number(p.at(-1))||1));
+  if(id==="craft"){
+    const amount=Math.max(1,Number(p.at(-1))||1);
+    const itemName=p.slice(0,-1).join("_")||p[0]||"";
+    return ctx.runtime.runManualCapability("clean:craft",async task=>{
+      ctx.task=task;
+      return nativeCraft(ctx,itemName,amount);
+    });
+  }
   if(id==="investigate_entity")options.entityName=required(arg,"Entity name is required.");
   if(id==="guard"||id==="guard_location")options.position=coords(arg);
   const mapped=id==="roam"?"safe_roam"
@@ -572,7 +579,11 @@ async function runtimeAction(ctx,id,arg){
     :id==="gather_resources"?"gather_basic_resources"
     :id==="gather_missing_materials"?"gather_basic_resources"
     :id;
-  return ctx.runtime.execute(mapped,options);
+  const continuous=id==="roam";
+  return ctx.runtime.runManualCapability("clean:"+mapped,async task=>{
+    ctx.task=task;
+    return ctx.runtime.execute(mapped,{...options,continuous,__task:task});
+  });
 }
 
 async function lowLevel(ctx,id,arg){
