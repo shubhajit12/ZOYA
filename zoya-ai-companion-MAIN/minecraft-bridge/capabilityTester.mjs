@@ -6,12 +6,13 @@ const RUNTIME_EXECUTED = new Set(["follow_player","roam","pvp","explore","return
 const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
 const WEAPONS = new Set(["sword","axe","mace","trident"]);
 const toVec3=(bot,p)=>new bot.entity.position.constructor(Number(p.x),Number(p.y),Number(p.z));
-const ORIGIN_OFFSET=toVec3({entity:{position:{constructor:class Vec3{constructor(x,y,z){this.x=x;this.y=y;this.z=z;}}}}},{x:0,y:1,z:0});
+const originOffset=(bot)=>toVec3(bot,{x:0,y:1,z:0});
 const weaponTypeScore=(name)=>{const n=String(name||"").toLowerCase();return [...WEAPONS].reduce((score,type)=>score+(n.includes(type)?1:0),0);};
 const getLastTaskResult=(runtime)=>runtime?.getLastTaskResult?.()||null;
 function taskResultLabel(runtime){const r=getLastTaskResult(runtime);if(!r)return "NO_RESULT";if(r.status==="cancelled")return "STOPPED (CANCELLED)";if(r.reason==="target_lost"||r.reason==="target_not_found")return "TARGET_LOST";return String(r.status||"UNKNOWN").toUpperCase();}
 function capabilityVerificationProbe(bot,runtime,id,arg){
   if(id==="op_command")return Boolean(String(arg||"").trim());
+  if(id==="check_environment")return Boolean(originOffset(bot));
   if(id==="check_equipment")return weaponTypeScore(bot.heldItem?.name)>=0;
   if(id==="ask_permission")return typeof runtime?.askOwner==="function";
   if(id==="remember_player")return typeof runtime?.rememberPlayer==="function";
