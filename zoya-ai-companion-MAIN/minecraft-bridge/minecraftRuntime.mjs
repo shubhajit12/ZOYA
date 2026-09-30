@@ -839,21 +839,24 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     task.terminationReason = null;
     log("[GUARD] Exact guard-post Y was not reached; retrying the same X/Z with Y-independent navigation.");
 
-    const nearXZ = await gotoTask(
-      task,
-      new goals.GoalNearXZ(position.x, position.z, 3),
-      bot.entity.position,
-      3,
-      12000,
-      "guard XZ navigation"
-    );
-    if (nearXZ) return true;
-
-    // Preserve the most useful path failure reason from the final attempt.
-    if (taskIsActive(task) && !task.terminationReason) {
-      task.terminationReason = previousReason || "path_timeout";
+    const xzGoal = new goals.GoalNearXZ(position.x, position.z, 3);
+    const xzDeadline = Date.now() + 12000;
+    bot.pathfinder.setGoal(xzGoal);
+    try {
+      while (taskIsActive(task) && Date.now() < xzDeadline) {
+        const dx = bot.entity.position.x - position.x;
+        const dz = bot.entity.position.z - position.z;
+        if (Math.hypot(dx, dz) <= 3) return true;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      if (!taskIsActive(task)) return false;
+      task.terminationReason = "path_timeout";
+      return false;
+    } finally {
+      if (activeTask === task) {
+        try { bot.pathfinder.setGoal(null); } catch {}
+      }
     }
-    return false;
   }
 
   async function guardLocation(position, task) {
