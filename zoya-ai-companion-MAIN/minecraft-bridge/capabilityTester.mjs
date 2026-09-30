@@ -691,7 +691,11 @@ async function openContainerWithRetry(bot, block, runtime=null, label="container
       const message = String(error?.message || error);
       log("[CONTAINER] Open attempt " + attempt + "/" + maxAttempts + " failed: " + message);
 
-      if (attempt === maxAttempts) break;
+      // Only retry the recoverable window-open handshake timeout observed in
+      // runtime. Do not hide cancellation, LOS, distance, or stale-container
+      // errors behind repeated attempts.
+      const retryable = /windowOpen did not fire within timeout|windowOpen.*timeout|timed out/i.test(message);
+      if (!retryable || attempt === maxAttempts) break;
 
       // Re-read the block before retrying. Never retry against a stale block
       // reference after a failed windowOpen handshake.
