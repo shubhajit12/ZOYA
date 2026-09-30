@@ -127,6 +127,18 @@ let capabilityRuntime = null;
 function getLastTaskResult() {
   return capabilityRuntime?.getLastTaskResult?.() || null;
 }
+
+function logTaskResult(log) {
+  const result = getLastTaskResult();
+  if (!result) return null;
+  if (result.status === "cancelled") {
+    log("[TASK RESULT] STOPPED (CANCELLED) #"+result.id+" "+result.action+
+      (result.reason ? " ("+result.reason+")" : "")+".");
+  } else if (result.reason === "target_lost" || result.reason === "target_not_found") {
+    log("[TASK RESULT] TARGET_LOST #"+result.id+" "+result.action+".");
+  }
+  return result;
+}
 async function taskSleep(ms) {
   const owner = capabilityRuntime;
   const duration = Math.max(0, Number(ms) || 0);
@@ -1383,6 +1395,7 @@ export function startCapabilityTester({ bot, runtime, log = console.log }) {
         try {
           const result = await dispatchCapability({ bot, runtime, id: capability.id, arg, log });
           log("[CAPABILITY] " + capability.id + " -> " + JSON.stringify(result));
+          logTaskResult(log);
         } catch (error) {
           log("[CAPABILITY] " + capability.id + " failed: " + (error instanceof Error ? error.message : String(error)));
         }
