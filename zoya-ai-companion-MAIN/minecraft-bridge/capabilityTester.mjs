@@ -19,7 +19,8 @@ function capabilityVerificationProbe(bot,runtime,id,arg){
   if(id==="watch")return Boolean(String(arg||"").trim());
   if(id==="coordinate_with_player")return Boolean(String(arg||"").trim());
   if(id==="whisper_player" || id==="report_result" || id==="ask_clarification")return Boolean(String(arg||"").trim());
-  const name=String(arg||"").trim().toLowerCase();\n  if(HOSTILES.has(name))return true;
+  const name=String(arg||"").trim().toLowerCase();
+  if(HOSTILES.has(name))return true;
   return true;
 }
 async function verifyContainerPrimitive(bot,position){
