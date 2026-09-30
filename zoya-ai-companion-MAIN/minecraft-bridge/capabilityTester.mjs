@@ -108,7 +108,8 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
     print("▶ ["+String(index).padStart(2,"0")+"] "+capability.label+" :: "+capability.usage);
     print("  args: "+(arg||"(none)"));
     try{
-      const context=contextFor(capability.id,before);\n      bot.__zoyaCapabilityRuntime = runtime;
+      const context=contextFor(capability.id,before);
+      bot.__zoyaCapabilityRuntime = runtime;
       let result;
       const runtimeOwned=RUNTIME_EXECUTED;
       if(runtimeOwned.has(capability.id)){
