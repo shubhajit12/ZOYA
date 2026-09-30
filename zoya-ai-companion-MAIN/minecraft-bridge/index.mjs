@@ -71,7 +71,7 @@ let lastEntityIds = new Set();
 let lastHostileNearby = false;
 const POSITION_LOG_THRESHOLD = 0.5;
 const HEARTBEAT_INTERVAL_MS = 30000;
-const CAPABILITY_BUILD_VERSION = "manual-capability-v18-container-geometry-2026-09-29";
+const CAPABILITY_BUILD_VERSION = "manual-capability-v19-task-arbitration-2026-09-30";
 // Autonomous movement is a brain capability, not a second movement loop.
 // Keeping one movement writer prevents natural-walk timers from fighting pathfinder actions.
 let movementEnabled = false;
