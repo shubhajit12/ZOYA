@@ -55,9 +55,11 @@ jobs:
             $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
             $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-            if ($indexSource -notmatch 'manual-capability-v18-container-geometry-2026-09-29') { throw 'Manual capability build marker is missing or stale.' }
-            if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
-            if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
+            if ($indexSource -notmatch 'manual-capability-v18-container-geometry-2026-09-29') { throw 'Minecraft bridge build marker is missing or stale.' }
+            if ($indexSource -match 'capabilityDebugMode = true') { throw 'Normal Minecraft bridge must not hard-lock capability debug mode.' }
+            if ($indexSource -notmatch 'CAPABILITY_DEBUG_ENV = process\.env\.ZOYA_CAPABILITY_DEBUG === "1"') { throw 'Capability debug mode must remain explicit opt-in via ZOYA_CAPABILITY_DEBUG=1.' }
+            if ($indexSource -notmatch 'capabilityDebugMode = CAPABILITY_DEBUG_ENV') { throw 'Capability debug mode must follow the explicit environment flag.' }
+            if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability tester guard is missing.' }
             if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
             if ($indexSource -notmatch 'playerHeight = 1.80001') { throw '1.21.x collision height workaround is missing.' }
             if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
