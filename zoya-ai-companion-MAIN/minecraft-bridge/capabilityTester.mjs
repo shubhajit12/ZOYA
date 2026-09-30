@@ -667,6 +667,48 @@ async function openContainerForTask(bot, block, runtime=null, label="container",
       ": " + String(error?.message || error));
   }
 }
+async function openContainerWithRetry(bot, block, runtime=null, label="container", log=console.log, options={}) {
+  const maxAttempts = Math.max(1, Math.min(3, Number(options.maxAttempts) || 3));
+  const backoffMs = Math.max(250, Number(options.backoffMs) || 750);
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const task = runtime?.getActiveTask?.() || bot.__zoyaCapabilityRuntime?.getActiveTask?.();
+    if (!task || task.cancelled) throw new Error("Task cancelled before opening " + label + ".");
+
+    try {
+      if (attempt > 1) {
+        log("[CONTAINER] Retry " + attempt + "/" + maxAttempts + " for " + label + ".");
+        try {
+          if (bot.currentWindow) await bot.closeWindow(bot.currentWindow);
+        } catch {}
+        await taskSleep(backoffMs * (attempt - 1));
+      }
+
+      return await openContainerForTask(bot, block, runtime, label, log);
+    } catch (error) {
+      lastError = error;
+      const message = String(error?.message || error);
+      log("[CONTAINER] Open attempt " + attempt + "/" + maxAttempts + " failed: " + message);
+
+      if (attempt === maxAttempts) break;
+
+      // Re-read the block before retrying. Never retry against a stale block
+      // reference after a failed windowOpen handshake.
+      const position = toVec3(bot, block.position);
+      const liveBlock = bot.blockAt(position);
+      if (!liveBlock || liveBlock.name !== block.name) {
+        throw new Error("Container changed during retry: expected " + String(block.name) +
+          ", found " + String(liveBlock?.name || "air") + ".");
+      }
+      block = liveBlock;
+    }
+  }
+
+  throw new Error("Could not open " + label + " after " + maxAttempts +
+    " attempts: " + String(lastError?.message || lastError));
+}
+
 async function equipMatching(bot,words,dest="hand") {
   const item=bot.inventory.items().find(i=>words.some(w=>i.name.toLowerCase().includes(w)));
   if(!item) return false;
@@ -1000,7 +1042,7 @@ async function directCapability({bot,runtime,id,arg,log}) {
     const itemBefore=findInventoryItem(bot,name);
     if(id==="deposit" && !itemBefore) throw new Error("Item not in inventory.");
     await gotoBlockInteraction(bot,b,3.5,20000,runtime);
-    const container=await openContainerForTask(bot,b,runtime,b.name,log);
+    const container=await openContainerWithRetry(bot,b,runtime,b.name,log,{maxAttempts:3,backoffMs:750});
     try {
       if(id==="deposit"){
         const item=findInventoryItem(bot,name);
@@ -1248,291 +1290,3 @@ async function directCapability({bot,runtime,id,arg,log}) {
   if(id==="detect_hostiles"){ const h=Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())&&dist(e.position,bot.entity.position)<=24); log("[SAFETY] Hostiles="+h.length); h.forEach(e=>log("[SAFETY] "+e.name+" "+dist(e.position,bot.entity.position).toFixed(2)+"m")); return true; }
   if(id==="check_health"){ log("[STATUS] Health="+bot.health); return true; }
   if(id==="check_food"){ log("[STATUS] Food="+bot.food+" saturation="+bot.foodSaturation); return true; }
-  if(id==="check_equipment"){ log("[EQUIPMENT] "+JSON.stringify(bot.inventory.slots?.slice(5,9).filter(Boolean).map(i=>i.name)||[])); return true; }
-  if(id==="coordinate"){
-    const p=findPlayer(bot,arg)?.entity;
-    if(!p?.position) throw new Error("Player not found: " + String(arg || ""));
-    const q=p.position;
-    log("[COORDINATES] Player = X="+q.x.toFixed(2)+" Y="+q.y.toFixed(2)+" Z="+q.z.toFixed(2));
-    return true;
-  }
-  if(id==="observe"){ log("[OBSERVE] dimension="+bot.game?.dimension+" time="+bot.time?.time+" entities="+Object.keys(bot.entities||{}).length+" health="+bot.health+" food="+bot.food); return true; }
-
-  if(["ask_permission","whisper_player","remember_player","report_result","ask_clarification"].includes(id)){
-    if(id==="whisper_player"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p) throw new Error("Player not found."); bot.whisper(p.username,m.join(" ")); return true; }
-    if(id==="report_result"){ bot.chat(String(arg||"")); return true; }
-    if(id==="ask_clarification"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p) throw new Error("Player not found."); bot.whisper(p.username,"I need clarification: "+m.join(" ")); return true; }
-    if(id==="remember_player"){
-      const m=String(arg||"").trim().split(/\s+/); const name=m.shift(); const fact=m.join(" ").trim();
-      if(!name||!fact) throw new Error("Usage: remember_player <username> <fact>");
-      if(typeof runtime?.rememberPlayer!=="function") throw new Error("Runtime memory API unavailable.");
-      const key=name.toLowerCase();
-      const existing=runtime.memory?.players?.[key] || {};
-      const facts=Array.isArray(existing.facts)?existing.facts.slice():[];
-      if(!facts.includes(fact)) facts.push(fact);
-      runtime.rememberPlayer(name,{facts});
-      log("[MEMORY] Remembered fact for "+name+": "+fact);
-      return true;
-    }
-    if(id==="ask_permission"){
-      const m=String(arg||"").trim().split(/\s+/); const name=m.shift(); const action=m.join(" ").trim();
-      if(!name||!action) throw new Error("Usage: ask_permission <username> <action>");
-      if(typeof runtime?.askOwner!=="function") throw new Error("Permission API unavailable.");
-      return runtime.askOwner(name,action,action);
-    }
-  }
-
-  if(id==="retrieve_item"){ return directCapability({bot,runtime,id:"collect",arg,log}); }
-  if(id==="watch"){ const e=findEntity(bot,arg)||findPlayer(bot,arg)?.entity; if(!e) throw new Error("Watch target not found."); await bot.lookAt(e.position.offset(0,e.height||1,0),true); await taskSleep(5000); return true; }
-  if(id==="search"){ const item=findWorldItem(bot,arg); if(item){log("[SEARCH] Found world item "+(item.getDroppedItem?.()?.name||arg)+" at "+JSON.stringify(item.position));return true;} const e=findEntity(bot,arg); if(e){log("[SEARCH] Found entity "+(e.username||e.name)+" at "+JSON.stringify(e.position));return true;} const b=nearestBlock(bot,arg,32); if(b){log("[SEARCH] Found block "+b.name+" at "+JSON.stringify(b.position));return true;} const i=findInventoryItem(bot,arg); if(i){log("[SEARCH] Found inventory item "+i.name+" x"+i.count);return true;} throw new Error("Target not found in nearby world/inventory."); }
-  if(id==="build"){
-    const s=String(arg||"").toLowerCase(), m=s.match(/(pillar|tower|line)\s+(\w+)\s+(\d+)/);
-    if(!m) throw new Error("Build tester syntax: pillar <block> <count> or line <block> <count>.");
-    const item=findInventoryItem(bot,m[2]); if(!item) throw new Error("Build block not in inventory.");
-    const n=Math.min(32,Math.max(1,Number(m[3]))); await bot.equip(item,"hand");
-    let placed=0;
-    const base=bot.entity.position.floored();
-    for(let i=0;i<n;i++){
-      const p=m[1]==="line" ? base.offset(i+1,0,0) : base.offset(0,i+1,0);
-      const ref=bot.blockAt(toVec3(bot,p.offset(0,-1,0)));
-      if(!ref || !isSolidBlock(ref)) break;
-      try {
-        await gotoPlaceBlock(bot,p,4.5,15000);
-        await bot.equip(item,"hand");
-        await bot.placeBlock(ref,toVec3(bot,{x:0,y:1,z:0}));
-        const placedBlock=bot.blockAt(toVec3(bot,p));
-        if(!placedBlock || placedBlock.name==="air") throw new Error("Placement not observed at "+p.x+" "+p.y+" "+p.z);
-        placed++;
-      } catch (error) {
-        log("[BUILD] Placement "+(i+1)+" failed: "+(error instanceof Error?error.message:String(error)));
-        break;
-      }
-      await taskSleep(100);
-    }
-    if(placed<1) throw new Error("No blocks were placed.");
-    return true;
-  }
-  if(id==="coordinate_with_player"){ const m=String(arg||"").trim().split(/\s+/),p=findPlayer(bot,m.shift()); if(!p?.entity) throw new Error("Player not found."); bot.chat("I am at "+Math.round(bot.entity.position.x)+" "+Math.round(bot.entity.position.y)+" "+Math.round(bot.entity.position.z)+"; task: "+m.join(" ")); return true; }
-  if(id==="op_command"){
-    const c=String(arg||"").trim();
-    if(!c.startsWith("/")) throw new Error("Enter a slash command.");
-
-    // Mineflayer's permissionLevel can remain stale when OP is granted/revoked
-    // while the bot is already connected. Minecraft's server is authoritative,
-    // so this cached value must never be used as an execution gate.
-    const reportedLevel=Number(bot.game?.permissionLevel);
-    log("[OP] Sending command: "+c+" | reported permissionLevel="+
-      (Number.isFinite(reportedLevel)?reportedLevel:"unknown")+
-      " (informational only).");
-
-    const denialPattern=/(unknown or incomplete command|unknown command|no permission|not permitted|cannot use|you do not have permission|you don't have permission|not allowed|requires permission|operator privileges)/i;
-    let feedback=null;
-    let timer=null;
-
-    const feedbackPromise=new Promise(resolve=>{
-      let settled=false;
-      const cleanup=()=>{
-        if(timer) clearTimeout(timer);
-        try{bot.removeListener("messagestr",onMessage);}catch{}
-        try{bot.removeListener("message",onMessage);}catch{}
-      };
-      const finish=value=>{
-        if(settled)return;
-        settled=true;
-        cleanup();
-        resolve(value);
-      };
-      const onMessage=message=>{
-        const text=typeof message==="string"?message:String(message??"");
-        if(!text)return;
-        if(denialPattern.test(text)){
-          feedback=text;
-          finish(false);
-        }
-      };
-      bot.on("messagestr",onMessage);
-      bot.on("message",onMessage);
-      timer=setTimeout(()=>finish(true),1500);
-    });
-
-    bot.chat(c);
-    const accepted=await feedbackPromise;
-    if(!accepted) throw new Error("Minecraft rejected the command: "+feedback);
-
-    const opMatch=c.match(/^\/op\s+(.+)$/i);
-    const opTarget=opMatch?.[1]?.trim().toLowerCase();
-    if(opTarget==="@s" || opTarget==="me" || opTarget===String(bot.username||"").toLowerCase()){
-      const deadline=Date.now()+3000;
-      while(Date.now()<deadline){
-        const level=Number(bot.game?.permissionLevel);
-        const abilities=bot.abilities || {};
-        if(level>=2 || abilities?.mayFly===true || abilities?.instantBuild===true){
-          log("[OP] Zoya operator state confirmed by server capabilities.");
-          return true;
-        }
-        await taskSleep(150);
-      }
-      throw new Error("OP command was not rejected, but Zoya's operator/permission state was not confirmed.");
-    }
-
-    log("[OP] Command sent; no permission/command rejection was reported by the server.");
-    return true;
-  }
-
-  throw new Error("Capability is registered but has no implementation.");
-}
-
-export async function dispatchCapability({bot, runtime, id, arg = "", log = console.log}) {
-  const capability = CAPABILITIES.find(cap => cap.id === String(id || "").trim().toLowerCase());
-  if (!capability) {
-    throw new Error("Unknown capability: " + String(id || "") + ". Use /zoya modes list.");
-  }
-
-  capabilityRuntime = runtime;
-  bot.__zoyaCapabilityRuntime = runtime;
-
-  if (capability.id === "stop") {
-    if (!runtime?.getActiveTask?.()) return { accepted: true, status: "idle", message: "No active capability task." };
-    runtime.cancelCurrentTask("manual capability command");
-    return { accepted: true, status: "cancel_requested", message: "Cancellation requested." };
-  }
-
-  if (runtime?.getActiveTask?.()) {
-    throw new Error("Another capability is already running. Use /zoya cancel first.");
-  }
-
-  const execute = async () => {
-    const executeDirect = async () => directCapability({ bot, runtime, id: capability.id, arg, log });
-    if (["follow_player", "pvp", "guard", "guard_location"].includes(capability.id)) {
-      void executeDirect().catch(error => {
-        log("[CAPABILITY] Background mode " + capability.id + " crashed: " +
-          (error instanceof Error ? error.message : String(error)));
-      });
-      return { accepted: true, status: "running", background: true, mode: capability.id };
-    }
-    const delegated = DELEGATED.has(capability.id) || capability.id === "gather_resources" || capability.id === "stop";
-    const result = delegated
-      ? await executeDirect()
-      : await runtime.runManualCapability(capability.id, executeDirect);
-    return { accepted: true, status: "finished", mode: capability.id, result: result === true ? true : result };
-  };
-
-  return execute();
-}
-
-export function startCapabilityTester({bot,runtime,log=console.log}) {
-  log("[CAPABILITY TESTER] Local-only mode: no Groq calls are made.");
-  capabilityRuntime = runtime;
-  bot.__zoyaCapabilityRuntime = runtime;
-  const preflight = [
-    ["bot.entity", !!bot?.entity],
-    ["bot.pathfinder.goto", typeof bot?.pathfinder?.goto === "function"],
-    ["bot.lookAt", typeof bot?.lookAt === "function"],
-    ["bot.setControlState", typeof bot?.setControlState === "function"],
-    ["bot.chat", typeof bot?.chat === "function"],
-    ["runtime.execute", typeof runtime?.execute === "function"],
-    ["runtime.cancelCurrentTask", typeof runtime?.cancelCurrentTask === "function"]
-  ];
-  const failed = preflight.filter(([, ok]) => !ok).map(([name]) => name);
-  if (failed.length) {
-    log("[CAPABILITY TESTER] PREFLIGHT FAIL: " + failed.join(", "));
-    return ()=>{};
-  }
-  log("[CAPABILITY TESTER] PREFLIGHT PASS: required Mineflayer/runtime APIs are available.");
-  log("[CAPABILITY TESTER] IMPORTANT: API availability is not a capability PASS; every action is post-verified.");
-  if(!process.stdin.isTTY||!process.stdout.isTTY){ log("[CAPABILITY TESTER] Interactive terminal unavailable."); return ()=>{}; }
-  let stopped=false;
-  let backgroundRun=null;
-  const rl=readline.createInterface({input:process.stdin,output:process.stdout,terminal:true});
-  const ask=q=>new Promise(resolve=>rl.question(q,resolve));
-
-  async function menu(){
-    let menuShown = false;
-    while(!stopped&&bot&&bot.entity){
-      if (!menuShown) {
-        log("");
-        log("========================================");
-        log("       ZOYA CAPABILITY DEBUGGER");
-        log("========================================");
-        log("Groq: DISABLED | Manual mode execution: ENABLED");
-        log("Registered modes: " + CAPABILITIES.length);
-        CAPABILITIES.forEach((cap,i)=>log(String(i+1).padStart(2," ") + ". " + cap.label));
-        log("0. Exit capability tester");
-        menuShown = true;
-      }
-
-      const answer=String(await ask("Choose a capability (0-"+CAPABILITIES.length+"): ")).trim();
-      if(answer==="0") break;
-
-      const index=Number(answer)-1;
-      if(!Number.isInteger(index)||index<0||index>=CAPABILITIES.length){
-        log("[CAPABILITY TESTER] Invalid selection.");
-        continue;
-      }
-
-      const cap=CAPABILITIES[index];
-      log("");
-      log("[CAPABILITY] " + cap.label + " selected.");
-      log("Usage: " + cap.usage);
-
-      const arg=String(await ask("Enter arguments: ")).trim();
-
-      try{
-        if(runtime?.getActiveTask?.()) {
-          runtime.cancelCurrentTask("manual capability tester");
-          const idle = await runtime.waitForTaskIdle?.(5000);
-          if (idle === false) throw new Error("Previous task did not finish cancellation within 5 seconds.");
-        }
-        log("[CAPABILITY] Mode: " + cap.id);
-        log("[CAPABILITY] Status: RUNNING");
-        const started=Date.now();
-        const before=inventorySnapshot(bot);
-
-        if (["follow_player","pvp","guard","guard_location"].includes(cap.id)) {
-          const promise = directCapability({bot,runtime,id:cap.id,arg,log});
-          backgroundRun = { id: cap.id, promise, before, started };
-          log("[CAPABILITY] Mode: " + cap.id + " | Status: RUNNING IN BACKGROUND");
-          void promise.then(result => {
-            const lifecycle = runtime?.getLastTaskResult?.() || null;
-            let label = "FAIL";
-            if (lifecycle?.status === "cancelled") label = "STOPPED (CANCELLED)";
-            else if (lifecycle?.reason === "target_lost") label = "ENDED (TARGET_LOST)";
-            else if (lifecycle?.reason === "target_not_found") label = "FAIL (TARGET_NOT_FOUND)";
-            else if (cap.id === "pvp" && lifecycle?.reason === "target_defeated") label = "PASS (TARGET_DEFEATED)";
-            else if (result === true && cap.id !== "pvp") label = "ENDED (COMPLETED)";
-            log("[CAPABILITY] Background mode: " + cap.id + " ended -> " + label);
-            if (backgroundRun?.promise === promise) backgroundRun = null;
-          }).catch(error => {
-            log("[CAPABILITY] Background mode: " + cap.id + " crashed: " + (error instanceof Error ? error.message : String(error)));
-            if (backgroundRun?.promise === promise) backgroundRun = null;
-          });
-          continue;
-        }
-
-        const executeDirect = async () => directCapability({bot,runtime,id:cap.id,arg,log});
-        const result = (DELEGATED.has(cap.id) || cap.id === "gather_resources" || cap.id === "stop")
-          ? await executeDirect()
-          : await runtime.runManualCapability(cap.id, async () => executeDirect());
-        if (cap.id==="remember_player" && runtime?.memory?.players) bot.__zoyaRuntimeMemoryPlayers=runtime.memory.players;
-        const verified=await verifyCapability({bot,id:cap.id,arg,before,log,result,ask,runtime});
-        const status=verified?"PASS":"FAIL";
-        log("[CAPABILITY] Mode: " + cap.id + " | Status: " + status + " | Duration: " + (Date.now()-started) + " ms");
-      }catch(error){
-        log("[CAPABILITY] Mode: " + cap.id + " | Status: FAIL | Error: " + (error instanceof Error?error.message:String(error)));
-      }
-    }
-    rl.close();
-    log("[CAPABILITY TESTER] Exited. No capability is selected automatically.");
-  }
-
-  void menu();
-  return ()=>{
-    stopped=true;
-    if(runtime?.getActiveTask?.()) runtime.cancelCurrentTask("capability tester exited");
-    try { bot?.pathfinder?.setGoal?.(null); } catch {}
-    try { bot?.clearControlStates?.(); } catch {}
-    backgroundRun=null;
-    try{rl.close();}catch{}
-  };
-}
-export function getCapabilityRegistry(){return CAPABILITIES.map(cap=>({...cap}));}
