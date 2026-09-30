@@ -55,7 +55,7 @@ jobs:
             $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
             $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-            if ($indexSource -notmatch 'manual-capability-v18-container-geometry-2026-09-29') { throw 'Manual capability build marker is missing or stale.' }
+            if ($indexSource -notmatch 'manual-capability-v19-task-arbitration-2026-09-30') { throw 'Manual capability build marker is missing or stale.' }
             if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
             if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
             if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
