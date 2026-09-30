@@ -563,10 +563,15 @@ async function runtimeAction(ctx,id,arg){
   if(id==="mine")options.blockName=required(arg,"Block is required.");
   if(id==="eat")options.itemName=String(arg||"").trim();
   if(id==="collect"||id==="gather_resources"){options.itemName=p[0]||"";options.amount=Math.max(1,Number(p[1])||1);}
+  if(id==="gather_missing_materials"){options.itemName=required(arg,"Item is required.");options.amount=1;}
   if(id==="craft")return nativeCraft(ctx,p.slice(0,-1).join("_")||p[0]||"",Math.max(1,Number(p.at(-1))||1));
   if(id==="investigate_entity")options.entityName=required(arg,"Entity name is required.");
   if(id==="guard"||id==="guard_location")options.position=coords(arg);
-  const mapped=id==="roam"?"safe_roam":id==="return"?"return_to_owner":id;
+  const mapped=id==="roam"?"safe_roam"
+    :id==="return"?"return_to_owner"
+    :id==="gather_resources"?"gather_basic_resources"
+    :id==="gather_missing_materials"?"gather_basic_resources"
+    :id;
   return ctx.runtime.execute(mapped,options);
 }
 
@@ -589,6 +594,38 @@ async function lowLevel(ctx,id,arg){
     case "jump":bot.setControlState("jump",true);await ctx.sleep(250);bot.setControlState("jump",false);return true;
     case "enter_exit_vehicle":if(bot.vehicle){bot.dismount();return true;}throw new Error("Vehicle target selection requires a specific nearby vehicle.");
     case "attack_mob":{const t=findEntity(bot,arg)||Object.values(bot.entities||{}).find(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase()));if(!t)throw new Error("Target mob not found.");return combatHit(ctx,t);}
+    case "hunt":{
+      const requested=String(arg||"").trim().toLowerCase();
+      const target=Object.values(bot.entities||{})
+        .filter(e=>e?.position&&e!==bot.entity&&HOSTILES.has(String(e.name||"").toLowerCase())&&(!requested||String(e.name||"").toLowerCase().includes(requested)))
+        .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
+      if(!target)throw new Error("Target hostile mob not found.");
+      let attacked=false;
+      const deadline=Date.now()+30000;
+      while(Date.now()<deadline&&target.isValid!==false&&(target.health==null||target.health>0)){
+        ctx.assertActive();
+        if(target.position.distanceTo(bot.entity.position)>3.1){
+          bot.pathfinder.setGoal(new goals.GoalFollow(target,2.7),true);
+          await ctx.sleep(150);
+          continue;
+        }
+        try{bot.pathfinder.setGoal(null)}catch{}
+        await bot.lookAt(target.position.offset(0,target.height||1,0),true);
+        bot.attack(target);
+        attacked=true;
+        await ctx.sleep(450);
+      }
+      try{bot.pathfinder.setGoal(null)}catch{}
+      if(!attacked)throw new Error("Hunt could not reach the target.");
+      return true;
+    }
+    case "retrieve_item":{
+      const a=split(arg);
+      const itemName=required(a.shift(),"Item is required.");
+      const p=coords(a.splice(0,3).join(" "));
+      const amount=Math.max(1,Number(a[0])||1);
+      return executeCapability("retrieve",itemName+" "+p.x+" "+p.y+" "+p.z+" "+amount,ctx);
+    }
     case "equip_best_weapon":{const xs=bot.inventory.items().filter(i=>/sword|axe|mace|trident/.test(i.name)).sort((a,b)=>weaponScore(b.name)-weaponScore(a.name));if(!xs[0])throw new Error("No weapon found.");await bot.equip(xs[0],"hand");return true;}
     case "equip_item":{const i=item(bot,arg);if(!i)throw new Error("Item not found.");await bot.equip(i,"hand");return true;}
     case "use_shield":{const i=item(bot,"shield");if(!i)throw new Error("Shield not found.");await bot.equip(i,"off-hand");bot.activateItem(true);await ctx.sleep(750);bot.deactivateItem();return true;}
