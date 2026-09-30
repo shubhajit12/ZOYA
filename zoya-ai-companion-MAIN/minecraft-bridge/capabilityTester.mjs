@@ -832,6 +832,39 @@ async function directCapability({bot,runtime,id,arg,log}) {
     bot.attack(liveTarget);
     return true;
   }
+  if(id==="ask_permission"){
+    const parts=String(arg||"").trim().split(/\s+/);
+    const username=parts.shift();
+    const action=parts.join(" ").trim();
+    if(!username) throw new Error("Username is required.");
+    if(!action) throw new Error("Action is required.");
+    if(!runtime?.askOwner) throw new Error("Permission service is unavailable.");
+    const queued=runtime.askOwner(username,action,action);
+    return queued === true;
+  }
+  if(id==="remember_player"){
+    const parts=String(arg||"").trim().split(/\s+/);
+    const username=parts.shift();
+    const fact=parts.join(" ").trim();
+    if(!username) throw new Error("Username is required.");
+    if(!fact) throw new Error("Fact is required.");
+    if(!runtime?.rememberPlayer) throw new Error("Memory service is unavailable.");
+    const existing=runtime.memory?.players?.[username.toLowerCase()];
+    const facts=Array.isArray(existing?.facts) ? existing.facts.filter(Boolean) : [];
+    if(!facts.includes(fact)) facts.push(fact);
+    runtime.rememberPlayer(username,{facts});
+    return runtime.memory?.players?.[username.toLowerCase()]?.facts?.includes(fact) === true;
+  }
+  if(id==="coordinate"){
+    const username=String(arg||"").trim();
+    if(!username) throw new Error("Username is required.");
+    const player=findPlayer(bot,username)?.entity;
+    if(!player) throw new Error("Player not found.");
+    await goto(bot,player.position.x,player.position.y,player.position.z,3,20000,runtime);
+    await bot.lookAt(player.position.offset(0,player.height||1.5,0),true);
+    bot.whisper(username,"I am here. Ready to coordinate.");
+    return true;
+  }
   if(id==="check_equipment"){
     const items = bot.inventory.items().filter(item => item.slot >= 5 && item.slot <= 8);
     const held = bot.heldItem?.name || "empty";
