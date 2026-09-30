@@ -908,27 +908,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         }
 
         if (taskIsActive(task) && bot.entity.position.distanceTo(position) > 3) {
-          await gotoTask(
-            task,
-            new goals.GoalNear(position.x, position.y, position.z, 2),
-            position,
-            2,
-            15000,
-            "guard position recovery"
-          );
+          await navigateToGuardPost(position, task);
           if (taskIsActive(task)) await equipMatchingForGuard();
         }
       } else {
         // No hostile is currently in the guard radius. Remain at the post.
         if (bot.entity.position.distanceTo(position) > 2.5) {
-          await gotoTask(
-            task,
-            new goals.GoalNear(position.x, position.y, position.z, 2),
-            position,
-            2,
-            10000,
-            "guard position maintenance"
-          );
+          await navigateToGuardPost(position, task);
           if (taskIsActive(task)) await equipMatchingForGuard();
         } else {
           await new Promise(resolve => setTimeout(resolve, 150));
