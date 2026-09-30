@@ -357,15 +357,17 @@ function disconnect({ resetReconnect = true } = {}) {
 }
 
 function connect(config, { preserveReconnectAttempt = false } = {}) {
-  // Manual capability verification is the active development phase.
-  // It must be impossible for a stale packaged config to silently enable Groq.
-  capabilityDebugMode = true;
-  currentConfig = { ...config, capabilityDebugMode: true };
+  // Normal ZOYA mode is the default. The interactive capability tester is
+  // opt-in only through the explicit developer environment flag.
+  capabilityDebugMode = CAPABILITY_DEBUG_ENV;
+  currentConfig = { ...config, capabilityDebugMode };
   disconnect({ resetReconnect: !preserveReconnectAttempt });
-  currentConfig = { ...config, capabilityDebugMode: true };
-  debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is HARD-DISABLED for this build.");
-  debugLog("[CAPABILITY TESTER] Build marker: " + CAPABILITY_BUILD_VERSION);
-  debugLog("[CAPABILITY TESTER] Effective config: capabilityDebugMode=true; Groq planner unavailable.");
+  currentConfig = { ...config, capabilityDebugMode };
+  if (capabilityDebugMode) {
+    debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is HARD-DISABLED for this developer build.");
+    debugLog("[CAPABILITY TESTER] Build marker: " + CAPABILITY_BUILD_VERSION);
+    debugLog("[CAPABILITY TESTER] Effective config: capabilityDebugMode=true; Groq planner unavailable.");
+  }
   const host = String(config.host || "127.0.0.1");
   const port = Number(config.port || 25565);
   const username = String(config.username || "Zoya");
@@ -627,11 +629,11 @@ server.listen(PORT, "127.0.0.1", () => {
     auth: "offline",
     autoConnect: true,
     autoReconnect: true,
-    capabilityDebugMode: true
+    capabilityDebugMode: false
   };
-  // Current developer phase: never silently fall back to Groq when the capability flag is omitted.
-  if (config.capabilityDebugMode === undefined) config.capabilityDebugMode = true;
-  if (config.autoConnect === true) connect({ ...config, capabilityDebugMode: true });
+  // Capability tester mode is opt-in through ZOYA_CAPABILITY_DEBUG=1.
+  // Do not let a stale packaged config force the entire bridge into developer mode.
+  if (config.autoConnect === true) connect({ ...config, capabilityDebugMode: false });
 });
 function shutdown() { clearInterval(stateTicker); disconnect(); server.close(() => process.exit(0)); }
 process.on("SIGINT", shutdown);
