@@ -1409,6 +1409,12 @@ export function startCapabilityTester({ bot, runtime, log = console.log }) {
   void (async () => {
     try {
       log("[CAPABILITY TESTER] Ready. Groq is disabled in this developer tester.");
+      log("[CAPABILITY MODES] Available capabilities:");
+      for (let index = 0; index < CAPABILITIES.length; index++) {
+        const capability = CAPABILITIES[index];
+        log("  [" + index + "] " + capability.label + " — " + capability.usage);
+      }
+
       while (!closed) {
         const active = runtime?.getActiveTask?.();
         if (active) {
