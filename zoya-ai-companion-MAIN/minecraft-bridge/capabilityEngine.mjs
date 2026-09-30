@@ -560,6 +560,12 @@ async function runtimeAction(ctx,id,arg){
   const options={permissionGranted:true};
   const p=split(arg);
   if(id==="pvp"||id==="look_at_player"||id==="follow_player")options.targetUsername=required(arg,"Username is required.");
+  if(id==="follow_player"){
+    return ctx.runtime.runManualCapability("clean:follow_player",async task=>{
+      ctx.task=task;
+      return followPlayer(ctx,options.targetUsername);
+    });
+  }
   if(id==="mine")options.blockName=required(arg,"Block is required.");
   if(id==="eat")options.itemName=String(arg||"").trim();
   if(id==="collect"||id==="gather_resources"){options.itemName=p[0]||"";options.amount=Math.max(1,Number(p[1])||1);}
