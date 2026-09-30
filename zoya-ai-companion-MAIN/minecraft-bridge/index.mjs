@@ -350,7 +350,7 @@ function applyConfiguredSkin(config) {
 function disconnect({ resetReconnect = true } = {}) {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (resetReconnect) reconnectAttempt = 0;
-  capabilityTesterStop?.();
+  try { capabilityTesterStop?.close?.(); } catch {}
   capabilityTesterStop = null;
   if (minecraftRuntime?.getActiveTask?.()) {
     try { minecraftRuntime.cancelCurrentTask("Minecraft bridge disconnect"); } catch {}
