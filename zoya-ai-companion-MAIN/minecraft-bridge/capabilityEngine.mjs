@@ -497,6 +497,9 @@ async function protect(ctx,a){
   let combatTargetAt=0;
   let ownerDamagedAt=0;
   let ownerDamagedBy=null;
+  let ownerSwingAt=0;
+  let swingCandidates=new Map();
+  const healthSeen=new Map();
 
   const ownerEntity=()=>player(bot,p.username)?.entity||null;
 
@@ -511,29 +514,14 @@ async function protect(ctx,a){
     if(!owner?.position) return [];
     return Object.values(bot.entities||{})
       .filter(isLivingCombatEntity)
-      .filter(e=>owner.position.distanceTo(e.position)<=5);
+      .filter(e=>owner.position.distanceTo(e.position)<=6);
   };
 
-  const facingScore=(owner,e)=>{
-    const dx=e.position.x-owner.position.x;
-    const dy=(e.position.y+(e.height||1.2)*0.5)-(owner.position.y+(owner.height||1.8)*0.85);
-    const dz=e.position.z-owner.position.z;
-    const len=Math.hypot(dx,dy,dz)||1;
-    const yaw=Number(owner.yaw)||0;
-    const pitch=Number(owner.pitch)||0;
-    const cp=Math.cos(pitch);
-    const fx=-Math.sin(yaw)*cp;
-    const fy=-Math.sin(pitch);
-    const fz=Math.cos(yaw)*cp;
-    return (dx/len)*fx+(dy/len)*fy+(dz/len)*fz;
-  };
-
-  const chooseSwingTarget=owner=>{
-    const candidates=nearbyCombat(owner)
-      .map(e=>({e,d:owner.position.distanceTo(e.position),face:facingScore(owner,e)}))
-      .filter(x=>x.d<=4.75&&x.face>=0.72)
-      .sort((a,b)=>(b.face-a.face)||(a.d-b.d));
-    return candidates[0]?.e||null;
+  const rememberHealth=()=>{
+    for(const e of nearbyCombat(ownerEntity())){
+      const hp=Number(e.health);
+      if(Number.isFinite(hp)) healthSeen.set(e.id,hp);
+    }
   };
 
   const rememberTarget=(entity,reason)=>{
@@ -547,11 +535,17 @@ async function protect(ctx,a){
     const owner=ownerEntity();
     if(!owner||entity?.id!==owner.id) return;
 
-    // A real owner arm swing is the primary signal. If a living mob/player is
-    // directly in the owner's attack cone, remember it immediately. This does
-    // not wait for health polling or an entityHurt packet.
-    const target=chooseSwingTarget(owner);
-    if(target) rememberTarget(target,"owner swing target");
+    ownerSwingAt=Date.now();
+    swingCandidates=new Map();
+
+    // Mirror the vanilla wolf concept: the owner's attack starts a short
+    // target-acquisition window. We then identify which nearby living entity
+    // actually lost health, rather than trusting animation direction alone.
+    for(const e of nearbyCombat(owner)){
+      const hp=Number(e.health);
+      if(Number.isFinite(hp)) swingCandidates.set(e.id,{entity:e,health:hp});
+    }
+    ctx.log?.("[PROTECT] owner attack window opened");
   };
 
   const onHurt=(entity,source)=>{
@@ -560,14 +554,27 @@ async function protect(ctx,a){
 
     if(entity.id===owner.id){
       ownerDamagedAt=Date.now();
-      ownerDamagedBy=isLivingCombatEntity(source)&&HOSTILES.has(entityName(source))?source:null;
-      if(ownerDamagedBy) rememberTarget(ownerDamagedBy,"owner attacker");
+      if(isLivingCombatEntity(source)&&HOSTILES.has(entityName(source))){
+        ownerDamagedBy=source;
+        rememberTarget(source,"owner attacker");
+      }
       return;
     }
 
-    // Mineflayer's current BotEvents contract provides the hurt source.
-    // When the owner is the source, this is the authoritative combat target.
-    if(source?.id===owner.id) rememberTarget(entity,"owner hurt target");
+    // When Mineflayer supplies the hurt source, use it directly.
+    if(source?.id===owner.id){
+      rememberTarget(entity,"owner hurt target");
+    }
+
+    // Also accept the target hurt event during the owner's short attack
+    // window. This handles servers/protocol paths where the source is null.
+    if(Date.now()-ownerSwingAt<=900){
+      const before=swingCandidates.get(entity.id)?.health;
+      const after=Number(entity.health);
+      if(Number.isFinite(before)&&Number.isFinite(after)&&after<before){
+        rememberTarget(entity,"owner attack confirmed");
+      }
+    }
   };
 
   bot.on("entitySwingArm",onSwing);
@@ -590,11 +597,13 @@ async function protect(ctx,a){
       const live=ownerEntity();
       if(!live){ctx.terminate("target_lost");return false;}
 
-      if(combatTarget && Date.now()-combatTargetAt>3500) combatTarget=null;
+      // Keep a rolling health baseline. This is only used inside an owner
+      // attack window; it is not a free-standing "attack anything hurt" rule.
+      rememberHealth();
 
-      // 1. Owner-initiated combat. This intentionally covers sheep, chickens,
-      // Endermen, other mobs, and players. The owner has already initiated the
-      // interaction, so protect_player assists rather than asking again.
+      if(combatTarget && Date.now()-combatTargetAt>3500) combatTarget=null;
+      if(ownerSwingAt && Date.now()-ownerSwingAt>900) ownerSwingAt=0;
+
       if(isLivingCombatEntity(combatTarget)){
         try{bot.pathfinder.setGoal(null);}catch{}
         followed=null;
@@ -604,7 +613,6 @@ async function protect(ctx,a){
         continue;
       }
 
-      // 2. Direct protection of the owner after an actual hurt event.
       if(Date.now()-ownerDamagedAt<=1500){
         const attacker=hostileNearOwner(live);
         if(attacker){
@@ -618,7 +626,6 @@ async function protect(ctx,a){
         }
       }
 
-      // 3. Secondary self-defense.
       const threat=selfThreat();
       if(threat){
         try{bot.pathfinder.setGoal(null);}catch{}
@@ -628,7 +635,6 @@ async function protect(ctx,a){
         continue;
       }
 
-      // 4. No combat: remain attached to the protected player.
       if(live!==followed){
         try{bot.pathfinder.setGoal(new goals.GoalFollow(live,5),true);}catch{}
         followed=live;
