@@ -322,10 +322,10 @@ const H = {
   retrieve_item: async(ctx,a)=>{
     const name=required(a,"Item is required.").toLowerCase().replace(/\s+/g,"_");
     const type=ctx.bot.registry?.itemsByName?.[name]; if(!type) throw new Error("Unknown item: "+name);
-    const blocks=Object.values(ctx.bot.findBlocks?.({matching:b=>CONTAINERS.has(String(b?.name||"")),maxDistance:32})||[]);
-    for(const b of blocks){
+    const positions=ctx.bot.findBlocks?.({matching:b=>CONTAINERS.has(String(b?.name||"")),maxDistance:32,maxCount:32})||[];
+    for(const position of positions){
       active(ctx);
-      const ctn=await container(ctx,b.position);
+      const ctn=await container(ctx,position);
       try{await ctn.withdraw(type.id,null,1);return true;}catch{}finally{try{await ctn.close();}catch{}}
     }
     throw new Error("Item not found in nearby containers: "+name);
