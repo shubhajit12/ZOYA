@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v25-combat-target-2026-10-01";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v26-entity-id-target-2026-10-01";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -494,12 +494,13 @@ async function protect(ctx,a){
   const {bot}=ctx;
   let followed=null;
   let combatTarget=null;
+  let combatTargetId=null;
   let combatTargetAt=0;
   let ownerDamagedAt=0;
   let ownerDamagedBy=null;
+  let ownerDamagedById=null;
   let ownerSwingAt=0;
-  let swingCandidates=new Map();
-  const healthSeen=new Map();
+  let swingEntityIds=new Set();
 
   const ownerEntity=()=>player(bot,p.username)?.entity||null;
 
@@ -510,25 +511,25 @@ async function protect(ctx,a){
     (e.type==="mob"||e.type==="player") &&
     (e.health==null||e.health>0);
 
+  const resolveEntityId=id=>{
+    if(id==null) return null;
+    const entity=bot.entities?.[id];
+    return isLivingCombatEntity(entity) ? entity : null;
+  };
+
   const nearbyCombat=owner=>{
     if(!owner?.position) return [];
     return Object.values(bot.entities||{})
       .filter(isLivingCombatEntity)
-      .filter(e=>owner.position.distanceTo(e.position)<=6);
-  };
-
-  const rememberHealth=()=>{
-    for(const e of nearbyCombat(ownerEntity())){
-      const hp=Number(e.health);
-      if(Number.isFinite(hp)) healthSeen.set(e.id,hp);
-    }
+      .filter(e=>owner.position.distanceTo(e.position)<=8);
   };
 
   const rememberTarget=(entity,reason)=>{
     if(!isLivingCombatEntity(entity)) return;
-    combatTarget=entity;
+    combatTargetId=entity.id;
+    combatTarget=resolveEntityId(combatTargetId);
     combatTargetAt=Date.now();
-    ctx.log?.("[PROTECT] "+reason+": "+entityName(entity));
+    ctx.log?.("[PROTECT] "+reason+" entityId="+String(combatTargetId)+" target="+entityName(entity));
   };
 
   const onSwing=entity=>{
@@ -536,44 +537,57 @@ async function protect(ctx,a){
     if(!owner||entity?.id!==owner.id) return;
 
     ownerSwingAt=Date.now();
-    swingCandidates=new Map();
-
-    // Mirror the vanilla wolf concept: the owner's attack starts a short
-    // target-acquisition window. We then identify which nearby living entity
-    // actually lost health, rather than trusting animation direction alone.
-    for(const e of nearbyCombat(owner)){
-      const hp=Number(e.health);
-      if(Number.isFinite(hp)) swingCandidates.set(e.id,{entity:e,health:hp});
-    }
-    ctx.log?.("[PROTECT] owner attack window opened");
+    swingEntityIds=new Set(
+      nearbyCombat(owner)
+        .map(e=>e.id)
+        .filter(id=>id!=null)
+    );
+    ctx.log?.("[PROTECT] owner attack window opened; nearby entityIds="+
+      Array.from(swingEntityIds).join(","));
   };
 
   const onHurt=(entity,source)=>{
     const owner=ownerEntity();
     if(!owner||!entity) return;
 
+    // entity.id is the exact entity affected by the hurt event.
+    // Resolve that ID against ZOYA's live entity registry instead of
+    // guessing from distance, facing direction, mob type, or health deltas.
+    const hurtEntity=resolveEntityId(entity.id);
+
     if(entity.id===owner.id){
       ownerDamagedAt=Date.now();
-      if(isLivingCombatEntity(source)&&HOSTILES.has(entityName(source))){
-        ownerDamagedBy=source;
-        rememberTarget(source,"owner attacker");
+
+      if(isLivingCombatEntity(source)){
+        ownerDamagedById=source.id;
+        ownerDamagedBy=resolveEntityId(ownerDamagedById);
+        if(ownerDamagedBy){
+          rememberTarget(ownerDamagedBy,"owner attacker");
+        }
       }
+
+      ctx.log?.("[PROTECT] owner hurt; attackerId="+
+        String(ownerDamagedById??"null"));
       return;
     }
 
-    // When Mineflayer supplies the hurt source, use it directly.
-    if(source?.id===owner.id){
-      rememberTarget(entity,"owner hurt target");
+    // If Mineflayer gives the owner as the hurt source, the affected
+    // entity ID is already the exact owner-selected target.
+    if(source?.id===owner.id && hurtEntity){
+      rememberTarget(hurtEntity,"owner hurt target");
+      return;
     }
 
-    // Also accept the target hurt event during the owner's short attack
-    // window. This handles servers/protocol paths where the source is null.
-    if(Date.now()-ownerSwingAt<=900){
-      const before=swingCandidates.get(entity.id)?.health;
-      const after=Number(entity.health);
-      if(Number.isFinite(before)&&Number.isFinite(after)&&after<before){
-        rememberTarget(entity,"owner attack confirmed");
-      }
+    // Some protocol/server paths may omit the source. In that case,
+    // the entityHurt event's entity.id is still the affected entity ID.
+    // Only accept IDs that were visible to ZOYA in the owner's attack
+    // window, preventing unrelated world damage from becoming a target.
+    if(
+      hurtEntity &&
+      Date.now()-ownerSwingAt<=900 &&
+      swingEntityIds.has(entity.id)
+    ){
+      rememberTarget(hurtEntity,"owner attack target matched by entityId");
     }
   };
 
@@ -581,12 +595,13 @@ async function protect(ctx,a){
   bot.on("entityHurt",onHurt);
 
   const hostileNearOwner=owner=>{
-    const direct=ownerDamagedBy;
+    const direct=resolveEntityId(ownerDamagedById);
     if(isLivingCombatEntity(direct)&&HOSTILES.has(entityName(direct))) return direct;
+
     return Object.values(bot.entities||{})
       .filter(e=>isLivingCombatEntity(e)&&HOSTILES.has(entityName(e)))
       .filter(e=>owner.position.distanceTo(e.position)<=7)
-      .sort((a,b)=>owner.position.distanceTo(a.position)-owner.position.distanceTo(b.position))[0]||null;
+      .sort((a,b)=>owner.position.distanceTo(a)-owner.position.distanceTo(b))[0]||null;
   };
 
   const selfThreat=()=>nearest(bot,e=>isLivingCombatEntity(e)&&HOSTILES.has(entityName(e)),8);
@@ -597,12 +612,18 @@ async function protect(ctx,a){
       const live=ownerEntity();
       if(!live){ctx.terminate("target_lost");return false;}
 
-      // Keep a rolling health baseline. This is only used inside an owner
-      // attack window; it is not a free-standing "attack anything hurt" rule.
-      rememberHealth();
+      if(combatTargetId!=null){
+        combatTarget=resolveEntityId(combatTargetId);
+        if(!combatTarget || Date.now()-combatTargetAt>5000){
+          combatTarget=null;
+          combatTargetId=null;
+        }
+      }
 
-      if(combatTarget && Date.now()-combatTargetAt>3500) combatTarget=null;
-      if(ownerSwingAt && Date.now()-ownerSwingAt>900) ownerSwingAt=0;
+      if(ownerSwingAt && Date.now()-ownerSwingAt>900){
+        ownerSwingAt=0;
+        swingEntityIds.clear();
+      }
 
       if(isLivingCombatEntity(combatTarget)){
         try{bot.pathfinder.setGoal(null);}catch{}
@@ -610,6 +631,7 @@ async function protect(ctx,a){
         await H.equip_best_weapon(ctx,"");
         await attack(ctx,combatTarget,15000);
         combatTarget=null;
+        combatTargetId=null;
         continue;
       }
 
@@ -622,6 +644,7 @@ async function protect(ctx,a){
           await attack(ctx,attacker,15000);
           ownerDamagedAt=0;
           ownerDamagedBy=null;
+          ownerDamagedById=null;
           continue;
         }
       }
