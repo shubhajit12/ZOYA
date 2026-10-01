@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-combat-aware-navigation-2026-10-01";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v24-bodyguard-2026-10-01";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -492,22 +492,54 @@ async function protect(ctx,a){
   const p=player(ctx.bot,a);
   if(!p?.entity) throw new Error("Player not found.");
   let followed=null;
+  let lastOwnerHealth=Number(p.entity.health ?? 20);
+
+  const ownerThreat = ownerEntity => {
+    const hostiles=Object.values(ctx.bot.entities||{})
+      .filter(e=>e?.position&&e!==ctx.bot.entity&&e.isValid!==false&&HOSTILES.has(entityName(e)))
+      .filter(e=>distance({entity:{position:ownerEntity.position}},e)<=5.5)
+      .sort((a,b)=>ownerEntity.position.distanceTo(a.position)-ownerEntity.position.distanceTo(b.position));
+    return hostiles[0]||null;
+  };
+
   try{
     while(true){
       active(ctx);
       const live=player(ctx.bot,p.username)?.entity;
       if(!live){ctx.terminate("target_lost");return false;}
-      if(live!==followed){
-        try{ctx.bot.pathfinder.setGoal(new goals.GoalFollow(live,5),true);}catch{}
-        followed=live;
-      }
-      const h=await nearestHostile(ctx,8);
-      if(h&&distance(ctx.bot,h)<=8){
+
+      const ownerHealth=Number(live.health ?? lastOwnerHealth);
+      const ownerDamaged=Number.isFinite(ownerHealth)&&Number.isFinite(lastOwnerHealth)&&ownerHealth<lastOwnerHealth;
+      lastOwnerHealth=ownerHealth;
+
+      // Protection priority:
+      // 1. A hostile close enough to the owner is treated as the owner's
+      //    immediate threat. This also covers the common case where the owner
+      //    has just struck that hostile.
+      // 2. If the owner was just damaged, immediately reacquire the closest
+      //    hostile around the owner before resuming follow.
+      const threat=ownerThreat(live);
+      if(threat && (ownerDamaged || distance({entity:{position:live.position}},threat)<=5.5)){
         try{ctx.bot.pathfinder.setGoal(null);}catch{}
         followed=null;
         await H.equip_best_weapon(ctx,"");
-        await attack(ctx,h,15000);
+        await attack(ctx,threat,15000);
         continue;
+      }
+
+      // Secondary protection: defend ZOYA herself from a nearby hostile.
+      const selfThreat=await nearestHostile(ctx,8);
+      if(selfThreat){
+        try{ctx.bot.pathfinder.setGoal(null);}catch{}
+        followed=null;
+        await H.equip_best_weapon(ctx,"");
+        await attack(ctx,selfThreat,15000);
+        continue;
+      }
+
+      if(live!==followed){
+        try{ctx.bot.pathfinder.setGoal(new goals.GoalFollow(live,5),true);}catch{}
+        followed=live;
       }
       await wait(ctx,200);
     }
