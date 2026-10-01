@@ -924,7 +924,18 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return false;
   }
 
+  let guardEquipInFlight = null;
+  let guardEquippedWeapon = null;
+
   async function equipMatchingForGuard() {
+    // Guard can legitimately request equipment from several transitions
+    // (initial post arrival, target acquisition, cluster continuation, and
+    // post recovery). Equipment is a physical action, so make it idempotent
+    // and serialize overlapping requests. Re-equipping the same item is not
+    // useful and can otherwise produce a burst of identical log lines when
+    // multiple guard paths wake in the same tick.
+    if (guardEquipInFlight) return guardEquipInFlight;
+
     const materialRank = [
       ["netherite", 7],
       ["diamond", 6],
@@ -954,9 +965,34 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     });
     const best = candidates[0];
     if (!best) return false;
-    await bot.equip(best, "hand");
-    log("[GUARD] Equipped best available weapon: " + best.name + ".");
-    return true;
+
+    const bestName = String(best.name || "").toLowerCase();
+    const heldName = String(bot.heldItem?.name || "").toLowerCase();
+    if (heldName === bestName) {
+      guardEquippedWeapon = bestName;
+      return true;
+    }
+    if (guardEquippedWeapon === bestName && heldName === bestName) return true;
+
+    guardEquipInFlight = (async () => {
+      try {
+        // Re-check after waiting for an overlapping request so a second
+        // caller cannot equip the same weapon unnecessarily.
+        const currentHeld = String(bot.heldItem?.name || "").toLowerCase();
+        if (currentHeld === bestName) {
+          guardEquippedWeapon = bestName;
+          return true;
+        }
+        await bot.equip(best, "hand");
+        guardEquippedWeapon = bestName;
+        log("[GUARD] Equipped best available weapon: " + best.name + ".");
+        return true;
+      } finally {
+        guardEquipInFlight = null;
+      }
+    })();
+
+    return guardEquipInFlight;
   }
 
   async function attackLoopForGuard(target) {
