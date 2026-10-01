@@ -10,6 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
+const CAPABILITY_ENGINE_PATCH = "guard-v23-combat-aware-navigation-2026-10-01";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -389,9 +390,79 @@ async function ensureDoor(ctx,p,wantedOpen){
 }
 async function guard(ctx,p){
   const {bot}=ctx;
+  const x=Number(p.x), z=Number(p.z), range=3;
+  if(!Number.isFinite(x)||!Number.isFinite(z)) throw new Error("Invalid guard-post X/Z.");
+
+  const reachPost = async label => {
+    const deadline=Date.now()+30000;
+    let lastProgressAt=Date.now();
+    let lastX=bot.entity.position.x;
+    let lastZ=bot.entity.position.z;
+    let replans=0;
+
+    while(Date.now()<deadline){
+      active(ctx);
+
+      // Guard owns hostile response even while travelling to the post.
+      // A safety warning is informational; it must not leave the navigation
+      // goal competing with combat.
+      const hostile=await nearestHostile(ctx,12);
+      if(hostile){
+        try{bot.pathfinder.setGoal(null);}catch{}
+        await H.equip_best_weapon(ctx,"");
+        await attack(ctx,hostile,15000);
+        active(ctx);
+        lastProgressAt=Date.now();
+        lastX=bot.entity.position.x;
+        lastZ=bot.entity.position.z;
+        replans++;
+        if(replans>12) throw new Error(label+" recovery limit reached.");
+        continue;
+      }
+
+      const dx=bot.entity.position.x-x, dz=bot.entity.position.z-z;
+      if(Math.hypot(dx,dz)<=range){
+        try{bot.pathfinder.setGoal(null);}catch{}
+        return true;
+      }
+
+      // Re-issue the same X/Z goal only when the bot has genuinely stalled.
+      // This prevents a second movement writer while still recovering from a
+      // blocked/stale Pathfinder plan.
+      const moved=Math.hypot(bot.entity.position.x-lastX,bot.entity.position.z-lastZ);
+      if(moved>=0.15){
+        lastProgressAt=Date.now();
+        lastX=bot.entity.position.x;
+        lastZ=bot.entity.position.z;
+      }
+
+      if(Date.now()-lastProgressAt>=2500){
+        try{bot.pathfinder.setGoal(null);}catch{}
+        replans++;
+        if(replans>12) throw new Error(label+" stalled repeatedly.");
+        bot.pathfinder.setGoal(new goals.GoalNearXZ(x,z,range),true);
+        lastProgressAt=Date.now();
+        lastX=bot.entity.position.x;
+        lastZ=bot.entity.position.z;
+      }else{
+        const goal=bot.pathfinder.goal;
+        if(!goal){
+          bot.pathfinder.setGoal(new goals.GoalNearXZ(x,z,range),true);
+          replans++;
+        }
+      }
+
+      await wait(ctx,100);
+    }
+
+    try{bot.pathfinder.setGoal(null);}catch{}
+    throw new Error(label+" timed out.");
+  };
+
   active(ctx);
-  await navigateXZ(ctx,p,3,30000,"guard post");
+  await reachPost("guard post navigation");
   await H.equip_best_weapon(ctx,"");
+
   while(true){
     active(ctx);
     const target=await nearestHostile(ctx,12);
@@ -401,9 +472,11 @@ async function guard(ctx,p){
       await attack(ctx,target,15000);
       continue;
     }
-    const dx=bot.entity.position.x-Number(p.x), dz=bot.entity.position.z-Number(p.z);
-    if(Math.hypot(dx,dz)>3){
-      await navigateXZ(ctx,p,3,30000,"guard post recovery");
+
+    const dx=bot.entity.position.x-x, dz=bot.entity.position.z-z;
+    if(Math.hypot(dx,dz)>range){
+      await reachPost("guard post recovery");
+      await H.equip_best_weapon(ctx,"");
       continue;
     }
     await wait(ctx,200);
