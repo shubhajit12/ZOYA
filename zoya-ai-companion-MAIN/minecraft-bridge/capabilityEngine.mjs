@@ -1,345 +1,369 @@
 import pathfinderPackage from "mineflayer-pathfinder";
 const { goals } = pathfinderPackage;
-
 import { CAPABILITY_MODES, assertCapabilityRegistry } from "./capabilityModes.mjs";
 
 export const CAPABILITIES = CAPABILITY_MODES;
 
 const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
-export const RUNTIME_ACTIONS = new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","craft","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
+const PASSIVES = new Set(["cow","pig","sheep","chicken","rabbit","horse","donkey","mule","llama","goat","mooshroom","strider","turtle","fish","cod","salmon"]);
+const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
+const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
+const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const required=(value,message="Argument is required.")=>{const v=String(value??"").trim();if(!v)throw new Error(message);return v;};
-const split=(value)=>String(value??"").trim().split(/\s+/).filter(Boolean);
-const coords=(value)=>{const p=split(value).map(Number);if(p.length!==3||p.some(n=>!Number.isFinite(n)))throw new Error("Expected x y z.");return{x:p[0],y:p[1],z:p[2]};};
-const vec=(bot,p)=>{const C=bot.entity?.position?.constructor;if(typeof C!=="function")throw new Error("Mineflayer Vec3 unavailable.");return new C(Number(p.x),Number(p.y),Number(p.z));};
-const findPlayer=(bot,name)=>{const w=required(name,"Username is required.").toLowerCase();return Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===w)||null;};
-const findEntity=(bot,name="")=>{const w=String(name).trim().toLowerCase();return Object.values(bot.entities||{}).filter(e=>e?.position&&e!==bot.entity&&(!w||String(e.username||e.name||e.displayName||"").toLowerCase().includes(w))).sort((x,y)=>x.position.distanceTo(bot.entity.position)-y.position.distanceTo(bot.entity.position))[0]||null;};
-const item=(bot,name)=>{const w=required(name,"Item is required.").toLowerCase();return bot.inventory.items().find(i=>i.name.toLowerCase()===w)||bot.inventory.items().find(i=>i.name.toLowerCase().includes(w));};
-const weaponScore=(name)=>{const n=String(name).toLowerCase();const m=n.includes("netherite")?7:n.includes("diamond")?6:n.includes("iron")?5:n.includes("stone")?4:n.includes("golden")?3:n.includes("wooden")?2:0;const t=n.includes("mace")?4:n.includes("sword")?3:n.includes("axe")?2:n.includes("trident")?1:0;return m*10+t;};
+const required = (v,msg="Argument is required.") => {
+  const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
+};
+const parts = v => String(v??"").trim().split(/\s+/).filter(Boolean);
+const number = (v,msg="Expected a number.") => {
+  const n=Number(v); if(!Number.isFinite(n)) throw new Error(msg); return n;
+};
+const vec = (bot,p) => new bot.entity.position.constructor(Number(p.x),Number(p.y),Number(p.z));
+const coords = v => {
+  const a=parts(v).map(Number); if(a.length!==3||a.some(n=>!Number.isFinite(n))) throw new Error("Expected x y z.");
+  return {x:a[0],y:a[1],z:a[2]};
+};
+const sleep = ms => new Promise(r=>setTimeout(r,Math.max(0,Number(ms)||0)));
 
-async function navigate(ctx,position,range=2,label="navigation"){
-  const target=vec(ctx.bot,position);const goal=new goals.GoalNear(target.x,target.y,target.z,range);ctx.bot.pathfinder.setGoal(goal);
-  const deadline=Date.now()+30000;
-  try{while(Date.now()<deadline){ctx.assertActive();if(ctx.bot.entity.position.distanceTo(target)<=range)return true;await ctx.sleep(100);}throw new Error(label+" timed out.");}
-  finally{try{ctx.bot.pathfinder.setGoal(null)}catch{}}
+function entityName(e){ return String(e?.name||e?.displayName||e?.username||"").toLowerCase(); }
+function distance(bot,e){ return e?.position ? bot.entity.position.distanceTo(e.position) : Infinity; }
+function nearest(bot,predicate,max=Infinity){
+  return Object.values(bot.entities||{}).filter(e=>e?.position&&e!==bot.entity&&distance(bot,e)<=max&&predicate(e))
+    .sort((a,b)=>distance(bot,a)-distance(bot,b))[0]||null;
 }
-
-async function followPlayer(ctx,username,range=2){
-  const player=findPlayer(ctx.bot,username);
-  const target=player?.entity;
-  if(!target)throw new Error("Player not found.");
-  const targetUsername=player.username;
-  const goal=new goals.GoalFollow(target,range);
-  ctx.bot.pathfinder.setGoal(goal,true);
-  try{
-    while(true){
-      ctx.assertActive();
-      if(!target.isValid || !ctx.bot.players[targetUsername]?.entity)throw new Error("Follow target is no longer available.");
-      await ctx.sleep(150);
-    }
-  }finally{
-    try{ctx.bot.pathfinder.setGoal(null);}catch{}
-  }
+function player(bot,name){
+  const w=required(name,"Username is required.").toLowerCase();
+  return Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===w)||null;
 }
+function inventoryItem(bot,name){
+  const w=required(name,"Item is required.").toLowerCase().replace(/\s+/g,"_");
+  return bot.inventory.items().find(i=>i.name.toLowerCase()===w) ||
+    bot.inventory.items().find(i=>i.name.toLowerCase().includes(w)) || null;
+}
+function countItem(bot,name){
+  const w=String(name||"").toLowerCase().replace(/\s+/g,"_");
+  return bot.inventory.items().filter(i=>i.name.toLowerCase()===w||i.name.toLowerCase().includes(w)).reduce((n,i)=>n+i.count,0);
+}
+function weaponScore(name){
+  const n=String(name||"").toLowerCase();
+  const m=n.includes("netherite")?7:n.includes("diamond")?6:n.includes("iron")?5:n.includes("stone")?4:n.includes("golden")?3:n.includes("wooden")?2:0;
+  const k=n.includes("mace")?4:n.includes("sword")?3:n.includes("axe")?2:n.includes("trident")?1:0;
+  return m*10+k;
+}
+function bestWeapon(bot){
+  return bot.inventory.items().filter(i=>WEAPON_KINDS.some(k=>i.name.toLowerCase().includes(k)))
+    .sort((a,b)=>weaponScore(b.name)-weaponScore(a.name))[0]||null;
+}
+function active(ctx){ ctx.assertActive(); }
+async function wait(ctx,ms){ await ctx.sleep(ms); active(ctx); }
 
-async function lookAtBlockGoal(ctx,position,reach=4.5,label="block interaction"){
-  const target=vec(ctx.bot,position);
-  const goal=new goals.GoalLookAtBlock(target,ctx.bot.world,{reach});
-  ctx.bot.pathfinder.setGoal(goal);
-  const deadline=Date.now()+30000;
+async function navigate(ctx,p,range=2,timeout=30000,label="navigation"){
+  const {bot}=ctx, t=vec(bot,p);
+  active(ctx);
+  bot.pathfinder.setGoal(new goals.GoalNear(t.x,t.y,t.z,range));
+  const deadline=Date.now()+timeout;
   try{
     while(Date.now()<deadline){
-      ctx.assertActive();
-      if(ctx.bot.entity.position.distanceTo(target)<=reach+1)return true;
-      await ctx.sleep(100);
+      active(ctx);
+      if(bot.entity.position.distanceTo(t)<=range)return true;
+      await wait(ctx,100);
     }
     throw new Error(label+" timed out.");
-  }finally{try{ctx.bot.pathfinder.setGoal(null)}catch{}}
+  }finally{try{bot.pathfinder.setGoal(null);}catch{}}
 }
-async function combatHit(ctx,target){
-  if(target.position.distanceTo(ctx.bot.entity.position)>3.1)await navigate(ctx,target.position,2.6,"combat navigation");
-  ctx.assertActive();await ctx.bot.lookAt(target.position.offset(0,target.height||1.4,0),true);ctx.bot.attack(target);return true;
-}
-async function nativeCraft(ctx,itemName,amount=1){
+async function follow(ctx,target,range=3){
   const {bot}=ctx;
-  const requested=required(itemName,"Item is required.").toLowerCase().replace(/\\s+/g,"_");
-  const targetItem=bot.registry?.itemsByName?.[requested];
-  if(!targetItem)throw new Error("Craft item not found: "+requested);
-  const targetAmount=Math.max(1,Math.floor(Number(amount)||1));
-  let table=null;
-  let recipes=bot.recipesFor(targetItem.id,null,targetAmount,null);
+  bot.pathfinder.setGoal(new goals.GoalFollow(target,range),true);
+  try{
+    while(true){ active(ctx); if(!target.isValid) throw new Error("Target lost."); await wait(ctx,150); }
+  }finally{try{bot.pathfinder.setGoal(null);}catch{}}
+}
+async function lookAt(ctx,p){ active(ctx); await ctx.bot.lookAt(vec(ctx.bot,p),true); return true; }
+async function lookAtEntity(ctx,e){ active(ctx); await ctx.bot.lookAt(e.position.offset(0,e.height||1.4,0),true); return true; }
+
+async function attack(ctx,target,timeout=15000){
+  const {bot}=ctx; const deadline=Date.now()+timeout;
+  while(target?.isValid!==false && (target?.health==null||target.health>0) && Date.now()<deadline){
+    active(ctx);
+    if(distance(bot,target)>3.1){
+      bot.pathfinder.setGoal(new goals.GoalFollow(target,2.7),true);
+      await wait(ctx,150);
+      continue;
+    }
+    try{bot.pathfinder.setGoal(null);}catch{}
+    await bot.lookAt(target.position.offset(0,target.height||1.2,0),true);
+    active(ctx); bot.attack(target);
+    await wait(ctx,450);
+  }
+  try{bot.pathfinder.setGoal(null);}catch{}
+  return target?.isValid!==false && (target?.health==null||target.health<=0);
+}
+
+async function nearestHostile(ctx,max=16){
+  return nearest(ctx.bot,e=>HOSTILES.has(entityName(e))&&e.isValid!==false,max);
+}
+async function nearestAnimal(ctx,max=24){
+  return nearest(ctx.bot,e=>PASSIVES.has(entityName(e)),max);
+}
+
+async function craft(ctx,name,amount=1,table=null){
+  const {bot}=ctx, key=required(name,"Item is required.").toLowerCase().replace(/\s+/g,"_");
+  const type=bot.registry?.itemsByName?.[key]; if(!type) throw new Error("Unknown craft item: "+key);
+  const target=Math.max(1,Math.floor(Number(amount)||1));
+  let recipes=bot.recipesFor(type.id,null,target,table||undefined);
   if(!recipes.length){
     const tableId=bot.registry?.blocksByName?.crafting_table?.id;
-    table=tableId!=null?bot.findBlock?.({matching:tableId,maxDistance:16})||null:null;
-    if(!table)throw new Error("No crafting recipe available nearby.");
-    recipes=bot.recipesFor(targetItem.id,null,targetAmount,table);
+    table=table|| (tableId!=null ? bot.findBlock({matching:tableId,maxDistance:16}) : null);
+    if(!table) throw new Error("No usable crafting table/recipe nearby.");
+    if(distance(bot,{position:table.position})>3.5) await navigate(ctx,table.position,3.2,30000,"crafting table");
+    recipes=bot.recipesFor(type.id,null,target,table);
   }
-  if(!recipes.length)throw new Error("No crafting recipe available for "+requested+".");
-  const recipe=recipes[0];
-  const resultPerCraft=Math.max(1,Number(recipe.result?.count||1));
-  const craftsNeeded=Math.max(1,Math.ceil(targetAmount/resultPerCraft));
-  if(recipe.requiresTable&&!table){
-    const tableId=bot.registry?.blocksByName?.crafting_table?.id;
-    table=tableId!=null?bot.findBlock?.({matching:tableId,maxDistance:16})||null:null;
-    if(!table)throw new Error("Crafting table required but none is nearby.");
-  }
-  if(table&&bot.entity.position.distanceTo(table.position)>3.5){
-    await navigate(ctx,table.position,3,"crafting-table navigation");
-  }
-  const before=bot.inventory.items().filter(i=>i.name===targetItem.name).reduce((n,i)=>n+i.count,0);
-  ctx.assertActive();
-  await bot.craft(recipe,craftsNeeded,table);
-  ctx.assertActive();
-  const after=bot.inventory.items().filter(i=>i.name===targetItem.name).reduce((n,i)=>n+i.count,0);
-  if(after<before+targetAmount)throw new Error("Craft completed without producing the requested amount.");
+  if(!recipes.length) throw new Error("No recipe for "+key+".");
+  const recipe=recipes[0], per=Math.max(1,Number(recipe.result?.count||1));
+  const crafts=Math.max(1,Math.ceil(target/per));
+  const before=countItem(bot,key);
+  active(ctx); await bot.craft(recipe,crafts,table);
+  active(ctx);
+  if(countItem(bot,key)<before+target) throw new Error("Craft did not produce the requested amount.");
   return true;
 }
 
-async function runtimeAction(ctx,id,arg){
-  const options={permissionGranted:true};
-  const p=split(arg);
-  if(id==="pvp"||id==="look_at_player"||id==="follow_player")options.targetUsername=required(arg,"Username is required.");
-  if(id==="follow_player"){
-    return ctx.runtime.runManualCapability("clean:follow_player",async task=>{
-      ctx.task=task;
-      return followPlayer(ctx,options.targetUsername);
-    });
+async function digBlock(ctx,block){
+  active(ctx); if(!block||block.name==="air") throw new Error("Target block is not diggable.");
+  if(distance(ctx.bot,{position:block.position})>4.5) await navigate(ctx,block.position,3.5,30000,"block navigation");
+  active(ctx); await ctx.bot.dig(block); return true;
+}
+async function container(ctx,p,expected=null){
+  const {bot}=ctx, b=bot.blockAt(vec(bot,p));
+  if(!b||!CONTAINERS.has(String(b.name))) throw new Error("Expected a supported container.");
+  if(expected && !String(b.name).includes(expected)) throw new Error("Expected "+expected+".");
+  if(distance(bot,{position:b.position})>4.5) await navigate(ctx,b.position,3.5,30000,"container navigation");
+  active(ctx); return bot.openContainer(b);
+}
+async function interactBlock(ctx,p,expected=null){
+  const {bot}=ctx,b=bot.blockAt(vec(bot,p)); if(!b) throw new Error("Block not loaded.");
+  if(expected && !String(b.name).includes(expected)) throw new Error("Expected "+expected+".");
+  if(distance(bot,{position:b.position})>4.5) await navigate(ctx,b.position,3.5,30000,"block navigation");
+  active(ctx); await bot.lookAt(b.position.offset(0.5,0.5,0.5),true); active(ctx); await bot.activateBlock(b); return true;
+}
+async function placeAt(ctx,name,p){
+  const {bot}=ctx, target=bot.blockAt(vec(bot,p));
+  const item=inventoryItem(bot,name);
+  if(!item) throw new Error("Placement item not found: "+name);
+  if(!target||target.name!=="air") throw new Error("Placement target is not empty.");
+  const ref=bot.blockAt(vec(bot,{x:p.x,y:p.y-1,z:p.z}));
+  if(!ref) throw new Error("No valid reference block for placement.");
+  if(distance(bot,{position:target.position})>4.5){
+    bot.pathfinder.setGoal(new goals.GoalPlaceBlock(target.position,bot.world,{range:4.5,LOS:true}));
+    const deadline=Date.now()+30000;
+    try{while(Date.now()<deadline){active(ctx);if(distance(bot,{position:target.position})<=4.5)return await placeDirect(ctx,item,ref);await wait(ctx,100);}throw new Error("placement navigation timed out.");}
+    finally{try{bot.pathfinder.setGoal(null);}catch{}}
   }
-  if(id==="mine")options.blockName=required(arg,"Block is required.");
-  if(id==="eat")options.itemName=String(arg||"").trim();
-  if(id==="collect"||id==="gather_resources"){options.itemName=p[0]||"";options.amount=Math.max(1,Number(p[1])||1);}
-  if(id==="gather_missing_materials"){options.itemName=required(arg,"Item is required.");options.amount=1;}
-  if(id==="craft"){
-    const amount=Math.max(1,Number(p.at(-1))||1);
-    const itemName=p.slice(0,-1).join("_")||p[0]||"";
-    return ctx.runtime.runManualCapability("clean:craft",async task=>{
-      ctx.task=task;
-      return nativeCraft(ctx,itemName,amount);
-    });
-  }
-  if(id==="investigate_entity")options.entityName=required(arg,"Entity name is required.");
-  if(id==="guard"||id==="guard_location")options.position=coords(arg);
-  const mapped=id==="roam"?"safe_roam"
-    :id==="return"?"return_to_owner"
-    :id==="gather_resources"?"gather_basic_resources"
-    :id==="gather_missing_materials"?"gather_basic_resources"
-    :id;
-  const continuous=id==="roam";
-  return ctx.runtime.runManualCapability("clean:"+mapped,async task=>{
-    ctx.task=task;
-    return ctx.runtime.execute(mapped,{...options,continuous,__task:task});
-  });
+  return placeDirect(ctx,item,ref);
+}
+async function placeDirect(ctx,item,ref){
+  const {bot}=ctx; await bot.equip(item,"hand"); active(ctx);
+  await bot.placeBlock(ref,new bot.entity.position.constructor(0,1,0)); return true;
 }
 
-async function lowLevel(ctx,id,arg){
-  const {bot}=ctx;
-  if(RUNTIME_ACTIONS.has(id))return runtimeAction(ctx,id,arg);
-  switch(id){
-    case "stop": ctx.runtime.cancelCurrentTask?.("manual stop"); return true;
-    case "hit":{const t=findPlayer(bot,arg)?.entity;if(!t)throw new Error("Player not found.");return combatHit(ctx,t);}
-    case "go_to":return navigate(ctx,coords(arg),2,"go_to");
-    case "return_to_coordinates":return navigate(ctx,coords(arg),2,"return_to_coordinates");
-    case "look_at_coordinates":await bot.lookAt(vec(bot,coords(arg)),true);return true;
-    case "look_at_player":{const p=findPlayer(bot,arg)?.entity;if(!p)throw new Error("Player not found.");await bot.lookAt(p.position.offset(0,p.height||1.4,0),true);return true;}
-    case "chat":bot.chat(required(arg,"Message is required.").slice(0,256));return true;
-    case "private_chat":case "whisper_player":{const a=split(arg),u=required(a.shift(),"Username is required."),m=required(a.join(" "),"Message is required.");if(!findPlayer(bot,u))throw new Error("Player not found.");bot.whisper(u,m.slice(0,256));return true;}
-    case "report_result":case "ask_clarification":bot.chat(required(arg,"Message is required.").slice(0,256));return true;
-    case "wait":await ctx.sleep(Math.max(0,Number(required(arg,"Seconds are required."))*1000));return true;
-    case "sprint":bot.setControlState("sprint",true);try{await ctx.sleep(Math.max(0,Number(required(arg))*1000));}finally{bot.setControlState("sprint",false);}return true;
-    case "sneak":bot.setControlState("sneak",true);try{await ctx.sleep(Math.max(0,Number(required(arg))*1000));}finally{bot.setControlState("sneak",false);}return true;
-    case "jump":bot.setControlState("jump",true);await ctx.sleep(250);bot.setControlState("jump",false);return true;
-    case "enter_exit_vehicle":if(bot.vehicle){bot.dismount();return true;}throw new Error("Vehicle target selection requires a specific nearby vehicle.");
-    case "attack_mob":{const t=findEntity(bot,arg)||Object.values(bot.entities||{}).find(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase()));if(!t)throw new Error("Target mob not found.");return combatHit(ctx,t);}
-    case "hunt":{
-      const requested=String(arg||"").trim().toLowerCase();
-      const target=Object.values(bot.entities||{})
-        .filter(e=>e?.position&&e!==bot.entity&&HOSTILES.has(String(e.name||"").toLowerCase())&&(!requested||String(e.name||"").toLowerCase().includes(requested)))
-        .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
-      if(!target)throw new Error("Target hostile mob not found.");
-      let attacked=false;
-      const deadline=Date.now()+30000;
-      while(Date.now()<deadline&&target.isValid!==false&&(target.health==null||target.health>0)){
-        ctx.assertActive();
-        if(target.position.distanceTo(bot.entity.position)>3.1){
-          bot.pathfinder.setGoal(new goals.GoalFollow(target,2.7),true);
-          await ctx.sleep(150);
-          continue;
-        }
-        try{bot.pathfinder.setGoal(null)}catch{}
-        await bot.lookAt(target.position.offset(0,target.height||1,0),true);
-        bot.attack(target);
-        attacked=true;
-        await ctx.sleep(450);
-      }
-      try{bot.pathfinder.setGoal(null)}catch{}
-      if(!attacked)throw new Error("Hunt could not reach the target.");
-      return true;
-    }
-    case "retrieve_item":{
-      const a=split(arg);
-      const itemName=required(a.shift(),"Item is required.");
-      const p=coords(a.splice(0,3).join(" "));
-      const amount=Math.max(1,Number(a[0])||1);
-      return executeCapability("retrieve",itemName+" "+p.x+" "+p.y+" "+p.z+" "+amount,ctx);
-    }
-    case "equip_best_weapon":{const xs=bot.inventory.items().filter(i=>/sword|axe|mace|trident/.test(i.name)).sort((a,b)=>weaponScore(b.name)-weaponScore(a.name));if(!xs[0])throw new Error("No weapon found.");await bot.equip(xs[0],"hand");return true;}
-    case "equip_item":{const i=item(bot,arg);if(!i)throw new Error("Item not found.");await bot.equip(i,"hand");return true;}
-    case "use_shield":{const i=item(bot,"shield");if(!i)throw new Error("Shield not found.");await bot.equip(i,"off-hand");bot.activateItem(true);await ctx.sleep(750);bot.deactivateItem();return true;}
-    case "use_item":{const i=item(bot,arg);if(!i)throw new Error("Item not found.");await bot.equip(i,"hand");bot.activateItem();await ctx.sleep(500);bot.deactivateItem();return true;}
-    case "fish":await bot.fish();return true;
-    case "eat":{const i=item(bot,arg);if(!i)throw new Error("Food item not found.");await bot.equip(i,"hand");await bot.consume();return true;}
-    case "drop_item":{const i=item(bot,arg);if(!i)throw new Error("Item not found.");await bot.tossStack(i);return true;}
-    case "count_item":{const w=required(arg).toLowerCase();const n=bot.inventory.items().filter(i=>i.name.toLowerCase().includes(w)).reduce((s,i)=>s+i.count,0);ctx.log("[INVENTORY] "+w+" = "+n);return true;}
-    case "find_item":{const i=item(bot,arg);if(!i)throw new Error("Item not found.");ctx.log("[INVENTORY] "+i.name+" x"+i.count);return true;}
-    case "check_inventory":ctx.log("[INVENTORY] "+bot.inventory.items().map(i=>i.name+" x"+i.count).join(", ")||"empty");return true;
-    case "check_health":ctx.log("[HEALTH] "+bot.health+" / 20");return true;
-    case "check_food":ctx.log("[FOOD] "+bot.food+" / 20");return true;
-    case "check_equipment":ctx.log("[EQUIPMENT] held="+(bot.heldItem?.name||"empty")+" armor="+bot.inventory.items().filter(i=>i.slot>=5&&i.slot<=8).map(i=>i.name).join(", "));return true;
-    case "find_player":{const p=findPlayer(bot,arg);if(!p)throw new Error("Player not found.");ctx.log("[PLAYER] "+p.username);return true;}
-    case "find_entity":{const e=findEntity(bot,arg);if(!e)throw new Error("Entity not found.");ctx.log("[ENTITY] "+(e.name||e.displayName||e.username));return true;}
-    case "find_item_world":{const e=findEntity(bot,arg);if(!e)throw new Error("World target not found.");ctx.log("[WORLD] "+(e.name||e.displayName));return true;}
-    case "check_nearby":ctx.log("[NEARBY] "+Object.values(bot.entities||{}).filter(e=>e?.position&&e!==bot.entity&&e.position.distanceTo(bot.entity.position)<=16).map(e=>e.name||e.username||"entity").join(", "));return true;
-    case "check_environment":ctx.log("[ENV] "+bot.entity.position.x.toFixed(2)+" "+bot.entity.position.y.toFixed(2)+" "+bot.entity.position.z.toFixed(2)+" | dimension="+bot.game?.dimension);return true;
-    case "detect_hostiles":{const h=Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(String(e.name||"").toLowerCase())&&e.position.distanceTo(bot.entity.position)<=16);ctx.log("[HOSTILES] "+h.length+" -> "+h.map(e=>e.name).join(", "));return true;}
-    case "sort_inventory":ctx.log("[SORT] "+bot.inventory.items().sort((a,b)=>a.name.localeCompare(b.name)).map(i=>i.name+" x"+i.count).join(", "));return true;
-    case "coordinate":case "coordinate_with_player":{const a=split(arg),u=required(a.shift(),"Username is required."),p=findPlayer(bot,u)?.entity;if(!p)throw new Error("Player not found.");await navigate(ctx,p.position,3,"coordinate");bot.whisper(u,a.join(" ")||"I am here. Ready.");return true;}
-    case "ask_permission":{const a=split(arg),u=required(a.shift(),"Username is required."),action=required(a.join(" "),"Action is required.");return ctx.runtime.askOwner?.(u,action,action)===true;}
-    case "remember_player":{const a=split(arg),u=required(a.shift(),"Username is required."),fact=required(a.join(" "),"Fact is required.");if(!ctx.runtime.rememberPlayer)throw new Error("Memory service unavailable.");ctx.runtime.rememberPlayer(u,{facts:[fact]});return true;}
-    case "watch":{const target=required(arg,"Watch target is required.");while(true){ctx.assertActive();const e=findPlayer(bot,target)?.entity||findEntity(bot,target);if(!e){ctx.terminate("target_lost");return false;}await bot.lookAt(e.position.offset(0,e.height||1.4,0),true);await ctx.sleep(250);}}
-    case "op_command":{const c=required(arg,"Command is required.");bot.chat(c.startsWith("/")?c:"/"+c);return true;}
-    case "use_ranged_weapon":{const t=findPlayer(bot,arg)?.entity||findEntity(bot,arg);if(!t)throw new Error("Target not found.");const i=item(bot,"bow")||item(bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await bot.equip(i,"hand");await bot.lookAt(t.position.offset(0,t.height||1.4,0),true);bot.activateItem();await ctx.sleep(1200);bot.deactivateItem();return true;}
-    case "dig":case "break_block":{const p=coords(arg),b=bot.blockAt(vec(bot,p));if(!b||b.name==="air")throw new Error("Target block is air.");await navigate(ctx,p,3.5,id);await bot.dig(b);return true;}
-    case "open_chest":case "open_barrel":{const p=coords(arg),b=bot.blockAt(vec(bot,p)),name=id==="open_chest"?"chest":"barrel";if(!b||!b.name.includes(name))throw new Error("Expected "+name+".");await lookAtBlockGoal(ctx,p,4.5,id);await bot.openContainer(b);return true;}
-    case "open_door":case "close_door":case "use_button":case "use_lever":case "use_block":{const p=coords(arg),b=bot.blockAt(vec(bot,p));if(!b)throw new Error("Block not found.");await lookAtBlockGoal(ctx,p,4.5,id);await bot.activateBlock(b);return true;}
-    case "place_block":{const a=split(arg),name=required(a.shift(),"Block is required."),p=coords(a.join(" ")),i=item(bot,name),target=bot.blockAt(vec(bot,p)),ref=bot.blockAt(vec(bot,{x:p.x,y:p.y-1,z:p.z}));if(!i)throw new Error("Placement item not found.");if(!target||target.name!=="air"||!ref)throw new Error("Placement target is not empty/valid.");const V=bot.entity.position.constructor;
-    const faces=[new V(0,1,0),new V(0,-1,0),new V(1,0,0),new V(-1,0,0),new V(0,0,1),new V(0,0,-1)];
-    const placeGoal=new goals.GoalPlaceBlock(vec(bot,p),bot.world,{range:4.5,LOS:true,faces});
-    bot.pathfinder.setGoal(placeGoal);
-    try{
-      const deadline=Date.now()+30000;
-      while(Date.now()<deadline){ctx.assertActive();if(bot.entity.position.distanceTo(vec(bot,p))<=4.5)break;await ctx.sleep(100);}
-      if(Date.now()>=deadline)throw new Error("place_block navigation timed out.");
-    }finally{try{bot.pathfinder.setGoal(null)}catch{}}
-    await bot.equip(i,"hand");await bot.placeBlock(ref,new V(0,1,0));return true;}
-    case "sleep":{const bed=bot.findBlock?.({matching:b=>String(b.name||"").endsWith("_bed"),maxDistance:16});if(!bed)throw new Error("No nearby bed found.");await navigate(ctx,bed.position,3.5,"sleep");await bot.sleep(bed);return true;}
-    case "recover_after_death":await ctx.sleep(750);return true;
-    case "observe":case "search":{const e=findEntity(bot,arg);if(e)await bot.lookAt(e.position.offset(0,e.height||1.4,0),true);ctx.log("[OBSERVE] "+(e?(e.name||e.username||"target"):"No matching target in loaded entities."));return true;}
-    case "find_safe_location":case "find_shelter":ctx.log("[SAFETY] Current location="+bot.entity.position.x.toFixed(1)+" "+bot.entity.position.y.toFixed(1)+" "+bot.entity.position.z.toFixed(1));return true;
-    case "harvest_crops":{const cropNames=new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);const b=bot.findBlock?.({matching:x=>cropNames.has(String(x.name||"")),maxDistance:16});if(!b)throw new Error("No mature crop found nearby.");await navigate(ctx,b.position,3.5,"crop navigation");await bot.dig(b);return true;}
-    case "take_item":{const e=findEntity(bot,arg);if(!e||e.name!=="item")throw new Error("Dropped item not found.");await navigate(ctx,e.position,1.5,"item pickup");await ctx.sleep(400);return true;}
-    case "give_item":case "deliver_item":{const a=split(arg),itemName=required(a.shift(),"Item is required."),u=required(a.shift(),"Username is required."),p=findPlayer(bot,u)?.entity,i=item(bot,itemName);if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,"delivery");await bot.equip(i,"hand");await bot.tossStack(i);ctx.log("[DELIVERY] Dropped "+itemName+" for "+u+".");return true;}
-    case "deposit":case "retrieve":{const a=split(arg),itemName=required(a.shift(),"Item is required."),p=coords(a.join(" ")),b=bot.blockAt(vec(bot,p));if(!b||!["chest","barrel","shulker_box"].some(n=>b.name.includes(n)))throw new Error("Storage container not found.");await navigate(ctx,p,3.5,id);const c=await bot.openContainer(b);const data=bot.registry.itemsByName[itemName.toLowerCase()];if(!data)throw new Error("Unknown item: "+itemName);const amount=id==="deposit"?(bot.inventory.items().find(x=>x.name===data.name)?.count||0):Math.max(1,Number(a.at(-1))||1);if(amount<=0)throw new Error("Item not available.");if(id==="deposit")await c.deposit(data.id,null,amount,null);else await c.withdraw(data.id,null,amount,null);await c.close();return true;}
-    case "craft_workbench":case "multi_step_craft":case "craft_furnace":{const name=required(arg,"Item is required.");return ctx.runtime.execute("craft",{itemName:name.replace(/\\s+/g,"_"),amount:1,permissionGranted:true});}
-    case "gather_missing_materials":return ctx.runtime.execute("gather_missing_materials",{itemName:required(arg,"Item is required."),permissionGranted:true});
-    case "smelt":{const wanted=required(arg,"Item is required.").toLowerCase();const furnace=bot.findBlock?.({matching:b=>String(b.name||"").includes("furnace"),maxDistance:16});if(!furnace)throw new Error("No nearby furnace.");await navigate(ctx,furnace.position,3.5,"furnace navigation");const f=await bot.openFurnace(furnace);const input=item(bot,wanted);if(!input)throw new Error("Smelting input not found.");const fuel=item(bot,"coal")||item(bot,"charcoal")||item(bot,"planks");if(!fuel)throw new Error("No furnace fuel found.");await f.putInput(input.type??input.itemId??input.id,null,input.count);await f.putFuel(fuel.type??fuel.itemId??fuel.id, null, Math.min(fuel.count,8));await ctx.sleep(1000);await f.takeOutput();await f.close();return true;}
-    case "do_task":{const task=required(arg,"Task is required.");const lower=task.toLowerCase();if(lower.startsWith("mine "))return executeCapability("mine",task.slice(5),ctx);if(lower.startsWith("chop"))return executeCapability("chop_tree","",ctx);if(lower.startsWith("gather "))return executeCapability("gather_resources",task.slice(7),ctx);if(lower.startsWith("craft "))return executeCapability("craft",task.slice(6),ctx);throw new Error("do_task requires a concrete supported task: mine, chop, gather, or craft.");}
-    case "build":{const m=required(arg,"Build plan is required.").match(/^(pillar|tower|line)\\s+(\\w+)\\s+(\\d+)$/i);if(!m)throw new Error("Build plan must be: pillar|tower|line <block> <count>.");const name=m[2].toLowerCase(),count=Math.max(1,Number(m[3]));const place=item(bot,name);if(!place)throw new Error("Build material not found: "+name);for(let n=0;n<count;n++){ctx.assertActive();const p=bot.entity.position.floored().offset(m[1].toLowerCase()==="line"?n:0,m[1].toLowerCase()==="line"?0:n,0);const target=bot.blockAt(p),ref=bot.blockAt(p.offset(0,-1,0));if(target?.name!=="air"||!ref)continue;await navigate(ctx,p,3.5,"build navigation");await bot.equip(place,"hand");await bot.placeBlock(ref,new (bot.entity.position.constructor)(0,1,0));}return true;}
-    case "defend":case "escape":case "chase_target":case "escort_player":case "protect_player":return ctx.runtime.execute(id,{permissionGranted:true,targetUsername:split(arg)[0]});
-    default:throw new Error("Clean handler missing for "+id);
-  }
-}
-
-export const HANDLERS = {
-  "follow_player": async (ctx, arg) => ctx.run("follow_player", arg),
-  "roam": async (ctx, arg) => ctx.run("roam", arg),
-  "pvp": async (ctx, arg) => ctx.run("pvp", arg),
-  "hit": async (ctx, arg) => ctx.run("hit", arg),
-  "gather_resources": async (ctx, arg) => ctx.run("gather_resources", arg),
-  "do_task": async (ctx, arg) => ctx.run("do_task", arg),
-  "coordinate": async (ctx, arg) => ctx.run("coordinate", arg),
-  "explore": async (ctx, arg) => ctx.run("explore", arg),
-  "observe": async (ctx, arg) => ctx.run("observe", arg),
-  "return": async (ctx, arg) => ctx.run("return", arg),
-  "investigate_entity": async (ctx, arg) => ctx.run("investigate_entity", arg),
-  "mine": async (ctx, arg) => ctx.run("mine", arg),
-  "chop_tree": async (ctx, arg) => ctx.run("chop_tree", arg),
-  "craft": async (ctx, arg) => ctx.run("craft", arg),
-  "eat": async (ctx, arg) => ctx.run("eat", arg),
-  "collect": async (ctx, arg) => ctx.run("collect", arg),
-  "look_at_player": async (ctx, arg) => ctx.run("look_at_player", arg),
-  "chat": async (ctx, arg) => ctx.run("chat", arg),
-  "private_chat": async (ctx, arg) => ctx.run("private_chat", arg),
-  "go_to": async (ctx, arg) => ctx.run("go_to", arg),
-  "look_at_coordinates": async (ctx, arg) => ctx.run("look_at_coordinates", arg),
-  "stop": async (ctx, arg) => ctx.run("stop", arg),
-  "wait": async (ctx, arg) => ctx.run("wait", arg),
-  "return_to_coordinates": async (ctx, arg) => ctx.run("return_to_coordinates", arg),
-  "sprint": async (ctx, arg) => ctx.run("sprint", arg),
-  "sneak": async (ctx, arg) => ctx.run("sneak", arg),
-  "jump": async (ctx, arg) => ctx.run("jump", arg),
-  "enter_exit_vehicle": async (ctx, arg) => ctx.run("enter_exit_vehicle", arg),
-  "attack_mob": async (ctx, arg) => ctx.run("attack_mob", arg),
-  "defend": async (ctx, arg) => ctx.run("defend", arg),
-  "guard": async (ctx, arg) => ctx.run("guard", arg),
-  "escape": async (ctx, arg) => ctx.run("escape", arg),
-  "chase_target": async (ctx, arg) => ctx.run("chase_target", arg),
-  "equip_best_weapon": async (ctx, arg) => ctx.run("equip_best_weapon", arg),
-  "use_shield": async (ctx, arg) => ctx.run("use_shield", arg),
-  "use_ranged_weapon": async (ctx, arg) => ctx.run("use_ranged_weapon", arg),
-  "dig": async (ctx, arg) => ctx.run("dig", arg),
-  "harvest_crops": async (ctx, arg) => ctx.run("harvest_crops", arg),
-  "fish": async (ctx, arg) => ctx.run("fish", arg),
-  "hunt": async (ctx, arg) => ctx.run("hunt", arg),
-  "find_shelter": async (ctx, arg) => ctx.run("find_shelter", arg),
-  "recover_after_death": async (ctx, arg) => ctx.run("recover_after_death", arg),
-  "find_safe_location": async (ctx, arg) => ctx.run("find_safe_location", arg),
-  "check_inventory": async (ctx, arg) => ctx.run("check_inventory", arg),
-  "find_item": async (ctx, arg) => ctx.run("find_item", arg),
-  "count_item": async (ctx, arg) => ctx.run("count_item", arg),
-  "equip_item": async (ctx, arg) => ctx.run("equip_item", arg),
-  "drop_item": async (ctx, arg) => ctx.run("drop_item", arg),
-  "give_item": async (ctx, arg) => ctx.run("give_item", arg),
-  "take_item": async (ctx, arg) => ctx.run("take_item", arg),
-  "deposit": async (ctx, arg) => ctx.run("deposit", arg),
-  "retrieve": async (ctx, arg) => ctx.run("retrieve", arg),
-  "sort_inventory": async (ctx, arg) => ctx.run("sort_inventory", arg),
-  "smelt": async (ctx, arg) => ctx.run("smelt", arg),
-  "craft_workbench": async (ctx, arg) => ctx.run("craft_workbench", arg),
-  "craft_furnace": async (ctx, arg) => ctx.run("craft_furnace", arg),
-  "gather_missing_materials": async (ctx, arg) => ctx.run("gather_missing_materials", arg),
-  "multi_step_craft": async (ctx, arg) => ctx.run("multi_step_craft", arg),
-  "place_block": async (ctx, arg) => ctx.run("place_block", arg),
-  "break_block": async (ctx, arg) => ctx.run("break_block", arg),
-  "open_chest": async (ctx, arg) => ctx.run("open_chest", arg),
-  "open_barrel": async (ctx, arg) => ctx.run("open_barrel", arg),
-  "open_door": async (ctx, arg) => ctx.run("open_door", arg),
-  "close_door": async (ctx, arg) => ctx.run("close_door", arg),
-  "use_button": async (ctx, arg) => ctx.run("use_button", arg),
-  "use_lever": async (ctx, arg) => ctx.run("use_lever", arg),
-  "use_block": async (ctx, arg) => ctx.run("use_block", arg),
-  "use_item": async (ctx, arg) => ctx.run("use_item", arg),
-  "sleep": async (ctx, arg) => ctx.run("sleep", arg),
-  "find_player": async (ctx, arg) => ctx.run("find_player", arg),
-  "find_entity": async (ctx, arg) => ctx.run("find_entity", arg),
-  "find_item_world": async (ctx, arg) => ctx.run("find_item_world", arg),
-  "check_nearby": async (ctx, arg) => ctx.run("check_nearby", arg),
-  "check_environment": async (ctx, arg) => ctx.run("check_environment", arg),
-  "detect_hostiles": async (ctx, arg) => ctx.run("detect_hostiles", arg),
-  "check_health": async (ctx, arg) => ctx.run("check_health", arg),
-  "check_food": async (ctx, arg) => ctx.run("check_food", arg),
-  "check_equipment": async (ctx, arg) => ctx.run("check_equipment", arg),
-  "ask_permission": async (ctx, arg) => ctx.run("ask_permission", arg),
-  "whisper_player": async (ctx, arg) => ctx.run("whisper_player", arg),
-  "remember_player": async (ctx, arg) => ctx.run("remember_player", arg),
-  "report_result": async (ctx, arg) => ctx.run("report_result", arg),
-  "ask_clarification": async (ctx, arg) => ctx.run("ask_clarification", arg),
-  "retrieve_item": async (ctx, arg) => ctx.run("retrieve_item", arg),
-  "deliver_item": async (ctx, arg) => ctx.run("deliver_item", arg),
-  "escort_player": async (ctx, arg) => ctx.run("escort_player", arg),
-  "protect_player": async (ctx, arg) => ctx.run("protect_player", arg),
-  "guard_location": async (ctx, arg) => ctx.run("guard_location", arg),
-  "build": async (ctx, arg) => ctx.run("build", arg),
-  "search": async (ctx, arg) => ctx.run("search", arg),
-  "watch": async (ctx, arg) => ctx.run("watch", arg),
-  "coordinate_with_player": async (ctx, arg) => ctx.run("coordinate_with_player", arg),
-  "op_command": async (ctx, arg) => ctx.run("op_command", arg),
+const H = {
+  follow_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
+  roam: async(ctx)=>{
+    const {bot}=ctx; const angle=Math.random()*Math.PI*2, r=8+Math.random()*12;
+    return navigate(ctx,{x:bot.entity.position.x+Math.cos(angle)*r,y:bot.entity.position.y,z:bot.entity.position.z+Math.sin(angle)*r},2,20000,"roam");
+  },
+  pvp: async(ctx,a)=>{
+    const p=player(ctx.bot,a); if(!p?.entity)throw new Error("Player not found.");
+    return attack(ctx,p.entity,60000);
+  },
+  hit: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return attack(ctx,p.entity,10000);},
+  gather_resources: async(ctx,a)=>{
+    const q=parts(a),name=required(q[0],"Resource name is required."),amount=Math.max(1,Math.floor(Number(q[1])||1));
+    let got=countItem(ctx.bot,name);
+    while(got<amount){active(ctx);const id=ctx.bot.registry.itemsByName[name.toLowerCase()]?.id;if(id==null)throw new Error("Unknown resource: "+name);
+      const block=ctx.bot.findBlock({matching:b=>b?.drops?.some?.(d=>d===id)||String(b?.name||"").toLowerCase().includes(name.toLowerCase()),maxDistance:32});
+      if(!block)throw new Error("Resource not found nearby: "+name);await digBlock(ctx,block);got=countItem(ctx,name);}
+    return true;
+  },
+  do_task: async(ctx,a)=>{
+    const s=required(a,"Task is required."), l=s.toLowerCase();
+    if(l.startsWith("mine "))return H.mine(ctx,s.slice(5));
+    if(l.startsWith("chop"))return H.chop_tree(ctx,"");
+    if(l.startsWith("gather "))return H.gather_resources(ctx,s.slice(7));
+    if(l.startsWith("craft "))return H.craft(ctx,s.slice(6));
+    throw new Error("Supported do_task forms: mine, chop, gather, craft.");
+  },
+  coordinate: async(ctx,a)=>H.coordinate_with_player(ctx,a),
+  explore: async(ctx)=>H.roam(ctx,""),
+  observe: async(ctx,a)=>H.search(ctx,a),
+  return: async(ctx)=>{const owner=ctx.runtime?.getStatus?.().ownerUsername;if(!owner)throw new Error("Owner is not configured.");return H.follow_player(ctx,owner);},
+  investigate_entity: async(ctx,a)=>H.search(ctx,a),
+  mine: async(ctx,a)=>{
+    const name=required(a,"Block name is required()").toLowerCase();
+    const b=ctx.bot.findBlock({matching:x=>String(x?.name||"").toLowerCase()===name,maxDistance:48});
+    if(!b)throw new Error("Block not found nearby: "+name);return digBlock(ctx,b);
+  },
+  chop_tree: async(ctx)=>{
+    const b=ctx.bot.findBlock({matching:x=>/(_log|_stem)$/.test(String(x?.name||"")),maxDistance:32});
+    if(!b)throw new Error("No tree log found nearby.");return digBlock(ctx,b);
+  },
+  craft: async(ctx,a)=>{const q=parts(a),amount=Math.max(1,Number(q.at(-1))||1),name=q.length>1?q.slice(0,-1).join("_"):q[0];return craft(ctx,name,amount);},
+  eat: async(ctx,a)=>{
+    const i=String(a||"").trim()?inventoryItem(ctx.bot,a):ctx.bot.inventory.items().find(i=>ctx.bot.registry.foods?.[i.type]||/bread|apple|beef|pork|chicken|mutton|carrot|potato|stew|melon/.test(i.name));
+    if(!i)throw new Error("Food item not found.");await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.consume();return true;
+  },
+  collect: async(ctx,a)=>{
+    const q=parts(a),name=q[0]||"",amount=Math.max(1,Number(q[1])||1),before=countItem(ctx.bot,name);
+    while(countItem(ctx.bot,name)<before+amount){active(ctx);const e=nearest(ctx.bot,e=>e.name==="item"&&(!name||String(e.metadata?.item?.itemId||e.displayName||"").toLowerCase().includes(name.toLowerCase())),32);if(!e)throw new Error("Dropped item not found.");await navigate(ctx,e.position,1.5,15000,"item pickup");await wait(ctx,500);}
+    return true;
+  },
+  look_at_player: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return lookAtEntity(ctx,p.entity);},
+  chat: async(ctx,a)=>{ctx.bot.chat(required(a,"Message is required.").slice(0,256));return true;},
+  private_chat: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),m=required(q.join(" "),"Message is required.");if(!player(ctx.bot,u))throw new Error("Player not found.");ctx.bot.whisper(u,m.slice(0,256));return true;},
+  go_to: async(ctx,a)=>navigate(ctx,coords(a),2,30000,"go_to"),
+  look_at_coordinates: async(ctx,a)=>lookAt(ctx,coords(a)),
+  stop: async()=>true,
+  wait: async(ctx,a)=>{const s=number(a,"Seconds are required.");if(s<0)throw new Error("Seconds cannot be negative.");await wait(ctx,s*1000);return true;},
+  return_to_coordinates: async(ctx,a)=>navigate(ctx,coords(a),2,30000,"return_to_coordinates"),
+  sprint: async(ctx,a)=>{const s=number(a,"Seconds are required.");if(s<0)throw new Error("Seconds cannot be negative.");ctx.bot.setControlState("sprint",true);try{await wait(ctx,s*1000);}finally{ctx.bot.setControlState("sprint",false);}return true;},
+  sneak: async(ctx,a)=>{const s=number(a,"Seconds are required.");if(s<0)throw new Error("Seconds cannot be negative.");ctx.bot.setControlState("sneak",true);try{await wait(ctx,s*1000);}finally{ctx.bot.setControlState("sneak",false);}return true;},
+  jump: async(ctx)=>{ctx.bot.setControlState("jump",true);try{await wait(ctx,250);}finally{ctx.bot.setControlState("jump",false);}return true;},
+  enter_exit_vehicle: async(ctx)=>{
+    if(ctx.bot.vehicle){ctx.bot.dismount();return true;}
+    const v=nearest(ctx.bot,e=>["boat","chest_boat","minecart"].includes(entityName(e)),6);if(!v)throw new Error("No nearby mountable vehicle.");if(typeof ctx.bot.mount!=="function")throw new Error("Mineflayer mount API is unavailable.");await ctx.bot.mount(v);return true;
+  },
+  attack_mob: async(ctx,a)=>{const t=nearest(ctx.bot,e=>HOSTILES.has(entityName(e))&&(!a||entityName(e).includes(String(a).toLowerCase())),32);if(!t)throw new Error("Target mob not found.");return attack(ctx,t);},
+  defend: async(ctx)=>{while(true){active(ctx);const t=await nearestHostile(ctx,12);if(t)await attack(ctx,t);else await wait(ctx,250);}},
+  guard: async(ctx,a)=>guard(ctx,coords(a)),
+  escape: async(ctx)=>{
+    const t=await nearestHostile(ctx,12);if(!t)return true;
+    const dx=ctx.bot.entity.position.x-t.position.x,dz=ctx.bot.entity.position.z-t.position.z,len=Math.hypot(dx,dz)||1;
+    return navigate(ctx,{x:ctx.bot.entity.position.x+dx/len*12,y:ctx.bot.entity.position.y,z:ctx.bot.entity.position.z+dz/len*12},3,15000,"escape");
+  },
+  chase_target: async(ctx,a)=>follow(ctx,player(ctx.bot,parts(a)[0])?.entity||(()=>{throw new Error("Target player not found.");})(),3),
+  equip_best_weapon: async(ctx)=>{const i=bestWeapon(ctx.bot);if(!i)throw new Error("No weapon found.");await ctx.bot.equip(i,"hand");return true;},
+  use_shield: async(ctx)=>{const i=inventoryItem(ctx.bot,"shield");if(!i)throw new Error("Shield not found.");await ctx.bot.equip(i,"off-hand");ctx.bot.activateItem();await wait(ctx,750);ctx.bot.deactivateItem();return true;},
+  use_ranged_weapon: async(ctx,a)=>{const t=player(ctx.bot,a)?.entity||nearest(ctx.bot,e=>!HOSTILES.has(entityName(e))&&entityName(e).includes(String(a||"").toLowerCase()),32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await ctx.bot.equip(i,"hand");await lookAtEntity(ctx,t);ctx.bot.activateItem();await wait(ctx,1200);ctx.bot.deactivateItem();return true;},
+  dig: async(ctx,a)=>digBlock(ctx,ctx.bot.blockAt(vec(ctx.bot,coords(a)))),
+  harvest_crops: async(ctx)=>{const b=ctx.bot.findBlock({matching:x=>CROPS.has(String(x?.name||"")),maxDistance:32});if(!b)throw new Error("No crop found nearby.");return digBlock(ctx,b);},
+  fish: async(ctx)=>{active(ctx);await ctx.bot.fish();return true;},
+  hunt: async(ctx,a)=>{const t=await nearestAnimal(ctx,32);if(!t)throw new Error("No huntable animal nearby.");return attack(ctx,t);},
+  find_shelter: async(ctx)=>findSafe(ctx),
+  recover_after_death: async(ctx)=>{await wait(ctx,1000);return true;},
+  find_safe_location: async(ctx)=>findSafe(ctx),
+  check_inventory: async(ctx)=>{ctx.log(ctx.bot.inventory.items().map(i=>i.name+" x"+i.count).join(", ")||"empty");return true;},
+  find_item: async(ctx,a)=>{const i=inventoryItem(ctx.bot,a);if(!i)throw new Error("Item not found.");ctx.log(i.name+" x"+i.count);return true;},
+  count_item: async(ctx,a)=>{ctx.log(String(countItem(ctx.bot,a)));return true;},
+  equip_item: async(ctx,a)=>{const i=inventoryItem(ctx.bot,a);if(!i)throw new Error("Item not found.");await ctx.bot.equip(i,"hand");return true;},
+  drop_item: async(ctx,a)=>{const i=inventoryItem(ctx.bot,a);if(!i)throw new Error("Item not found.");await ctx.bot.tossStack(i);return true;},
+  give_item: async(ctx,a)=>give(ctx,a),
+  take_item: async(ctx,a)=>{const e=nearest(ctx.bot,e=>e.name==="item"&&(!a||entityName(e).includes(String(a).toLowerCase())),32);if(!e)throw new Error("Dropped item not found.");await navigate(ctx,e.position,1.5,15000,"take item");return true;},
+  deposit: async(ctx,a)=>storage(ctx,a,true),
+  retrieve: async(ctx,a)=>storage(ctx,a,false),
+  sort_inventory: async(ctx)=>{const names=ctx.bot.inventory.items().sort((a,b)=>a.name.localeCompare(b.name)).map(i=>i.name+" x"+i.count);ctx.log(names.join(", ")||"empty");return true;},
+  smelt: async(ctx,a)=>smelt(ctx,a),
+  craft_workbench: async(ctx,a)=>craft(ctx,a,1),
+  craft_furnace: async(ctx,a)=>craft(ctx,a,1),
+  gather_missing_materials: async(ctx,a)=>{const q=required(a,"Item is required.");return H.gather_resources(ctx,q+" 1");},
+  multi_step_craft: async(ctx,a)=>craft(ctx,a,1),
+  place_block: async(ctx,a)=>{const q=parts(a),name=required(q.shift(),"Block is required."),p=coords(q.join(" "));return placeAt(ctx,name,p);},
+  break_block: async(ctx,a)=>H.dig(ctx,a),
+  open_chest: async(ctx,a)=>{const c=await container(ctx,coords(a),"chest");try{return true}finally{await c.close();}},
+  open_barrel: async(ctx,a)=>{const c=await container(ctx,coords(a),"barrel");try{return true}finally{await c.close();}},
+  open_door: async(ctx,a)=>interactBlock(ctx,coords(a),"door"),
+  close_door: async(ctx,a)=>interactBlock(ctx,coords(a),"door"),
+  use_button: async(ctx,a)=>interactBlock(ctx,coords(a),"button"),
+  use_lever: async(ctx,a)=>interactBlock(ctx,coords(a),"lever"),
+  use_block: async(ctx,a)=>interactBlock(ctx,coords(a)),
+  use_item: async(ctx,a)=>{const i=inventoryItem(ctx.bot,a);if(!i)throw new Error("Item not found.");await ctx.bot.equip(i,"hand");ctx.bot.activateItem();await wait(ctx,500);ctx.bot.deactivateItem();return true;},
+  sleep: async(ctx)=>{const b=ctx.bot.findBlock({matching:x=>String(x?.name||"").endsWith("_bed"),maxDistance:24});if(!b)throw new Error("No bed nearby.");await navigate(ctx,b.position,3.5,30000,"bed navigation");await ctx.bot.sleep(b);return true;},
+  find_player: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p)throw new Error("Player not found.");ctx.log(p.username);return true;},
+  find_entity: async(ctx,a)=>{const e=nearest(ctx.bot,e=>!a||entityName(e).includes(String(a).toLowerCase()),48);if(!e)throw new Error("Entity not found.");ctx.log(entityName(e));return true;},
+  find_item_world: async(ctx,a)=>{const e=nearest(ctx.bot,e=>e.name==="item"&&(!a||entityName(e).includes(String(a).toLowerCase())),48);if(!e)throw new Error("Dropped item not found.");ctx.log("item at "+e.position);return true;},
+  check_nearby: async(ctx)=>{ctx.log(Object.values(ctx.bot.entities||{}).filter(e=>e?.position&&e!==ctx.bot.entity&&distance(ctx.bot,e)<=16).map(entityName).join(", ")||"none");return true;},
+  check_environment: async(ctx)=>{ctx.log("position="+ctx.bot.entity.position.x.toFixed(2)+" "+ctx.bot.entity.position.y.toFixed(2)+" "+ctx.bot.entity.position.z.toFixed(2)+" dimension="+ctx.bot.game?.dimension);return true;},
+  detect_hostiles: async(ctx)=>{const h=Object.values(ctx.bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(entityName(e))&&distance(ctx.bot,e)<=16);ctx.log(h.map(entityName).join(", ")||"none");return true;},
+  check_health: async(ctx)=>{ctx.log(String(ctx.bot.health??0)+"/20");return true;},
+  check_food: async(ctx)=>{ctx.log(String(ctx.bot.food??0)+"/20");return true;},
+  check_equipment: async(ctx)=>{ctx.log("held="+(ctx.bot.heldItem?.name||"empty"));return true;},
+  ask_permission: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),action=required(q.join(" "),"Action is required.");return ctx.runtime.askOwner?.(u,action,action)===true;},
+  whisper_player: async(ctx,a)=>H.private_chat(ctx,a),
+  remember_player: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),fact=required(q.join(" "),"Fact is required.");ctx.runtime.rememberPlayer?.(u,{facts:[fact]});return true;},
+  report_result: async(ctx,a)=>{ctx.bot.chat(required(a,"Message is required.").slice(0,256));return true;},
+  ask_clarification: async(ctx,a)=>H.private_chat(ctx,a),
+  retrieve_item: async(ctx,a)=>H.retrieve(ctx,a),
+  deliver_item: async(ctx,a)=>H.give_item(ctx,a),
+  escort_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
+  protect_player: async(ctx,a)=>protect(ctx,a),
+  guard_location: async(ctx,a)=>guard(ctx,coords(a)),
+  build: async(ctx,a)=>build(ctx,a),
+  search: async(ctx,a)=>{const e=nearest(ctx.bot,e=>!a||entityName(e).includes(String(a).toLowerCase()),48);if(!e)throw new Error("Search target not found.");await lookAtEntity(ctx,e);ctx.log(entityName(e));return true;},
+  watch: async(ctx,a)=>{const s=required(a,"Watch target is required.");while(true){active(ctx);const e=player(ctx.bot,s)?.entity||nearest(ctx.bot,e=>entityName(e).includes(s.toLowerCase()),48);if(!e){ctx.terminate("target_lost");return false;}await lookAtEntity(ctx,e);await wait(ctx,250);}},
+  coordinate_with_player: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),task=q.join(" ")||"ready";const p=player(ctx.bot,u);if(!p?.entity)throw new Error("Player not found.");await navigate(ctx,p.entity.position,3,30000,"coordinate");ctx.bot.whisper(u,"Ready: "+task);return true;},
+  op_command: async(ctx,a)=>{const c=required(a,"Command is required.");ctx.bot.chat(c.startsWith("/")?c:"/"+c);return true;}
 };
+
+async function guard(ctx,p){
+  const {bot}=ctx; active(ctx);
+  await navigate(ctx,p,3,20000,"guard post");
+  await H.equip_best_weapon(ctx,"");
+  while(true){
+    active(ctx);
+    const target=await nearestHostile(ctx,12);
+    if(target){await H.equip_best_weapon(ctx,"");await attack(ctx,target,15000);continue;}
+    if(bot.entity.position.distanceTo(vec(bot,p))>3){await navigate(ctx,p,3,20000,"guard post recovery");continue;}
+    await wait(ctx,200);
+  }
+}
+async function protect(ctx,a){
+  const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");
+  while(true){active(ctx);const live=player(ctx.bot,p.username)?.entity;if(!live){ctx.terminate("target_lost");return false;}
+    const h=await nearestHostile(ctx,8);if(h&&distance(ctx.bot,h)<=8){await attack(ctx,h,15000);continue;}
+    if(distance(ctx.bot,live)>5)await followOnce(ctx,live,5);else await wait(ctx,250);
+  }
+}
+async function followOnce(ctx,t,r){return navigate(ctx,t.position,r,20000,"follow");}
+async function give(ctx,a){
+  const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required."),p=player(ctx.bot,u)?.entity,i=inventoryItem(ctx.bot,name);
+  if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,20000,"delivery");await ctx.bot.equip(i,"hand");await ctx.bot.tossStack(i);return true;
+}
+async function storage(ctx,a,deposit){
+  const q=parts(a),name=required(q.shift(),"Item is required."),p=coords(q.splice(0,3).join(" ")),c=await container(ctx,p);
+  try{
+    const type=ctx.bot.registry.itemsByName[name.toLowerCase().replace(/\s+/g,"_")];if(!type)throw new Error("Unknown item: "+name);
+    if(deposit){const n=countItem(ctx.bot,name);if(n<=0)throw new Error("Item not available.");await c.deposit(type.id,null,n,null);}
+    else {const n=Math.max(1,Number(q[0])||1);await c.withdraw(type.id,null,n,null);}
+    return true;
+  }finally{try{await c.close();}catch{}}
+}
+async function smelt(ctx,a){
+  const name=required(a,"Smelting input is required.").toLowerCase(),b=ctx.bot.findBlock({matching:x=>/furnace/.test(String(x?.name||"")),maxDistance:24});
+  if(!b)throw new Error("No furnace nearby.");await navigate(ctx,b.position,3.5,30000,"furnace");
+  const f=await ctx.bot.openFurnace(b);try{
+    const input=inventoryItem(ctx.bot,name),fuel=inventoryItem(ctx.bot,"coal")||inventoryItem(ctx.bot,"charcoal")||inventoryItem(ctx.bot,"planks");
+    if(!input)throw new Error("Smelting input not found.");if(!fuel)throw new Error("Fuel not found.");
+    await f.putInput(input.type??input.id,null,Math.min(input.count,64));await f.putFuel(fuel.type??fuel.id,null,Math.min(fuel.count,8));await wait(ctx,1200);await f.takeOutput();return true;
+  }finally{try{await f.close();}catch{}}
+}
+async function findSafe(ctx){
+  const {bot}=ctx;
+  for(let r=4;r<=20;r+=4){for(let i=0;i<8;i++){active(ctx);const a=i*Math.PI/4,p={x:bot.entity.position.x+Math.cos(a)*r,y:bot.entity.position.y,z:bot.entity.position.z+Math.sin(a)*r};const b=bot.blockAt(vec(bot,p));if(b?.name==="air")return navigate(ctx,p,2,10000,"safe location");}}
+  throw new Error("No safe location found in loaded area.");
+}
+async function build(ctx,a){
+  const m=required(a,"Build plan is required.").match(/^(pillar|tower|line)\s+(\S+)\s+(\d+)$/i);if(!m)throw new Error("Build plan: pillar|tower|line <block> <count>.");
+  const kind=m[1].toLowerCase(),name=m[2],n=Math.max(1,Number(m[3])),base=ctx.bot.entity.position.floored();
+  for(let i=0;i<n;i++){active(ctx);const p=kind==="line"?{x:base.x+i,y:base.y,z:base.z}:{x:base.x,y:base.y+i,z:base.z};const b=ctx.bot.blockAt(vec(ctx.bot,p));if(b?.name!=="air")continue;await placeAt(ctx,name,p);}return true;
+}
+
+export const RUNTIME_ACTIONS = new Set();
+export const HANDLERS = Object.freeze(H);
 assertCapabilityRegistry(HANDLERS);
+
 export async function executeCapability(id,arg,ctx){
-  const mode=CAPABILITY_MODES.find(item=>item.id===id);
+  const mode=CAPABILITY_MODES.find(x=>x.id===id);
   if(!mode)throw new Error("Unknown capability: "+id);
-  const h=HANDLERS[id];
-  if(!h)throw new Error("Capability has no handler: "+id);
-  ctx.run=ctx.run||((modeId,value)=>lowLevel(ctx,modeId,value));
-  return h(ctx,arg);
+  const handler=HANDLERS[id];
+  if(typeof handler!=="function")throw new Error("Capability has no handler: "+id);
+  if(id==="stop"){ctx.runtime.cancelCurrentTask?.("manual stop");return true;}
+  return handler(ctx,arg);
 }
