@@ -1,8 +1,8 @@
 import readline from "node:readline";
-import { CAPABILITIES, executeCapability } from "./capabilityEngine.mjs";
+import { CAPABILITIES, RUNTIME_ACTIONS, executeCapability } from "./capabilityEngine.mjs";
 
 
-const RUNTIME_EXECUTED = new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","craft","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
+const RUNTIME_EXECUTED = RUNTIME_ACTIONS;
 const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
 const WEAPONS = new Set(["sword","axe","mace","trident"]);
 const toVec3=(bot,p)=>new bot.entity.position.constructor(Number(p.x),Number(p.y),Number(p.z));
@@ -85,10 +85,9 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
   }
 }
 
-const CONTINUOUS_TEST_MODES = new Set([
-  "follow_player","roam","pvp","guard","guard_location","defend","chase_target",
-  "escort_player","protect_player","watch","coordinate_with_player"
-]);
+const CONTINUOUS_TEST_MODES = new Set(
+  CAPABILITIES.filter(capability => capability.execution === "continuous").map(capability => capability.id)
+);
 
 export function startCapabilityTester({bot,runtime,log=console.log}){
   let closed=false;
