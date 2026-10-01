@@ -57,7 +57,7 @@ jobs:
             $engineSource = Get-Content (Join-Path $bridgeDist 'capabilityEngine.mjs') -Raw
             $modesSource = Get-Content (Join-Path $bridgeDist 'capabilityModes.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-            if ($indexSource -notmatch 'manual-capability-v24-clean-93-mode-engine-2026-10-01') { throw 'Manual capability build marker is missing or stale.' }
+            if ($indexSource -notmatch 'manual-capability-v25-clean-93-mode-engine-2026-10-01') { throw 'Manual capability build marker is missing or stale.' }
             if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
             if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
             if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
