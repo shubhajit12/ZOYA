@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v24-bodyguard-2026-10-01";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v25-combat-target-2026-10-01";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -493,13 +493,37 @@ async function protect(ctx,a){
   if(!p?.entity) throw new Error("Player not found.");
   let followed=null;
   let lastOwnerHealth=Number(p.entity.health ?? 20);
+  const seenHealth=new Map();
+  let lastOwnerTarget=null;
+  let targetSeenAt=0;
 
-  const ownerThreat = ownerEntity => {
-    const hostiles=Object.values(ctx.bot.entities||{})
-      .filter(e=>e?.position&&e!==ctx.bot.entity&&e.isValid!==false&&HOSTILES.has(entityName(e)))
-      .filter(e=>distance({entity:{position:ownerEntity.position}},e)<=5.5)
-      .sort((a,b)=>ownerEntity.position.distanceTo(a.position)-ownerEntity.position.distanceTo(b.position));
-    return hostiles[0]||null;
+  const nearbyEntities=ownerEntity => Object.values(ctx.bot.entities||{})
+    .filter(e=>e?.position&&e!==ctx.bot.entity&&e.isValid!==false)
+    .filter(e=>distance({entity:{position:ownerEntity.position}},e)<=12);
+
+  const hostileThreat=ownerEntity => nearbyEntities(ownerEntity)
+    .filter(e=>HOSTILES.has(entityName(e)))
+    .sort((a,b)=>ownerEntity.position.distanceTo(a.position)-ownerEntity.position.distanceTo(b.position))[0]||null;
+
+  const detectOwnerAttack = ownerEntity => {
+    let best=null;
+    let bestDrop=0;
+    for(const e of nearbyEntities(ownerEntity)){
+      const hp=Number(e.health);
+      if(!Number.isFinite(hp)) continue;
+      const previous=seenHealth.get(e.id);
+      seenHealth.set(e.id,hp);
+      if(previous!=null && hp<previous){
+        const drop=previous-hp;
+        if(drop>bestDrop){best=e;bestDrop=drop;}
+      }
+    }
+    if(best){
+      lastOwnerTarget=best;
+      targetSeenAt=Date.now();
+    }
+    if(lastOwnerTarget?.isValid!==false && Date.now()-targetSeenAt<=2500) return lastOwnerTarget;
+    return null;
   };
 
   try{
@@ -512,14 +536,28 @@ async function protect(ctx,a){
       const ownerDamaged=Number.isFinite(ownerHealth)&&Number.isFinite(lastOwnerHealth)&&ownerHealth<lastOwnerHealth;
       lastOwnerHealth=ownerHealth;
 
-      // Protection priority:
-      // 1. A hostile close enough to the owner is treated as the owner's
-      //    immediate threat. This also covers the common case where the owner
-      //    has just struck that hostile.
-      // 2. If the owner was just damaged, immediately reacquire the closest
-      //    hostile around the owner before resuming follow.
-      const threat=ownerThreat(live);
-      if(threat && (ownerDamaged || distance({entity:{position:live.position}},threat)<=5.5)){
+      // Learn the owner's actual combat target from a nearby entity health
+      // decrease. This deliberately includes passive mobs: if the owner
+      // attacks a chicken, protect_player assists against that chicken too.
+      const ownerTarget=detectOwnerAttack(live);
+      const threat=hostileThreat(live);
+
+      // Owner's explicit target has priority for a short window. This covers
+      // both passive targets (e.g. chicken) and hostile targets (e.g. Enderman).
+      if(ownerTarget && (ownerDamaged || Date.now()-targetSeenAt<=2500)){
+        if(ownerTarget.isValid!==false && (ownerTarget.health==null||ownerTarget.health>0)){
+          try{ctx.bot.pathfinder.setGoal(null);}catch{}
+          followed=null;
+          await H.equip_best_weapon(ctx,"");
+          await attack(ctx,ownerTarget,15000);
+          continue;
+        }
+        lastOwnerTarget=null;
+      }
+
+      // If the owner is damaged, prioritize a hostile around the owner even
+      // when the hostile moved farther away after landing the hit.
+      if(ownerDamaged && threat){
         try{ctx.bot.pathfinder.setGoal(null);}catch{}
         followed=null;
         await H.equip_best_weapon(ctx,"");
@@ -541,13 +579,12 @@ async function protect(ctx,a){
         try{ctx.bot.pathfinder.setGoal(new goals.GoalFollow(live,5),true);}catch{}
         followed=live;
       }
-      await wait(ctx,200);
+      await wait(ctx,100);
     }
   }finally{
     try{ctx.bot.pathfinder.setGoal(null);}catch{}
   }
-}
-async function give(ctx,a){
+}async function give(ctx,a){
   const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required."),p=player(ctx.bot,u)?.entity,i=inventoryItem(ctx.bot,name);
   if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,20000,"delivery");await ctx.bot.equip(i,"hand");await ctx.bot.tossStack(i);return true;
 }
