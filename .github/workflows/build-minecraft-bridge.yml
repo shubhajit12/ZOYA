@@ -64,7 +64,7 @@ jobs:
             if ($indexSource -notmatch 'playerHeight = 1.80001') { throw '1.21.x collision height workaround is missing.' }
             if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
             $registeredCapabilities = [regex]::Matches($modesSource, '\["[^"]+","[^"]+","[^"]+","[^"]+","[^"]+"\]').Count
-            $handlerCount = [regex]::Matches($engineSource, '^  "[^"]+": async \(ctx, arg\) => ctx\.run', [System.Text.RegularExpressions.RegexOptions]::Multiline).Count
+            $handlerCount = [regex]::Matches($engineSource, '^  [a-z0-9_]+: async', [System.Text.RegularExpressions.RegexOptions]::Multiline).Count
             if ($registeredCapabilities -ne 93) { throw "Expected 93 clean capability definitions, found $registeredCapabilities." }
             if ($handlerCount -ne 93) { throw "Expected 93 clean capability handlers, found $handlerCount." }
             if ($modesSource -notmatch 'CAPABILITY_MODES =') { throw 'Canonical capability registry is missing.' }
