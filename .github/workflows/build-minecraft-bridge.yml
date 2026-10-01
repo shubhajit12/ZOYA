@@ -38,7 +38,7 @@ jobs:
           foreach ($dependency in @('mineflayer','mineflayer-pathfinder','mineflayer-tool','mineflayer-collectblock','mineflayer-crafting-util')) {
             if (-not (Test-Path (Join-Path $bridgeDist "node_modules/$dependency"))) { throw "Minecraft dependency was not installed: $dependency" }
           }
-          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs')) {
+          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs','capabilityModes.mjs')) {
             if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Minecraft bridge runtime file is missing: $required" }
           }
 
@@ -62,10 +62,11 @@ jobs:
             if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
             if ($indexSource -notmatch 'playerHeight = 1.80001') { throw '1.21.x collision height workaround is missing.' }
             if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
-            $registeredCapabilities = [regex]::Matches($engineSource, '"id": "[^"]+",').Count
+            $registeredCapabilities = [regex]::Matches($modesSource, '\["[^"]+","[^"]+","[^"]+","[^"]+","[^"]+"\]').Count
             $handlerCount = [regex]::Matches($engineSource, '^  "[^"]+": async \(ctx, arg\) => ctx\.run', [System.Text.RegularExpressions.RegexOptions]::Multiline).Count
             if ($registeredCapabilities -ne 93) { throw "Expected 93 clean capability definitions, found $registeredCapabilities." }
             if ($handlerCount -ne 93) { throw "Expected 93 clean capability handlers, found $handlerCount." }
+            if ($modesSource -notmatch 'CAPABILITY_MODES =') { throw 'Canonical capability registry is missing.' }
             if ($engineSource -notmatch 'export async function executeCapability') { throw 'Clean capability executor is missing.' }
             if ($engineSource -match 'ctx\.legacy') { throw 'Clean capability engine must not fall back to legacy handlers.' }
             foreach ($requiredText in @('GoalFollow','GoalNear','GoalLookAtBlock','GoalPlaceBlock','RUNTIME_ACTIONS','HOSTILES','weaponScore','openContainer','deposit','withdraw','bot.craft','bot.dig','bot.placeBlock')) {
@@ -88,7 +89,7 @@ jobs:
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           Push-Location $bridgeDist
           try {
-            node --input-type=module -e "await import('mineflayer'); await import('mineflayer-pathfinder'); await import('mineflayer-tool'); await import('mineflayer-collectblock'); await import('mineflayer-crafting-util'); await import('./minecraftRuntime.mjs'); await import('./zoyaBrain.mjs'); await import('./capabilityEngine.mjs'); await import('./capabilityTester.mjs'); console.log('Minecraft bridge ESM/plugin smoke test passed.')"
+            node --input-type=module -e "await import('mineflayer'); await import('mineflayer-pathfinder'); await import('mineflayer-tool'); await import('mineflayer-collectblock'); await import('mineflayer-crafting-util'); await import('./minecraftRuntime.mjs'); await import('./zoyaBrain.mjs'); await import('./capabilityModes.mjs'); await import('./capabilityEngine.mjs'); await import('./capabilityTester.mjs'); console.log('Minecraft bridge ESM/plugin smoke test passed.')"
             if ($LASTEXITCODE -ne 0) { throw 'Minecraft bridge ESM/plugin smoke test failed.' }
           } finally { Pop-Location }
 
