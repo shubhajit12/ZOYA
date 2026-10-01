@@ -51,6 +51,27 @@ function debugWarn(message) {
 }
 function debugError(message) { process.stderr.write("[" + debugTimestamp() + "] " + message + "\n"); }
 
+let processFailureHandled = false;
+function installProcessFailureGuards() {
+  process.on("uncaughtException", error => {
+    const message = error instanceof Error ? (error.stack || error.message) : String(error);
+    debugError("[FATAL] Uncaught exception in Minecraft bridge: " + message);
+    processFailureHandled = true;
+    try { minecraftRuntime?.cancelCurrentTask?.("bridge uncaught exception"); } catch {}
+    try { bot?.clearControlStates?.(); } catch {}
+    if (bot) {
+      try { bot.quit("ZOYA bridge internal error"); } catch {}
+    }
+    setState("ERROR", { error: message.slice(0, 1000) });
+  });
+  process.on("unhandledRejection", reason => {
+    const message = reason instanceof Error ? (reason.stack || reason.message) : String(reason);
+    debugError("[ERROR] Unhandled promise rejection in Minecraft bridge: " + message);
+    try { minecraftRuntime?.cancelCurrentTask?.("bridge unhandled rejection"); } catch {}
+  });
+}
+installProcessFailureGuards();
+
 const state = { status: "DISCONNECTED", connected: false, host: null, port: null, username: null, version: null, error: null, startedAt: new Date().toISOString() };
 let bot = null;
 let latestMinecraftState = {
@@ -458,6 +479,9 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
       const message = typeof reason === "string" ? reason : JSON.stringify(reason);
       debugError(`[ZOYA Minecraft Bridge] Bot kicked: ${message}`);
       state.error = `Kicked by Minecraft server: ${message}`;
+      if (minecraftRuntime?.getActiveTask?.()) {
+        try { minecraftRuntime.cancelCurrentTask("server kicked the bot"); } catch {}
+      }
     });
     bot.once("death", () => {
       debugLog("[EVENT] Zoya died. Waiting for respawn/state recovery.");
@@ -470,9 +494,16 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
       // Ignore a stale bot instance that was intentionally replaced or shut down.
       if (bot !== botInstance) return;
 
+      const activeTaskAtEnd = minecraftRuntime?.getActiveTask?.();
+      if (activeTaskAtEnd) {
+        try { minecraftRuntime.cancelCurrentTask("Minecraft connection ended"); } catch {}
+      }
       bot = null;
       minecraftRuntime = null;
       const message = reason ? String(reason) : state.error;
+      debugError("[ZOYA Minecraft Bridge] Connection ended. reason=" + (message || "none") +
+        " | previousStatus=" + state.status +
+        " | activeTask=" + (activeTaskAtEnd?.action || "none"));
       setState("DISCONNECTED", { error: message || null });
 
       // ECONNREFUSED, transient login failures, kicks, and ordinary disconnects
