@@ -6,7 +6,7 @@ import { CAPABILITY_MODES, assertCapabilityRegistry } from "./capabilityModes.mj
 export const CAPABILITIES = CAPABILITY_MODES;
 
 const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
-const RUNTIME_ACTIONS = new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","craft","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
+export const RUNTIME_ACTIONS = new Set(["follow_player","roam","pvp","explore","return","investigate_entity","mine","chop_tree","craft","eat","collect","gather_resources","guard","guard_location","gather_missing_materials"]);
 
 const required=(value,message="Argument is required.")=>{const v=String(value??"").trim();if(!v)throw new Error(message);return v;};
 const split=(value)=>String(value??"").trim().split(/\s+/).filter(Boolean);
