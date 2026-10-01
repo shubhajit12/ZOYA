@@ -551,18 +551,30 @@ async function protect(ctx,a){
     if(aimed) swingCandidates.unshift(aimed);
   };
 
-  const onEntityHurt=entity=>{
+  const onEntityHurt=(entity,source)=>{
     const owner=ownerEntity();
     if(!owner||!entity) return;
 
     if(entity.id===owner.id){
       ownerDamagedAt=Date.now();
+      // Mineflayer's entityHurt event can provide the attacking source.
+      // Keep a hostile source immediately when available; this avoids guessing
+      // which mob hit the owner after the attacker moves.
+      if(source?.id!=null && HOSTILES.has(entityName(source))) lastOwnerTarget=source;
+      if(source?.id!=null && HOSTILES.has(entityName(source))) targetSeenAt=Date.now();
       return;
     }
 
-    // Mineflayer exposes entityHurt for mobs and players. Pair a very recent
-    // owner swing with the hurt entity so protect_player learns the owner's
-    // actual combat target without relying on polling entity.health.
+    // Prefer Mineflayer's authoritative hurt source when it identifies the
+    // owner as the attacker. This works for passive mobs (sheep/chickens),
+    // hostile mobs (including Endermen), and explicitly attacked players.
+    if(source?.id===owner.id){
+      markTarget(entity);
+      return;
+    }
+
+    // Fallback for protocol/version paths where the hurt source is unavailable:
+    // pair a very recent owner swing with the hurt entity.
     if(Date.now()-swingAt<=900 && swingCandidates.some(e=>e?.id===entity.id)){
       markTarget(entity);
     }
