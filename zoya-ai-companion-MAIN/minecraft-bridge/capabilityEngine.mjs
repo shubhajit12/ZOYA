@@ -180,7 +180,12 @@ const H = {
     const q=parts(a),name=required(q[0],"Resource name is required."),amount=Math.max(1,Math.floor(Number(q[1])||1));
     let got=countItem(ctx.bot,name);
     while(got<amount){active(ctx);const id=ctx.bot.registry.itemsByName[name.toLowerCase()]?.id;if(id==null)throw new Error("Unknown resource: "+name);
-      const block=ctx.bot.findBlock({matching:b=>b?.drops?.some?.(d=>d===id)||String(b?.name||"").toLowerCase().includes(name.toLowerCase()),maxDistance:32});
+      const block=ctx.bot.findBlock({matching:b=>{
+        const bn=String(b?.name||"").toLowerCase();
+        if(bn===name.toLowerCase()||bn.includes(name.toLowerCase())) return true;
+        const drops=Array.isArray(b?.drops)?b.drops:[];
+        return drops.some(d=>Number(d)===Number(id));
+      },maxDistance:48});
       if(!block)throw new Error("Resource not found nearby: "+name);await digBlock(ctx,block);got=countItem(ctx,name);}
     return true;
   },
@@ -271,8 +276,13 @@ const H = {
   retrieve: async(ctx,a)=>storage(ctx,a,false),
   sort_inventory: async(ctx)=>{const names=ctx.bot.inventory.items().sort((a,b)=>a.name.localeCompare(b.name)).map(i=>i.name+" x"+i.count);ctx.log(names.join(", ")||"empty");return true;},
   smelt: async(ctx,a)=>smelt(ctx,a),
-  craft_workbench: async(ctx,a)=>craft(ctx,a,1),
-  craft_furnace: async(ctx,a)=>craft(ctx,a,1),
+  craft_workbench: async(ctx,a)=>{
+    const tableId=ctx.bot.registry?.blocksByName?.crafting_table?.id;
+    const table=tableId!=null?ctx.bot.findBlock({matching:tableId,maxDistance:16}):null;
+    if(!table)throw new Error("No crafting table nearby.");
+    return craft(ctx,a,1,table);
+  },
+  craft_furnace: async(ctx,a)=>smelt(ctx,a),
   gather_missing_materials: async(ctx,a)=>{
     const name=required(a,"Item is required.").toLowerCase().replace(/\s+/g,"_");
     const type=ctx.bot.registry?.itemsByName?.[name]; if(!type) throw new Error("Unknown item: "+name);
@@ -293,7 +303,11 @@ const H = {
     }
     return true;
   },
-  multi_step_craft: async(ctx,a)=>craft(ctx,a,1),
+  multi_step_craft: async(ctx,a)=>{
+    const name=required(a,"Item is required.").toLowerCase().replace(/\s+/g,"_");
+    try{await H.gather_missing_materials(ctx,name);}catch(error){if(!/No missing materials/.test(String(error?.message||"")))throw error;}
+    return craft(ctx,name,1);
+  },
   place_block: async(ctx,a)=>{const q=parts(a),name=required(q.shift(),"Block is required."),p=coords(q.join(" "));return placeAt(ctx,name,p);},
   break_block: async(ctx,a)=>H.dig(ctx,a),
   open_chest: async(ctx,a)=>{const c=await container(ctx,coords(a),"chest");ctx.log("Chest opened.");return Boolean(c);},
