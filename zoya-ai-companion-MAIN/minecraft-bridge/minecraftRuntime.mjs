@@ -817,27 +817,10 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   async function navigateToGuardPost(position, task) {
     assertTaskActive(task, "guard navigation start");
 
-    // A guard post is an area, not a requirement to occupy one exact foot-level
-    // block. GoalNear is preferred because it respects the requested Y level,
-    // but a manually supplied Y can legitimately be one level above/below the
-    // traversable surface. In that case GoalNear can spend its whole planning
-    // window searching for an exact Y-compatible route even though the X/Z
-    // location is reachable. Fall back to GoalNearXZ so Guard can establish the
-    // post on the nearest reachable terrain at that X/Z location.
-    const near = await gotoTask(
-      task,
-      new goals.GoalNear(position.x, position.y, position.z, 3),
-      position,
-      3,
-      15000,
-      "guard navigation"
-    );
-    if (near) return true;
-    if (!taskIsActive(task)) return false;
-
-    task.terminationReason = null;
-    log("[GUARD] Exact guard-post Y was not reached; retrying the same X/Z with Y-independent navigation.");
-
+    // Guarding is an area-hold capability. Do not require the supplied Y to be
+    // the exact traversable foot level; first navigate to the requested X/Z.
+    // This avoids spending a full planning window on an impossible vertical
+    // coordinate and then entering an unbounded retry loop.
     const xzGoal = new goals.GoalNearXZ(position.x, position.z, 3);
     const xzDeadline = Date.now() + 12000;
     bot.pathfinder.setGoal(xzGoal);
@@ -850,6 +833,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       }
       if (!taskIsActive(task)) return false;
       task.terminationReason = "path_timeout";
+      log("[GUARD] Could not reach guard-post X/Z within 12s.");
       return false;
     } finally {
       if (activeTask === task) {
@@ -861,10 +845,42 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   async function guardLocation(position, task) {
     if (!task) return false;
     assertTaskActive(task, "guard navigation");
-    const reachedGuard = await navigateToGuardPost(position, task);
-    if (!reachedGuard) return false;
+
+    const MAX_NAV_FAILURES = 2;
+    let navigationFailures = 0;
+
+    const reachPostOrFail = async stage => {
+      const reached = await navigateToGuardPost(position, task);
+      if (reached) {
+        navigationFailures = 0;
+        return true;
+      }
+      if (!taskIsActive(task)) return false;
+
+      navigationFailures += 1;
+      log("[GUARD] Navigation failure " + navigationFailures + "/" + MAX_NAV_FAILURES + " during " + stage + ".");
+      if (navigationFailures >= MAX_NAV_FAILURES) {
+        task.terminationReason = "guard_post_unreachable";
+        log("[GUARD] Guard task stopping: guard post is unreachable.");
+        return false;
+      }
+
+      // One bounded recovery: clear the current path and let Pathfinder
+      // rebuild from the bot's actual position. Do not recursively retry.
+      try {
+        bot.pathfinder.setGoal(null);
+        bot.clearControlStates();
+      } catch {}
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return taskIsActive(task);
+    };
+
+    if (!await reachPostOrFail("initial navigation")) return false;
     assertTaskActive(task, "guard navigation completion");
-    await equipMatchingForGuard();
+
+    if (!await equipMatchingForGuard()) {
+      log("[GUARD] No usable weapon found; continuing guard without forced re-equip.");
+    }
 
     const guardHostiles = new Set([
       "zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider",
@@ -898,28 +914,28 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
           log("[GUARD] Attack attempt did not reduce target health; continuing guard.");
         }
 
-        // Combat is cluster-aware: if another hostile is already in range,
-        // immediately select it instead of travelling back to the guard post.
-        // The guard position is restored only after the local threat cluster
-        // has been cleared.
+        // Combat is cluster-aware: immediately process another hostile already
+        // inside the guard radius instead of returning to the post between kills.
         if (taskIsActive(task) && findGuardHostile()) {
           continue;
         }
 
         if (taskIsActive(task) && bot.entity.position.distanceTo(position) > 3) {
-          await navigateToGuardPost(position, task);
-          if (taskIsActive(task)) await equipMatchingForGuard();
+          if (!await reachPostOrFail("post recovery")) return false;
+          await equipMatchingForGuard();
         }
       } else {
-        // No hostile is currently in the guard radius. Remain at the post.
+        // No hostile is currently in the guard radius. Hold the post. A failed
+        // recovery is a real task failure, not permission to retry forever.
         if (bot.entity.position.distanceTo(position) > 2.5) {
-          await navigateToGuardPost(position, task);
-          if (taskIsActive(task)) await equipMatchingForGuard();
+          if (!await reachPostOrFail("post maintenance")) return false;
+          await equipMatchingForGuard();
         } else {
           await new Promise(resolve => setTimeout(resolve, 150));
         }
       }
     }
+
     try { bot.pathfinder.setGoal(null); } catch {}
     return false;
   }
