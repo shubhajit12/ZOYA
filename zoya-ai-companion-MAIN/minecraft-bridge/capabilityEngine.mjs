@@ -399,6 +399,7 @@ async function guard(ctx,p){
     let lastX=bot.entity.position.x;
     let lastZ=bot.entity.position.z;
     let replans=0;
+    let goalActive=false;
 
     while(Date.now()<deadline){
       active(ctx);
@@ -409,6 +410,7 @@ async function guard(ctx,p){
       const hostile=await nearestHostile(ctx,12);
       if(hostile){
         try{bot.pathfinder.setGoal(null);}catch{}
+        goalActive=false;
         await H.equip_best_weapon(ctx,"");
         await attack(ctx,hostile,15000);
         active(ctx);
@@ -423,6 +425,7 @@ async function guard(ctx,p){
       const dx=bot.entity.position.x-x, dz=bot.entity.position.z-z;
       if(Math.hypot(dx,dz)<=range){
         try{bot.pathfinder.setGoal(null);}catch{}
+        goalActive=false;
         return true;
       }
 
@@ -438,16 +441,18 @@ async function guard(ctx,p){
 
       if(Date.now()-lastProgressAt>=2500){
         try{bot.pathfinder.setGoal(null);}catch{}
+        goalActive=false;
         replans++;
         if(replans>12) throw new Error(label+" stalled repeatedly.");
         bot.pathfinder.setGoal(new goals.GoalNearXZ(x,z,range),true);
+        goalActive=true;
         lastProgressAt=Date.now();
         lastX=bot.entity.position.x;
         lastZ=bot.entity.position.z;
       }else{
-        const goal=bot.pathfinder.goal;
-        if(!goal){
+        if(!goalActive){
           bot.pathfinder.setGoal(new goals.GoalNearXZ(x,z,range),true);
+          goalActive=true;
           replans++;
         }
       }
@@ -456,6 +461,7 @@ async function guard(ctx,p){
     }
 
     try{bot.pathfinder.setGoal(null);}catch{}
+    goalActive=false;
     throw new Error(label+" timed out.");
   };
 
