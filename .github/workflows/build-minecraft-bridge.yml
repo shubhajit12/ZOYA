@@ -70,7 +70,7 @@ jobs:
             if ($modesSource -notmatch 'CAPABILITY_MODES =') { throw 'Canonical capability registry is missing.' }
             if ($engineSource -notmatch 'export async function executeCapability') { throw 'Clean capability executor is missing.' }
             if ($engineSource -match 'ctx\.legacy') { throw 'Clean capability engine must not fall back to legacy handlers.' }
-            foreach ($requiredText in @('GoalFollow','GoalNear','GoalLookAtBlock','GoalPlaceBlock','RUNTIME_ACTIONS','HOSTILES','weaponScore','openContainer','deposit','withdraw','bot.craft','bot.dig','bot.placeBlock')) {
+            foreach ($requiredText in @('GoalFollow','GoalNear','GoalPlaceBlock','bot.lookAt,'RUNTIME_ACTIONS','HOSTILES','weaponScore','openContainer','deposit','withdraw','bot.craft','bot.dig','bot.placeBlock')) {
               if ($engineSource -notmatch [regex]::Escape($requiredText)) { throw "Clean engine guard is missing: $requiredText" }
             }
             if ($testerSource -notmatch 'capabilityEngine\.mjs') { throw 'Tester is not wired to the clean capability engine.' }
