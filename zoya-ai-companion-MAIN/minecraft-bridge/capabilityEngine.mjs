@@ -72,9 +72,33 @@ async function navigate(ctx,p,range=2,timeout=30000,label="navigation"){
 }
 async function follow(ctx,target,range=3){
   const {bot}=ctx;
+  if(!target?.isValid) throw new Error("Target lost.");
   bot.pathfinder.setGoal(new goals.GoalFollow(target,range),true);
   try{
-    while(true){ active(ctx); if(!target.isValid) throw new Error("Target lost."); await wait(ctx,150); }
+    while(true){
+      active(ctx);
+      if(!target.isValid) throw new Error("Target lost.");
+      await wait(ctx,150);
+    }
+  }finally{try{bot.pathfinder.setGoal(null);}catch{}}
+}
+
+async function navigateXZ(ctx,p,range=3,timeout=30000,label="navigation"){
+  const {bot}=ctx;
+  active(ctx);
+  const x=Number(p.x), z=Number(p.z);
+  if(!Number.isFinite(x)||!Number.isFinite(z)) throw new Error("Invalid X/Z target.");
+  bot.pathfinder.setGoal(new goals.GoalNearXZ(x,z,range));
+  const deadline=Date.now()+timeout;
+  try{
+    while(Date.now()<deadline){
+      active(ctx);
+      const dx=bot.entity.position.x-x;
+      const dz=bot.entity.position.z-z;
+      if(Math.hypot(dx,dz)<=range) return true;
+      await wait(ctx,100);
+    }
+    throw new Error(label+" timed out.");
   }finally{try{bot.pathfinder.setGoal(null);}catch{}}
 }
 async function lookAt(ctx,p){ active(ctx); await ctx.bot.lookAt(vec(ctx.bot,p),true); return true; }
@@ -364,25 +388,54 @@ async function ensureDoor(ctx,p,wantedOpen){
   active(ctx); await ctx.bot.lookAt(b.position.offset(0.5,0.5,0.5),true); active(ctx); await ctx.bot.activateBlock(b); return true;
 }
 async function guard(ctx,p){
-  const {bot}=ctx; active(ctx);
-  await navigate(ctx,p,3,20000,"guard post");
+  const {bot}=ctx;
+  active(ctx);
+  await navigateXZ(ctx,p,3,30000,"guard post");
   await H.equip_best_weapon(ctx,"");
   while(true){
     active(ctx);
     const target=await nearestHostile(ctx,12);
-    if(target){await H.equip_best_weapon(ctx,"");await attack(ctx,target,15000);continue;}
-    if(bot.entity.position.distanceTo(vec(bot,p))>3){await navigate(ctx,p,3,20000,"guard post recovery");continue;}
+    if(target){
+      try{bot.pathfinder.setGoal(null);}catch{}
+      await H.equip_best_weapon(ctx,"");
+      await attack(ctx,target,15000);
+      continue;
+    }
+    const dx=bot.entity.position.x-Number(p.x), dz=bot.entity.position.z-Number(p.z);
+    if(Math.hypot(dx,dz)>3){
+      await navigateXZ(ctx,p,3,30000,"guard post recovery");
+      continue;
+    }
     await wait(ctx,200);
   }
 }
 async function protect(ctx,a){
-  const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");
-  while(true){active(ctx);const live=player(ctx.bot,p.username)?.entity;if(!live){ctx.terminate("target_lost");return false;}
-    const h=await nearestHostile(ctx,8);if(h&&distance(ctx.bot,h)<=8){await attack(ctx,h,15000);continue;}
-    if(distance(ctx.bot,live)>5)await followOnce(ctx,live,5);else await wait(ctx,250);
+  const p=player(ctx.bot,a);
+  if(!p?.entity) throw new Error("Player not found.");
+  let followed=null;
+  try{
+    while(true){
+      active(ctx);
+      const live=player(ctx.bot,p.username)?.entity;
+      if(!live){ctx.terminate("target_lost");return false;}
+      if(live!==followed){
+        try{ctx.bot.pathfinder.setGoal(new goals.GoalFollow(live,5),true);}catch{}
+        followed=live;
+      }
+      const h=await nearestHostile(ctx,8);
+      if(h&&distance(ctx.bot,h)<=8){
+        try{ctx.bot.pathfinder.setGoal(null);}catch{}
+        followed=null;
+        await H.equip_best_weapon(ctx,"");
+        await attack(ctx,h,15000);
+        continue;
+      }
+      await wait(ctx,200);
+    }
+  }finally{
+    try{ctx.bot.pathfinder.setGoal(null);}catch{}
   }
 }
-async function followOnce(ctx,t,r){return navigate(ctx,t.position,r,20000,"follow");}
 async function give(ctx,a){
   const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required."),p=player(ctx.bot,u)?.entity,i=inventoryItem(ctx.bot,name);
   if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,20000,"delivery");await ctx.bot.equip(i,"hand");await ctx.bot.tossStack(i);return true;
