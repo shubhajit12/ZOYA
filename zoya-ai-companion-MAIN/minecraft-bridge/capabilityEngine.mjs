@@ -639,7 +639,8 @@ async function protect(ctx,a){
     bot.removeListener?.("entityHurt",onHurt);
     try{bot.pathfinder.setGoal(null);}catch{}
   }
-}}async function give(ctx,a){
+}
+async function give(ctx,a){
   const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required."),p=player(ctx.bot,u)?.entity,i=inventoryItem(ctx.bot,name);
   if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,20000,"delivery");await ctx.bot.equip(i,"hand");await ctx.bot.tossStack(i);return true;
 }
