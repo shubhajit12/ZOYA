@@ -501,6 +501,7 @@ async function protect(ctx,a){
   const ownerEntity=()=>player(bot,p.username)?.entity||null;
 
   const isLivingCombatEntity=e =>
+    !!e &&
     e?.isValid!==false &&
     e!==bot.entity &&
     (e.type==="mob"||e.type==="player") &&
