@@ -48,13 +48,14 @@ jobs:
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           Push-Location $bridgeDist
           try {
-            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityEngine.mjs','capabilityTester.mjs')) {
+            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs')) {
               node --check $file
               if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
             }
             $indexSource = Get-Content (Join-Path $bridgeDist 'index.mjs') -Raw
             $testerSource = Get-Content (Join-Path $bridgeDist 'capabilityTester.mjs') -Raw
             $engineSource = Get-Content (Join-Path $bridgeDist 'capabilityEngine.mjs') -Raw
+            $modesSource = Get-Content (Join-Path $bridgeDist 'capabilityModes.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
             if ($indexSource -notmatch 'manual-capability-v21-clean-93-mode-engine-2026-09-30') { throw 'Manual capability build marker is missing or stale.' }
             if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
