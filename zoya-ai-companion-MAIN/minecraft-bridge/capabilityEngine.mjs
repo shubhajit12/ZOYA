@@ -690,7 +690,19 @@ async function protect(ctx,a){
     return attacker;
   };
 
-  const selfThreat=()=>nearest(bot,e=>isLivingCombatEntity(e)&&HOSTILES.has(entityName(e)),8);
+  // Protect mode has two independent defense layers:
+  // 1) exact owner damage attribution (entityHurt/source), and
+  // 2) a proactive danger scan for hostile mobs already inside the owner's
+  //    immediate combat envelope. This prevents an AFK owner from taking a
+  //    long series of hits while waiting for another damage event.
+  const selfThreat=()=>{
+    const owner=ownerEntity();
+    if(!owner?.position) return null;
+    return Object.values(bot.entities||{})
+      .filter(e=>isAttackableTarget(e)&&HOSTILES.has(entityName(e)))
+      .filter(e=>owner.position.distanceTo(e.position)<=8)
+      .sort((a,b)=>owner.position.distanceTo(a)-owner.position.distanceTo(b))[0]||null;
+  };
 
   try{
     while(true){
