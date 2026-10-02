@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-2026-10-02";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-2026-10-02";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -53,6 +53,66 @@ function weaponScore(name){
 function bestWeapon(bot){
   return bot.inventory.items().filter(i=>WEAPON_KINDS.some(k=>i.name.toLowerCase().includes(k)))
     .sort((a,b)=>weaponScore(b.name)-weaponScore(a.name))[0]||null;
+}
+function armorSlot(name){
+  const n=String(name||"").toLowerCase();
+  if(n.includes("helmet")||n==="turtle_shell") return "head";
+  if(n.includes("chestplate")) return "torso";
+  if(n.includes("leggings")) return "legs";
+  if(n.includes("boots")) return "feet";
+  return null;
+}
+function armorMaterialTier(name){
+  const n=String(name||"").toLowerCase();
+  if(n.includes("netherite")) return 7;
+  if(n.includes("diamond")) return 6;
+  if(n.includes("iron")) return 5;
+  if(n.includes("chainmail")) return 4;
+  if(n.includes("golden")) return 3;
+  if(n.includes("leather")) return 2;
+  if(n.includes("turtle_shell")) return 4;
+  return 0;
+}
+function armorEnchantments(item){
+  const found={};
+  const root=item?.nbt?.value??item?.nbt;
+  const readScalar=v=>v?.value??v;
+  const walk=node=>{
+    if(!node||typeof node!=="object") return;
+    if(Array.isArray(node)){for(const value of node) walk(value);return;}
+    const id=readScalar(node.id);
+    const lvl=Number(readScalar(node.lvl));
+    if(typeof id==="string"&&Number.isFinite(lvl)){
+      const key=id.toLowerCase().replace(/^minecraft:/,"");
+      found[key]=Math.max(found[key]||0,lvl);
+    }
+    for(const value of Object.values(node)) walk(value);
+  };
+  walk(root);
+  return found;
+}
+function armorScore(item,destination){
+  const tier=armorMaterialTier(item?.name);
+  if(!tier||armorSlot(item?.name)!==destination) return -Infinity;
+  const e=armorEnchantments(item);
+  // Material tier is the primary ranking. Protection enchantments are the
+  // secondary ranking, followed by durability-oriented enchantments.
+  return tier*1000 +
+    (e.protection||0)*40 +
+    (e.fire_protection||0)*30 +
+    (e.blast_protection||0)*28 +
+    (e.projectile_protection||0)*28 +
+    (e.unbreaking||0)*3 +
+    (e.mending||0)*2;
+}
+function equippedArmor(bot,destination){
+  const index={feet:1,legs:2,torso:3,head:4}[destination];
+  return index==null?null:(bot.entity?.equipment?.[index]||null);
+}
+function bestArmorBySlot(bot,destination){
+  return bot.inventory.items()
+    .filter(item=>armorSlot(item.name)===destination)
+    .sort((a,b)=>armorScore(b,destination)-armorScore(a,destination))[0]||null;
 }
 function active(ctx){ ctx.assertActive(); }
 async function wait(ctx,ms){ await ctx.sleep(ms); active(ctx); }
@@ -295,6 +355,45 @@ const H = {
   },
   chase_target: async(ctx,a)=>follow(ctx,player(ctx.bot,parts(a)[0])?.entity||(()=>{throw new Error("Target player not found.");})(),3),
   equip_best_weapon: async(ctx)=>{const i=bestWeapon(ctx.bot);if(!i)throw new Error("No weapon found.");await ctx.bot.equip(i,"hand");return true;},
+  equip_best_armor: async(ctx)=>{
+    const {bot}=ctx;
+    const destinations=["head","torso","legs","feet"];
+    const changes=[];
+    let foundArmor=false;
+
+    // Evaluate the inventory before equipping anything so swapping one armor
+    // piece into the inventory cannot change the candidates for another slot.
+    const bestBySlot=Object.fromEntries(destinations.map(d=>[d,bestArmorBySlot(bot,d)]));
+
+    for(const destination of destinations){
+      active(ctx);
+      const candidate=bestBySlot[destination];
+      const current=equippedArmor(bot,destination);
+      if(candidate) foundArmor=true;
+      if(!candidate){
+        ctx.log?.("[ARMOR] "+destination+" no inventory armor");
+        continue;
+      }
+
+      const candidateScore=armorScore(candidate,destination);
+      const currentScore=current ? armorScore(current,destination) : -Infinity;
+      if(current && currentScore>=candidateScore){
+        ctx.log?.("[ARMOR] "+destination+" keep "+String(current.name)+"; inventory="+String(candidate.name));
+        continue;
+      }
+
+      await bot.equip(candidate,destination);
+      changes.push(destination+"="+candidate.name);
+      ctx.log?.("[ARMOR] equipped "+candidate.name+" -> "+destination);
+    }
+
+    if(!foundArmor && destinations.every(d=>!equippedArmor(bot,d))){
+      throw new Error("No wearable armor found in inventory.");
+    }
+
+    ctx.log?.("[ARMOR] result "+(changes.length?changes.join(", "):"no upgrades needed"));
+    return true;
+  },
   use_shield: async(ctx)=>{const i=inventoryItem(ctx.bot,"shield");if(!i)throw new Error("Shield not found.");await ctx.bot.equip(i,"off-hand");ctx.bot.activateItem();await wait(ctx,750);ctx.bot.deactivateItem();return true;},
   use_ranged_weapon: async(ctx,a)=>{const t=player(ctx.bot,a)?.entity||nearest(ctx.bot,e=>!HOSTILES.has(entityName(e))&&entityName(e).includes(String(a||"").toLowerCase()),32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await ctx.bot.equip(i,"hand");await lookAtEntity(ctx,t);ctx.bot.activateItem();await wait(ctx,1200);ctx.bot.deactivateItem();return true;},
   dig: async(ctx,a)=>digBlock(ctx,ctx.bot.blockAt(vec(ctx.bot,coords(a)))),
