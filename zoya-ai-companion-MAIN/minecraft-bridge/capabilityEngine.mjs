@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v28-hurt-entity-uuid-correlation-2026-10-02";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v29-owner-defense-acquisition-2026-10-02";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -621,12 +621,26 @@ async function protect(ctx,a){
     const direct=ownerDamagedByUuid
       ? resolveEntityUuid(ownerDamagedByUuid)
       : ownerDamagedBy;
-    if(isLivingCombatEntity(direct)&&HOSTILES.has(entityName(direct))) return direct;
 
-    return Object.values(bot.entities||{})
+    if(isLivingCombatEntity(direct)&&HOSTILES.has(entityName(direct))){
+      ctx.log?.("[PROTECT] defense attacker resolved by source entityUUID="+
+        String(direct.uuid??"null")+
+        " entityId="+String(direct.id??"null")+
+        " target="+entityName(direct));
+      return direct;
+    }
+
+    const candidates=Object.values(bot.entities||{})
       .filter(e=>isLivingCombatEntity(e)&&HOSTILES.has(entityName(e)))
-      .filter(e=>owner.position.distanceTo(e.position)<=7)
-      .sort((a,b)=>owner.position.distanceTo(a)-owner.position.distanceTo(b))[0]||null;
+      .filter(e=>owner.position.distanceTo(e.position)<=12)
+      .sort((a,b)=>owner.position.distanceTo(a)-owner.position.distanceTo(b));
+
+    const attacker=candidates[0]||null;
+    ctx.log?.("[PROTECT] defense scan ownerHurt=true candidates="+
+      candidates.map(e=>entityName(e)+"#"+String(e.id)+"@"+e.position.distanceTo(owner.position).toFixed(2)+"m").join(",")+
+      " selected="+(attacker?entityName(attacker):"none"));
+
+    return attacker;
   };
 
   const selfThreat=()=>nearest(bot,e=>isLivingCombatEntity(e)&&HOSTILES.has(entityName(e)),8);
