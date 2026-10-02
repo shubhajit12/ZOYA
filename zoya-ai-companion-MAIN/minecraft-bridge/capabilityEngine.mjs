@@ -107,20 +107,44 @@ async function lookAtEntity(ctx,e){ active(ctx); await ctx.bot.lookAt(e.position
 
 async function attack(ctx,target,timeout=15000){
   const {bot}=ctx; const deadline=Date.now()+timeout;
+  let lastEntityId=target?.id;
+  let swings=0;
   while(target?.isValid!==false && (target?.health==null||target.health>0) && Date.now()<deadline){
     active(ctx);
-    if(distance(bot,target)>3.1){
-      bot.pathfinder.setGoal(new goals.GoalFollow(target,2.7),true);
+    const current=target;
+    const d=distance(bot,current);
+    if(d>3.1){
+      bot.pathfinder.setGoal(new goals.GoalFollow(current,2.7),true);
       await wait(ctx,150);
       continue;
     }
     try{bot.pathfinder.setGoal(null);}catch{}
-    await bot.lookAt(target.position.offset(0,target.height||1.2,0),true);
-    active(ctx); bot.attack(target);
+    await bot.lookAt(current.position.offset(0,current.height||1.2,0),true);
+    active(ctx);
+    bot.attack(current);
+    swings++;
     await wait(ctx,450);
+    // Mineflayer can invalidate an entity object during a world/entity update.
+    // Re-resolve by UUID so a still-alive target does not silently end combat.
+    const uuid=current?.uuid;
+    if(uuid){
+      const fresh=Object.values(bot.entities||{}).find(e=>e?.uuid===uuid&&e!==bot.entity);
+      if(fresh && fresh.isValid!==false){
+        target=fresh;
+        lastEntityId=fresh.id;
+      }
+    }
   }
   try{bot.pathfinder.setGoal(null);}catch{}
-  return target?.isValid!==false && (target?.health==null||target.health<=0);
+  const alive=target?.isValid!==false && (target?.health==null||target.health>0);
+  const killed=target?.isValid!==false && target?.health!=null && target.health<=0;
+  ctx.log?.("[COMBAT] attack loop target="+entityName(target)+
+    " swings="+String(swings)+
+    " finalHealth="+String(target?.health??"unknown")+
+    " valid="+String(target?.isValid!==false)+
+    " entityId="+String(target?.id??lastEntityId)+
+    " killed="+String(killed));
+  return killed;
 }
 
 async function nearestHostile(ctx,max=16){
