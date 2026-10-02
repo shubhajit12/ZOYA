@@ -506,6 +506,7 @@ async function protect(ctx,a){
   let lastProcessedTargetUuid=null;
   let lastProcessedTargetAt=0;
   let defenseIncidentAt=0;
+  let lastDefenseScanAt=0;
   let combatBusy=false;
 
   const ownerEntity=()=>player(bot,p.username)?.entity||null;
@@ -515,6 +516,17 @@ async function protect(ctx,a){
     e?.isValid!==false &&
     e!==bot.entity &&
     (e.type==="mob"||e.type==="player") &&
+    (e.health==null||e.health>0);
+
+  // An exact entityHurt target is already authoritative for the owner-attack
+  // path. Do not require Mineflayer's broad entity type classification here:
+  // protocol/entity variants can briefly expose a valid hurt target without
+  // the normal mob/player type while the entity is still attackable.
+  const isAttackableTarget=e =>
+    !!e &&
+    e?.isValid!==false &&
+    e!==bot.entity &&
+    !!e.position &&
     (e.health==null||e.health>0);
 
   const resolveEntityUuid=uuid=>{
@@ -699,7 +711,9 @@ async function protect(ctx,a){
         continue;
       }
 
-      if(!combatBusy && Date.now()-ownerDamagedAt<=1500){
+      if(!combatBusy && Date.now()-ownerDamagedAt<=1500 &&
+         Date.now()-lastDefenseScanAt>=500){
+        lastDefenseScanAt=Date.now();
         const attacker=hostileNearOwner(live);
         if(attacker){
           try{bot.pathfinder.setGoal(null);}catch{}
@@ -717,6 +731,7 @@ async function protect(ctx,a){
               " killed="+String(killed));
           }finally{combatBusy=false;}
           ownerDamagedAt=0;
+          lastDefenseScanAt=0;
           ownerDamagedBy=null;
           ownerDamagedByUuid=null;
           ownerDamagedById=null;
