@@ -690,7 +690,7 @@ async function protect(ctx,a){
         swingEntityUuids.clear();
       }
 
-      if(isLivingCombatEntity(combatTarget)){
+      if(isAttackableTarget(combatTarget)){
         try{bot.pathfinder.setGoal(null);}catch{}
         followed=null;
         combatBusy=true;
