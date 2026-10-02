@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v27-entity-uuid-target-2026-10-02";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v28-hurt-entity-uuid-correlation-2026-10-02";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -516,7 +516,7 @@ async function protect(ctx,a){
   const resolveEntityUuid=uuid=>{
     if(!uuid) return null;
     return Object.values(bot.entities||{})
-      .find(e=>isLivingCombatEntity(e)&&e.uuid===uuid)||null;
+      .find(e=>e?.isValid!==false&&e!==bot.entity&&e.uuid===uuid)||null;
   };
 
   const nearbyCombat=owner=>{
@@ -527,15 +527,13 @@ async function protect(ctx,a){
   };
 
   const rememberTarget=(entity,reason)=>{
-    if(!isLivingCombatEntity(entity)) return;
-    combatTargetUuid=entity.uuid||null;
+    if(!entity?.uuid) return;
+    combatTargetUuid=entity.uuid;
     combatTargetId=entity.id;
-    combatTarget=combatTargetUuid
-      ? resolveEntityUuid(combatTargetUuid)
-      : entity;
+    combatTarget=resolveEntityUuid(combatTargetUuid)||entity;
     combatTargetAt=Date.now();
     ctx.log?.("[PROTECT] "+reason+
-      " entityUUID="+String(combatTargetUuid??"null")+
+      " entityUUID="+String(combatTargetUuid)+
       " entityId="+String(combatTargetId??"null")+
       " target="+entityName(entity));
   };
@@ -544,24 +542,26 @@ async function protect(ctx,a){
     const owner=ownerEntity();
     if(!owner||entity?.id!==owner.id) return;
 
+    // A swing is only a correlation signal. It is NOT proof that anything
+    // was hit, so never log/select nearby UUIDs here.
     ownerSwingAt=Date.now();
     swingEntityUuids=new Set(
       nearbyCombat(owner)
         .map(e=>e.uuid)
         .filter(Boolean)
     );
-
-    ctx.log?.("[PROTECT] owner attack window opened; nearby entityUUIDs="+
-      Array.from(swingEntityUuids).join(","));
   };
 
   const onHurt=(entity,source)=>{
     const owner=ownerEntity();
     if(!owner||!entity) return;
 
+    // The entity delivered by entityHurt is already the exact affected
+    // entity. Prefer it directly; resolving through bot.entities can fail
+    // when the entity is being removed/dying.
     const hurtEntity=entity.uuid
-      ? resolveEntityUuid(entity.uuid)
-      : null;
+      ? (resolveEntityUuid(entity.uuid)||entity)
+      : entity;
 
     if(entity.id===owner.id){
       ownerDamagedAt=Date.now();
@@ -569,9 +569,7 @@ async function protect(ctx,a){
       if(isLivingCombatEntity(source)){
         ownerDamagedByUuid=source.uuid||null;
         ownerDamagedById=source.id;
-        ownerDamagedBy=ownerDamagedByUuid
-          ? resolveEntityUuid(ownerDamagedByUuid)
-          : source;
+        ownerDamagedBy=source;
 
         if(ownerDamagedBy){
           rememberTarget(ownerDamagedBy,"owner attacker");
@@ -584,22 +582,35 @@ async function protect(ctx,a){
       return;
     }
 
-    // Best case: Mineflayer supplies the owner as the damage source.
-    // The hurt entity's UUID identifies the exact entity the owner hit.
-    if(source?.id===owner.id && hurtEntity){
-      rememberTarget(hurtEntity,"owner hurt target");
+    // Exact server-side attribution when the damage source is the owner.
+    if(
+      hurtEntity &&
+      (source===owner || source?.id===owner.id)
+    ){
+      rememberTarget(hurtEntity,"owner attack target confirmed by entityHurt source");
       return;
     }
 
-    // If the source is omitted, the hurt event still identifies the exact
-    // affected entity by UUID. Only accept it inside the owner's attack
-    // window and only when that UUID was visible nearby at swing time.
+    // Some server/protocol paths omit source. In that case entityHurt still
+    // gives the exact hurt entity UUID. Correlate only with a recent owner
+    // swing AND the UUID that was visible at swing time.
     if(
-      hurtEntity &&
-      Date.now()-ownerSwingAt<=900 &&
-      swingEntityUuids.has(entity.uuid)
+      hurtEntity?.uuid &&
+      Date.now()-ownerSwingAt<=1500 &&
+      swingEntityUuids.has(hurtEntity.uuid)
     ){
       rememberTarget(hurtEntity,"owner attack target matched by entityUUID");
+      return;
+    }
+
+    // Debug only: prove which UUID Mineflayer reported as hurt without
+    // treating unrelated damage as an owner attack.
+    if(hurtEntity?.uuid){
+      ctx.log?.("[PROTECT] entity hurt observed entityUUID="+
+        String(hurtEntity.uuid)+
+        " entityId="+String(hurtEntity.id??"null")+
+        " sourceUUID="+String(source?.uuid??"null")+
+        " sourceId="+String(source?.id??"null"));
     }
   };
 
@@ -627,8 +638,8 @@ async function protect(ctx,a){
       if(!live){ctx.terminate("target_lost");return false;}
 
       if(combatTargetUuid){
-        combatTarget=resolveEntityUuid(combatTargetUuid);
-        if(!combatTarget || Date.now()-combatTargetAt>5000){
+        combatTarget=resolveEntityUuid(combatTargetUuid)||combatTarget;
+        if(!combatTarget || combatTarget.isValid===false || Date.now()-combatTargetAt>5000){
           combatTarget=null;
           combatTargetUuid=null;
           combatTargetId=null;
@@ -637,7 +648,7 @@ async function protect(ctx,a){
         }
       }
 
-      if(ownerSwingAt && Date.now()-ownerSwingAt>900){
+      if(ownerSwingAt && Date.now()-ownerSwingAt>1500){
         ownerSwingAt=0;
         swingEntityUuids.clear();
       }
