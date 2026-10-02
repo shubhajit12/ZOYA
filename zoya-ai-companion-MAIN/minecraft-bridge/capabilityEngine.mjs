@@ -4,7 +4,7 @@ import { CAPABILITY_MODES, assertCapabilityRegistry } from "./capabilityModes.mj
 
 export const CAPABILITIES = CAPABILITY_MODES;
 
-const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin"]);
+const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin","enderman"]);
 const PASSIVES = new Set(["cow","pig","sheep","chicken","rabbit","horse","donkey","mule","llama","goat","mooshroom","strider","turtle","fish","cod","salmon"]);
 const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
@@ -678,7 +678,7 @@ async function protect(ctx,a){
     }
 
     const candidates=Object.values(bot.entities||{})
-      .filter(e=>isLivingCombatEntity(e)&&HOSTILES.has(entityName(e)))
+      .filter(e=>isAttackableTarget(e)&&HOSTILES.has(entityName(e)))
       .filter(e=>owner.position.distanceTo(e.position)<=12)
       .sort((a,b)=>owner.position.distanceTo(a)-owner.position.distanceTo(b));
 
