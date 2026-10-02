@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v29-owner-defense-acquisition-2026-10-02";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-2026-10-02";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -503,6 +503,10 @@ async function protect(ctx,a){
   let ownerDamagedById=null;
   let ownerSwingAt=0;
   let swingEntityUuids=new Set();
+  let lastProcessedTargetUuid=null;
+  let lastProcessedTargetAt=0;
+  let defenseIncidentAt=0;
+  let combatBusy=false;
 
   const ownerEntity=()=>player(bot,p.username)?.entity||null;
 
@@ -528,10 +532,14 @@ async function protect(ctx,a){
 
   const rememberTarget=(entity,reason)=>{
     if(!entity?.uuid) return;
+    const now=Date.now();
+    if(combatTargetUuid===entity.uuid && now-lastProcessedTargetAt<1500) return;
     combatTargetUuid=entity.uuid;
     combatTargetId=entity.id;
     combatTarget=resolveEntityUuid(combatTargetUuid)||entity;
-    combatTargetAt=Date.now();
+    combatTargetAt=now;
+    lastProcessedTargetUuid=entity.uuid;
+    lastProcessedTargetAt=now;
     ctx.log?.("[PROTECT] "+reason+
       " entityUUID="+String(combatTargetUuid)+
       " entityId="+String(combatTargetId??"null")+
@@ -564,7 +572,10 @@ async function protect(ctx,a){
       : entity;
 
     if(entity.id===owner.id){
-      ownerDamagedAt=Date.now();
+      const now=Date.now();
+      ownerDamagedAt=now;
+      if(now-defenseIncidentAt<1200) return;
+      defenseIncidentAt=now;
 
       if(isLivingCombatEntity(source)){
         ownerDamagedByUuid=source.uuid||null;
@@ -670,21 +681,41 @@ async function protect(ctx,a){
       if(isLivingCombatEntity(combatTarget)){
         try{bot.pathfinder.setGoal(null);}catch{}
         followed=null;
-        await H.equip_best_weapon(ctx,"");
-        await attack(ctx,combatTarget,15000);
+        combatBusy=true;
+        ctx.log?.("[PROTECT] ATTACK START target="+entityName(combatTarget)+
+          " entityUUID="+String(combatTarget.uuid??combatTargetUuid)+
+          " entityId="+String(combatTarget.id??combatTargetId));
+        try{
+          const weapon=bestWeapon(bot);
+          if(weapon) await bot.equip(weapon,"hand");
+          const killed=await attack(ctx,combatTarget,15000);
+          ctx.log?.("[PROTECT] ATTACK END target="+entityName(combatTarget)+
+            " entityUUID="+String(combatTarget.uuid??combatTargetUuid)+
+            " killed="+String(killed));
+        }finally{combatBusy=false;}
         combatTarget=null;
         combatTargetUuid=null;
         combatTargetId=null;
         continue;
       }
 
-      if(Date.now()-ownerDamagedAt<=1500){
+      if(!combatBusy && Date.now()-ownerDamagedAt<=1500){
         const attacker=hostileNearOwner(live);
         if(attacker){
           try{bot.pathfinder.setGoal(null);}catch{}
           followed=null;
-          await H.equip_best_weapon(ctx,"");
-          await attack(ctx,attacker,15000);
+          combatBusy=true;
+          ctx.log?.("[PROTECT] DEFENSE ATTACK START target="+entityName(attacker)+
+            " entityUUID="+String(attacker.uuid??"null")+
+            " entityId="+String(attacker.id??"null"));
+          try{
+            const weapon=bestWeapon(bot);
+            if(weapon) await bot.equip(weapon,"hand");
+            const killed=await attack(ctx,attacker,15000);
+            ctx.log?.("[PROTECT] DEFENSE ATTACK END target="+entityName(attacker)+
+              " entityUUID="+String(attacker.uuid??"null")+
+              " killed="+String(killed));
+          }finally{combatBusy=false;}
           ownerDamagedAt=0;
           ownerDamagedBy=null;
           ownerDamagedByUuid=null;
@@ -694,11 +725,21 @@ async function protect(ctx,a){
       }
 
       const threat=selfThreat();
-      if(threat){
+      if(!combatBusy && threat){
         try{bot.pathfinder.setGoal(null);}catch{}
         followed=null;
-        await H.equip_best_weapon(ctx,"");
-        await attack(ctx,threat,15000);
+        combatBusy=true;
+        ctx.log?.("[PROTECT] SELF-DEFENSE ATTACK START target="+entityName(threat)+
+          " entityUUID="+String(threat.uuid??"null")+
+          " entityId="+String(threat.id??"null"));
+        try{
+          const weapon=bestWeapon(bot);
+          if(weapon) await bot.equip(weapon,"hand");
+          const killed=await attack(ctx,threat,15000);
+          ctx.log?.("[PROTECT] SELF-DEFENSE ATTACK END target="+entityName(threat)+
+            " entityUUID="+String(threat.uuid??"null")+
+            " killed="+String(killed));
+        }finally{combatBusy=false;}
         continue;
       }
 
