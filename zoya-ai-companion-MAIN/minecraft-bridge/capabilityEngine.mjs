@@ -274,6 +274,59 @@ async function placeDirect(ctx,item,ref){
   await bot.placeBlock(ref,new bot.entity.position.constructor(0,1,0)); return true;
 }
 
+function droppedItemMatches(bot,e,name){
+  const wanted=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");
+  if(!wanted) return true;
+  const scalar=v=>v?.value??v;
+  const names=new Set();
+  const visit=node=>{
+    if(node==null) return;
+    if(Array.isArray(node)){for(const value of node) visit(value);return;}
+    if(typeof node!=="object") return;
+    const directName=scalar(node.name);
+    const displayName=scalar(node.displayName);
+    if(typeof directName==="string") names.add(directName.toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_"));
+    if(typeof displayName==="string") names.add(displayName.toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_"));
+    const rawId=scalar(node.itemId??node.item_id);
+    if(rawId!=null && Number.isFinite(Number(rawId))){
+      const id=Number(rawId);
+      const item=Object.values(bot.registry?.itemsByName||{}).find(i=>Number(i?.id)===id);
+      if(item?.name) names.add(String(item.name).toLowerCase());
+    }
+    for(const value of Object.values(node)) visit(value);
+  };
+  visit(e?.itemStack);
+  visit(e?.item);
+  visit(e?.metadata);
+  visit(e?.displayName);
+  return [...names].some(n=>n===wanted||n.includes(wanted)||wanted.includes(n));
+}
+
+function droppedItemMatchesName(bot,e,name){
+  const wanted=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");if(!wanted)return true;const names=new Set();
+  const add=v=>{const x=String(v?.value??v??"").trim().toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_");if(x)names.add(x);};
+  const walk=node=>{if(node==null)return;if(Array.isArray(node)){for(const v of node)walk(v);return;}if(typeof node!=="object")return;add(node.name);add(node.displayName);const id=node.itemId??node.item_id;if(Number.isFinite(Number(id))){const item=Object.values(bot.registry?.itemsByName||{}).find(i=>Number(i?.id)===Number(id));if(item?.name)add(item.name);}for(const v of Object.values(node))walk(v);};
+  walk(e?.itemStack);walk(e?.item);walk(e?.metadata);add(e?.displayName);return [...names].some(n=>n===wanted||n.includes(wanted)||wanted.includes(n));
+}
+function findSearchTarget(bot,target,maxDistance=48){
+  const wanted=String(target||"").trim().toLowerCase().replace(/\s+/g,"_");if(!wanted)return null;
+  const p=Object.values(bot.players||{}).find(x=>String(x?.username||"").toLowerCase()===wanted);if(p?.entity&&distance(bot,p.entity)<=maxDistance)return p.entity;
+  const entity=nearest(bot,e=>{const n=entityName(e).replace(/\s+/g,"_");return n===wanted||n.includes(wanted)||wanted.includes(n);},maxDistance);if(entity)return entity;
+  const item=nearest(bot,e=>String(e?.name||"").toLowerCase()==="item"&&droppedItemMatchesName(bot,e,wanted),maxDistance);if(item)return item;
+  return bot.findBlock?.({matching:b=>{const n=String(b?.name||"").toLowerCase().replace(/\s+/g,"_");return n===wanted||n.includes(wanted)||wanted.includes(n);},maxDistance})||null;
+}
+function findBlockDroppingItem(bot,itemName,maxDistance=48){
+  const key=String(itemName||"").trim().toLowerCase().replace(/\s+/g,"_"),type=bot.registry?.itemsByName?.[key];if(!type)return null;
+  return bot.findBlock?.({matching:b=>{if(!b||b.name==="air")return false;const n=String(b.name||"").toLowerCase().replace(/\s+/g,"_");return n===key||n.includes(key)||(Array.isArray(b.drops)&&b.drops.some(d=>Number(d)===Number(type.id)));},maxDistance})||null;
+}
+async function ensureCraftMaterials(ctx,name,seen=new Set()){
+  const key=required(name,"Item is required.").toLowerCase().replace(/\s+/g,"_");if(seen.has(key))throw new Error("Craft dependency cycle detected: "+key);seen.add(key);
+  const bot=ctx.bot,type=bot.registry?.itemsByName?.[key];if(!type)throw new Error("Unknown craft item: "+key);
+  const recipes=bot.recipesFor(type.id,null,1,null);if(!recipes.length){seen.delete(key);return false;}
+  for(const ingredient of recipes[0].delta||[]){const id=ingredient?.id,need=Math.max(0,Number(ingredient?.count)||0);if(id==null||need<=0)continue;const ing=bot.registry.items[id],ingName=String(ing?.name||id),have=countItem(bot,ingName);if(have>=need)continue;const missing=need-have,ingRecipes=bot.recipesFor(id,null,missing,null);if(ingRecipes.length){await ensureCraftMaterials(ctx,ingName,seen);await craft(ctx,ingName,missing);}else for(let i=0;i<missing;i++){active(ctx);const block=findBlockDroppingItem(bot,ingName,48);if(!block)throw new Error("Missing raw material not found nearby: "+ingName);await digBlock(ctx,block);}}
+  seen.delete(key);return true;
+}
+
 const H = {
   follow_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
   roam: async(ctx)=>{
@@ -325,33 +378,6 @@ const H = {
     const i=String(a||"").trim()?inventoryItem(ctx.bot,a):ctx.bot.inventory.items().find(i=>ctx.bot.registry.foods?.[i.type]||/bread|apple|beef|pork|chicken|mutton|carrot|potato|stew|melon/.test(i.name));
     if(!i)throw new Error("Food item not found.");await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.consume();return true;
   },
-function droppedItemMatches(bot,e,name){
-  const wanted=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");
-  if(!wanted) return true;
-  const scalar=v=>v?.value??v;
-  const names=new Set();
-  const visit=node=>{
-    if(node==null) return;
-    if(Array.isArray(node)){for(const value of node) visit(value);return;}
-    if(typeof node!=="object") return;
-    const directName=scalar(node.name);
-    const displayName=scalar(node.displayName);
-    if(typeof directName==="string") names.add(directName.toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_"));
-    if(typeof displayName==="string") names.add(displayName.toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_"));
-    const rawId=scalar(node.itemId??node.item_id);
-    if(rawId!=null && Number.isFinite(Number(rawId))){
-      const id=Number(rawId);
-      const item=Object.values(bot.registry?.itemsByName||{}).find(i=>Number(i?.id)===id);
-      if(item?.name) names.add(String(item.name).toLowerCase());
-    }
-    for(const value of Object.values(node)) visit(value);
-  };
-  visit(e?.itemStack);
-  visit(e?.item);
-  visit(e?.metadata);
-  visit(e?.displayName);
-  return [...names].some(n=>n===wanted||n.includes(wanted)||wanted.includes(n));
-}
   collect: async(ctx,a)=>{
     const q=parts(a),name=q[0]||"",amount=Math.max(1,Number(q[1])||1),before=countItem(ctx.bot,name);
     while(countItem(ctx.bot,name)<before+amount){
@@ -956,30 +982,6 @@ async function smelt(ctx,a){
     if(!input)throw new Error("Smelting input not found.");if(!fuel)throw new Error("Fuel not found.");
     await f.putInput(input.type??input.id,null,Math.min(input.count,64));await f.putFuel(fuel.type??fuel.id,null,Math.min(fuel.count,8));await wait(ctx,1200);await f.takeOutput();return true;
   }finally{try{await f.close();}catch{}}
-}
-function droppedItemMatchesName(bot,e,name){
-  const wanted=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");if(!wanted)return true;const names=new Set();
-  const add=v=>{const x=String(v?.value??v??"").trim().toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_");if(x)names.add(x);};
-  const walk=node=>{if(node==null)return;if(Array.isArray(node)){for(const v of node)walk(v);return;}if(typeof node!=="object")return;add(node.name);add(node.displayName);const id=node.itemId??node.item_id;if(Number.isFinite(Number(id))){const item=Object.values(bot.registry?.itemsByName||{}).find(i=>Number(i?.id)===Number(id));if(item?.name)add(item.name);}for(const v of Object.values(node))walk(v);};
-  walk(e?.itemStack);walk(e?.item);walk(e?.metadata);add(e?.displayName);return [...names].some(n=>n===wanted||n.includes(wanted)||wanted.includes(n));
-}
-function findSearchTarget(bot,target,maxDistance=48){
-  const wanted=String(target||"").trim().toLowerCase().replace(/\s+/g,"_");if(!wanted)return null;
-  const p=Object.values(bot.players||{}).find(x=>String(x?.username||"").toLowerCase()===wanted);if(p?.entity&&distance(bot,p.entity)<=maxDistance)return p.entity;
-  const entity=nearest(bot,e=>{const n=entityName(e).replace(/\s+/g,"_");return n===wanted||n.includes(wanted)||wanted.includes(n);},maxDistance);if(entity)return entity;
-  const item=nearest(bot,e=>String(e?.name||"").toLowerCase()==="item"&&droppedItemMatchesName(bot,e,wanted),maxDistance);if(item)return item;
-  return bot.findBlock?.({matching:b=>{const n=String(b?.name||"").toLowerCase().replace(/\s+/g,"_");return n===wanted||n.includes(wanted)||wanted.includes(n);},maxDistance})||null;
-}
-function findBlockDroppingItem(bot,itemName,maxDistance=48){
-  const key=String(itemName||"").trim().toLowerCase().replace(/\s+/g,"_"),type=bot.registry?.itemsByName?.[key];if(!type)return null;
-  return bot.findBlock?.({matching:b=>{if(!b||b.name==="air")return false;const n=String(b.name||"").toLowerCase().replace(/\s+/g,"_");return n===key||n.includes(key)||(Array.isArray(b.drops)&&b.drops.some(d=>Number(d)===Number(type.id)));},maxDistance})||null;
-}
-async function ensureCraftMaterials(ctx,name,seen=new Set()){
-  const key=required(name,"Item is required.").toLowerCase().replace(/\s+/g,"_");if(seen.has(key))throw new Error("Craft dependency cycle detected: "+key);seen.add(key);
-  const bot=ctx.bot,type=bot.registry?.itemsByName?.[key];if(!type)throw new Error("Unknown craft item: "+key);
-  const recipes=bot.recipesFor(type.id,null,1,null);if(!recipes.length){seen.delete(key);return false;}
-  for(const ingredient of recipes[0].delta||[]){const id=ingredient?.id,need=Math.max(0,Number(ingredient?.count)||0);if(id==null||need<=0)continue;const ing=bot.registry.items[id],ingName=String(ing?.name||id),have=countItem(bot,ingName);if(have>=need)continue;const missing=need-have,ingRecipes=bot.recipesFor(id,null,missing,null);if(ingRecipes.length){await ensureCraftMaterials(ctx,ingName,seen);await craft(ctx,ingName,missing);}else for(let i=0;i<missing;i++){active(ctx);const block=findBlockDroppingItem(bot,ingName,48);if(!block)throw new Error("Missing raw material not found nearby: "+ingName);await digBlock(ctx,block);}}
-  seen.delete(key);return true;
 }
 async function findSafe(ctx){
   const {bot}=ctx;
