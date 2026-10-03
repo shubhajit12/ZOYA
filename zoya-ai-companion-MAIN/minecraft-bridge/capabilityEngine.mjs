@@ -361,7 +361,7 @@ const H = {
   },
   coordinate: async(ctx,a)=>H.coordinate_with_player(ctx,a),
   explore: async(ctx)=>H.roam(ctx,""),
-  observe: async(ctx,a)=>{const e=findSearchTarget(ctx.bot,required(a,"Observation target is required."),48);if(!e)throw new Error("Observation target not found.");if(e.position&&e.height!=null)await lookAtEntity(ctx,e);ctx.log?.("observed="+String(e.name||e.username||e.displayName||"target")+" position="+String(e.position||"unknown"));return true;},
+  observe: async(ctx,a)=>{const target=String(a||"").trim();const e=target?findSearchTarget(ctx.bot,target,48):nearest(ctx.bot,()=>true,16);if(!e)throw new Error(target?"Observation target not found: "+target:"Nothing observable nearby.");if(e.position&&e.height!=null)await lookAtEntity(ctx,e);ctx.log?.("observed="+String(e.name||e.username||e.displayName||"target")+" position="+String(e.position||"unknown"));return true;},
   return: async(ctx)=>{const owner=ctx.runtime?.getStatus?.().ownerUsername;if(!owner)throw new Error("Owner is not configured.");const p=player(ctx.bot,owner);if(!p?.entity)throw new Error("Owner is not online.");return navigate(ctx,p.entity.position,3,30000,"return to owner");},
   investigate_entity: async(ctx,a)=>{const wanted=required(a,"Entity name is required.").toLowerCase();const e=nearest(ctx.bot,x=>entityName(x)===wanted||entityName(x).includes(wanted),48);if(!e)throw new Error("Entity not found: "+wanted);await lookAtEntity(ctx,e);ctx.log?.("entity="+entityName(e)+" id="+String(e.id??"unknown")+" uuid="+String(e.uuid??"unknown")+" position="+String(e.position));return true;},
   mine: async(ctx,a)=>{
