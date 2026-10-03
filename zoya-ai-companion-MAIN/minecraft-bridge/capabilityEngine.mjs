@@ -325,9 +325,42 @@ const H = {
     const i=String(a||"").trim()?inventoryItem(ctx.bot,a):ctx.bot.inventory.items().find(i=>ctx.bot.registry.foods?.[i.type]||/bread|apple|beef|pork|chicken|mutton|carrot|potato|stew|melon/.test(i.name));
     if(!i)throw new Error("Food item not found.");await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.consume();return true;
   },
+function droppedItemMatches(bot,e,name){
+  const wanted=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");
+  if(!wanted) return true;
+  const scalar=v=>v?.value??v;
+  const names=new Set();
+  const visit=node=>{
+    if(node==null) return;
+    if(Array.isArray(node)){for(const value of node) visit(value);return;}
+    if(typeof node!=="object") return;
+    const directName=scalar(node.name);
+    const displayName=scalar(node.displayName);
+    if(typeof directName==="string") names.add(directName.toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_"));
+    if(typeof displayName==="string") names.add(displayName.toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_"));
+    const rawId=scalar(node.itemId??node.item_id);
+    if(rawId!=null && Number.isFinite(Number(rawId))){
+      const id=Number(rawId);
+      const item=Object.values(bot.registry?.itemsByName||{}).find(i=>Number(i?.id)===id);
+      if(item?.name) names.add(String(item.name).toLowerCase());
+    }
+    for(const value of Object.values(node)) visit(value);
+  };
+  visit(e?.itemStack);
+  visit(e?.item);
+  visit(e?.metadata);
+  visit(e?.displayName);
+  return [...names].some(n=>n===wanted||n.includes(wanted)||wanted.includes(n));
+}
   collect: async(ctx,a)=>{
     const q=parts(a),name=q[0]||"",amount=Math.max(1,Number(q[1])||1),before=countItem(ctx.bot,name);
-    while(countItem(ctx.bot,name)<before+amount){active(ctx);const e=nearest(ctx.bot,e=>e.name==="item"&&(!name||String(e.metadata?.item?.itemId||e.displayName||"").toLowerCase().includes(name.toLowerCase())),32);if(!e)throw new Error("Dropped item not found.");await navigate(ctx,e.position,1.5,15000,"item pickup");await wait(ctx,500);}
+    while(countItem(ctx.bot,name)<before+amount){
+      active(ctx);
+      const e=nearest(ctx.bot,e=>String(e?.name||"").toLowerCase()==="item"&&droppedItemMatches(ctx.bot,e,name),32);
+      if(!e) throw new Error("Dropped item not found: "+name);
+      await navigate(ctx,e.position,0.8,15000,"item pickup");
+      await wait(ctx,750);
+    }
     return true;
   },
   look_at_player: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return lookAtEntity(ctx,p.entity);},
