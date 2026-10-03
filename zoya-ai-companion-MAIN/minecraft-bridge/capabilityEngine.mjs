@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v4-fish-hunt-build-goalplace-2026-10-03";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v5-fish-reachable-spot-2026-10-03";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -357,16 +357,42 @@ async function ensureCraftMaterials(ctx,name,seen=new Set()){
   for(const ingredient of recipes[0].delta||[]){const id=ingredient?.id,need=Math.max(0,Number(ingredient?.count)||0);if(id==null||need<=0)continue;const ing=bot.registry.items[id],ingName=String(ing?.name||id),have=countItem(bot,ingName);if(have>=need)continue;const missing=need-have,ingRecipes=bot.recipesFor(id,null,missing,null);if(ingRecipes.length){await ensureCraftMaterials(ctx,ingName,seen);await craft(ctx,ingName,missing);}else for(let i=0;i<missing;i++){active(ctx);const block=findBlockDroppingItem(bot,ingName,48);if(!block)throw new Error("Missing raw material not found nearby: "+ingName);await digBlock(ctx,block);}}
   seen.delete(key);return true;
 }
-function findFishingWater(bot,maxDistance=32){
-  const positions=bot.findBlocks?.({matching:b=>b?.name==="water"||b?.name==="flowing_water",maxDistance,count:24})||[];
+function findFishingSpot(bot,maxDistance=32){
+  const positions=bot.findBlocks?.({
+    matching:b=>b?.name==="water"||b?.name==="flowing_water",
+    maxDistance,
+    count:64
+  })||[];
   const origin=bot.entity.position;
-  const hostiles=Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(entityName(e))&&e.isValid!==false);
-  return positions
-    .map(p=>bot.blockAt(p))
-    .filter(Boolean)
-    .map(block=>({block,score:origin.distanceTo(block.position)+
-      (hostiles.some(e=>e.position.distanceTo(block.position)<8)?1000:0)}))
-    .sort((a,b)=>a.score-b.score)[0]?.block||null;
+  const hostiles=Object.values(bot.entities||{})
+    .filter(e=>e?.position&&HOSTILES.has(entityName(e))&&e.isValid!==false);
+  const offsets=[
+    [1,0],[-1,0],[0,1],[0,-1],
+    [1,1],[1,-1],[-1,1],[-1,-1]
+  ];
+  const candidates=[];
+  for(const p of positions){
+    const water=bot.blockAt(p);
+    if(!water) continue;
+    for(const [dx,dz] of offsets){
+      const stand=bot.blockAt(new bot.entity.position.constructor(p.x+dx,p.y,p.z+dz));
+      const standHead=bot.blockAt(new bot.entity.position.constructor(p.x+dx,p.y+1,p.z+dz));
+      const floor=bot.blockAt(new bot.entity.position.constructor(p.x+dx,p.y-1,p.z+dz));
+      if(stand?.name!=="air"||standHead?.name!=="air"||floor?.boundingBox!=="block") continue;
+      const standPos=stand.position.offset(0.5,0,0.5);
+      const waterPos=water.position.offset(0.5,0.2,0.5);
+      const hostilePenalty=hostiles.some(e=>e.position.distanceTo(water.position)<8)?1000:0;
+      candidates.push({
+        water,
+        stand,
+        standPos,
+        waterPos,
+        score:origin.distanceTo(standPos)+hostilePenalty
+      });
+    }
+  }
+  candidates.sort((a,b)=>a.score-b.score);
+  return candidates[0]||null;
 }
 function findBuildSupport(bot,maxDistance=6){
   const base=bot.entity.position.floored();
@@ -519,18 +545,20 @@ const H = {
     const {bot}=ctx;
     const rod=inventoryItem(bot,"fishing_rod");
     if(!rod)throw new Error("Fishing rod not found.");
-    const water=findFishingWater(bot,32);
-    if(!water)throw new Error("No safe water found nearby.");
+    const spot=findFishingSpot(bot,32);
+    if(!spot)throw new Error("No reachable safe water fishing spot found nearby.");
     const nearbyHostile=nearest(bot,e=>HOSTILES.has(entityName(e))&&e.isValid!==false,10);
     if(nearbyHostile)throw new Error("Fishing area is unsafe: "+entityName(nearbyHostile)+" nearby.");
-    if(distance(bot,{position:water.position})>4.5)await navigate(ctx,water.position,3.5,30000,"fishing water");
+    const d=bot.entity.position.distanceTo(spot.standPos);
+    if(d>3.0)await navigate(ctx,spot.standPos,2.2,30000,"fishing stand");
     active(ctx);
     await bot.equip(rod,"hand");
-    await bot.lookAt(water.position.offset(0.5,0.2,0.5),true);
+    active(ctx);
+    await bot.lookAt(spot.waterPos,true);
     active(ctx);
     await bot.fish();
     active(ctx);
-    ctx.log?.("[FISH] catch completed at "+String(water.position));
+    ctx.log?.("[FISH] catch completed at "+String(spot.water.position));
     return true;
   },
   hunt: async(ctx,a)=>{
