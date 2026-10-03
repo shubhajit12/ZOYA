@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v3-fish-hunt-build-2026-10-03";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v4-fish-hunt-build-goalplace-2026-10-03";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -263,7 +263,30 @@ async function placeAt(ctx,name,p){
   const ref=bot.blockAt(vec(bot,{x:p.x,y:p.y-1,z:p.z}));
   if(!ref||ref.name==="air"||ref.boundingBox!=="block") throw new Error("No solid reference block below placement target.");
   if(distance(bot,{position:target.position})>4.5){
-    await navigate(ctx,{x:p.x,y:p.y,z:p.z},4.2,30000,"block placement");
+    active(ctx);
+    // GoalPlaceBlock is the pathfinder-native placement-position goal. It
+    // owns navigation only; the actual placement remains a single explicit
+    // bot.placeBlock writer below.
+    if(typeof goals.GoalPlaceBlock === "function"){
+      const upFace=new bot.entity.position.constructor(0,1,0);
+      const placeGoal=new goals.GoalPlaceBlock(
+        target.position,
+        bot.world,
+        {range:4.5,LOS:true,faces:[upFace],facing:"up"}
+      );
+      bot.pathfinder.setGoal(placeGoal);
+      try{
+        const deadline=Date.now()+30000;
+        while(Date.now()<deadline){
+          active(ctx);
+          if(distance(bot,{position:target.position})<=4.5) break;
+          await wait(ctx,100);
+        }
+        if(distance(bot,{position:target.position})>4.5) throw new Error("block placement navigation timed out.");
+      }finally{try{bot.pathfinder.setGoal(null);}catch{}}
+    }else{
+      await navigate(ctx,{x:p.x,y:p.y,z:p.z},4.2,30000,"block placement");
+    }
   }
   active(ctx);
   await bot.lookAt(target.position.offset(0.5,0.5,0.5),true);
