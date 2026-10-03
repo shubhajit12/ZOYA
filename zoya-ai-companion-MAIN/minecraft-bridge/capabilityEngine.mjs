@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v2-2026-10-03";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v3-fish-hunt-build-2026-10-03";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -197,7 +197,7 @@ async function attack(ctx,target,timeout=15000){
   }
   try{bot.pathfinder.setGoal(null);}catch{}
   const alive=target?.isValid!==false && (target?.health==null||target.health>0);
-  const killed=target?.isValid!==false && target?.health!=null && target.health<=0;
+  const killed=(target?.health!=null&&target.health<=0)||(target?.isValid===false&&swings>0);
   ctx.log?.("[COMBAT] attack loop target="+entityName(target)+
     " swings="+String(swings)+
     " finalHealth="+String(target?.health??"unknown")+
@@ -255,24 +255,32 @@ async function interactBlock(ctx,p,expected=null){
   active(ctx); await bot.lookAt(b.position.offset(0.5,0.5,0.5),true); active(ctx); await bot.activateBlock(b); return true;
 }
 async function placeAt(ctx,name,p){
-  const {bot}=ctx, target=bot.blockAt(vec(bot,p));
+  const {bot}=ctx;
+  const target=bot.blockAt(vec(bot,p));
   const item=inventoryItem(bot,name);
   if(!item) throw new Error("Placement item not found: "+name);
   if(!target||target.name!=="air") throw new Error("Placement target is not empty.");
   const ref=bot.blockAt(vec(bot,{x:p.x,y:p.y-1,z:p.z}));
-  if(!ref) throw new Error("No valid reference block for placement.");
+  if(!ref||ref.name==="air"||ref.boundingBox!=="block") throw new Error("No solid reference block below placement target.");
   if(distance(bot,{position:target.position})>4.5){
-    bot.pathfinder.setGoal(new goals.GoalPlaceBlock(target.position,bot.world,{range:4.5,LOS:true}));
-    const deadline=Date.now()+30000;
-    try{while(Date.now()<deadline){active(ctx);if(distance(bot,{position:target.position})<=4.5)return await placeDirect(ctx,item,ref);await wait(ctx,100);}throw new Error("placement navigation timed out.");}
-    finally{try{bot.pathfinder.setGoal(null);}catch{}}
+    await navigate(ctx,{x:p.x,y:p.y,z:p.z},4.2,30000,"block placement");
   }
-  return placeDirect(ctx,item,ref);
+  active(ctx);
+  await bot.lookAt(target.position.offset(0.5,0.5,0.5),true);
+  await bot.equip(item,"hand");
+  active(ctx);
+  await bot.placeBlock(ref,new bot.entity.position.constructor(0,1,0));
+  const expectedId=bot.registry?.blocksByName?.[String(name).toLowerCase()]?.id;
+  const deadline=Date.now()+1500;
+  while(Date.now()<deadline){
+    active(ctx);
+    const placed=bot.blockAt(target.position);
+    if(placed&&placed.name!=="air"&&(expectedId==null||placed.type===expectedId)) return true;
+    await wait(ctx,75);
+  }
+  throw new Error("Server did not confirm "+name+" at ("+p.x+", "+p.y+", "+p.z+").");
 }
-async function placeDirect(ctx,item,ref){
-  const {bot}=ctx; await bot.equip(item,"hand"); active(ctx);
-  await bot.placeBlock(ref,new bot.entity.position.constructor(0,1,0)); return true;
-}
+
 
 function droppedItemMatches(bot,e,name){
   const wanted=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");
@@ -326,6 +334,34 @@ async function ensureCraftMaterials(ctx,name,seen=new Set()){
   for(const ingredient of recipes[0].delta||[]){const id=ingredient?.id,need=Math.max(0,Number(ingredient?.count)||0);if(id==null||need<=0)continue;const ing=bot.registry.items[id],ingName=String(ing?.name||id),have=countItem(bot,ingName);if(have>=need)continue;const missing=need-have,ingRecipes=bot.recipesFor(id,null,missing,null);if(ingRecipes.length){await ensureCraftMaterials(ctx,ingName,seen);await craft(ctx,ingName,missing);}else for(let i=0;i<missing;i++){active(ctx);const block=findBlockDroppingItem(bot,ingName,48);if(!block)throw new Error("Missing raw material not found nearby: "+ingName);await digBlock(ctx,block);}}
   seen.delete(key);return true;
 }
+function findFishingWater(bot,maxDistance=32){
+  const positions=bot.findBlocks?.({matching:b=>b?.name==="water"||b?.name==="flowing_water",maxDistance,count:24})||[];
+  const origin=bot.entity.position;
+  const hostiles=Object.values(bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(entityName(e))&&e.isValid!==false);
+  return positions
+    .map(p=>bot.blockAt(p))
+    .filter(Boolean)
+    .map(block=>({block,score:origin.distanceTo(block.position)+
+      (hostiles.some(e=>e.position.distanceTo(block.position)<8)?1000:0)}))
+    .sort((a,b)=>a.score-b.score)[0]?.block||null;
+}
+function findBuildSupport(bot,maxDistance=6){
+  const base=bot.entity.position.floored();
+  const candidates=[];
+  for(let dx=-4;dx<=4;dx++) for(let dz=-4;dz<=4;dz++){
+    if(Math.abs(dx)+Math.abs(dz)<2) continue;
+    const x=base.x+dx,z=base.z+dz,y=base.y;
+    const floor=bot.blockAt(new bot.entity.position.constructor(x,y-1,z));
+    const target=bot.blockAt(new bot.entity.position.constructor(x,y,z));
+    const head=bot.blockAt(new bot.entity.position.constructor(x,y+1,z));
+    if(floor?.boundingBox==="block"&&target?.name==="air"&&head?.name==="air"){
+      const d=Math.hypot(dx,dz);
+      if(d<=maxDistance)candidates.push({x,y,z,d});
+    }
+  }
+  candidates.sort((a,b)=>a.d-b.d);
+  return candidates[0]||null;
+}
 
 const H = {
   follow_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
@@ -347,8 +383,7 @@ const H = {
         if(bn===name.toLowerCase()||bn.includes(name.toLowerCase())) return true;
         const drops=Array.isArray(b?.drops)?b.drops:[];
         return drops.some(d=>Number(d)===Number(id));
-      },maxDistance:48});
-      if(!block)throw new Error("Resource not found nearby: "+name);await digBlock(ctx,block);got=countItem(ctx,name);}
+      },maxDistance:48});      if(!block)throw new Error("Resource not found nearby: "+name);await digBlock(ctx,block);got=countItem(ctx,name);}
     return true;
   },
   do_task: async(ctx,a)=>{
@@ -457,8 +492,33 @@ const H = {
   use_ranged_weapon: async(ctx,a)=>{const t=player(ctx.bot,a)?.entity||nearest(ctx.bot,e=>!HOSTILES.has(entityName(e))&&entityName(e).includes(String(a||"").toLowerCase()),32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await ctx.bot.equip(i,"hand");await lookAtEntity(ctx,t);ctx.bot.activateItem();await wait(ctx,1200);ctx.bot.deactivateItem();return true;},
   dig: async(ctx,a)=>digBlock(ctx,ctx.bot.blockAt(vec(ctx.bot,coords(a)))),
   harvest_crops: async(ctx)=>{const b=ctx.bot.findBlock({matching:x=>CROPS.has(String(x?.name||"")),maxDistance:32});if(!b)throw new Error("No crop found nearby.");return digBlock(ctx,b);},
-  fish: async(ctx)=>{active(ctx);await ctx.bot.fish();return true;},
-  hunt: async(ctx,a)=>{const t=await nearestAnimal(ctx,32);if(!t)throw new Error("No huntable animal nearby.");return attack(ctx,t);},
+  fish: async(ctx)=>{
+    const {bot}=ctx;
+    const rod=inventoryItem(bot,"fishing_rod");
+    if(!rod)throw new Error("Fishing rod not found.");
+    const water=findFishingWater(bot,32);
+    if(!water)throw new Error("No safe water found nearby.");
+    const nearbyHostile=nearest(bot,e=>HOSTILES.has(entityName(e))&&e.isValid!==false,10);
+    if(nearbyHostile)throw new Error("Fishing area is unsafe: "+entityName(nearbyHostile)+" nearby.");
+    if(distance(bot,{position:water.position})>4.5)await navigate(ctx,water.position,3.5,30000,"fishing water");
+    active(ctx);
+    await bot.equip(rod,"hand");
+    await bot.lookAt(water.position.offset(0.5,0.2,0.5),true);
+    active(ctx);
+    await bot.fish();
+    active(ctx);
+    ctx.log?.("[FISH] catch completed at "+String(water.position));
+    return true;
+  },
+  hunt: async(ctx,a)=>{
+    const t=await nearestAnimal(ctx,32);
+    if(!t)throw new Error("No huntable animal nearby.");
+    const weapon=bestWeapon(ctx.bot);
+    if(weapon)await ctx.bot.equip(weapon,"hand");
+    const killed=await attack(ctx,t,15000);
+    if(!killed)throw new Error("Hunt target was not killed before timeout.");
+    return true;
+  },
   find_shelter: async(ctx)=>{
     const {bot}=ctx;
     for(let r=2;r<=24;r+=2) for(let i=0;i<16;i++){
@@ -697,8 +757,7 @@ async function protect(ctx,a){
     (e.type==="mob"||e.type==="player") &&
     (e.health==null||e.health>0);
 
-  // An exact entityHurt target is already authoritative for the owner-attack
-  // path. Do not require Mineflayer's broad entity type classification here:
+  // An exact entityHurt target is already authoritative for the owner-attack  // path. Do not require Mineflayer's broad entity type classification here:
   // protocol/entity variants can briefly expose a valid hurt target without
   // the normal mob/player type while the entity is still attackable.
   const isAttackableTarget=e =>
@@ -999,9 +1058,25 @@ async function findSafe(ctx){
 }
 
 async function build(ctx,a){
-  const m=required(a,"Build plan is required.").match(/^(pillar|tower|line)\s+(\S+)\s+(\d+)$/i);if(!m)throw new Error("Build plan: pillar|tower|line <block> <count>.");
-  const kind=m[1].toLowerCase(),name=m[2],n=Math.max(1,Number(m[3])),base=ctx.bot.entity.position.floored();
-  for(let i=0;i<n;i++){active(ctx);const p=kind==="line"?{x:base.x+i,y:base.y,z:base.z}:{x:base.x,y:base.y+i,z:base.z};const b=ctx.bot.blockAt(vec(ctx.bot,p));if(b?.name!=="air")continue;await placeAt(ctx,name,p);}return true;
+  const m=required(a,"Build plan is required.").match(/^(pillar|tower|line)\s+(\S+)\s+(\d+)$/i);
+  if(!m)throw new Error("Build plan: pillar|tower|line <block> <count>.");
+  const kind=m[1].toLowerCase(),name=m[2],n=Math.max(1,Number(m[3]));
+  const support=findBuildSupport(ctx.bot,6);
+  if(!support)throw new Error("No safe solid build location nearby.");
+  const placed=[];
+  for(let i=0;i<n;i++){
+    active(ctx);
+    const p=kind==="line"
+      ? {x:support.x+i,y:support.y,z:support.z}
+      : {x:support.x,y:support.y+i,z:support.z};
+    const b=ctx.bot.blockAt(vec(ctx.bot,p));
+    if(b?.name===name){placed.push(p);continue;}
+    if(b?.name!=="air")throw new Error("Build target occupied at ("+p.x+", "+p.y+", "+p.z+").");
+    await placeAt(ctx,name,p);
+    placed.push(p);
+  }
+  ctx.log?.("[BUILD] "+kind+" placed="+String(placed.length)+" block="+name);
+  return true;
 }
 
 export const RUNTIME_ACTIONS = new Set();
