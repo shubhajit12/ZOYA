@@ -498,7 +498,14 @@ const H = {
     if(l.startsWith("craft "))return H.craft(ctx,s.slice(6));
     throw new Error("Supported do_task forms: mine, chop, gather, craft.");
   },
-  coordinate: async(ctx,a)=>H.coordinate_with_player(ctx,a),
+  coordinate: async(ctx,a)=>{
+    const q=parts(a),u=required(q.shift(),"Username is required."),task=q.join(" ")||"ready";
+    const p=player(ctx.bot,u);
+    if(!p?.entity)throw new Error("Player not found.");
+    await navigate(ctx,p.entity.position,3,30000,"coordinate");
+    ctx.bot.whisper(u,"Ready: "+task);
+    return true;
+  },
   explore: async(ctx)=>H.roam(ctx,""),
   observe: async(ctx,a)=>{const target=String(a||"").trim();const e=target?findSearchTarget(ctx.bot,target,48):nearest(ctx.bot,()=>true,16);if(!e)throw new Error(target?"Observation target not found: "+target:"Nothing observable nearby.");if(e.position&&e.height!=null)await lookAtEntity(ctx,e);ctx.log?.("observed="+String(e.name||e.username||e.displayName||"target")+" position="+String(e.position||"unknown"));return true;},
   return: async(ctx)=>{const owner=ctx.runtime?.getStatus?.().ownerUsername;if(!owner)throw new Error("Owner is not configured.");const p=player(ctx.bot,owner);if(!p?.entity)throw new Error("Owner is not online.");return navigate(ctx,p.entity.position,3,30000,"return to owner");},
