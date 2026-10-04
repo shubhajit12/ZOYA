@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v6-fish-multilevel-reachable-spots-2026-10-04";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v7-shield-offhand-2026-10-04";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -543,7 +543,24 @@ const H = {
     ctx.log?.("[ARMOR] result "+(changes.length?changes.join(", "):"no upgrades needed"));
     return true;
   },
-  use_shield: async(ctx)=>{const i=inventoryItem(ctx.bot,"shield");if(!i)throw new Error("Shield not found.");await ctx.bot.equip(i,"off-hand");ctx.bot.activateItem();await wait(ctx,750);ctx.bot.deactivateItem();return true;},
+  use_shield: async(ctx)=>{
+    const {bot}=ctx;
+    const offhand=bot.inventory?.slots?.[45]||null;
+    const shield=String(offhand?.name||"").toLowerCase()==="shield" ? offhand : inventoryItem(bot,"shield");
+    if(!shield) throw new Error("Shield not found.");
+    active(ctx);
+    if(String(bot.inventory?.slots?.[45]?.name||"").toLowerCase()!=="shield"){
+      await bot.equip(shield,"off-hand");
+      active(ctx);
+    }
+    const equipped=bot.inventory?.slots?.[45];
+    if(String(equipped?.name||"").toLowerCase()!=="shield") throw new Error("Shield was not equipped in off-hand.");
+    bot.activateItem(true);
+    await wait(ctx,750);
+    bot.deactivateItem();
+    ctx.log?.("[SHIELD] off-hand shield activated.");
+    return true;
+  },
   use_ranged_weapon: async(ctx,a)=>{const t=player(ctx.bot,a)?.entity||nearest(ctx.bot,e=>!HOSTILES.has(entityName(e))&&entityName(e).includes(String(a||"").toLowerCase()),32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await ctx.bot.equip(i,"hand");await lookAtEntity(ctx,t);ctx.bot.activateItem();await wait(ctx,1200);ctx.bot.deactivateItem();return true;},
   dig: async(ctx,a)=>digBlock(ctx,ctx.bot.blockAt(vec(ctx.bot,coords(a)))),
   harvest_crops: async(ctx)=>{const b=ctx.bot.findBlock({matching:x=>CROPS.has(String(x?.name||"")),maxDistance:32});if(!b)throw new Error("No crop found nearby.");return digBlock(ctx,b);},
@@ -1098,27 +1115,3 @@ async function protect(ctx,a){
 async function give(ctx,a){
   const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required."),p=player(ctx.bot,u)?.entity,i=inventoryItem(ctx.bot,name);
   if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,20000,"delivery");await ctx.bot.equip(i,"hand");await ctx.bot.tossStack(i);return true;
-}
-async function storage(ctx,a,deposit){
-  const q=parts(a),name=required(q.shift(),"Item is required."),p=coords(q.splice(0,3).join(" ")),c=await container(ctx,p);
-  try{
-    const type=ctx.bot.registry.itemsByName[name.toLowerCase().replace(/\s+/g,"_")];if(!type)throw new Error("Unknown item: "+name);
-    if(deposit){const n=countItem(ctx.bot,name);if(n<=0)throw new Error("Item not available.");await c.deposit(type.id,null,n,null);}
-    else {const n=Math.max(1,Number(q[0])||1);await c.withdraw(type.id,null,n,null);}
-    return true;
-  }finally{try{await c.close();}catch{}}
-}
-async function smelt(ctx,a){
-  const name=required(a,"Smelting input is required.").toLowerCase(),b=ctx.bot.findBlock({matching:x=>/furnace/.test(String(x?.name||"")),maxDistance:24});
-  if(!b)throw new Error("No furnace nearby.");await navigate(ctx,b.position,3.5,30000,"furnace");
-  const f=await ctx.bot.openFurnace(b);try{
-    const input=inventoryItem(ctx.bot,name),fuel=inventoryItem(ctx.bot,"coal")||inventoryItem(ctx.bot,"charcoal")||inventoryItem(ctx.bot,"planks");
-    if(!input)throw new Error("Smelting input not found.");if(!fuel)throw new Error("Fuel not found.");
-    await f.putInput(input.type??input.id,null,Math.min(input.count,64));await f.putFuel(fuel.type??fuel.id,null,Math.min(fuel.count,8));await wait(ctx,1200);await f.takeOutput();return true;
-  }finally{try{await f.close();}catch{}}
-}
-async function findSafe(ctx){
-  const {bot}=ctx;
-  for(let r=3;r<=24;r+=3) for(let i=0;i<16;i++){
-    active(ctx); const a=i*Math.PI/8;
-    const x=Math.floor(bot.entity.position.x+Math.cos(a)*r), z=Math.floor(bot.entity.position.z+Math.sin(a)*r), y=Math.floor(bot.entity.position.y);
