@@ -1342,7 +1342,28 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return false;
   }
 
-  bot.on("death", () => { const pos=bot.entity?.position; const death={ username:bot.username||"Zoya", x:pos?.x??null, y:pos?.y??null, z:pos?.z??null, dimension:String(bot.game?.dimension||"unknown") }; memory.lastDeath=death; rememberEvent("death", death); saveMemory(); interruptMovement("death"); });
+  bot.on("death", () => {
+    const pos=bot.entity?.position;
+    const death={ username:bot.username||"Zoya", x:pos?.x??null, y:pos?.y??null, z:pos?.z??null, dimension:String(bot.game?.dimension||"unknown") };
+    memory.lastDeath=death;
+    rememberEvent("death", death);
+    saveMemory();
+
+    // Guard is a persistent post assignment. Death must stop physical actions
+    // immediately, but the guard task itself stays alive so the dispatcher can
+    // restart the same guard operation after respawn.
+    const action=String(activeTask?.action||"");
+    const resumableGuard=/^(?:manual:)?(?:clean:)?guard(?:_location)?$/.test(action);
+    if(resumableGuard){
+      try { bot.pathfinder?.setGoal(null); } catch {}
+      try { bot.clearControlStates?.(); } catch {}
+      try { bot.stopDigging?.(); } catch {}
+      try { bot.deactivateItem?.(); } catch {}
+      log("[SAFETY] Guard task paused for death; guard post will resume after respawn.");
+    }else{
+      interruptMovement("death");
+    }
+  });
   bot.on("respawn", () => { rememberEvent("respawn", { username: bot.username || "Zoya" }); wakeBrain(); });
   bot.on("kicked", reason => rememberEvent("kicked", { reason: String(reason || "unknown").slice(0, 300) }));
   let previousHealth = bot.health ?? 20;
@@ -1371,19 +1392,22 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       log("[SAFETY] Damage observed; preserving active task ownership.");
     }
     if (health <= 0) {
-      // Do not wait for Mineflayer's separate "death" event. Persistent
-      // capabilities can otherwise remain in their wait loops for a short
-      // window while health is already zero. Cancellation is global and
-      // therefore covers guard/protect/escort/follow/combat and every future
-      // capability without modifying their individual behavior.
-      if (activeTask) {
+      // Every mode stops physical work at zero health. Guard is the one
+      // persistent post assignment that deliberately survives death: its task
+      // remains paused so the same guard coordinates can be restored after
+      // Mineflayer emits spawn/respawn.
+      const action=String(activeTask?.action||"");
+      const resumableGuard=/^(?:manual:)?(?:clean:)?guard(?:_location)?$/.test(action);
+      if (activeTask && !resumableGuard) {
         cancelCurrentTask("health_depleted");
         log("[SAFETY] Health reached 0; active task cancelled immediately.");
       } else {
         try { bot.pathfinder?.setGoal(null); } catch {}
-        try { bot.clearControlStates(); } catch {}
+        try { bot.clearControlStates?.(); } catch {}
+        if (activeTask && resumableGuard) {
+          log("[SAFETY] Health reached 0; guard task paused until respawn.");
+        }
       }
-      wakeBrain();
     } else if (health < 10) {
       wakeBrain();
     }
