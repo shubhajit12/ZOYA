@@ -357,13 +357,25 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return !activeTask;
   }
 
+  function botHasHealth() {
+    const health = Number(bot?.health);
+    // Mineflayer can expose health=0 briefly before the asynchronous "death"
+    // event arrives. Treat zero/invalid health as an immediate hard stop for
+    // every task so persistent modes (guard/protect/follow/etc.) never keep
+    // waiting or issuing movement/combat actions while Zoya is dead.
+    return Number.isFinite(health) && health > 0;
+  }
+
   function taskIsActive(task) {
-    return activeTask === task && !task.cancelled && activeTask.token === task.token;
+    return activeTask === task &&
+      !task.cancelled &&
+      activeTask.token === task.token &&
+      botHasHealth();
   }
 
   function assertTaskActive(task, stage = "operation") {
     if (!taskIsActive(task)) {
-      throw new Error("Task cancelled or superseded during " + stage + ".");
+      throw new Error("Task cancelled, superseded, or bot has no health during " + stage + ".");
     }
   }
 
@@ -1358,8 +1370,23 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       // dedicated death handler above.
       log("[SAFETY] Damage observed; preserving active task ownership.");
     }
-    if (health <= 0) wakeBrain();
-    else if (health < 10) wakeBrain();
+    if (health <= 0) {
+      // Do not wait for Mineflayer's separate "death" event. Persistent
+      // capabilities can otherwise remain in their wait loops for a short
+      // window while health is already zero. Cancellation is global and
+      // therefore covers guard/protect/escort/follow/combat and every future
+      // capability without modifying their individual behavior.
+      if (activeTask) {
+        cancelCurrentTask("health_depleted");
+        log("[SAFETY] Health reached 0; active task cancelled immediately.");
+      } else {
+        try { bot.pathfinder?.setGoal(null); } catch {}
+        try { bot.clearControlStates(); } catch {}
+      }
+      wakeBrain();
+    } else if (health < 10) {
+      wakeBrain();
+    }
     previousHealth = health;
   });
   bot.on("whisper", handleWhisper);
