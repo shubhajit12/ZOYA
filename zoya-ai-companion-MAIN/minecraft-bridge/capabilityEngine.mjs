@@ -1283,22 +1283,11 @@ const H = {
     ctx.log?.("[ARMOR] result "+(changes.length?changes.join(", "):"no upgrades needed"));
     return true;
   },
-  use_shield: async(ctx)=>{
-    const {bot}=ctx;
-    const offhand=bot.inventory?.slots?.[45]||null;
-    const shield=String(offhand?.name||"").toLowerCase()==="shield" ? offhand : inventoryItem(bot,"shield");
-    if(!shield) throw new Error("Shield not found.");
-    active(ctx);
-    if(String(bot.inventory?.slots?.[45]?.name||"").toLowerCase()!=="shield"){
-      await bot.equip(shield,"off-hand");
-      active(ctx);
-    }
-    const equipped=bot.inventory?.slots?.[45];
-    if(String(equipped?.name||"").toLowerCase()!=="shield") throw new Error("Shield was not equipped in off-hand.");
-    bot.activateItem(true);
-    await wait(ctx,750);
-    bot.deactivateItem();
-    ctx.log?.("[SHIELD] off-hand shield activated.");
+  use_shield: async(ctx,a)=>{
+    const seconds=number(required(a,"Shield duration is required."),"Shield duration must be a number of seconds.");
+    if(seconds<=0) throw new Error("Shield duration must be greater than 0 seconds.");
+    if(!await briefShieldBlock(ctx,seconds*1000)) throw new Error("Shield not found or could not be equipped.");
+    ctx.log?.("[SHIELD] held for "+String(seconds)+"s.");
     return true;
   },
   use_ranged_weapon: async(ctx,a)=>{const target=required(a,"Target is required.");const t=player(ctx.bot,target)?.entity||findSearchTarget(ctx.bot,target,32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await lookAtEntity(ctx,t);active(ctx);ctx.bot.activateItem();try{await wait(ctx,1200);}finally{ctx.bot.deactivateItem();}return true;},
