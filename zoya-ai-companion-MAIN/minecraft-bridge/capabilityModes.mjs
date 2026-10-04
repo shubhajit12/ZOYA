@@ -85,7 +85,6 @@ const defs = [
 ["ask_permission","Ask Permission","ask_permission {username} {action}","username action","control"],
 ["whisper_player","Whisper Player","whisper_player {username} {message}","username message","finite"],
 ["remember_player","Remember Player","remember_player {username} {fact}","username fact","control"],
-["remember_home","Remember Home","remember_home {x} {y} {z}","coordinates","control"],
 ["report_result","Report Result","report_result {message}","message","finite"],
 ["ask_clarification","Ask Clarification","ask_clarification {username} {question}","username question","finite"],
 ["retrieve_item","Retrieve Item","retrieve_item {item}","item","finite"],
@@ -98,7 +97,8 @@ const defs = [
 ["watch","Watch","watch {target}","target","continuous"],
 ["coordinate_with_player","Coordinate With Player","coordinate_with_player {username} {task}","username task","continuous"],
 ["op_command","Use OP Command","op_command {command}","command","finite"],
-["equip_best_armor","Equip Best Armor","equip_best_armor","none","finite"]
+["equip_best_armor","Equip Best Armor","equip_best_armor","none","finite"],
+["remember_home","Remember Home","remember_home {x} {y} {z}","coordinates","control"]
 ];
 
 export const CAPABILITY_MODES = Object.freeze(defs.map(([id,label,usage,argSchema,execution]) => Object.freeze({
