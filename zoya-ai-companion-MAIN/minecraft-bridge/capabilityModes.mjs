@@ -142,7 +142,7 @@ export const CAPABILITY_IDS = Object.freeze(CAPABILITY_MODES.map(m => m.id));
 export const CAPABILITY_BY_ID = Object.freeze(Object.fromEntries(CAPABILITY_MODES.map(m => [m.id,m])));
 
 export function assertCapabilityRegistry(handlers) {
-  if (CAPABILITY_MODES.length !== 111) throw new Error("Expected exactly 124 capability modes.");
+  if (CAPABILITY_MODES.length !== 124) throw new Error("Expected exactly 124 capability modes.");
   if (new Set(CAPABILITY_IDS).size !== 124) throw new Error("Capability IDs must be unique.");
   for (const mode of CAPABILITY_MODES) {
     if (!mode.id || !mode.label || !mode.usage || !mode.argSchema || !mode.execution) {
