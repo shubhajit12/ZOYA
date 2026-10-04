@@ -87,7 +87,7 @@ jobs:
               if ($engineSource -notmatch [regex]::Escape($requiredText)) { throw "Clean engine guard is missing: $requiredText" }
             }
             if ($testerSource -notmatch 'capabilityEngine\.mjs') { throw 'Tester is not wired to the clean capability engine.' }
-            foreach ($requiredBrainText in @('api.groq.com/openai/v1/chat/completions','json_schema','capabilityIds()','ownerUsername','requestOwnerPermission','dispatchCapability','MAX_ACTIONS_PER_PLAN','handlePlayerMessage')) {
+            foreach ($requiredBrainText in @('api.groq.com/openai/v1/chat/completions','json_schema','capabilityIds()','ownerUsername','requestOwnerPermission','dispatchCapability','MAX_ACTIONS_PER_PLAN','handlePlayerMessage','EVENT_COALESCE_MS','RATE_LIMIT_FALLBACK_MS','max_completion_tokens','rate_limit_exceeded','rateLimitedUntil')) {
               if ($brainSource -notmatch [regex]::Escape($requiredBrainText)) { throw "Groq brain guard is missing: $requiredBrainText" }
             }
             foreach ($requiredPermissionText in @('function askOwner(requester, action, displayAction = action, execution = null)','pending.set(key, { id, requester, action, displayAction, execution','ownerUsername','owner-approved player cancellation')) {
