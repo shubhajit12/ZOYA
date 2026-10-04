@@ -940,6 +940,7 @@ async function followWithDefense(ctx,target,range=3,protectTarget=false){
   const {bot}=ctx;
   if(!target?.isValid)throw new Error("Target lost.");
   let lastCheck=0;
+  active(ctx);
   bot.pathfinder.setGoal(new goals.GoalFollow(target,range),true);
   try{
     while(true){
