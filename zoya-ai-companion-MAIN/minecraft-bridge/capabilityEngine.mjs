@@ -763,13 +763,11 @@ const H = {
   watch: async(ctx,a)=>{const s=required(a,"Watch target is required.");while(true){active(ctx);const e=player(ctx.bot,s)?.entity||nearest(ctx.bot,e=>entityName(e).includes(s.toLowerCase()),48);if(!e){ctx.terminate("target_lost");return false;}await lookAtEntity(ctx,e);await wait(ctx,250);}},
   coordinate_with_player: async(ctx,a)=>{
     const q=parts(a),u=required(q.shift(),"Username is required."),task=q.join(" ")||"ready";
-    while(true){
-      active(ctx);
-      const p=player(ctx.bot,u);
-      if(!p?.entity){ctx.terminate("target_lost");return false;}
-      ctx.bot.whisper(u,"Ready: "+task);
-      await follow(ctx,p.entity,3);
-    }
+    const p=player(ctx.bot,u);
+    if(!p?.entity)throw new Error("Player not found.");
+    await navigate(ctx,p.entity.position,3,30000,"coordinate");
+    ctx.bot.whisper(u,"Ready: "+task);
+    return true;
   },
   op_command: async(ctx,a)=>{const c=required(a,"Command is required.");ctx.bot.chat(c.startsWith("/")?c:"/"+c);return true;}
 };
