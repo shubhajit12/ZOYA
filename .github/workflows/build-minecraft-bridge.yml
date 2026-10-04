@@ -57,7 +57,7 @@ jobs:
             $engineSource = Get-Content (Join-Path $bridgeDist 'capabilityEngine.mjs') -Raw
             $modesSource = Get-Content (Join-Path $bridgeDist 'capabilityModes.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-            if ($indexSource -notmatch 'manual-capability-v27-clean-95-mode-engine-home-2026-10-04') { throw 'Manual capability build marker is missing or stale.' }
+            if ($indexSource -notmatch 'manual-capability-v28-clean-105-mode-engine-world-progression-2026-10-04') { throw 'Manual capability build marker is missing or stale.' }
             if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
             if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
             if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
@@ -65,8 +65,8 @@ jobs:
             if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
             $registeredCapabilities = [regex]::Matches($modesSource, '\["[^"]+","[^"]+","[^"]+","[^"]+","[^"]+"\]').Count
             $handlerCount = [regex]::Matches($engineSource, '^  [a-z0-9_]+: async', [System.Text.RegularExpressions.RegexOptions]::Multiline).Count
-            if ($registeredCapabilities -ne 95) { throw "Expected 95 clean capability definitions, found $registeredCapabilities." }
-            if ($handlerCount -ne 95) { throw "Expected 95 clean capability handlers, found $handlerCount." }
+            if ($registeredCapabilities -ne 105) { throw "Expected 95 clean capability definitions, found $registeredCapabilities." }
+            if ($handlerCount -ne 105) { throw "Expected 95 clean capability handlers, found $handlerCount." }
             if ($modesSource -notmatch 'CAPABILITY_MODES =') { throw 'Canonical capability registry is missing.' }
             if ($engineSource -notmatch 'export async function executeCapability') { throw 'Clean capability executor is missing.' }
             if ($engineSource -match 'ctx\.legacy') { throw 'Clean capability engine must not fall back to legacy handlers.' }
