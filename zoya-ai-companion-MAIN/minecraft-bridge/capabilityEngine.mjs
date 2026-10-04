@@ -7,10 +7,10 @@ export const CAPABILITIES = CAPABILITY_MODES;
 const HOSTILES = new Set(["zombie","husk","drowned","skeleton","stray","creeper","spider","cave_spider","witch","pillager","vindicator","evoker","ravager","phantom","blaze","magma_cube","silverfish","endermite","guardian","elder_guardian","piglin_brute","hoglin","zoglin","enderman"]);
 const PASSIVES = new Set(["cow","pig","sheep","chicken","rabbit","horse","donkey","mule","llama","goat","mooshroom","strider","turtle","fish","cod","salmon"]);
 const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
-const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
+const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box","ender_chest"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "combat-survival-interruption-v1-workstations-liquids-vehicle-2026-10-04";
+const CAPABILITY_ENGINE_PATCH = "combat-survival-interruption-v1-workstations-liquids-vehicle-player-interactions-2026-10-04";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -590,6 +590,66 @@ async function controlVehicle(ctx,a){
   return true;
 }
 
+
+async function usePotion(ctx,a){
+  const item=inventoryItem(ctx,required(a,"Potion item is required."));
+  if(!item||!/(potion|splash_potion|lingering_potion)/.test(item.name))throw new Error("Potion item not found.");
+  const before=countItem(ctx,item.name);
+  active(ctx);await ctx.bot.equip(item,"hand");active(ctx);
+  if(/splash_potion|lingering_potion/.test(item.name)){
+    ctx.bot.activateItem();await wait(ctx,700);
+  }else{
+    await ctx.bot.consume();
+  }
+  const after=countItem(ctx,item.name);
+  if(after>=before)throw new Error("Potion use was not confirmed.");
+  return true;
+}
+async function useFirework(ctx,a){
+  const item=inventoryItem(ctx.bot,a||"firework_rocket");
+  if(!item||item.name!=="firework_rocket")throw new Error("Firework rocket not found.");
+  const before=countItem(ctx.bot,"firework_rocket");
+  active(ctx);await ctx.bot.equip(item,"hand");active(ctx);ctx.bot.activateItem();await wait(ctx,500);
+  const after=countItem(ctx.bot,"firework_rocket");
+  if(after>=before)throw new Error("Firework activation was not confirmed.");
+  return true;
+}
+async function useEnderChest(ctx,a){
+  const p=coords(a);
+  const b=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!b||b.name!=="ender_chest")throw new Error("Target is not an ender chest.");
+  if(distance(ctx.bot,{position:b.position})>4.5)await navigate(ctx,b.position,3.5,30000,"ender chest");
+  active(ctx);
+  const c=await ctx.bot.openContainer(b);
+  try{ctx.log?.("[ENDER_CHEST] opened.");return true;}finally{try{await c.close?.();}catch{}}
+}
+async function collectHoney(ctx,a){
+  const q=parts(a), tool=(q.shift()||"bottle").toLowerCase(), p=coords(q.join(" "));
+  const b=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!b||!["bee_nest","beehive"].includes(b.name))throw new Error("Target is not a bee nest or beehive.");
+  const item=inventoryItem(ctx.bot,tool==="shears"?"shears":"glass_bottle");
+  if(!item)throw new Error((tool==="shears"?"Shears":"Glass bottle")+" not found.");
+  const before=ctx.bot.inventory.items().reduce((n,i)=>n+i.count,0);
+  await navigate(ctx,b.position,3.5,15000,"honey collection");
+  active(ctx);await ctx.bot.equip(item,"hand");active(ctx);await ctx.bot.lookAt(b.position.offset(0.5,0.5,0.5),true);active(ctx);ctx.bot.activateBlock(b);await wait(ctx,700);
+  const after=ctx.bot.inventory.items().reduce((n,i)=>n+i.count,0);
+  if(after===before)ctx.log?.("[HONEY] interaction sent; inventory delta not observable.");
+  return true;
+}
+async function useBeacon(ctx,a){
+  const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!b||b.name!=="beacon")throw new Error("Target is not a beacon.");
+  await navigate(ctx,b.position,3.5,15000,"beacon");
+  active(ctx);
+  const w=await ctx.bot.openBlock(b);
+  try{ctx.log?.("[BEACON] opened.");return true;}finally{try{await w.close?.();}catch{}}
+}
+async function useConduit(ctx,a){
+  const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!b||b.name!=="conduit")throw new Error("Target is not a conduit.");
+  await navigate(ctx,b.position,3.5,15000,"conduit");
+  active(ctx);await ctx.bot.activateBlock(b);ctx.log?.("[CONDUIT] activated/interacted.");return true;
+}
 async function clearHostiles(ctx,a){
   const raw=String(a??"").trim();
   const radius=raw?Number(raw):16;
@@ -1352,6 +1412,12 @@ const H = {
   shear_animal: async(ctx,a)=>shearAnimal(ctx,a),
   extinguish_fire: async(ctx)=>extinguishFire(ctx),
   clear_hostiles: async(ctx,a)=>clearHostiles(ctx,a),
+  use_potion: async(ctx,a)=>usePotion(ctx,a),
+  use_firework: async(ctx,a)=>useFirework(ctx,a),
+  use_ender_chest: async(ctx,a)=>useEnderChest(ctx,a),
+  collect_honey: async(ctx,a)=>collectHoney(ctx,a),
+  use_beacon: async(ctx,a)=>useBeacon(ctx,a),
+  use_conduit: async(ctx,a)=>useConduit(ctx,a),
   trade_villager: async(ctx,a)=>tradeVillager(ctx,a),
   use_anvil: async(ctx,a)=>useAnvil(ctx,a),
   use_brewing_stand: async(ctx,a)=>useBrewingStand(ctx,a),
