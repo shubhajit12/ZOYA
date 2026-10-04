@@ -519,15 +519,33 @@ async function useBrewingStand(ctx,a){
   }finally{try{await brew.close?.();}catch{}}
 }
 async function useShulkerBox(ctx,a){
-  const q=parts(a), action=(q.shift()||"open").toLowerCase(), itemName=q.shift()||null, amount=q.shift()?Math.max(1,Number(q.pop())):null;
-  const p=coords(q.join(" "));
+  const q=parts(a), action=(q.shift()||"open").toLowerCase();
+  let itemName=null, amount=null, p;
+  if(action==="open"){
+    p=coords(q.join(" "));
+  }else if(action==="deposit"||action==="retrieve"){
+    itemName=required(q.shift(),"Item is required.");
+    amount=Math.max(1,Math.floor(Number(q.shift()||1)));
+    p=coords(q.join(" "));
+  }else{
+    throw new Error("Shulker action must be open, deposit, or retrieve.");
+  }
   const box=ctx.bot.blockAt(vec(ctx.bot,p));
   if(!box||String(box.name)!=="shulker_box")throw new Error("Target is not a shulker box.");
   const c=await container(ctx,p,"shulker_box");
   try{
-    if(action==="deposit"&&itemName){const item=inventoryItem(ctx.bot,itemName);if(!item)throw new Error("Item not found: "+itemName);await c.deposit(item.type??item.id,null,amount);return true;}
-    if(action==="retrieve"&&itemName){const type=ctx.bot.registry?.itemsByName?.[String(itemName).toLowerCase().replace(/\s+/g,"_")];if(!type)throw new Error("Unknown item: "+itemName);await c.withdraw(type.id,null,amount);return true;}
-    if(action!=="open")throw new Error("Shulker action must be open, deposit, or retrieve.");
+    if(action==="deposit"){
+      const item=inventoryItem(ctx.bot,itemName);
+      if(!item)throw new Error("Item not found: "+itemName);
+      await c.deposit(item.type??item.id,null,amount);
+      return true;
+    }
+    if(action==="retrieve"){
+      const type=ctx.bot.registry?.itemsByName?.[String(itemName).toLowerCase().replace(/\s+/g,"_")];
+      if(!type)throw new Error("Unknown item: "+itemName);
+      await c.withdraw(type.id,null,amount);
+      return true;
+    }
     ctx.log?.("[SHULKER] opened.");
     return true;
   }finally{try{await c.close?.();}catch{}}
@@ -565,7 +583,7 @@ async function controlVehicle(ctx,a){
   const q=parts(a),seconds=Math.max(0.1,Number(q.shift()||2)),forward=Number(q.shift()??1),sideways=Number(q.shift()??0);
   if(!ctx.bot.vehicle)throw new Error("Bot is not mounted.");
   if(typeof ctx.bot.moveVehicle==="function"){
-    active(ctx);ctx.bot.moveVehicle(forward,sideways);await wait(ctx,seconds*1000);ctx.bot.moveVehicle(0,0);return true;
+    active(ctx);ctx.bot.moveVehicle(sideways,forward);await wait(ctx,seconds*1000);ctx.bot.moveVehicle(0,0);return true;
   }
   ctx.bot.setControlState("forward",forward>0);ctx.bot.setControlState("back",forward<0);ctx.bot.setControlState("left",sideways<0);ctx.bot.setControlState("right",sideways>0);
   try{await wait(ctx,seconds*1000);}finally{ctx.bot.setControlState("forward",false);ctx.bot.setControlState("back",false);ctx.bot.setControlState("left",false);ctx.bot.setControlState("right",false);}
@@ -917,6 +935,35 @@ async function recoveryMission(ctx){
 }
 
 
+
+async function followWithDefense(ctx,target,range=3,protectTarget=false){
+  const {bot}=ctx;
+  if(!target?.isValid)throw new Error("Target lost.");
+  let lastCheck=0;
+  bot.pathfinder.setGoal(new goals.GoalFollow(target,range),true);
+  try{
+    while(true){
+      active(ctx);
+      if(!target.isValid)throw new Error("Target lost.");
+      const now=Date.now();
+      if(now-lastCheck>=250){
+        lastCheck=now;
+        const nearby=Object.values(bot.entities||{})
+          .filter(x=>x?.position&&x!==bot.entity&&HOSTILES.has(entityName(x))&&x.isValid!==false)
+          .filter(x=>distance(bot,x)<=10 || (protectTarget&&target.position.distanceTo(x)<=8))
+          .sort((a,b)=>distance(bot,a)-distance(bot,b));
+        if(nearby.length){
+          try{bot.pathfinder.setGoal(null);}catch{}
+          await combatAttack(ctx,nearby[0],15000);
+          active(ctx);
+          bot.pathfinder.setGoal(new goals.GoalFollow(target,range),true);
+        }
+      }
+      await wait(ctx,150);
+    }
+  }finally{try{bot.pathfinder.setGoal(null);}catch{}}
+}
+
 async function combatPrepare(ctx){
   const {bot}=ctx;
   active(ctx);
@@ -988,7 +1035,7 @@ async function defendNearbyThreat(ctx,radius=10){
 }
 
 const H = {
-  follow_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
+  follow_player: async(ctx,a)=>followWithDefense(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3,false),
   roam: async(ctx)=>{
     const {bot}=ctx;
     while(true){
@@ -1089,7 +1136,7 @@ const H = {
     const dx=ctx.bot.entity.position.x-t.position.x,dz=ctx.bot.entity.position.z-t.position.z,len=Math.hypot(dx,dz)||1;
     return navigate(ctx,{x:ctx.bot.entity.position.x+dx/len*12,y:ctx.bot.entity.position.y,z:ctx.bot.entity.position.z+dz/len*12},3,15000,"escape");
   },
-  chase_target: async(ctx,a)=>follow(ctx,player(ctx.bot,parts(a)[0])?.entity||(()=>{throw new Error("Target player not found.");})(),3),
+  chase_target: async(ctx,a)=>followWithDefense(ctx,player(ctx.bot,parts(a)[0])?.entity||(()=>{throw new Error("Target player not found.");})(),3,false),
   equip_best_weapon: async(ctx)=>{const i=bestWeapon(ctx.bot);if(!i)throw new Error("No weapon found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);return true;},
   equip_best_armor: async(ctx)=>{
     const {bot}=ctx;
@@ -1334,7 +1381,7 @@ const H = {
     throw new Error("Item not found in nearby containers: "+name);
   },
   deliver_item: async(ctx,a)=>H.give_item(ctx,a),
-  escort_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
+  escort_player: async(ctx,a)=>followWithDefense(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3,true),
   protect_player: async(ctx,a)=>protect(ctx,a),
   guard_location: async(ctx,a)=>guard(ctx,coords(a)),  build: async(ctx,a)=>build(ctx,a),
   search: async(ctx,a)=>{const target=required(a,"Search target is required."),e=findSearchTarget(ctx.bot,target,48);if(!e)throw new Error("Search target not found: "+target);if(e.position&&e.height!=null)await lookAtEntity(ctx,e);ctx.log("found="+String(e.name||e.username||e.displayName||"target")+" position="+String(e.position||"unknown"));return true;},
