@@ -114,6 +114,13 @@ const defs = [
 ["extinguish_fire","Extinguish Fire","extinguish_fire","none","finite"],
 ["clear_hostiles","Clear Hostiles","clear_hostiles [radius]","optional_radius","finite"],
 ["recovery_mission","Recovery Mission","recovery_mission","none","finite"],
+["trade_villager","Trade Villager","trade_villager {tradeIndex} {times}","tradeIndex times","finite"],
+["use_anvil","Use Anvil","use_anvil {item} [secondItem] [name]","item secondItem name","finite"],
+["use_brewing_stand","Use Brewing Stand","use_brewing_stand {ingredient} {potion} {count}","ingredient potion count","finite"],
+["use_shulker_box","Use Shulker Box","use_shulker_box {action} {item} {amount} {x} {y} {z}","action item amount coordinates","finite"],
+["fill_bucket","Fill Bucket","fill_bucket {x} {y} {z}","coordinates","finite"],
+["place_liquid","Place Liquid","place_liquid {bucket} {x} {y} {z}","bucket coordinates","finite"],
+["control_vehicle","Control Vehicle","control_vehicle {seconds} {forward} {sideways}","seconds forward sideways","finite"],
 ["goal","Goal","goal {objective}","objective","finite"]
 ];
 
@@ -129,8 +136,8 @@ export const CAPABILITY_IDS = Object.freeze(CAPABILITY_MODES.map(m => m.id));
 export const CAPABILITY_BY_ID = Object.freeze(Object.fromEntries(CAPABILITY_MODES.map(m => [m.id,m])));
 
 export function assertCapabilityRegistry(handlers) {
-  if (CAPABILITY_MODES.length !== 111) throw new Error("Expected exactly 111 capability modes.");
-  if (new Set(CAPABILITY_IDS).size !== 111) throw new Error("Capability IDs must be unique.");
+  if (CAPABILITY_MODES.length !== 111) throw new Error("Expected exactly 118 capability modes.");
+  if (new Set(CAPABILITY_IDS).size !== 118) throw new Error("Capability IDs must be unique.");
   for (const mode of CAPABILITY_MODES) {
     if (!mode.id || !mode.label || !mode.usage || !mode.argSchema || !mode.execution) {
       throw new Error("Incomplete capability contract: " + String(mode.id));
