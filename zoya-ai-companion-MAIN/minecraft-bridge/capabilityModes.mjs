@@ -1,5 +1,5 @@
 
-// ZOYA Minecraft — canonical 109-capability contract registry.
+// ZOYA Minecraft — canonical 111-capability contract registry.
 // This file is the single source of truth for mode identity, arguments,
 // execution class, lifecycle, cancellation and safety metadata.
 
@@ -112,7 +112,9 @@ const defs = [
 ["milk_animal","Milk Animal","milk_animal {animal}","animal","finite"],
 ["shear_animal","Shear Animal","shear_animal {animal}","animal","finite"],
 ["extinguish_fire","Extinguish Fire","extinguish_fire","none","finite"],
-["clear_hostiles","Clear Hostiles","clear_hostiles [radius]","optional_radius","finite"]
+["clear_hostiles","Clear Hostiles","clear_hostiles [radius]","optional_radius","finite"],
+["recovery_mission","Recovery Mission","recovery_mission","none","finite"],
+["goal","Goal","goal {objective}","objective","finite"]
 ];
 
 export const CAPABILITY_MODES = Object.freeze(defs.map(([id,label,usage,argSchema,execution]) => Object.freeze({
@@ -127,8 +129,8 @@ export const CAPABILITY_IDS = Object.freeze(CAPABILITY_MODES.map(m => m.id));
 export const CAPABILITY_BY_ID = Object.freeze(Object.fromEntries(CAPABILITY_MODES.map(m => [m.id,m])));
 
 export function assertCapabilityRegistry(handlers) {
-  if (CAPABILITY_MODES.length !== 109) throw new Error("Expected exactly 109 capability modes.");
-  if (new Set(CAPABILITY_IDS).size !== 109) throw new Error("Capability IDs must be unique.");
+  if (CAPABILITY_MODES.length !== 111) throw new Error("Expected exactly 111 capability modes.");
+  if (new Set(CAPABILITY_IDS).size !== 111) throw new Error("Capability IDs must be unique.");
   for (const mode of CAPABILITY_MODES) {
     if (!mode.id || !mode.label || !mode.usage || !mode.argSchema || !mode.execution) {
       throw new Error("Incomplete capability contract: " + String(mode.id));
