@@ -341,19 +341,17 @@ export function createZoyaBrain({
                   goal: { type: "string" },
                   actions: {
                     type: "array",
-                    minItems: 0,
-                    maxItems: MAX_ACTIONS_PER_PLAN,
                     items: {
                       type: "object",
                       properties: {
-                        mode: { type: "string", minLength: 1, maxLength: 64 },
+                        mode: { type: "string" },
                         args: { type: "string" }
                       },
                       required: ["mode", "args"],
                       additionalProperties: false
                     }
                   },
-                  priority: { type: "number", minimum: 0, maximum: 1 },
+                  priority: { type: "number" },
                   reasonSummary: { type: "string" }
                 },
                 required: ["goal", "actions", "priority", "reasonSummary"],
@@ -362,6 +360,7 @@ export function createZoyaBrain({
             }
           },
           reasoning_format: "hidden",
+          reasoning_effort: "low",
           temperature: 0.15,
           max_completion_tokens: MAX_COMPLETION_TOKENS
         })
