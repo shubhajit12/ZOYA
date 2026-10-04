@@ -128,7 +128,7 @@ export const CAPABILITY_BY_ID = Object.freeze(Object.fromEntries(CAPABILITY_MODE
 
 export function assertCapabilityRegistry(handlers) {
   if (CAPABILITY_MODES.length !== 109) throw new Error("Expected exactly 109 capability modes.");
-  if (new Set(CAPABILITY_IDS).size !== 105) throw new Error("Capability IDs must be unique.");
+  if (new Set(CAPABILITY_IDS).size !== 109) throw new Error("Capability IDs must be unique.");
   for (const mode of CAPABILITY_MODES) {
     if (!mode.id || !mode.label || !mode.usage || !mode.argSchema || !mode.execution) {
       throw new Error("Incomplete capability contract: " + String(mode.id));
