@@ -118,7 +118,7 @@ const defs = [
 export const CAPABILITY_MODES = Object.freeze(defs.map(([id,label,usage,argSchema,execution]) => Object.freeze({
   id, label, usage, argSchema, execution,
   cancellation: execution === "continuous" ? "explicit_stop_or_target_loss" : "explicit_stop_or_completion",
-  safety: ["op_command","pvp","attack_mob","hit","guard","guard_location","defend","escort_player","protect_player","chase_target"].includes(id)
+  safety: ["op_command","pvp","attack_mob","hit","guard","guard_location","defend","escort_player","protect_player","chase_target","clear_hostiles"].includes(id)
     ? "combat_or_privileged"
     : "standard"
 })));
