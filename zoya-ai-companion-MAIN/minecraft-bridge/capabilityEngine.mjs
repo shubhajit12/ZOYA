@@ -748,6 +748,13 @@ const H = {
   ask_permission: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),action=required(q.join(" "),"Action is required.");return ctx.runtime.askOwner?.(u,action,action)===true;},
   whisper_player: async(ctx,a)=>H.private_chat(ctx,a),
   remember_player: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),fact=required(q.join(" "),"Fact is required.");ctx.runtime.rememberPlayer?.(u,{facts:[fact]});return true;},
+  remember_home: async(ctx,a)=>{
+    const p=coords(a);
+    const home=ctx.runtime.rememberHome?.(p.x,p.y,p.z);
+    if(!home) throw new Error("Home memory service is unavailable.");
+    ctx.log?.("[HOME] Remembered at "+home.x+" "+home.y+" "+home.z+" ("+home.dimension+").");
+    return true;
+  },
   report_result: async(ctx,a)=>{ctx.bot.chat(required(a,"Message is required.").slice(0,256));return true;},
   ask_clarification: async(ctx,a)=>H.private_chat(ctx,a),
   retrieve_item: async(ctx,a)=>{
