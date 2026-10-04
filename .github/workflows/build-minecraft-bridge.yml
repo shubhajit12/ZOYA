@@ -2,9 +2,6 @@ name: Build Minecraft Bridge Only
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - minecraft
 
 jobs:
   build-minecraft-bridge:
