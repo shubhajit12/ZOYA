@@ -71,7 +71,8 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
       const task=runtime.getActiveTask?.();
       const health=Number(bot.health ?? 0);
       if(!task||task.cancelled)throw new Error("Task cancelled.");
-      if(mode!=="recover_after_death" && (!Number.isFinite(health)||health<=0))throw new Error("Bot has no health.");
+      const meta=CAPABILITIES.find(item=>item.id===mode);
+      if(meta?.execution!=="observation" && mode!=="recover_after_death" && (!Number.isFinite(health)||health<=0))throw new Error("Bot has no health.");
     },
     terminate:reason=>{const task=runtime.getActiveTask?.();if(task)task.terminationReason=reason;}
   };
@@ -173,7 +174,8 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
         const task=runtime.getActiveTask?.();
         const health=Number(bot.health ?? 0);
         if(!task||task.cancelled)throw new Error("Task cancelled.");
-        if(id!=="recover_after_death" && (!Number.isFinite(health)||health<=0))throw new Error("Bot has no health.");
+        const meta=CAPABILITIES.find(item=>item.id===id);
+        if(meta?.execution!=="observation" && id!=="recover_after_death" && (!Number.isFinite(health)||health<=0))throw new Error("Bot has no health.");
       },
       terminate:reason=>{
         const task=runtime.getActiveTask?.();
