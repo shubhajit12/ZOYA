@@ -1,5 +1,5 @@
 
-// ZOYA Minecraft — canonical 124-capability contract registry.
+// ZOYA Minecraft — canonical 127-capability contract registry.
 // This file is the single source of truth for mode identity, arguments,
 // execution class, lifecycle, cancellation and safety metadata.
 
@@ -116,6 +116,9 @@ const defs = [
 ["recovery_mission","Recovery Mission","recovery_mission","none","finite"],
 ["trade_villager","Trade Villager","trade_villager {tradeIndex} {times}","tradeIndex times","finite"],
 ["use_potion","Use Potion","use_potion {item}","item","finite"],
+["fill_area","Fill Area","fill_area {block} {x1} {y1} {z1} {x2} {y2} {z2}","block coordinates","finite"],
+["clear_area","Clear Area","clear_area {x1} {y1} {z1} {x2} {y2} {z2}","coordinates","finite"],
+["replace_blocks","Replace Blocks","replace_blocks {from} {to} {x1} {y1} {z1} {x2} {y2} {z2}","blocks coordinates","finite"],
 ["use_firework","Use Firework","use_firework [firework_rocket]","optional_item","finite"],
 ["use_ender_chest","Use Ender Chest","use_ender_chest {x} {y} {z}","coordinates","finite"],
 ["collect_honey","Collect Honey","collect_honey {bottle|shears} {x} {y} {z}","tool coordinates","finite"],
@@ -142,8 +145,8 @@ export const CAPABILITY_IDS = Object.freeze(CAPABILITY_MODES.map(m => m.id));
 export const CAPABILITY_BY_ID = Object.freeze(Object.fromEntries(CAPABILITY_MODES.map(m => [m.id,m])));
 
 export function assertCapabilityRegistry(handlers) {
-  if (CAPABILITY_MODES.length !== 124) throw new Error("Expected exactly 124 capability modes.");
-  if (new Set(CAPABILITY_IDS).size !== 124) throw new Error("Capability IDs must be unique.");
+  if (CAPABILITY_MODES.length !== 127) throw new Error("Expected exactly 127 capability modes.");
+  if (new Set(CAPABILITY_IDS).size !== 127) throw new Error("Capability IDs must be unique.");
   for (const mode of CAPABILITY_MODES) {
     if (!mode.id || !mode.label || !mode.usage || !mode.argSchema || !mode.execution) {
       throw new Error("Incomplete capability contract: " + String(mode.id));
