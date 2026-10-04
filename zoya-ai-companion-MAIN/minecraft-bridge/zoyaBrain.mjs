@@ -422,7 +422,7 @@ export function createZoyaBrain({
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const rateMatch = message.match(/try again in ([0-9]+(?:\\.[0-9]+)?)s/i);
+      const rateMatch = message.match(/try again in ([0-9]+(?:\.[0-9]+)?)s/i);
       if (/rate_limit_exceeded|rate limit reached/i.test(message)) {
         const retryMs = rateMatch
           ? Math.ceil(Number(rateMatch[1]) * 1000) + 1000
