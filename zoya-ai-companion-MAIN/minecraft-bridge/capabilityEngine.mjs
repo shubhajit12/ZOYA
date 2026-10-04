@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box","ender_chest"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "combat-survival-interruption-v1-workstations-liquids-vehicle-player-interactions-2026-10-04";
+const CAPABILITY_ENGINE_PATCH = "combat-survival-interruption-v1-area-workstations-liquids-vehicle-player-interactions-2026-10-04";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -649,6 +649,51 @@ async function useConduit(ctx,a){
   if(!b||b.name!=="conduit")throw new Error("Target is not a conduit.");
   await navigate(ctx,b.position,3.5,15000,"conduit");
   active(ctx);await ctx.bot.activateBlock(b);ctx.log?.("[CONDUIT] activated/interacted.");return true;
+}
+
+function boundedArea(a,label){
+  const q=parts(a), name=label==="fill_area"?required(q.shift(),"Block is required."):null;
+  const nums=q.map(Number);
+  if(nums.length!==6||nums.some(n=>!Number.isFinite(n)))throw new Error(label+" requires x1 y1 z1 x2 y2 z2.");
+  const p1={x:Math.floor(nums[0]),y:Math.floor(nums[1]),z:Math.floor(nums[2])},p2={x:Math.floor(nums[3]),y:Math.floor(nums[4]),z:Math.floor(nums[5])};
+  const min={x:Math.min(p1.x,p2.x),y:Math.min(p1.y,p2.y),z:Math.min(p1.z,p2.z)},max={x:Math.max(p1.x,p2.x),y:Math.max(p1.y,p2.y),z:Math.max(p1.z,p2.z)};
+  const volume=(max.x-min.x+1)*(max.y-min.y+1)*(max.z-min.z+1);
+  if(volume<1||volume>512)throw new Error(label+" area must contain 1-512 blocks.");
+  return {name,min,max,volume};
+}
+async function fillArea(ctx,a){
+  const {name,min,max}=boundedArea(a,"fill_area");let placed=0;
+  for(let y=min.y;y<=max.y;y++)for(let z=min.z;z<=max.z;z++)for(let x=min.x;x<=max.x;x++){
+    active(ctx);if((placed%8)===0)await defendNearbyThreat(ctx,10);
+    const b=ctx.bot.blockAt(new ctx.bot.entity.position.constructor(x,y,z));
+    if(b?.name===name){placed++;continue;}
+    if(b?.name!=="air")continue;
+    await placeAt(ctx,name,{x,y,z});placed++;
+  }
+  ctx.log?.("[AREA] filled "+String(placed)+" block(s) with "+name);return true;
+}
+async function clearArea(ctx,a){
+  const {min,max}=boundedArea(a,"clear_area");let cleared=0;
+  for(let y=min.y;y<=max.y;y++)for(let z=min.z;z<=max.z;z++)for(let x=min.x;x<=max.x;x++){
+    active(ctx);if((cleared%8)===0)await defendNearbyThreat(ctx,10);
+    const b=ctx.bot.blockAt(new ctx.bot.entity.position.constructor(x,y,z));
+    if(!b||b.name==="air")continue;
+    await digBlock(ctx,b);cleared++;
+  }
+  ctx.log?.("[AREA] cleared "+String(cleared)+" block(s)");return true;
+}
+async function replaceBlocks(ctx,a){
+  const q=parts(a),from=required(q.shift(),"Source block is required."),to=required(q.shift(),"Replacement block is required.");
+  const {min,max}=boundedArea(q.join(" "),"replace_blocks");let changed=0;
+  for(let y=min.y;y<=max.y;y++)for(let z=min.z;z<=max.z;z++)for(let x=min.x;x<=max.x;x++){
+    active(ctx);if((changed%8)===0)await defendNearbyThreat(ctx,10);
+    const b=ctx.bot.blockAt(new ctx.bot.entity.position.constructor(x,y,z));
+    if(!b||b.name!==from)continue;
+    await digBlock(ctx,b);
+    await placeAt(ctx,to,{x,y,z});
+    changed++;
+  }
+  ctx.log?.("[AREA] replaced "+String(changed)+" block(s) "+from+" -> "+to);return true;
 }
 async function clearHostiles(ctx,a){
   const raw=String(a??"").trim();
@@ -1412,6 +1457,9 @@ const H = {
   shear_animal: async(ctx,a)=>shearAnimal(ctx,a),
   extinguish_fire: async(ctx)=>extinguishFire(ctx),
   clear_hostiles: async(ctx,a)=>clearHostiles(ctx,a),
+  fill_area: async(ctx,a)=>fillArea(ctx,a),
+  clear_area: async(ctx,a)=>clearArea(ctx,a),
+  replace_blocks: async(ctx,a)=>replaceBlocks(ctx,a),
   use_potion: async(ctx,a)=>usePotion(ctx,a),
   use_firework: async(ctx,a)=>useFirework(ctx,a),
   use_ender_chest: async(ctx,a)=>useEnderChest(ctx,a),
