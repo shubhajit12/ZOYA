@@ -417,7 +417,7 @@ function disconnect({ resetReconnect = true } = {}) {
 }
 
 function connect(config, { preserveReconnectAttempt = false } = {}) {
-  capabilityDebugMode = CAPABILITY_DEBUG_ENV || config.capabilityDebugMode === true;
+  capabilityDebugMode = CAPABILITY_DEBUG_ENV;
   currentConfig = { ...config, capabilityDebugMode };
   disconnect({ resetReconnect: !preserveReconnectAttempt });
   currentConfig = { ...config, capabilityDebugMode };
