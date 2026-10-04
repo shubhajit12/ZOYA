@@ -101,7 +101,7 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
     print("╔══════════════════════════════════════════════════════════════╗");
     print("║                 ZOYA MINECRAFT TEST CONSOLE                ║");
     print("╠══════════════════════════════════════════════════════════════╣");
-    print("║  93 clean capability modes | Groq planner: OFF             ║");
+    print("║  "+CAPABILITIES.length+" clean capability modes | Groq planner: OFF             ║");
     print("║  STOP = cancel the active task                             ║");
     print("╚══════════════════════════════════════════════════════════════╝");
     for(let i=0;i<CAPABILITIES.length;i++){
@@ -181,7 +181,7 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
 
   const choose=async()=>{
     while(!closed){
-      const raw=String(await ask("Mode [0-92 / stop / modes / quit]: ")).trim();
+      const raw=String(await ask("Mode [0-"+(CAPABILITIES.length-1)+" / stop / modes / quit]: ")).trim();
       if(!raw)continue;
       if(raw.toLowerCase()==="quit"||raw.toLowerCase()==="exit"){closed=true;rl.close();break;}
       if(raw.toLowerCase()==="modes"){printModes();continue;}
@@ -199,7 +199,7 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
     }
   };
 
-  print("Clean 93-mode tester loaded.");
+  print("Clean "+CAPABILITIES.length+"-mode tester loaded.");
   print("Every mode resolves through capabilityEngine.mjs; no old directCapability dispatcher is used.");
   printModes();
   void choose();
