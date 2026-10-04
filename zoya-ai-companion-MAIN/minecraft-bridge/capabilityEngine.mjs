@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v7-shield-offhand-2026-10-04";
+const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v5-fish-reachable-spot-2026-10-03";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -357,6 +357,43 @@ async function ensureCraftMaterials(ctx,name,seen=new Set()){
   for(const ingredient of recipes[0].delta||[]){const id=ingredient?.id,need=Math.max(0,Number(ingredient?.count)||0);if(id==null||need<=0)continue;const ing=bot.registry.items[id],ingName=String(ing?.name||id),have=countItem(bot,ingName);if(have>=need)continue;const missing=need-have,ingRecipes=bot.recipesFor(id,null,missing,null);if(ingRecipes.length){await ensureCraftMaterials(ctx,ingName,seen);await craft(ctx,ingName,missing);}else for(let i=0;i<missing;i++){active(ctx);const block=findBlockDroppingItem(bot,ingName,48);if(!block)throw new Error("Missing raw material not found nearby: "+ingName);await digBlock(ctx,block);}}
   seen.delete(key);return true;
 }
+function findFishingSpot(bot,maxDistance=32){
+  const positions=bot.findBlocks?.({
+    matching:b=>b?.name==="water"||b?.name==="flowing_water",
+    maxDistance,
+    count:64
+  })||[];
+  const origin=bot.entity.position;
+  const hostiles=Object.values(bot.entities||{})
+    .filter(e=>e?.position&&HOSTILES.has(entityName(e))&&e.isValid!==false);
+  const offsets=[
+    [1,0],[-1,0],[0,1],[0,-1],
+    [1,1],[1,-1],[-1,1],[-1,-1]
+  ];
+  const candidates=[];
+  for(const p of positions){
+    const water=bot.blockAt(p);
+    if(!water) continue;
+    for(const [dx,dz] of offsets){
+      const stand=bot.blockAt(new bot.entity.position.constructor(p.x+dx,p.y,p.z+dz));
+      const standHead=bot.blockAt(new bot.entity.position.constructor(p.x+dx,p.y+1,p.z+dz));
+      const floor=bot.blockAt(new bot.entity.position.constructor(p.x+dx,p.y-1,p.z+dz));
+      if(stand?.name!=="air"||standHead?.name!=="air"||floor?.boundingBox!=="block") continue;
+      const standPos=stand.position.offset(0.5,0,0.5);
+      const waterPos=water.position.offset(0.5,0.2,0.5);
+      const hostilePenalty=hostiles.some(e=>e.position.distanceTo(water.position)<8)?1000:0;
+      candidates.push({
+        water,
+        stand,
+        standPos,
+        waterPos,
+        score:origin.distanceTo(standPos)+hostilePenalty
+      });
+    }
+  }
+  candidates.sort((a,b)=>a.score-b.score);
+  return candidates[0]||null;
+}
 function findFishingSpots(bot,maxDistance=48){
   const positions=bot.findBlocks?.({
     matching:b=>String(b?.name||"")==="water",
@@ -421,12 +458,24 @@ function findBuildSupport(bot,maxDistance=6){
 const H = {
   follow_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
   roam: async(ctx)=>{
-    const {bot}=ctx; const angle=Math.random()*Math.PI*2, r=8+Math.random()*12;
-    return navigate(ctx,{x:bot.entity.position.x+Math.cos(angle)*r,y:bot.entity.position.y,z:bot.entity.position.z+Math.sin(angle)*r},2,20000,"roam");
+    const {bot}=ctx;
+    while(true){
+      active(ctx);
+      const angle=Math.random()*Math.PI*2, r=8+Math.random()*12;
+      await navigate(ctx,{x:bot.entity.position.x+Math.cos(angle)*r,y:bot.entity.position.y,z:bot.entity.position.z+Math.sin(angle)*r},2,20000,"roam");
+      await wait(ctx,250);
+    }
   },
   pvp: async(ctx,a)=>{
-    const p=player(ctx.bot,a); if(!p?.entity)throw new Error("Player not found.");
-    return attack(ctx,p.entity,60000);
+    const username=required(a,"Player username is required.");
+    while(true){
+      active(ctx);
+      const p=player(ctx.bot,username);
+      if(!p?.entity)throw new Error("Player not found: "+username);
+      await attack(ctx,p.entity,5000);
+      active(ctx);
+      await wait(ctx,100);
+    }
   },
   hit: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return attack(ctx,p.entity,10000);},
   gather_resources: async(ctx,a)=>{
@@ -677,7 +726,12 @@ const H = {
   sleep: async(ctx)=>{const b=ctx.bot.findBlock({matching:x=>String(x?.name||"").endsWith("_bed"),maxDistance:24});if(!b)throw new Error("No bed nearby.");await navigate(ctx,b.position,3.5,30000,"bed navigation");await ctx.bot.sleep(b);return true;},
   find_player: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p)throw new Error("Player not found.");ctx.log(p.username);return true;},
   find_entity: async(ctx,a)=>{const e=nearest(ctx.bot,e=>!a||entityName(e).includes(String(a).toLowerCase()),48);if(!e)throw new Error("Entity not found.");ctx.log(entityName(e));return true;},
-  find_item_world: async(ctx,a)=>{const e=nearest(ctx.bot,e=>e.name==="item"&&(!a||entityName(e).includes(String(a).toLowerCase())),48);if(!e)throw new Error("Dropped item not found.");ctx.log("item at "+e.position);return true;},
+  find_item_world: async(ctx,a)=>{
+    const e=nearest(ctx.bot,e=>String(e?.name||"").toLowerCase()==="item"&&droppedItemMatches(ctx.bot,e,a),48);
+    if(!e)throw new Error("Dropped item not found"+(a?": "+String(a):"."));
+    ctx.log("item="+String(a||"unknown")+" at "+e.position);
+    return true;
+  },
   check_nearby: async(ctx)=>{ctx.log(Object.values(ctx.bot.entities||{}).filter(e=>e?.position&&e!==ctx.bot.entity&&distance(ctx.bot,e)<=16).map(entityName).join(", ")||"none");return true;},
   check_environment: async(ctx)=>{ctx.log("position="+ctx.bot.entity.position.x.toFixed(2)+" "+ctx.bot.entity.position.y.toFixed(2)+" "+ctx.bot.entity.position.z.toFixed(2)+" dimension="+ctx.bot.game?.dimension);return true;},
   detect_hostiles: async(ctx)=>{const h=Object.values(ctx.bot.entities||{}).filter(e=>e?.position&&HOSTILES.has(entityName(e))&&distance(ctx.bot,e)<=16);ctx.log(h.map(entityName).join(", ")||"none");return true;},
@@ -707,7 +761,16 @@ const H = {
   build: async(ctx,a)=>build(ctx,a),
   search: async(ctx,a)=>{const target=required(a,"Search target is required."),e=findSearchTarget(ctx.bot,target,48);if(!e)throw new Error("Search target not found: "+target);if(e.position&&e.height!=null)await lookAtEntity(ctx,e);ctx.log("found="+String(e.name||e.username||e.displayName||"target")+" position="+String(e.position||"unknown"));return true;},
   watch: async(ctx,a)=>{const s=required(a,"Watch target is required.");while(true){active(ctx);const e=player(ctx.bot,s)?.entity||nearest(ctx.bot,e=>entityName(e).includes(s.toLowerCase()),48);if(!e){ctx.terminate("target_lost");return false;}await lookAtEntity(ctx,e);await wait(ctx,250);}},
-  coordinate_with_player: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),task=q.join(" ")||"ready";const p=player(ctx.bot,u);if(!p?.entity)throw new Error("Player not found.");await navigate(ctx,p.entity.position,3,30000,"coordinate");ctx.bot.whisper(u,"Ready: "+task);return true;},
+  coordinate_with_player: async(ctx,a)=>{
+    const q=parts(a),u=required(q.shift(),"Username is required."),task=q.join(" ")||"ready";
+    while(true){
+      active(ctx);
+      const p=player(ctx.bot,u);
+      if(!p?.entity){ctx.terminate("target_lost");return false;}
+      ctx.bot.whisper(u,"Ready: "+task);
+      await follow(ctx,p.entity,3);
+    }
+  },
   op_command: async(ctx,a)=>{const c=required(a,"Command is required.");ctx.bot.chat(c.startsWith("/")?c:"/"+c);return true;}
 };
 
@@ -1115,3 +1178,90 @@ async function protect(ctx,a){
 async function give(ctx,a){
   const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required."),p=player(ctx.bot,u)?.entity,i=inventoryItem(ctx.bot,name);
   if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,20000,"delivery");await ctx.bot.equip(i,"hand");await ctx.bot.tossStack(i);return true;
+}
+async function storage(ctx,a,deposit){
+  const q=parts(a),name=required(q.shift(),"Item is required."),p=coords(q.splice(0,3).join(" ")),c=await container(ctx,p);
+  try{
+    const type=ctx.bot.registry.itemsByName[name.toLowerCase().replace(/\s+/g,"_")];if(!type)throw new Error("Unknown item: "+name);
+    if(deposit){const n=countItem(ctx.bot,name);if(n<=0)throw new Error("Item not available.");await c.deposit(type.id,null,n,null);}
+    else {const n=Math.max(1,Number(q[0])||1);await c.withdraw(type.id,null,n,null);}
+    return true;
+  }finally{try{await c.close();}catch{}}
+}
+async function smelt(ctx,a){
+  const name=required(a,"Smelting input is required.").toLowerCase();
+  const b=ctx.bot.findBlock({matching:x=>/furnace/.test(String(x?.name||"")),maxDistance:24});
+  if(!b)throw new Error("No furnace nearby.");
+  await navigate(ctx,b.position,3.5,30000,"furnace");
+  const f=await ctx.bot.openFurnace(b);
+  try{
+    const input=inventoryItem(ctx.bot,name);
+    const fuel=inventoryItem(ctx.bot,"coal")||inventoryItem(ctx.bot,"charcoal")||inventoryItem(ctx.bot,"planks");
+    if(!input)throw new Error("Smelting input not found.");
+    if(!fuel)throw new Error("Fuel not found.");
+    const beforeOutput=f.outputItem?.();
+    await f.putInput(input.type??input.id,null,1);
+    await f.putFuel(fuel.type??fuel.id,null,1);
+    const deadline=Date.now()+30000;
+    while(Date.now()<deadline){
+      active(ctx);
+      const output=f.outputItem?.();
+      if(output && (!beforeOutput || output.count>beforeOutput.count || output.type!==beforeOutput.type)){
+        await f.takeOutput();
+        ctx.log?.("[SMELT] output ready: "+String(output.name||"item"));
+        return true;
+      }
+      await wait(ctx,250);
+    }
+    throw new Error("Furnace did not produce output before timeout.");
+  }finally{try{await f.close();}catch{}}
+}
+async function findSafe(ctx){
+  const {bot}=ctx;
+  for(let r=3;r<=24;r+=3) for(let i=0;i<16;i++){
+    active(ctx); const a=i*Math.PI/8;
+    const x=Math.floor(bot.entity.position.x+Math.cos(a)*r), z=Math.floor(bot.entity.position.z+Math.sin(a)*r), y=Math.floor(bot.entity.position.y);
+    const foot=bot.blockAt(new bot.entity.position.constructor(x,y,z));
+    const head=bot.blockAt(new bot.entity.position.constructor(x,y+1,z));
+    const floor=bot.blockAt(new bot.entity.position.constructor(x,y-1,z));
+    const hostiles=Object.values(bot.entities||{}).some(e=>e?.position&&HOSTILES.has(entityName(e))&&e.position.distanceTo(new bot.entity.position.constructor(x,y,z))<5);
+    if(!hostiles && foot?.name==="air" && head?.name==="air" && floor?.name!=="air" && floor?.boundingBox==="block")
+      return navigate(ctx,{x:x+0.5,y,z:z+0.5},1.5,10000,"safe location");
+  }
+  throw new Error("No safe location found in loaded area.");
+}
+
+async function build(ctx,a){
+  const m=required(a,"Build plan is required.").match(/^(pillar|tower|line)\s+(\S+)\s+(\d+)$/i);
+  if(!m)throw new Error("Build plan: pillar|tower|line <block> <count>.");
+  const kind=m[1].toLowerCase(),name=m[2],n=Math.max(1,Number(m[3]));
+  const support=findBuildSupport(ctx.bot,6);
+  if(!support)throw new Error("No safe solid build location nearby.");
+  const placed=[];
+  for(let i=0;i<n;i++){
+    active(ctx);
+    const p=kind==="line"
+      ? {x:support.x+i,y:support.y,z:support.z}
+      : {x:support.x,y:support.y+i,z:support.z};
+    const b=ctx.bot.blockAt(vec(ctx.bot,p));
+    if(b?.name===name){placed.push(p);continue;}
+    if(b?.name!=="air")throw new Error("Build target occupied at ("+p.x+", "+p.y+", "+p.z+").");
+    await placeAt(ctx,name,p);
+    placed.push(p);
+  }
+  ctx.log?.("[BUILD] "+kind+" placed="+String(placed.length)+" block="+name);
+  return true;
+}
+
+export const RUNTIME_ACTIONS = new Set();
+export const HANDLERS = Object.freeze(H);
+assertCapabilityRegistry(HANDLERS);
+
+export async function executeCapability(id,arg,ctx){
+  const mode=CAPABILITY_MODES.find(x=>x.id===id);
+  if(!mode)throw new Error("Unknown capability: "+id);
+  const handler=HANDLERS[id];
+  if(typeof handler!=="function")throw new Error("Capability has no handler: "+id);
+  if(id==="stop"){ctx.runtime.cancelCurrentTask?.("manual stop");return true;}
+  return handler(ctx,arg);
+}
