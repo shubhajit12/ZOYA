@@ -65,8 +65,13 @@ jobs:
             if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
             $registeredCapabilities = [regex]::Matches($modesSource, '\["[^"]+","[^"]+","[^"]+","[^"]+","[^"]+"\]').Count
             $handlerCount = [regex]::Matches($engineSource, '^  [a-z0-9_]+: async', [System.Text.RegularExpressions.RegexOptions]::Multiline).Count
+            $namedHandlerCount = 0
+            foreach ($named in @('coordinate','build')) {
+              if ($engineSource -match ("async function " + $named + "\\(")) { $namedHandlerCount++ }
+            }
+            $logicalHandlerCount = $handlerCount + $namedHandlerCount
             if ($registeredCapabilities -ne 168) { throw "Expected 168 clean capability definitions, found $registeredCapabilities." }
-            if ($handlerCount -ne 168) { throw "Expected 168 clean capability handlers, found $handlerCount." }
+            if ($logicalHandlerCount -ne 168) { throw "Expected 168 clean capability handlers, found $logicalHandlerCount." }
             if ($modesSource -notmatch 'CAPABILITY_MODES =') { throw 'Canonical capability registry is missing.' }
             if ($engineSource -notmatch 'export async function executeCapability') { throw 'Clean capability executor is missing.' }
             if ($engineSource -match 'ctx\.legacy') { throw 'Clean capability engine must not fall back to legacy handlers.' }
