@@ -78,7 +78,33 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
     if(RUNTIME_EXECUTED.has(mode))return executeCapability(mode,arg,context);
     return runtime.runManualCapability("clean:"+mode,async task=>{
       context.task=task;
-      return executeCapability(mode,arg,context);
+
+      // Guard is a persistent world assignment, not a one-life action.
+      // If Zoya dies, the runtime deliberately keeps the guard task paused
+      // (with all physical controls stopped). Wait for normal Mineflayer
+      // respawn/spawn health restoration, then execute the same guard command
+      // again using the original coordinates. STOP still cancels the task.
+      const resumableGuard = mode === "guard" || mode === "guard_location";
+      while(true){
+        try{
+          return await executeCapability(mode,arg,context);
+        }catch(error){
+          const health=Number(bot.health ?? 0);
+          if(!resumableGuard || task.cancelled || health > 0){
+            throw error;
+          }
+
+          log("[MODE] "+mode+" paused: Zoya died. Waiting for respawn before returning to the guard post.");
+          while(!task.cancelled && Number(bot.health ?? 0) <= 0){
+            await sleep(250);
+          }
+          if(task.cancelled) throw error;
+
+          // Mineflayer emits spawn again after death. Waiting for health > 0
+          // also prevents navigation during the pre-spawn transition.
+          log("[MODE] "+mode+" respawn detected. Returning to the guard post.");
+        }
+      }
     });
   }finally{
     if(bot.__zoyaCapabilityRuntime===runtime){try{delete bot.__zoyaCapabilityRuntime;}catch{}}
