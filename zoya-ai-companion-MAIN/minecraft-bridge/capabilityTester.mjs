@@ -69,7 +69,9 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
     },
     assertActive:()=>{
       const task=runtime.getActiveTask?.();
+      const health=Number(bot.health ?? 0);
       if(!task||task.cancelled)throw new Error("Task cancelled.");
+      if(!Number.isFinite(health)||health<=0)throw new Error("Bot has no health.");
     },
     terminate:reason=>{const task=runtime.getActiveTask?.();if(task)task.terminationReason=reason;}
   };
@@ -81,32 +83,38 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
 
       // Persistent assignments survive death as intent. Their physical
       // work is paused by minecraftRuntime.mjs and restarted only after
-      // health is restored. Finite/combat actions remain one-life operations.
+      // health is restored. executeCapability() uses runManualCapability(),
+      // which deliberately converts handler errors into a false result, so
+      // death recovery must inspect the result + health after each run rather
+      // than waiting for an exception that can never escape that wrapper.
       const resumablePersistent = new Set([
         "follow_player","roam","explore","defend","guard","guard_location",
         "chase_target","escort_player","protect_player","watch",
         "coordinate_with_player"
       ]).has(mode);
       while(true){
-        try{
-          return await executeCapability(mode,arg,context);
-        }catch(error){
+        let result;
+        try {
+          result = await executeCapability(mode,arg,context);
+        } catch (error) {
           const health=Number(bot.health ?? 0);
-          if(!resumablePersistent || task.cancelled || health > 0){
-            throw error;
-          }
-
-          log("[MODE] "+mode+" paused: Zoya died. Waiting for respawn before resuming the assignment.");
-          while(!task.cancelled && Number(bot.health ?? 0) <= 0){
-            await sleep(250);
-          }
-          if(task.cancelled) throw error;
-
-          // Mineflayer restores the bot during its death/respawn lifecycle.
-          // Waiting for positive health prevents navigation/action calls
-          // during the pre-spawn transition.
-          log("[MODE] "+mode+" respawn detected. Resuming the assignment.");
+          if(!resumablePersistent || health > 0) throw error;
+          result=false;
         }
+
+        const health=Number(bot.health ?? 0);
+        const last=runtime.getLastTaskResult?.()||null;
+        if(!resumablePersistent || health > 0 || last?.status === "cancelled") return result;
+
+        log("[MODE] "+mode+" paused: Zoya died. Waiting for respawn before resuming the assignment.");
+        while(Number(bot.health ?? 0) <= 0){
+          await sleep(250);
+        }
+
+        // Mineflayer restores the bot during its death/respawn lifecycle.
+        // Waiting for positive health prevents navigation/action calls
+        // during the pre-spawn transition.
+        log("[MODE] "+mode+" respawn detected. Resuming the assignment.");
       }
     });
   }finally{
@@ -163,7 +171,9 @@ export function startCapabilityTester({bot,runtime,log=console.log}){
       },
       assertActive:()=>{
         const task=runtime.getActiveTask?.();
+        const health=Number(bot.health ?? 0);
         if(!task||task.cancelled)throw new Error("Task cancelled.");
+        if(!Number.isFinite(health)||health<=0)throw new Error("Bot has no health.");
       },
       terminate:reason=>{
         const task=runtime.getActiveTask?.();
