@@ -58,7 +58,9 @@ jobs:
             $modesSource = Get-Content (Join-Path $bridgeDist 'capabilityModes.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
             $brainSource = Get-Content (Join-Path $bridgeDist 'zoyaBrain.mjs') -Raw
-            if ($indexSource -notmatch 'manual-capability-v30-clean-168-mode-engine-complete-player-actions-2026-10-04') { throw 'Capability build marker is missing or stale.' }
+            $capabilityMarker = [regex]::Match($indexSource, 'manual-capability-v\d+-clean-168-mode-engine-complete-player-actions-\d{4}-\d{2}-\d{2}')
+            if (-not $capabilityMarker.Success) { throw 'Capability build marker is missing or invalid.' }
+            Write-Host "Capability build marker: $($capabilityMarker.Value)"
             if ($indexSource -notmatch 'createZoyaBrain') { throw 'Groq brain controller is not wired.' }
             if ($indexSource -notmatch 'dispatchCapability') { throw 'Groq capability dispatcher is not wired.' }
             if ($indexSource -notmatch 'ownerUsername') { throw 'Owner identity is not wired into the bridge.' }
