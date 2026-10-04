@@ -61,6 +61,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   const memory = readJson(memoryPath, DEFAULT_MEMORY);
   if (!memory.players) memory.players = {};
   if (!Array.isArray(memory.events)) memory.events = [];
+  if (!memory.locations) memory.locations = {};
   const owner = String(config.ownerUsername || "").trim();
   const ownerKey = owner.toLowerCase();
   const pending = new Map();
@@ -136,6 +137,31 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     rememberEvent("home_set", { x: nx, y: ny, z: nz, dimension: memory.home.dimension });
     log("[MEMORY] Home remembered at " + nx + " " + ny + " " + nz + " (" + memory.home.dimension + ").");
     return memory.home;
+  }
+
+  function forgetHome() {
+    delete memory.home;
+    saveMemory();
+    rememberEvent("home_forgotten", {});
+    log("[MEMORY] Home forgotten.");
+    return true;
+  }
+  function rememberLocation(name, x, y, z) {
+    const key = String(name || "").trim().toLowerCase().replace(/\s+/g, "_");
+    const nx=Number(x), ny=Number(y), nz=Number(z);
+    if (!key) throw new Error("Location name is required.");
+    if (![nx,ny,nz].every(Number.isFinite)) throw new Error("Location coordinates must be finite numbers.");
+    if (!memory.locations) memory.locations = {};
+    memory.locations[key] = { name: String(name).trim(), x:nx, y:ny, z:nz, dimension:String(bot.game?.dimension||"unknown"), updatedAt:new Date().toISOString() };
+    saveMemory();
+    rememberEvent("location_set",{name:String(name).trim(),x:nx,y:ny,z:nz,dimension:memory.locations[key].dimension});
+    log("[MEMORY] Location remembered: "+String(name).trim()+" at "+nx+" "+ny+" "+nz+" ("+memory.locations[key].dimension+").");
+    return memory.locations[key];
+  }
+  function forgetLocation(name) {
+    const key=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");
+    if(!memory.locations?.[key]) return false;
+    delete memory.locations[key]; saveMemory(); rememberEvent("location_forgotten",{name:key}); return true;
   }
 
 
@@ -1304,7 +1330,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return false;
   }
 
-  bot.on("death", () => { rememberEvent("death", { username: bot.username || "Zoya" }); interruptMovement("death"); });
+  bot.on("death", () => { const pos=bot.entity?.position; const death={ username:bot.username||"Zoya", x:pos?.x??null, y:pos?.y??null, z:pos?.z??null, dimension:String(bot.game?.dimension||"unknown") }; memory.lastDeath=death; rememberEvent("death", death); saveMemory(); interruptMovement("death"); });
   bot.on("respawn", () => { rememberEvent("respawn", { username: bot.username || "Zoya" }); wakeBrain(); });
   bot.on("kicked", reason => rememberEvent("kicked", { reason: String(reason || "unknown").slice(0, 300) }));
   let previousHealth = bot.health ?? 20;
@@ -1347,6 +1373,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     memory,
     rememberPlayer,
     rememberHome,
+    forgetHome,
+    rememberLocation,
+    forgetLocation,
     rememberEvent,
     permissionFor,
     askOwner,
