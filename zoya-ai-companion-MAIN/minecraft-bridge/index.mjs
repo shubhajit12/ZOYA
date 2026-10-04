@@ -116,8 +116,27 @@ function ensureZoyaBrain() {
     isMovementEnabled: () => movementEnabled,
     roam: async () => minecraftRuntime ? minecraftRuntime.execute("safe_roam") : false,
     executeAction: async (action, options = {}) => minecraftRuntime ? minecraftRuntime.execute(action, options) : false,
-    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-20) } : null,
+    dispatchCapability: async (mode, args = "") => minecraftRuntime && bot
+      ? dispatchCapability({ bot, runtime: minecraftRuntime, id: mode, arg: args, log: debugLog })
+      : false,
+    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-30), home: minecraftRuntime.memory.home || null, locations: minecraftRuntime.memory.locations || {} } : null,
     getActiveTask: () => minecraftRuntime ? minecraftRuntime.getActiveTask() : null,
+    getOwnerUsername: () => String(currentConfig?.ownerUsername || "").trim(),
+    askOwnerPermission: (requester, action, displayAction, metadata = {}) => {
+      if (!minecraftRuntime) return false;
+      return minecraftRuntime.askOwner(
+        requester,
+        action,
+        displayAction,
+        async () => {
+          const mode = String(metadata.mode || "").trim().toLowerCase();
+          const args = String(metadata.args || "").trim();
+          if (!mode) return false;
+          if (mode === "stop") return minecraftRuntime.cancelCurrentTask("owner-approved cancellation");
+          return dispatchCapability({ bot, runtime: minecraftRuntime, id: mode, arg: args, log: debugLog });
+        }
+      );
+    },
     log: debugLog
   });
   return zoyaBrain;
@@ -397,15 +416,12 @@ function disconnect({ resetReconnect = true } = {}) {
 }
 
 function connect(config, { preserveReconnectAttempt = false } = {}) {
-  // Manual capability verification is the active development phase.
-  // It must be impossible for a stale packaged config to silently enable Groq.
-  capabilityDebugMode = true;
-  currentConfig = { ...config, capabilityDebugMode: true };
+  capabilityDebugMode = CAPABILITY_DEBUG_ENV || config.capabilityDebugMode === true;
+  currentConfig = { ...config, capabilityDebugMode };
   disconnect({ resetReconnect: !preserveReconnectAttempt });
-  currentConfig = { ...config, capabilityDebugMode: true };
-  debugLog("[CAPABILITY TESTER] Capability mode is ACTIVE. Groq brain is HARD-DISABLED for this build.");
-  debugLog("[CAPABILITY TESTER] Build marker: " + CAPABILITY_BUILD_VERSION);
-  debugLog("[CAPABILITY TESTER] Effective config: capabilityDebugMode=true; Groq planner unavailable.");
+  currentConfig = { ...config, capabilityDebugMode };
+  debugLog("[ZOYA Minecraft Bridge] Mode: " + (capabilityDebugMode ? "manual capability tester" : "Groq brain controller") + ".");
+  debugLog("[ZOYA Minecraft Bridge] Owner: " + (String(config.ownerUsername || "").trim() || "NOT CONFIGURED") + ".");
   const host = String(config.host || "127.0.0.1");
   const port = Number(config.port || 25565);
   const username = String(config.username || "Zoya");
@@ -457,7 +473,15 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
           bot,
           config: { ...config, capabilityDebugMode },
           stateDir: path.dirname(CONFIG_PATH),
-          wakeBrain: () => { if (!capabilityDebugMode) void zoyaBrain?.thinkNow(); },
+          wakeBrain: (reason = "event", request = null) => {
+            if (capabilityDebugMode) return false;
+            if (reason === "player_message" && request) {
+              zoyaBrain?.handlePlayerMessage(request.requester, request.message, request.channel);
+              return true;
+            }
+            zoyaBrain?.thinkNow();
+            return true;
+          },
           log: debugLog
         });
         if (!capabilityDebugMode) ensureZoyaBrain().start();
@@ -679,9 +703,8 @@ server.listen(PORT, "127.0.0.1", () => {
     autoReconnect: true,
     capabilityDebugMode: true
   };
-  // Current developer phase: never silently fall back to Groq when the capability flag is omitted.
-  if (config.capabilityDebugMode === undefined) config.capabilityDebugMode = true;
-  if (config.autoConnect === true) connect({ ...config, capabilityDebugMode: true });
+  if (config.capabilityDebugMode === undefined) config.capabilityDebugMode = CAPABILITY_DEBUG_ENV;
+  if (config.autoConnect === true) connect({ ...config, capabilityDebugMode: config.capabilityDebugMode });
 });
 function shutdown() { clearInterval(stateTicker); disconnect(); server.close(() => process.exit(0)); }
 process.on("SIGINT", shutdown);
