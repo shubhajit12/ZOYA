@@ -57,9 +57,14 @@ jobs:
             $engineSource = Get-Content (Join-Path $bridgeDist 'capabilityEngine.mjs') -Raw
             $modesSource = Get-Content (Join-Path $bridgeDist 'capabilityModes.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-            if ($indexSource -notmatch 'manual-capability-v30-clean-168-mode-engine-complete-player-actions-2026-10-04') { throw 'Manual capability build marker is missing or stale.' }
-            if ($indexSource -notmatch 'capabilityDebugMode = true') { throw 'Capability build is not hard-locked to Groq-disabled mode.' }
-            if ($indexSource -notmatch 'Groq brain is HARD-DISABLED') { throw 'Groq-disabled capability guard is missing.' }
+            $brainSource = Get-Content (Join-Path $bridgeDist 'zoyaBrain.mjs') -Raw
+            if ($indexSource -notmatch 'manual-capability-v30-clean-168-mode-engine-complete-player-actions-2026-10-04') { throw 'Capability build marker is missing or stale.' }
+            if ($indexSource -notmatch 'createZoyaBrain') { throw 'Groq brain controller is not wired.' }
+            if ($indexSource -notmatch 'dispatchCapability') { throw 'Groq capability dispatcher is not wired.' }
+            if ($indexSource -notmatch 'ownerUsername') { throw 'Owner identity is not wired into the bridge.' }
+            if ($indexSource -notmatch 'askOwnerPermission') { throw 'Owner permission callback is not wired.' }
+            if ($indexSource -notmatch 'player_message') { throw 'Player chat is not routed into the Groq brain.' }
+            if ($indexSource -notmatch 'CAPABILITY_DEBUG_ENV') { throw 'Manual tester debug switch is missing.' }
             if ($indexSource -notmatch 'playerHalfWidth = 0.30001') { throw '1.21.x collision workaround is missing.' }
             if ($indexSource -notmatch 'playerHeight = 1.80001') { throw '1.21.x collision height workaround is missing.' }
             if ($testerSource -match 'api\.groq\.com') { throw 'Capability tester must never call Groq directly.' }
@@ -82,6 +87,12 @@ jobs:
               if ($engineSource -notmatch [regex]::Escape($requiredText)) { throw "Clean engine guard is missing: $requiredText" }
             }
             if ($testerSource -notmatch 'capabilityEngine\.mjs') { throw 'Tester is not wired to the clean capability engine.' }
+            foreach ($requiredBrainText in @('api.groq.com/openai/v1/chat/completions','json_schema','capabilityIds()','ownerUsername','requestOwnerPermission','dispatchCapability','MAX_ACTIONS_PER_PLAN','handlePlayerMessage')) {
+              if ($brainSource -notmatch [regex]::Escape($requiredBrainText)) { throw "Groq brain guard is missing: $requiredBrainText" }
+            }
+            foreach ($requiredPermissionText in @('function askOwner(requester, action, displayAction = action, execution = null)','pending.set(key, { id, requester, action, displayAction, execution','Owner permission','owner-approved player cancellation')) {
+              if ($runtimeSource -notmatch [regex]::Escape($requiredPermissionText)) { throw "Owner permission guard is missing: $requiredPermissionText" }
+            }
             foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','assertTaskActive','runManualCapability','lastTaskResult','bot.stopDigging?.()','bot.collectBlock.movements = movements','bot.collectBlock?.cancelTask?.()','target_lost','target_not_found','bot.isSleeping === true','bot.wake')) {
               if ($runtimeSource -notmatch [regex]::Escape($requiredRuntimeText)) { throw "Runtime guard is missing: $requiredRuntimeText" }
             }
@@ -89,7 +100,7 @@ jobs:
               if ($testerSource -notmatch [regex]::Escape($requiredTesterText)) { throw "Verification guard is missing: $requiredTesterText" }
             }
             if ($runtimeSource -notmatch 'Damage observed; preserving active task ownership.') { throw 'Damage must not globally cancel active Minecraft tasks.' }
-            Write-Host "Clean bridge static guards passed: $registeredCapabilities definitions / $handlerCount handlers."
+            Write-Host "Clean bridge static guards passed: $registeredCapabilities definitions / $logicalHandlerCount handlers + Groq owner-permission controller."
           } finally { Pop-Location }
 
       - name: Verify Mineflayer plugin imports
