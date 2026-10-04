@@ -359,6 +359,111 @@ async function enchantItem(ctx,a){
 }
 
 
+
+function nearestAnimalByNames(ctx,names,maxDistance=32){
+  const wanted=new Set(names.map(x=>String(x).toLowerCase().replace(/\\s+/g,"_")));
+  return nearest(ctx.bot,e=>wanted.has(entityName(e).replace(/\\s+/g,"_")),maxDistance);
+}
+async function milkAnimal(ctx,a){
+  const wanted=required(a,"Animal is required.").toLowerCase().replace(/\\s+/g,"_");
+  const allowed=new Set(["cow","goat"]);
+  if(!allowed.has(wanted)) throw new Error("Only cow or goat can be milked.");
+  const bucket=inventoryItem(ctx.bot,"bucket");
+  if(!bucket) throw new Error("Empty bucket not found.");
+  const target=nearestAnimalByNames(ctx,[wanted],32);
+  if(!target) throw new Error("No nearby "+wanted+" found.");
+  const before=countItem(ctx.bot,"milk_bucket");
+  await navigate(ctx,target.position,2.5,15000,"milk animal");
+  active(ctx);
+  await ctx.bot.equip(bucket,"hand");
+  active(ctx);
+  await ctx.bot.activateEntity(target);
+  await wait(ctx,500);
+  const after=countItem(ctx.bot,"milk_bucket");
+  if(after<=before) throw new Error("Milk action did not produce a milk bucket.");
+  ctx.log?.("[MILK] milked "+wanted+"; milk buckets="+String(after));
+  return true;
+}
+async function shearAnimal(ctx,a){
+  const wanted=required(a,"Animal is required.").toLowerCase().replace(/\\s+/g,"_");
+  const allowed=new Set(["sheep","mooshroom"]);
+  if(!allowed.has(wanted)) throw new Error("Only sheep or mooshroom can be sheared.");
+  const shears=inventoryItem(ctx.bot,"shears");
+  if(!shears) throw new Error("Shears not found.");
+  const target=nearestAnimalByNames(ctx,[wanted],32);
+  if(!target) throw new Error("No nearby "+wanted+" found.");
+  await navigate(ctx,target.position,2.5,15000,"shear animal");
+  active(ctx);
+  await ctx.bot.equip(shears,"hand");
+  active(ctx);
+  await ctx.bot.activateEntity(target);
+  await wait(ctx,500);
+  ctx.log?.("[SHEAR] shearing action sent to "+wanted+".");
+  return true;
+}
+async function extinguishFire(ctx){
+  const {bot}=ctx;
+  const fireBlocks=bot.findBlocks?.({
+    matching:b=>["fire","soul_fire"].includes(String(b?.name||"")),
+    maxDistance:24,
+    count:64
+  })||[];
+  const campfires=bot.findBlocks?.({
+    matching:b=>["campfire","soul_campfire"].includes(String(b?.name||"")) && b?.getProperties?.().lit===true,
+    maxDistance:24,
+    count:32
+  })||[];
+  if(!fireBlocks.length&&!campfires.length) throw new Error("No fire found nearby.");
+  let extinguished=0;
+  for(const p of fireBlocks){
+    active(ctx);
+    const block=bot.blockAt(p);
+    if(!block||!["fire","soul_fire"].includes(String(block.name||""))) continue;
+    await digBlock(ctx,block);
+    extinguished++;
+  }
+  if(campfires.length){
+    const shovel=inventoryItem(bot,"netherite_shovel")||inventoryItem(bot,"diamond_shovel")||inventoryItem(bot,"iron_shovel")||inventoryItem(bot,"stone_shovel")||inventoryItem(bot,"golden_shovel")||inventoryItem(bot,"wooden_shovel");
+    if(!shovel) throw new Error("Lit campfire found, but no shovel is available to extinguish it.");
+    await bot.equip(shovel,"hand");
+    for(const p of campfires){
+      active(ctx);
+      const block=bot.blockAt(p);
+      if(!block) continue;
+      const lit=block.getProperties?.().lit;
+      if(lit===true){
+        await navigate(ctx,block.position,3.5,15000,"campfire");
+        active(ctx);
+        await bot.activateBlock(block);
+        await wait(ctx,250);
+        if(block.getProperties?.().lit===false) extinguished++;
+      }
+    }
+  }
+  if(!extinguished) throw new Error("Fire was found but could not be extinguished.");
+  ctx.log?.("[FIRE] extinguished "+String(extinguished)+" fire source(s).");
+  return true;
+}
+async function clearHostiles(ctx,a){
+  const raw=String(a??"").trim();
+  const radius=raw?Number(raw):16;
+  if(!Number.isFinite(radius)||radius<1||radius>64) throw new Error("Radius must be between 1 and 64.");
+  let defeated=0;
+  for(let pass=0;pass<32;pass++){
+    active(ctx);
+    const target=nearest(ctx.bot,e=>HOSTILES.has(entityName(e))&&e.isValid!==false&&(e.health==null||e.health>0),radius);
+    if(!target) break;
+    const weapon=bestWeapon(ctx.bot);
+    if(weapon) await ctx.bot.equip(weapon,"hand");
+    const killed=await attack(ctx,target,15000);
+    if(!killed) throw new Error("Failed to clear hostile target: "+entityName(target));
+    defeated++;
+  }
+  if(defeated===0) throw new Error("No hostiles found within "+radius+" blocks.");
+  ctx.log?.("[HOSTILES] cleared "+String(defeated)+" hostile target(s) within "+String(radius)+" blocks.");
+  return true;
+}
+
 async function craft(ctx,name,amount=1,table=null){
   const {bot}=ctx, key=required(name,"Item is required.").toLowerCase().replace(/\s+/g,"_");
   const type=bot.registry?.itemsByName?.[key]; if(!type) throw new Error("Unknown craft item: "+key);
@@ -914,6 +1019,10 @@ const H = {
   repair_equipment: async(ctx,a)=>repairEquipment(ctx,a),
   breed_animals: async(ctx,a)=>breedAnimals(ctx,a),
   enchant_item: async(ctx,a)=>enchantItem(ctx,a),
+  milk_animal: async(ctx,a)=>milkAnimal(ctx,a),
+  shear_animal: async(ctx,a)=>shearAnimal(ctx,a),
+  extinguish_fire: async(ctx)=>extinguishFire(ctx),
+  clear_hostiles: async(ctx,a)=>clearHostiles(ctx,a),
   remember_home: async(ctx,a)=>{
     const p=coords(a);
     const home=ctx.runtime.rememberHome?.(p.x,p.y,p.z);
