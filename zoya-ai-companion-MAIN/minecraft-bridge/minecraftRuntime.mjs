@@ -291,7 +291,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     return { allowed: false, source: "owner-required" };
   }
 
-  function askOwner(requester, action, displayAction = action) {
+  function askOwner(requester, action, displayAction = action, execution = null) {
     const requesterKey = String(requester).toLowerCase();
     const existing = [...pending.values()].find(request => request.requester.toLowerCase() === requesterKey && request.action === action);
     if (existing) {
@@ -305,7 +305,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
     const id = String(nextPermissionId++);
     const key = id;
-    pending.set(key, { id, requester, action, createdAt: Date.now() });
+    pending.set(key, { id, requester, action, displayAction, execution, createdAt: Date.now() });
     setTimeout(() => {
       const request = pending.get(key);
       if (request && Date.now() - request.createdAt >= PERMISSION_TIMEOUT_MS) {
@@ -372,8 +372,18 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
     log("[PERMISSION] Owner accepted #" + request.id + " " + request.requester + " -> " + request.action + ".");
     try { bot.chat("[ZOYA] Permission granted. I will try that now."); } catch {}
-    const result = await execute(request.action, { targetUsername: request.requester, permissionGranted: true });
-    try { bot.chat(result ? "[ZOYA] Done." : "[ZOYA] Action could not be completed."); } catch {}
+    let result = false;
+    try {
+      if (typeof request.execution === "function") {
+        result = await request.execution();
+      } else {
+        result = await execute(request.action, { targetUsername: request.requester, permissionGranted: true });
+      }
+    } catch (error) {
+      log("[PERMISSION] Approved action failed: " + (error instanceof Error ? error.message : String(error)));
+      result = false;
+    }
+    try { bot.whisper(request.requester, result ? "[ZOYA] Permission granted. Done." : "[ZOYA] Permission was granted, but I could not complete the task."); } catch {}
   }
 
   async function lookAtPlayer(username) {
@@ -1442,11 +1452,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       return true;
     }
 
-    // Normal player chat is intentionally left to the future high-level
-    // planner architecture. There is no direct Groq call from the runtime.
     rememberEvent("chat_input", { username: String(username || ""), channel, message: rawMessage.slice(0, 500) });
-    log("[CHAT] Message recorded for planner: " + String(username || "unknown") + " -> " + rawMessage.slice(0, 180));
-    return false;
+    log("[CHAT] Routing message to Groq planner: " + String(username || "unknown") + " -> " + rawMessage.slice(0, 180));
+    return Boolean(wakeBrain("player_message", { requester: String(username || ""), message: rawMessage, channel }));
   }
 
   bot.on("death", () => {
