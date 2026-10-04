@@ -73,6 +73,113 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   let chatBusy = false;
   let lastTaskResult = null;
 
+  // Survival intervention is deliberately separate from task ownership.
+  // Low food/health should trigger an automatic eat, not cancel the active
+  // capability. Death remains the hard boundary handled by the death/health
+  // lifecycle below.
+  const SURVIVAL_FOOD_THRESHOLD = 10;
+  const SURVIVAL_HEALTH_THRESHOLD = 14;
+  const SURVIVAL_EAT_COOLDOWN_MS = 3000;
+  let survivalEating = false;
+  let survivalEatPromise = null;
+  let lastSurvivalEatAt = 0;
+
+  function findSurvivalFood() {
+    const foods = bot.inventory.items().filter(item => {
+      if (!item || Number(item.count) <= 0) return false;
+      const name = String(item.name || "").toLowerCase();
+      if (bot.registry?.foods?.[item.type]) return true;
+      return /bread|apple|beef|pork|chicken|mutton|rabbit|carrot|potato|stew|melon|beetroot|sweet_berries|golden_carrot|cookie|pumpkin_pie/.test(name);
+    });
+    if (!foods.length) return null;
+
+    const score = item => {
+      const name = String(item.name || "").toLowerCase();
+      const preferred =
+        name.includes("golden_carrot") ? 100 :
+        name.includes("cooked_beef") || name.includes("cooked_porkchop") ||
+        name.includes("cooked_chicken") || name.includes("cooked_mutton") ||
+        name.includes("cooked_rabbit") ? 90 :
+        name.includes("bread") || name.includes("baked_potato") ? 80 :
+        name.includes("carrot") || name.includes("apple") ||
+        name.includes("pumpkin_pie") ? 70 : 50;
+      return preferred + Math.min(64, Number(item.count) || 0) / 100;
+    };
+    return foods.sort((a,b) => score(b) - score(a))[0];
+  }
+
+  function survivalNeedsFood() {
+    const health = Number(bot?.health);
+    const food = Number(bot?.food);
+    if (!Number.isFinite(health) || health <= 0) return false;
+    if (!Number.isFinite(food)) return false;
+    return food <= SURVIVAL_FOOD_THRESHOLD ||
+      (health <= SURVIVAL_HEALTH_THRESHOLD && food < 18);
+  }
+
+  async function autoEatForSurvival(trigger = "monitor") {
+    if (!survivalNeedsFood() || survivalEating || Date.now() - lastSurvivalEatAt < SURVIVAL_EAT_COOLDOWN_MS) return false;
+    if (survivalEatPromise) return survivalEatPromise;
+
+    const food = findSurvivalFood();
+    if (!food) {
+      log("[SURVIVAL] Need food (" + String(trigger) + "), but no edible food is available.");
+      return false;
+    }
+
+    survivalEatPromise = (async () => {
+      survivalEating = true;
+      lastSurvivalEatAt = Date.now();
+      const previousHeld = bot.heldItem ? {
+        name: String(bot.heldItem.name || ""),
+        type: Number(bot.heldItem.type)
+      } : null;
+      const beforeFood = Number(bot.food ?? 0);
+      const beforeHealth = Number(bot.health ?? 0);
+
+      log("[SURVIVAL] Eating " + food.name + " (health=" + beforeHealth + ", food=" + beforeFood + ", trigger=" + trigger + ").");
+
+      try {
+        // Do not cancel or replace activeTask. Consume is a temporary survival
+        // intervention; the existing capability remains the owner of its task.
+        await bot.equip(food, "hand");
+        await bot.consume();
+
+        // Restore the item that the capability was using before survival
+        // intervention. Persistent/combat loops also re-equip their preferred
+        // item when they need it, so eating never permanently steals the hand.
+        if (previousHeld?.name) {
+          const restored = bot.inventory.items().find(item =>
+            String(item.name || "") === previousHeld.name &&
+            (previousHeld.type == null || Number(item.type) === previousHeld.type)
+          );
+          if (restored) {
+            try { await bot.equip(restored, "hand"); } catch {}
+          }
+        }
+
+        log("[SURVIVAL] Finished eating " + food.name +
+          " (health=" + String(bot.health ?? 0) +
+          ", food=" + String(bot.food ?? 0) + ").");
+        return true;
+      } catch (error) {
+        log("[SURVIVAL] Eating failed: " + (error instanceof Error ? error.message : String(error)));
+        return false;
+      } finally {
+        survivalEating = false;
+        survivalEatPromise = null;
+      }
+    })();
+
+    return survivalEatPromise;
+  }
+
+  const survivalMonitor = setInterval(() => {
+    if (bot?.health > 0 && survivalNeedsFood()) {
+      void autoEatForSurvival("periodic monitor");
+    }
+  }, 1000);
+
   // Combat physics must remain authoritative to Minecraft/Mineflayer.
   // We only observe the server velocity for diagnostics; we never write a
   // second velocity into bot.entity. Re-applying the same velocity after a
@@ -1369,6 +1476,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   });
   bot.on("respawn", () => { rememberEvent("respawn", { username: bot.username || "Zoya" }); wakeBrain(); });
   bot.on("kicked", reason => rememberEvent("kicked", { reason: String(reason || "unknown").slice(0, 300) }));
+  bot.on("end", () => {
+    clearInterval(survivalMonitor);
+    survivalEatPromise = null;
+    survivalEating = false;
+  });
   let previousHealth = bot.health ?? 20;
   bot.on("health", () => {
     const health = bot.health ?? 0;
@@ -1414,6 +1526,9 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     } else if (health < 10) {
       wakeBrain();
     }
+    if (health > 0 && survivalNeedsFood()) {
+      void autoEatForSurvival("health event");
+    }
     previousHealth = health;
   });
   bot.on("whisper", handleWhisper);
@@ -1440,6 +1555,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     getActiveTask: () => activeTask,
     getLastTaskResult: () => lastTaskResult,
     waitForTaskIdle,
-    getStatus: () => ({ ownerUsername: owner || null, pendingPermissions: pending.size, currentGoal, busy, activeTask: activeTask ? { id: activeTask.id, action: activeTask.action, targetUsername: activeTask.targetUsername, startedAt: activeTask.startedAt } : null, memoryPlayers: Object.keys(memory.players).length, memoryEvents: memory.events.length })
+    getStatus: () => ({ ownerUsername: owner || null, pendingPermissions: pending.size, currentGoal, busy, survivalEating, activeTask: activeTask ? { id: activeTask.id, action: activeTask.action, targetUsername: activeTask.targetUsername, startedAt: activeTask.startedAt } : null, memoryPlayers: Object.keys(memory.players).length, memoryEvents: memory.events.length })
   };
 }
