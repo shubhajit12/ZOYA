@@ -210,9 +210,154 @@ async function attack(ctx,target,timeout=15000){
 async function nearestHostile(ctx,max=16){
   return nearest(ctx.bot,e=>HOSTILES.has(entityName(e))&&e.isValid!==false,max);
 }
+
 async function nearestAnimal(ctx,max=24){
   return nearest(ctx.bot,e=>PASSIVES.has(entityName(e)),max);
 }
+function locationMemory(ctx,name){
+  const key=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");
+  const loc=ctx.runtime?.memory?.locations?.[key];
+  if(!loc) throw new Error("Location not remembered: "+String(name));
+  if(loc.dimension && String(ctx.bot.game?.dimension||"unknown")!==String(loc.dimension)) throw new Error("Location is in "+loc.dimension+"; current dimension is "+String(ctx.bot.game?.dimension||"unknown")+".");
+  return loc;
+}
+async function findStructureMarker(ctx,name){
+  const key=String(name||"").trim().toLowerCase().replace(/\s+/g,"_");
+  const signatures={
+    village:["bell","hay_block","composter","lectern","bed"],
+    fortress:["nether_bricks","nether_brick_fence","nether_brick_stairs"],
+    stronghold:["end_portal_frame","stone_bricks","iron_door"],
+    monument:["prismarine","sea_lantern"],
+    bastion:["blackstone","gilded_blackstone"],
+    temple:["chest","sandstone","cut_sandstone"],
+    desert_pyramid:["sandstone","cut_sandstone","orange_terracotta"],
+    jungle_temple:["cobblestone","mossy_cobblestone","tripwire_hook"],
+    shipwreck:["oak_planks","spruce_planks","dark_oak_planks","chest"]
+  };
+  const sig=signatures[key];
+  if(!sig) throw new Error("Unsupported structure search: "+String(name)+".");
+  const matches=[];
+  for(const blockName of sig){
+    const id=ctx.bot.registry?.blocksByName?.[blockName]?.id;
+    if(id==null) continue;
+    const found=ctx.bot.findBlocks({matching:id,maxDistance:64,count:8})||[];
+    for(const pos of found) matches.push({name:blockName,pos});
+  }
+  if(!matches.length) throw new Error("No "+key+" marker found in loaded area.");
+  matches.sort((a,b)=>ctx.bot.entity.position.distanceTo(vec(ctx.bot,a.pos))-ctx.bot.entity.position.distanceTo(vec(ctx.bot,b.pos)));
+  const hit=matches[0];
+  await navigate(ctx,hit.pos,2.5,30000,key+" marker");
+  ctx.log?.("[STRUCTURE] "+key+" marker="+hit.name+" at "+String(hit.pos));
+  return true;
+}
+async function findBiome(ctx,name){
+  const wanted=String(name||"").trim().toLowerCase().replace(/^minecraft:/,"").replace(/\s+/g,"_");
+  const info=ctx.bot.registry?.biomesByName?.[wanted];
+  if(!info) throw new Error("Unknown biome: "+wanted);
+  const world=ctx.bot.world;
+  if(typeof world?.getBiome!=="function") throw new Error("Mineflayer world biome API is unavailable.");
+  const origin=ctx.bot.entity.position;
+  for(let r=0;r<=64;r+=4){
+    for(let a=0;a<16;a++){
+      active(ctx);
+      const ang=a*Math.PI/8;
+      const x=Math.floor(origin.x+Math.cos(ang)*r);
+      const z=Math.floor(origin.z+Math.sin(ang)*r);
+      const p=new ctx.bot.entity.position.constructor(x,Math.floor(origin.y),z);
+      const id=world.getBiome(p);
+      const numeric=typeof id==="number"?id:Number(id?.id);
+      if(numeric===Number(info.id)){
+        await navigate(ctx,{x:x+0.5,y:origin.y,z:z+0.5},3,30000,"biome");
+        ctx.log?.("[BIOME] found "+wanted+" at "+x+" "+Math.floor(origin.y)+" "+z);
+        return true;
+      }
+    }
+  }
+  throw new Error("Biome not found in loaded area within 64 blocks: "+wanted);
+}
+async function recoverDeathItems(ctx){
+  const death=ctx.runtime?.memory?.lastDeath;
+  if(!death||![death.x,death.y,death.z].every(Number.isFinite)) throw new Error("No remembered death location.");
+  if(String(death.dimension||"unknown")!==String(ctx.bot.game?.dimension||"unknown")) throw new Error("Death location is in "+death.dimension+"; current dimension is "+String(ctx.bot.game?.dimension||"unknown")+".");
+  const origin={x:death.x,y:death.y,z:death.z};
+  let recovered=0;
+  for(let pass=0;pass<3;pass++){
+    active(ctx);
+    const items=Object.values(ctx.bot.entities||{}).filter(e=>e?.position&&String(e.name||"").toLowerCase()==="item"&&e.position.distanceTo(vec(ctx.bot,origin))<=48);
+    if(!items.length) break;
+    for(const item of items.sort((a,b)=>a.position.distanceTo(vec(ctx.bot,origin))-b.position.distanceTo(vec(ctx.bot,origin)))){
+      active(ctx);
+      await navigate(ctx,item.position,1.2,15000,"death-item recovery");
+      await wait(ctx,750);
+      recovered++;
+    }
+  }
+  if(!recovered) throw new Error("No dropped items found near remembered death location.");
+  ctx.log?.("[RECOVER] approached "+recovered+" dropped item stack(s).");
+  return true;
+}
+async function repairEquipment(ctx,a){
+  const name=required(a,"Item is required.");
+  const target=inventoryItem(ctx.bot,name);
+  if(!target) throw new Error("Item not found: "+name);
+  const anvil=ctx.bot.findBlock({matching:x=>String(x?.name||"").endsWith("_anvil"),maxDistance:24});
+  if(!anvil) throw new Error("No anvil nearby.");
+  if(typeof ctx.bot.openAnvil!=="function") throw new Error("Mineflayer anvil API is unavailable.");
+  await navigate(ctx,anvil.position,3.5,30000,"anvil");
+  const spare=ctx.bot.inventory.items().find(i=>i.type===target.type&&i!==target);
+  if(!spare) throw new Error("A second copy/material for repairing "+target.name+" is required.");
+  const av=await ctx.bot.openAnvil(anvil);
+  try{
+    active(ctx);
+    await av.combine(target,spare);
+    ctx.log?.("[ANVIL] repaired "+target.name+" using a second matching item.");
+    return true;
+  }finally{try{await av.close?.();}catch{}}
+}
+const BREED_FOOD={
+  cow:["wheat"],sheep:["wheat"],goat:["wheat"],pig:["carrot","potato","beetroot"],
+  chicken:["wheat_seeds","beetroot_seeds","melon_seeds","pumpkin_seeds","torchflower_seeds"],
+  rabbit:["carrot","golden_carrot","dandelion"],horse:["golden_carrot","golden_apple"],
+  donkey:["golden_carrot","golden_apple"],mule:["golden_carrot","golden_apple"],
+  llama:["hay_block"],mooshroom:["wheat"],turtle:["seagrass"],strider:["warped_fungus"]
+};
+async function breedAnimals(ctx,a){
+  const wanted=required(a,"Animal is required.").toLowerCase();
+  const foodNames=BREED_FOOD[wanted];
+  if(!foodNames) throw new Error("No breeding rule for "+wanted+".");
+  const food=foodNames.map(n=>inventoryItem(ctx.bot,n)).find(Boolean);
+  if(!food) throw new Error("Breeding food not found for "+wanted+".");
+  const animals=Object.values(ctx.bot.entities||{}).filter(e=>e?.position&&entityName(e)===wanted&&e.isValid!==false).sort((x,y)=>distance(ctx.bot,x)-distance(ctx.bot,y)).slice(0,2);
+  if(animals.length<2) throw new Error("Need two nearby "+wanted+" animals.");
+  await ctx.bot.equip(food,"hand");
+  for(const animal of animals){active(ctx);await navigate(ctx,animal.position,2.5,10000,"breeding animal");await ctx.bot.activateEntity(animal);await wait(ctx,300);}
+  ctx.log?.("[BREED] fed two "+wanted+" animals.");
+  return true;
+}
+async function enchantItem(ctx,a){
+  const target=inventoryItem(ctx.bot,required(a,"Item is required."));
+  if(!target) throw new Error("Item not found.");
+  const lapis=inventoryItem(ctx.bot,"lapis_lazuli");
+  if(!lapis) throw new Error("Lapis lazuli not found.");
+  const table=ctx.bot.findBlock({matching:ctx.bot.registry?.blocksByName?.enchanting_table?.id,maxDistance:24});
+  if(!table) throw new Error("No enchanting table nearby.");
+  if(typeof ctx.bot.openEnchantmentTable!=="function") throw new Error("Mineflayer enchantment-table API is unavailable.");
+  await navigate(ctx,table.position,3.5,30000,"enchanting table");
+  const et=await ctx.bot.openEnchantmentTable(table);
+  try{
+    active(ctx);
+    await et.putTargetItem(target);
+    await et.putLapis(lapis);
+    const deadline=Date.now()+5000;
+    while(Date.now()<deadline && (!Array.isArray(et.enchantments)||et.enchantments.every(x=>Number(x?.level)<0))){active(ctx);await wait(ctx,100);}
+    const choices=(et.enchantments||[]).map((x,i)=>({i,level:Number(x?.level)})).filter(x=>x.level>=0).sort((a,b)=>b.level-a.level);
+    if(!choices.length) throw new Error("No enchantment choices available.");
+    const result=await et.enchant(choices[0].i);
+    ctx.log?.("[ENCHANT] selected highest available level "+choices[0].level+" for "+target.name+"; result="+String(result?.name||"item"));
+    return true;
+  }finally{try{await et.close?.();}catch{}}
+}
+
 
 async function craft(ctx,name,amount=1,table=null){
   const {bot}=ctx, key=required(name,"Item is required.").toLowerCase().replace(/\s+/g,"_");
@@ -748,6 +893,27 @@ const H = {
   ask_permission: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),action=required(q.join(" "),"Action is required.");return ctx.runtime.askOwner?.(u,action,action)===true;},
   whisper_player: async(ctx,a)=>H.private_chat(ctx,a),
   remember_player: async(ctx,a)=>{const q=parts(a),u=required(q.shift(),"Username is required."),fact=required(q.join(" "),"Fact is required.");ctx.runtime.rememberPlayer?.(u,{facts:[fact]});return true;},
+  return_home: async(ctx)=>{
+    const h=ctx.runtime?.memory?.home;
+    if(!h) throw new Error("Home is not remembered.");
+    if(String(h.dimension||"unknown")!==String(ctx.bot.game?.dimension||"unknown")) throw new Error("Home is in "+h.dimension+"; current dimension is "+String(ctx.bot.game?.dimension||"unknown")+".");
+    return navigate(ctx,h,3,30000,"home");
+  },
+  forget_home: async(ctx)=>{if(!ctx.runtime?.forgetHome?.()) throw new Error("No home is currently remembered.");return true;},
+  remember_location: async(ctx,a)=>{
+    const q=parts(a),name=required(q.shift(),"Location name is required."),p=coords(q.join(" "));
+    if(!ctx.runtime?.rememberLocation) throw new Error("Location memory service is unavailable.");
+    ctx.runtime.rememberLocation(name,p.x,p.y,p.z); return true;
+  },
+  return_to_location: async(ctx,a)=>{
+    const loc=locationMemory(ctx,a); return navigate(ctx,loc,3,30000,"location");
+  },
+  find_structure: async(ctx,a)=>findStructureMarker(ctx,a),
+  find_biome: async(ctx,a)=>findBiome(ctx,a),
+  recover_items_after_death: async(ctx)=>recoverDeathItems(ctx),
+  repair_equipment: async(ctx,a)=>repairEquipment(ctx,a),
+  breed_animals: async(ctx,a)=>breedAnimals(ctx,a),
+  enchant_item: async(ctx,a)=>enchantItem(ctx,a),
   remember_home: async(ctx,a)=>{
     const p=coords(a);
     const home=ctx.runtime.rememberHome?.(p.x,p.y,p.z);
