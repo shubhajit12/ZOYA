@@ -1,10 +1,13 @@
 import { getCapabilityRegistry } from "./capabilityTester.mjs";
 
 const MODEL = "openai/gpt-oss-20b";
-const MAX_CONTEXT_ENTITIES = 16;
-const MIN_THINK_GAP_MS = 350;
-const MAX_COMPLETION_TOKENS = 900;
-const MAX_ACTIONS_PER_PLAN = 6;
+const MAX_CONTEXT_ENTITIES = 12;
+const MAX_CONTEXT_INVENTORY = 16;
+const MIN_THINK_GAP_MS = 5000;
+const EVENT_COALESCE_MS = 1500;
+const MAX_COMPLETION_TOKENS = 300;
+const MAX_ACTIONS_PER_PLAN = 4;
+const RATE_LIMIT_FALLBACK_MS = 15000;
 
 function compactState(state) {
   const nearby = (state?.nearbyEntities || [])
@@ -26,7 +29,7 @@ function compactState(state) {
       thunder: state.world.thunderState
     } : null,
     environment: state?.environment || null,
-    inventory: (state?.inventory || []).slice(0, 24),
+    inventory: (state?.inventory || []).slice(0, MAX_CONTEXT_INVENTORY),
     selectedItem: state?.selectedItem || null,
     nearbyEntities: nearby.slice(0, MAX_CONTEXT_ENTITIES).map(entity => ({
       type: entity.type,
@@ -67,6 +70,8 @@ export function createZoyaBrain({
   let queuedReason = null;
   let queuedRequest = null;
   let lastThinkAt = 0;
+  let eventTimer = null;
+  let rateLimitedUntil = 0;
   let noApiKeyLogged = false;
 
   const registry = () => getCapabilityRegistry();
@@ -95,7 +100,9 @@ export function createZoyaBrain({
       activeTask: getActiveTask?.() || null,
       taskDriven: true,
       capabilityCount: registry().length,
-      minThinkGapMs: MIN_THINK_GAP_MS
+      minThinkGapMs: MIN_THINK_GAP_MS,
+      eventCoalesceMs: EVENT_COALESCE_MS,
+      rateLimitedUntil: rateLimitedUntil || null
     };
   }
 
@@ -104,21 +111,27 @@ export function createZoyaBrain({
     queuedReason = null;
     queuedRequest = null;
     thinking = false;
+    if (eventTimer) {
+      clearTimeout(eventTimer);
+      eventTimer = null;
+    }
   }
 
   function requestThink(reason = "event", request = null) {
     if (!started) return;
     queuedReason = reason;
     if (request) queuedRequest = request;
-    if (thinking) return;
-    const wait = Math.max(0, MIN_THINK_GAP_MS - (Date.now() - lastThinkAt));
-    if (wait > 0) {
-      setTimeout(() => {
-        if (started && !thinking) void think();
-      }, wait);
-      return;
-    }
-    void think();
+    if (thinking || eventTimer) return;
+
+    const now = Date.now();
+    const waitForRateLimit = Math.max(0, rateLimitedUntil - now);
+    const waitForGap = Math.max(0, MIN_THINK_GAP_MS - (now - lastThinkAt));
+    const wait = Math.max(EVENT_COALESCE_MS, waitForRateLimit, waitForGap);
+
+    eventTimer = setTimeout(() => {
+      eventTimer = null;
+      if (started && !thinking) void think();
+    }, wait);
   }
 
   async function requestOwnerPermission({ requester, mode, args, reason }) {
@@ -250,6 +263,11 @@ export function createZoyaBrain({
     noApiKeyLogged = false;
     if (!minecraftState?.available || !minecraftState.player) return;
 
+    if (Date.now() < rateLimitedUntil) {
+      log("[BRAIN] Groq rate-limit backoff active; event coalesced.");
+      return;
+    }
+
     const activeTask = getActiveTask?.() || null;
     if (activeTask) {
       log("[BRAIN] Active task '" + activeTask.action + "' is still running; no new Groq request.");
@@ -263,17 +281,10 @@ export function createZoyaBrain({
     try {
       const context = compactState(minecraftState);
       const requester = String(request?.requester || "").trim();
-      const capabilitySummary = registry().map(item => ({
-        id: item.id,
-        usage: item.usage,
-        execution: item.execution,
-        lifecycle: item.lifecycle
-      }));
-
       const system = [
         "You are Zoya's Minecraft brain.",
         "Groq decides WHAT Zoya should do; the local capability engine decides HOW it is physically executed.",
-        "You may select only one of the canonical capabilities supplied in the capability list.",
+        "You may select only canonical capabilities known to the local engine. The local engine validates every mode; do not invent modes.",
         "Return a short ordered plan of at most " + MAX_ACTIONS_PER_PLAN + " actions. Use the fewest actions needed.",
         "Each action has mode and a single string args field matching that capability's usage.",
         "Never invent a capability, never invent a player identity, and never issue raw Mineflayer/code/tool commands.",
@@ -304,7 +315,7 @@ export function createZoyaBrain({
           channel: request.channel || null,
           message: String(request.message || "").slice(0, 1200)
         } : null,
-        capabilities: capabilitySummary
+        capabilities: "Validated locally; do not enumerate capabilities in the response."
       };
 
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -335,7 +346,7 @@ export function createZoyaBrain({
                     items: {
                       type: "object",
                       properties: {
-                        mode: { type: "string", enum: capabilityIds() },
+                        mode: { type: "string", minLength: 1, maxLength: 64 },
                         args: { type: "string" }
                       },
                       required: ["mode", "args"],
@@ -410,7 +421,17 @@ export function createZoyaBrain({
         consecutiveFailures = 0;
       }
     } catch (error) {
-      log("[BRAIN] Decision failed: " + (error instanceof Error ? error.message : String(error)));
+      const message = error instanceof Error ? error.message : String(error);
+      const rateMatch = message.match(/try again in ([0-9]+(?:\\.[0-9]+)?)s/i);
+      if (/rate_limit_exceeded|rate limit reached/i.test(message)) {
+        const retryMs = rateMatch
+          ? Math.ceil(Number(rateMatch[1]) * 1000) + 1000
+          : RATE_LIMIT_FALLBACK_MS;
+        rateLimitedUntil = Date.now() + retryMs;
+        log("[BRAIN] Groq rate limit; backing off for " + Math.ceil(retryMs / 1000) + "s and coalescing events.");
+      } else {
+        log("[BRAIN] Decision failed: " + message);
+      }
     } finally {
       thinking = false;
       if (queuedReason && started) requestThink(queuedReason);
