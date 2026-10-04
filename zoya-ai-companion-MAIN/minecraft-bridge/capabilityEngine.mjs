@@ -147,8 +147,7 @@ async function follow(ctx,target,range=3){
 async function navigateXZ(ctx,p,range=3,timeout=30000,label="navigation"){
   const {bot}=ctx;
   active(ctx);
-  const x=Number(p.x), z=Number(p.z);
-  if(!Number.isFinite(x)||!Number.isFinite(z)) throw new Error("Invalid X/Z target.");
+  const x=Number(p.x), z=Number(p.z);  if(!Number.isFinite(x)||!Number.isFinite(z)) throw new Error("Invalid X/Z target.");
   bot.pathfinder.setGoal(new goals.GoalNearXZ(x,z,range));
   const deadline=Date.now()+timeout;
   try{
@@ -297,8 +296,7 @@ async function recoverDeathItems(ctx){
   return true;
 }
 async function repairEquipment(ctx,a){
-  const name=required(a,"Item is required.");
-  const target=inventoryItem(ctx.bot,name);
+  const name=required(a,"Item is required.");  const target=inventoryItem(ctx.bot,name);
   if(!target) throw new Error("Item not found: "+name);
   const anvil=ctx.bot.findBlock({matching:x=>String(x?.name||"").endsWith("_anvil"),maxDistance:24});
   if(!anvil) throw new Error("No anvil nearby.");
@@ -447,8 +445,7 @@ async function extinguishFire(ctx){
 async function clearHostiles(ctx,a){
   const raw=String(a??"").trim();
   const radius=raw?Number(raw):16;
-  if(!Number.isFinite(radius)||radius<1||radius>64) throw new Error("Radius must be between 1 and 64.");
-  let defeated=0;
+  if(!Number.isFinite(radius)||radius<1||radius>64) throw new Error("Radius must be between 1 and 64.");  let defeated=0;
   for(let pass=0;pass<32;pass++){
     active(ctx);
     const target=nearest(ctx.bot,e=>HOSTILES.has(entityName(e))&&e.isValid!==false&&(e.health==null||e.health>0),radius);
@@ -597,8 +594,7 @@ function findSearchTarget(bot,target,maxDistance=48){
   return bot.findBlock?.({matching:b=>{const n=String(b?.name||"").toLowerCase().replace(/\s+/g,"_");return n===wanted||n.includes(wanted)||wanted.includes(n);},maxDistance})||null;
 }
 function findBlockDroppingItem(bot,itemName,maxDistance=48){
-  const key=String(itemName||"").trim().toLowerCase().replace(/\s+/g,"_"),type=bot.registry?.itemsByName?.[key];if(!type)return null;
-  return bot.findBlock?.({matching:b=>{if(!b||b.name==="air")return false;const n=String(b.name||"").toLowerCase().replace(/\s+/g,"_");return n===key||n.includes(key)||(Array.isArray(b.drops)&&b.drops.some(d=>Number(d)===Number(type.id)));},maxDistance})||null;
+  const key=String(itemName||"").trim().toLowerCase().replace(/\s+/g,"_"),type=bot.registry?.itemsByName?.[key];if(!type)return null;  return bot.findBlock?.({matching:b=>{if(!b||b.name==="air")return false;const n=String(b.name||"").toLowerCase().replace(/\s+/g,"_");return n===key||n.includes(key)||(Array.isArray(b.drops)&&b.drops.some(d=>Number(d)===Number(type.id)));},maxDistance})||null;
 }
 async function ensureCraftMaterials(ctx,name,seen=new Set()){
   const key=required(name,"Item is required.").toLowerCase().replace(/\s+/g,"_");if(seen.has(key))throw new Error("Craft dependency cycle detected: "+key);seen.add(key);
@@ -705,6 +701,91 @@ function findBuildSupport(bot,maxDistance=6){
   return candidates[0]||null;
 }
 
+const GOAL_SEPARATOR = /\\s*;\\s*|\\r?\\n+/;
+
+function parseGoalPlan(input){
+  const raw=required(input,"Goal objective is required.").trim();
+  if(raw.startsWith("[")||raw.startsWith("{")){
+    try{
+      const parsed=JSON.parse(raw);
+      const steps=Array.isArray(parsed)?parsed:[parsed];
+      return steps.map(step=>{
+        if(typeof step==="string"){
+          const m=step.trim().match(/^(\\S+)(?:\\s+(.*))?$/);
+          if(!m)throw new Error("Invalid goal step: "+step);
+          return {mode:m[1].toLowerCase(),args:m[2]||""};
+        }
+        const mode=required(step?.mode,"Goal step mode is required.").toLowerCase();
+        return {mode,args:String(step?.args??"").trim()};
+      });
+    }catch(error){
+      if(error instanceof SyntaxError) throw new Error("Goal JSON is invalid.");
+      throw error;
+    }
+  }
+  return raw.split(GOAL_SEPARATOR).map(step=>{
+    const s=step.trim();
+    if(!s)return null;
+    const call=s.match(/^(\\w+)(?:\\((.*)\\)|\\s+(.*))?$/);
+    if(!call)throw new Error("Invalid goal step: "+s);
+    return {mode:call[1].toLowerCase(),args:String(call[2]??call[3]??"").trim()};
+  }).filter(Boolean);
+}
+
+async function runGoalPlan(ctx,input){
+  const steps=parseGoalPlan(input);
+  if(!steps.length)throw new Error("Goal contains no steps.");
+  const results=[];
+  for(let i=0;i<steps.length;i++){
+    active(ctx);
+    const step=steps[i];
+    if(step.mode==="goal")throw new Error("A goal cannot directly contain another goal.");
+    if(step.mode==="stop")throw new Error("stop is not valid inside a goal plan.");
+    const handler=H[step.mode];
+    if(typeof handler!=="function")throw new Error("Unknown goal capability: "+step.mode);
+    ctx.log?.("[GOAL] "+String(i+1)+"/"+String(steps.length)+" -> "+step.mode+(step.args?" "+step.args:""));
+    const result=await handler(ctx,step.args);
+    results.push({mode:step.mode,result});
+  }
+  ctx.log?.("[GOAL] completed "+String(steps.length)+" step(s).");
+  return results.every(x=>x.result!==false);
+}
+
+async function recoveryMission(ctx){
+  const {bot}=ctx;
+  const death=ctx.runtime?.memory?.lastDeath;
+  if(Number(bot.health??0)<=0){
+    await H.recover_after_death(ctx,"");
+  }
+  active(ctx);
+  let recovered=false;
+  if(death){
+    try{
+      await H.recover_items_after_death(ctx,"");
+      recovered=true;
+    }catch(error){
+      ctx.log?.("[RECOVERY] item recovery unavailable: "+String(error?.message||error));
+    }
+  }
+  active(ctx);
+  let returned=false;
+  const home=ctx.runtime?.memory?.home;
+  if(home && [home.x,home.y,home.z].every(Number.isFinite)){
+    await H.return_home(ctx,"");
+    returned=true;
+  }else if(ctx.runtime?.getStatus?.().ownerUsername){
+    try{
+      await H.return(ctx,"");
+      returned=true;
+    }catch(error){
+      ctx.log?.("[RECOVERY] owner return unavailable: "+String(error?.message||error));
+    }
+  }
+  ctx.log?.("[RECOVERY] mission complete; respawned="+String(Number(bot.health??0)>0)+
+    " itemsRecovered="+String(recovered)+" returned="+String(returned));
+  return true;
+}
+
 const H = {
   follow_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
   roam: async(ctx)=>{
@@ -747,8 +828,7 @@ const H = {
     if(l.startsWith("gather "))return H.gather_resources(ctx,s.slice(7));
     if(l.startsWith("craft "))return H.craft(ctx,s.slice(6));
     throw new Error("Supported do_task forms: mine, chop, gather, craft.");
-  },
-  coordinate: async(ctx,a)=>{
+  },  coordinate: async(ctx,a)=>{
     const q=parts(a),u=required(q.shift(),"Username is required."),task=q.join(" ")||"ready";
     const p=player(ctx.bot,u);
     if(!p?.entity)throw new Error("Player not found.");
@@ -897,8 +977,7 @@ const H = {
       }
       active(ctx);
       await bot.equip(rod,"hand");
-      active(ctx);
-      await bot.lookAt(spot.waterPos,true);
+      active(ctx);      await bot.lookAt(spot.waterPos,true);
       active(ctx);
       await bot.fish();
       active(ctx);
@@ -1024,6 +1103,8 @@ const H = {
   shear_animal: async(ctx,a)=>shearAnimal(ctx,a),
   extinguish_fire: async(ctx)=>extinguishFire(ctx),
   clear_hostiles: async(ctx,a)=>clearHostiles(ctx,a),
+  recovery_mission: async(ctx)=>recoveryMission(ctx),
+  goal: async(ctx,a)=>runGoalPlan(ctx,a),
   remember_home: async(ctx,a)=>{
     const p=coords(a);
     const home=ctx.runtime.rememberHome?.(p.x,p.y,p.z);
@@ -1047,8 +1128,7 @@ const H = {
   deliver_item: async(ctx,a)=>H.give_item(ctx,a),
   escort_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
   protect_player: async(ctx,a)=>protect(ctx,a),
-  guard_location: async(ctx,a)=>guard(ctx,coords(a)),
-  build: async(ctx,a)=>build(ctx,a),
+  guard_location: async(ctx,a)=>guard(ctx,coords(a)),  build: async(ctx,a)=>build(ctx,a),
   search: async(ctx,a)=>{const target=required(a,"Search target is required."),e=findSearchTarget(ctx.bot,target,48);if(!e)throw new Error("Search target not found: "+target);if(e.position&&e.height!=null)await lookAtEntity(ctx,e);ctx.log("found="+String(e.name||e.username||e.displayName||"target")+" position="+String(e.position||"unknown"));return true;},
   watch: async(ctx,a)=>{const s=required(a,"Watch target is required.");while(true){active(ctx);const e=player(ctx.bot,s)?.entity||nearest(ctx.bot,e=>entityName(e).includes(s.toLowerCase()),48);if(!e){ctx.terminate("target_lost");return false;}await lookAtEntity(ctx,e);await wait(ctx,250);}},
   coordinate_with_player: async(ctx,a)=>{
@@ -1197,8 +1277,7 @@ async function protect(ctx,a){
 
   const isLivingCombatEntity=e =>
     !!e &&
-    e?.isValid!==false &&
-    e!==bot.entity &&
+    e?.isValid!==false &&    e!==bot.entity &&
     (e.type==="mob"||e.type==="player") &&
     (e.health==null||e.health>0);
 
@@ -1348,7 +1427,6 @@ async function protect(ctx,a){
 
     return attacker;
   };
-
   // Protect mode has two independent defense layers:
   // 1) exact owner damage attribution (entityHurt/source), and
   // 2) a proactive danger scan for hostile mobs already inside the owner's
@@ -1497,8 +1575,7 @@ async function smelt(ctx,a){
     const deadline=Date.now()+30000;
     while(Date.now()<deadline){
       active(ctx);
-      const output=f.outputItem?.();
-      if(output && (!beforeOutput || output.count>beforeOutput.count || output.type!==beforeOutput.type)){
+      const output=f.outputItem?.();      if(output && (!beforeOutput || output.count>beforeOutput.count || output.type!==beforeOutput.type)){
         await f.takeOutput();
         ctx.log?.("[SMELT] output ready: "+String(output.name||"item"));
         return true;
