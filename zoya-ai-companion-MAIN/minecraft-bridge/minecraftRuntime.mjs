@@ -122,6 +122,22 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     memory.events.push({ at: new Date().toISOString(), type, ...data });
     saveMemory();
   }
+  function rememberHome(x, y, z) {
+    const nx = Number(x), ny = Number(y), nz = Number(z);
+    if (![nx, ny, nz].every(Number.isFinite)) throw new Error("Home coordinates must be finite numbers.");
+    memory.home = {
+      x: nx,
+      y: ny,
+      z: nz,
+      dimension: String(bot.game?.dimension || "unknown"),
+      updatedAt: new Date().toISOString()
+    };
+    saveMemory();
+    rememberEvent("home_set", { x: nx, y: ny, z: nz, dimension: memory.home.dimension });
+    log("[MEMORY] Home remembered at " + nx + " " + ny + " " + nz + " (" + memory.home.dimension + ").");
+    return memory.home;
+  }
+
 
   function findPlayerByUsername(username) {
     const wanted = String(username || "").trim().toLowerCase();
@@ -1330,6 +1346,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   return {
     memory,
     rememberPlayer,
+    rememberHome,
     rememberEvent,
     permissionFor,
     askOwner,
