@@ -591,6 +591,46 @@ async function controlVehicle(ctx,a){
 }
 
 
+const STRUCTURE_CLIPBOARD={blocks:[],size:{x:0,y:0,z:0}};
+async function useWorkstation(ctx,a,expected){const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p));if(!b||b.name!==expected)throw new Error("Target is not a "+expected+".");await navigate(ctx,b.position,3.5,15000,expected);active(ctx);await ctx.bot.activateBlock(b);await wait(ctx,500);return true;}
+async function ignite(ctx,a){const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p)),i=inventoryItem(ctx.bot,"flint_and_steel");if(!b)throw new Error("Target block is not loaded.");if(!i)throw new Error("Flint and steel not found.");await navigate(ctx,b.position,3.5,15000,"ignite");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateBlock(b);await wait(ctx,500);return true;}
+async function activateRespawnAnchor(ctx,a){const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p)),i=inventoryItem(ctx.bot,"glowstone");if(!b||b.name!=="respawn_anchor")throw new Error("Target is not a respawn anchor.");if(!i)throw new Error("Glowstone not found.");await navigate(ctx,b.position,3.5,15000,"respawn anchor");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateBlock(b);await wait(ctx,500);return true;}
+async function useTotem(ctx){const i=inventoryItem(ctx.bot,"totem_of_undying");if(!i)throw new Error("Totem of Undying not found.");active(ctx);await ctx.bot.equip(i,"off-hand");active(ctx);return true;}
+async function useBucketKind(ctx,a,kind){const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p)),i=inventoryItem(ctx.bot,kind+"_bucket");if(!b)throw new Error("Target block is not loaded.");if(!i)throw new Error(kind+" bucket not found.");await navigate(ctx,b.position,3.5,15000,kind+" bucket");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateBlock(b);await wait(ctx,600);return true;}
+async function collectPowderSnow(ctx,a){const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p)),i=inventoryItem(ctx.bot,"bucket");if(!b||!["powder_snow","powder_snow_cauldron"].includes(b.name))throw new Error("Target is not powder snow.");if(!i)throw new Error("Empty bucket not found.");await navigate(ctx,b.position,3.5,15000,"powder snow");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateBlock(b);await wait(ctx,600);if(!inventoryItem(ctx.bot,"powder_snow_bucket"))throw new Error("Powder snow pickup not confirmed.");return true;}
+async function useSpyglass(ctx,a){const ms=Math.max(100,number(a)*1000),i=inventoryItem(ctx.bot,"spyglass");if(!i)throw new Error("Spyglass not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);ctx.bot.activateItem();try{await wait(ctx,ms)}finally{try{ctx.bot.deactivateItem()}catch{}}return true;}
+async function useCompass(ctx){const i=inventoryItem(ctx.bot,"compass");if(!i)throw new Error("Compass not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);return true;}
+async function useRecoveryCompass(ctx){const i=inventoryItem(ctx.bot,"recovery_compass");if(!i)throw new Error("Recovery compass not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);return true;}
+async function chargeBow(ctx,a){const ms=Math.max(100,number(a)*1000),i=inventoryItem(ctx.bot,"bow");if(!i)throw new Error("Bow not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);ctx.bot.activateItem();try{await wait(ctx,ms)}finally{try{ctx.bot.deactivateItem()}catch{}}return true;}
+async function chargeCrossbow(ctx){const i=inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Crossbow not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);ctx.bot.activateItem();try{await wait(ctx,1800)}finally{try{ctx.bot.deactivateItem()}catch{}}return true;}
+function targetEntity(ctx,name){const q=required(name,"Target is required.").toLowerCase(),p=player(ctx.bot,q);if(p?.entity)return p.entity;const e=nearest(ctx.bot,x=>entityName(x)===q||entityName(x).includes(q),32);if(!e)throw new Error("Target not found: "+q);return e;}
+async function tridentAttack(ctx,a){const t=targetEntity(ctx,a),i=inventoryItem(ctx.bot,"trident");if(!i)throw new Error("Trident not found.");await navigate(ctx,t.position,3.5,15000,"trident");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.attack(t);return true;}
+async function throwTrident(ctx,a){return chargeBow(ctx,a);}
+async function throwPotionKind(ctx,a,k){const i=inventoryItem(ctx.bot,required(a,"Potion item is required."));if(!i||!i.name.includes(k))throw new Error(k+" not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);ctx.bot.activateItem();await wait(ctx,700);return true;}
+async function knockbackTarget(ctx,a){const t=targetEntity(ctx,a);await navigate(ctx,t.position,3.2,15000,"knockback");active(ctx);ctx.bot.setControlState("sprint",true);try{await wait(ctx,100);active(ctx);await ctx.bot.attack(t)}finally{try{ctx.bot.setControlState("sprint",false)}catch{}}return true;}
+async function criticalAttack(ctx,a){const t=targetEntity(ctx,a);await navigate(ctx,t.position,3.2,15000,"critical");active(ctx);ctx.bot.setControlState("jump",true);await wait(ctx,120);ctx.bot.setControlState("jump",false);await wait(ctx,80);active(ctx);await ctx.bot.attack(t);return true;}
+async function plantAt(ctx,itemName,p){const i=inventoryItem(ctx.bot,itemName),b=ctx.bot.blockAt(vec(ctx.bot,p));if(!i)throw new Error("Planting item not found.");if(!b||!["farmland","dirt","grass_block","podzol","mycelium","soul_sand"].includes(b.name))throw new Error("Invalid planting block.");await navigate(ctx,b.position,3.5,15000,"planting");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateBlock(b);await wait(ctx,400);return true;}
+async function plantSeeds(ctx,a){const q=parts(a),i=required(q.shift(),"Seed item is required.");return plantAt(ctx,i,coords(q.join(" ")))}
+async function plantSapling(ctx,a){const q=parts(a),i=required(q.shift(),"Sapling item is required.");return plantAt(ctx,i,coords(q.join(" ")))}
+async function harvestAndReplant(ctx){const ps=ctx.bot.findBlocks?.({matching:b=>CROPS.has(String(b?.name||"")),maxDistance:24,maxCount:64})||[];let n=0;for(const p of ps){active(ctx);const b=ctx.bot.blockAt(p);if(!b)continue;await digBlock(ctx,b);const seed=b.name==="wheat"?"wheat_seeds":b.name;const i=inventoryItem(ctx.bot,seed);if(i)try{await plantAt(ctx,seed,{x:p.x,y:p.y-1,z:p.z});n++}catch{}}return true;}
+async function boneMeal(ctx,a){const p=coords(a),b=ctx.bot.blockAt(vec(ctx.bot,p)),i=inventoryItem(ctx.bot,"bone_meal");if(!b||!i)throw new Error("Target or bone meal unavailable.");await navigate(ctx,b.position,3.5,15000,"bone meal");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateBlock(b);await wait(ctx,400);return true;}
+function animalEntity(ctx,name){const q=required(name,"Animal is required.").toLowerCase(),e=nearest(ctx.bot,x=>PASSIVES.has(entityName(x))&&entityName(x).includes(q),24);if(!e)throw new Error("Animal not found: "+q);return e;}
+async function feedAnimal(ctx,a){const e=animalEntity(ctx,a),food={cow:"wheat",sheep:"wheat",pig:"carrot",chicken:"wheat_seeds",rabbit:"carrot",goat:"wheat"}[entityName(e)]||"wheat",i=inventoryItem(ctx.bot,food);if(!i)throw new Error("Food not found.");await navigate(ctx,e.position,3.5,15000,"animal");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateEntity(e);return true;}
+async function tameAnimal(ctx,a){const e=animalEntity(ctx,a),food={wolf:"bone",cat:"cod",horse:"golden_carrot",donkey:"golden_carrot",parrot:"wheat_seeds"}[entityName(e)]||"bone",i=inventoryItem(ctx.bot,food);if(!i)throw new Error("Taming item not found.");await navigate(ctx,e.position,3.5,15000,"tame");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.activateEntity(e);return true;}
+async function leadAnimal(ctx,a){const e=animalEntity(ctx,a),i=inventoryItem(ctx.bot,"lead");if(!i)throw new Error("Lead not found.");await navigate(ctx,e.position,3.5,15000,"lead");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.useOn(e);return true;}
+async function moveAnimal(ctx,a){const q=parts(a),name=required(q.shift(),"Animal is required."),p=coords(q.join(" ")),e=animalEntity(ctx,name),i=inventoryItem(ctx.bot,"lead");if(!i)throw new Error("Lead not found.");await navigate(ctx,e.position,3.5,15000,"move animal");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.useOn(e);await navigate(ctx,p,3.5,30000,"animal destination");return true;}
+async function collectEggs(ctx,a){const r=a?Number(a):16;if(!Number.isFinite(r)||r<1||r>48)throw new Error("Radius must be 1-48.");const eggs=Object.values(ctx.bot.entities||{}).filter(e=>e?.position&&e.name==="item"&&e.position.distanceTo(ctx.bot.entity.position)<=r);if(!eggs.length)throw new Error("No dropped items detected nearby.");for(const e of eggs){await navigate(ctx,e.position,1.5,10000,"egg")}return true;}
+async function controlTypedVehicle(ctx,a,type){if(!ctx.bot.vehicle)throw new Error("Bot is not mounted.");if(entityName(ctx.bot.vehicle)!==type)throw new Error("Mounted vehicle is not a "+type+".");return controlVehicle(ctx,a);}
+async function useElytra(ctx,a){const s=Math.max(1,number(a)),i=inventoryItem(ctx.bot,"elytra");if(!i)throw new Error("Elytra not found.");active(ctx);await ctx.bot.equip(i,"torso");active(ctx);if(typeof ctx.bot.elytraFly==="function")await ctx.bot.elytraFly();await wait(ctx,s*1000);return true;}
+function parseBlueprint(a){const out=[];for(const row of required(a).split(/[;\n]+/)){const q=parts(row),name=q.shift(),x=Number(q.shift()),y=Number(q.shift()),z=Number(q.shift());if(name&&[x,y,z].every(Number.isFinite))out.push({name,x,y,z})}if(!out.length)throw new Error("Blueprint contains no valid blocks.");if(out.length>512)throw new Error("Blueprint exceeds 512 blocks.");return out;}
+async function buildBlueprint(ctx,a){for(const b of parseBlueprint(a)){active(ctx);await placeAt(ctx,b.name,b)}return true;}
+async function copyStructure(ctx,a){const q=parts(a).map(Number);if(q.length!==6||q.some(n=>!Number.isFinite(n)))throw new Error("copy_structure requires 6 coordinates.");const min={x:Math.min(q[0],q[3]),y:Math.min(q[1],q[4]),z:Math.min(q[2],q[5])},max={x:Math.max(q[0],q[3]),y:Math.max(q[1],q[4]),z:Math.max(q[2],q[5])};const blocks=[];for(let y=min.y;y<=max.y;y++)for(let z=min.z;z<=max.z;z++)for(let x=min.x;x<=max.x;x++){active(ctx);const b=ctx.bot.blockAt(vec(ctx.bot,{x,y,z}));if(b&&b.name!=="air")blocks.push({name:b.name,x:x-min.x,y:y-min.y,z:z-min.z})}STRUCTURE_CLIPBOARD.blocks=blocks;STRUCTURE_CLIPBOARD.size={x:max.x-min.x+1,y:max.y-min.y+1,z:max.z-min.z+1};return true;}
+function transformClipboard(kind,v){if(!STRUCTURE_CLIPBOARD.blocks.length)throw new Error("Structure clipboard is empty.");const size=STRUCTURE_CLIPBOARD.size,out=[];if(kind==="rotate"){let turns=((Math.round(v/90)%4)+4)%4,sx=size.x,sz=size.z;for(const b0 of STRUCTURE_CLIPBOARD.blocks){let x=b0.x,z=b0.z;for(let i=0;i<turns;i++){const nx=sz-1-z,nz=x;x=nx;z=nz;[sx,sz]=[sz,sx]}out.push({name:b0.name,x,y:b0.y,z})}STRUCTURE_CLIPBOARD.blocks=out;STRUCTURE_CLIPBOARD.size={x:sx,y:size.y,z:sz}}else{const axis=String(v).toLowerCase();if(!["x","z"].includes(axis))throw new Error("Mirror axis must be x or z.");for(const b of STRUCTURE_CLIPBOARD.blocks)out.push({...b,[axis]:STRUCTURE_CLIPBOARD.size[axis]-1-b[axis]});STRUCTURE_CLIPBOARD.blocks=out}}
+async function rotateStructure(ctx,a){transformClipboard("rotate",number(a));return true;}
+async function mirrorStructure(ctx,a){transformClipboard("mirror",a);return true;}
+async function repairStructure(ctx){if(!STRUCTURE_CLIPBOARD.blocks.length)throw new Error("Structure clipboard is empty.");for(const b of STRUCTURE_CLIPBOARD.blocks){active(ctx);const p={x:Math.floor(ctx.bot.entity.position.x+b.x),y:Math.floor(ctx.bot.entity.position.y+b.y),z:Math.floor(ctx.bot.entity.position.z+b.z)};const live=ctx.bot.blockAt(vec(ctx.bot,p));if(!live||live.name!==b.name)try{await placeAt(ctx,b.name,p)}catch{}}return true;}
+async function lightArea(ctx,a){const {min,max}=boundedArea(a,"light_area"),i=inventoryItem(ctx.bot,"torch")||inventoryItem(ctx.bot,"lantern");if(!i)throw new Error("Torch or lantern not found.");for(let y=min.y;y<=max.y;y++)for(let z=min.z;z<=max.z;z++)for(let x=min.x;x<=max.x;x+=4){active(ctx);const floor=ctx.bot.blockAt(vec(ctx.bot,{x,y:y-1,z})),spot=ctx.bot.blockAt(vec(ctx.bot,{x,y,z}));if(floor?.name!=="air"&&spot?.name==="air")try{await placeAt(ctx,i.name,{x,y,z})}catch{}}return true;}
+
 async function usePotion(ctx,a){
   const item=inventoryItem(ctx,required(a,"Potion item is required."));
   if(!item||!/(potion|splash_potion|lingering_potion)/.test(item.name))throw new Error("Potion item not found.");
@@ -1462,6 +1502,47 @@ const H = {
   fill_bucket: async(ctx,a)=>fillBucket(ctx,a),
   place_liquid: async(ctx,a)=>placeLiquid(ctx,a),
   control_vehicle: async(ctx,a)=>controlVehicle(ctx,a),
+  use_grindstone: async(ctx,a)=>useWorkstation(ctx,a,"grindstone"),
+  use_loom: async(ctx,a)=>useWorkstation(ctx,a,"loom"),
+  use_stonecutter: async(ctx,a)=>useWorkstation(ctx,a,"stonecutter"),
+  use_cartography_table: async(ctx,a)=>useWorkstation(ctx,a,"cartography_table"),
+  use_smithing_table: async(ctx,a)=>useWorkstation(ctx,a,"smithing_table"),
+  ignite: async(ctx,a)=>ignite(ctx,a),
+  activate_respawn_anchor: async(ctx,a)=>activateRespawnAnchor(ctx,a),
+  use_totem: async(ctx)=>useTotem(ctx),
+  use_water_bucket: async(ctx,a)=>useBucketKind(ctx,a,"water"),
+  use_lava_bucket: async(ctx,a)=>useBucketKind(ctx,a,"lava"),
+  collect_powder_snow: async(ctx,a)=>collectPowderSnow(ctx,a),
+  use_spyglass: async(ctx,a)=>useSpyglass(ctx,a),
+  use_compass: async(ctx)=>useCompass(ctx),
+  use_recovery_compass: async(ctx)=>useRecoveryCompass(ctx),
+  bow_charge: async(ctx,a)=>chargeBow(ctx,a),
+  crossbow_charge: async(ctx)=>chargeCrossbow(ctx),
+  trident_attack: async(ctx,a)=>tridentAttack(ctx,a),
+  throw_trident: async(ctx,a)=>throwTrident(ctx,a),
+  throw_splash_potion: async(ctx,a)=>throwPotionKind(ctx,a,"splash_potion"),
+  throw_lingering_potion: async(ctx,a)=>throwPotionKind(ctx,a,"lingering_potion"),
+  knockback_target: async(ctx,a)=>knockbackTarget(ctx,a),
+  critical_attack: async(ctx,a)=>criticalAttack(ctx,a),
+  plant_seeds: async(ctx,a)=>plantSeeds(ctx,a),
+  plant_sapling: async(ctx,a)=>plantSapling(ctx,a),
+  harvest_and_replant: async(ctx)=>harvestAndReplant(ctx),
+  bone_meal: async(ctx,a)=>boneMeal(ctx,a),
+  feed_animal: async(ctx,a)=>feedAnimal(ctx,a),
+  tame_animal: async(ctx,a)=>tameAnimal(ctx,a),
+  lead_animal: async(ctx,a)=>leadAnimal(ctx,a),
+  move_animal: async(ctx,a)=>moveAnimal(ctx,a),
+  collect_eggs: async(ctx,a)=>collectEggs(ctx,a),
+  control_boat: async(ctx,a)=>controlTypedVehicle(ctx,a,"boat"),
+  control_horse: async(ctx,a)=>controlTypedVehicle(ctx,a,"horse"),
+  control_strider: async(ctx,a)=>controlTypedVehicle(ctx,a,"strider"),
+  use_elytra: async(ctx,a)=>useElytra(ctx,a),
+  build_blueprint: async(ctx,a)=>buildBlueprint(ctx,a),
+  copy_structure: async(ctx,a)=>copyStructure(ctx,a),
+  rotate_structure: async(ctx,a)=>rotateStructure(ctx,a),
+  mirror_structure: async(ctx,a)=>mirrorStructure(ctx,a),
+  repair_structure: async(ctx)=>repairStructure(ctx),
+  light_area: async(ctx,a)=>lightArea(ctx,a),
   recovery_mission: async(ctx)=>recoveryMission(ctx),
   goal: async(ctx,a)=>runGoalPlan(ctx,a),
   remember_home: async(ctx,a)=>{
