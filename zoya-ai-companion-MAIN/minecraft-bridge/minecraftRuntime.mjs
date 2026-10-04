@@ -1353,13 +1353,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     // immediately, but the guard task itself stays alive so the dispatcher can
     // restart the same guard operation after respawn.
     const action=String(activeTask?.action||"");
-    const resumableGuard=/^(?:manual:)?(?:clean:)?guard(?:_location)?$/.test(action);
-    if(resumableGuard){
+    // Persistent assignments survive a death as intent, but every physical
+    // control is paused immediately. Combat/finite actions are intentionally
+    // cancelled so Zoya never respawns and blindly repeats a stale attack.
+    const resumableAction=/^(?:manual:)?(?:clean:)?(?:follow_player|roam|explore|defend|guard|guard_location|chase_target|escort_player|protect_player|watch|coordinate_with_player)$/i.test(action);
+    if(resumableAction){
       try { bot.pathfinder?.setGoal(null); } catch {}
       try { bot.clearControlStates?.(); } catch {}
       try { bot.stopDigging?.(); } catch {}
       try { bot.deactivateItem?.(); } catch {}
-      log("[SAFETY] Guard task paused for death; guard post will resume after respawn.");
+      log("[SAFETY] Persistent task paused for death; intent will resume after respawn.");
     }else{
       interruptMovement("death");
     }
@@ -1397,15 +1400,15 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       // remains paused so the same guard coordinates can be restored after
       // Mineflayer emits spawn/respawn.
       const action=String(activeTask?.action||"");
-      const resumableGuard=/^(?:manual:)?(?:clean:)?guard(?:_location)?$/.test(action);
-      if (activeTask && !resumableGuard) {
+      const resumableAction=/^(?:manual:)?(?:clean:)?(?:follow_player|roam|explore|defend|guard|guard_location|chase_target|escort_player|protect_player|watch|coordinate_with_player)$/i.test(action);
+      if (activeTask && !resumableAction) {
         cancelCurrentTask("health_depleted");
         log("[SAFETY] Health reached 0; active task cancelled immediately.");
       } else {
         try { bot.pathfinder?.setGoal(null); } catch {}
         try { bot.clearControlStates?.(); } catch {}
-        if (activeTask && resumableGuard) {
-          log("[SAFETY] Health reached 0; guard task paused until respawn.");
+        if (activeTask && resumableAction) {
+          log("[SAFETY] Health reached 0; persistent task paused until respawn.");
         }
       }
     } else if (health < 10) {
