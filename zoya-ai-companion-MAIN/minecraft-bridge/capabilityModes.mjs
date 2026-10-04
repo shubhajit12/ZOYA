@@ -38,7 +38,7 @@ const defs = [
 ["escape","Escape","escape","none","finite"],
 ["chase_target","Chase Target","chase_target {target}","target","continuous"],
 ["equip_best_weapon","Equip Best Weapon","equip_best_weapon","none","finite"],
-["use_shield","Use Shield","use_shield","none","finite"],
+["use_shield","Use Shield","use_shield {time}","time_seconds","finite"],
 ["use_ranged_weapon","Use Ranged Weapon","use_ranged_weapon {target}","target","finite"],
 ["dig","Dig","dig {x} {y} {z}","coordinates","finite"],
 ["harvest_crops","Harvest Crops","harvest_crops","none","finite"],
