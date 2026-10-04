@@ -1,5 +1,5 @@
 
-// ZOYA Minecraft — canonical 111-capability contract registry.
+// ZOYA Minecraft — canonical 118-capability contract registry.
 // This file is the single source of truth for mode identity, arguments,
 // execution class, lifecycle, cancellation and safety metadata.
 
