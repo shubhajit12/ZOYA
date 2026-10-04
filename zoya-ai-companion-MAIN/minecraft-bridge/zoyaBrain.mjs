@@ -145,6 +145,7 @@ export function createZoyaBrain({
     if (!capability) return { mode, args, success: false, error: "Unknown capability." };
 
     if (mode === "stop") {
+      if (!requester) return { mode, args, success: false, error: "Autonomous planner cannot cancel an active task." };
       if (requester && !isOwner(requester)) {
         const permission = await requestOwnerPermission({ requester, mode, args, reason: "stop/cancel request" });
         if (permission.allowed !== true) return { mode, args, success: false, pendingPermission: permission.allowed === "pending", error: "Owner permission required to cancel Zoya's active task." };
@@ -261,7 +262,7 @@ export function createZoyaBrain({
 
     try {
       const context = compactState(minecraftState);
-      const requester = String(request?.requester || ownerUsername() || "").trim();
+      const requester = String(request?.requester || "").trim();
       const capabilitySummary = registry().map(item => ({
         id: item.id,
         usage: item.usage,
