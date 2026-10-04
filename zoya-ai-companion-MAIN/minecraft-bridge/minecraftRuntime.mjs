@@ -1443,13 +1443,33 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     const normalizedMessage = rawMessage.toLowerCase().replace(/[!?.,]+$/g, "").trim();
     const localStop = /^(stop|stop here|wait here|stay here|cancel|cancel task|hold here|don't move|do not move)$/.test(normalizedMessage);
     if (localStop) {
-      const cancelled = cancelCurrentTask("player command");
-      const reply = cancelled ? "Okay, I'll stop here." : "Okay, I'm staying here.";
-      if (channel === "whisper") bot.whisper(username, reply);
-      else bot.chat(reply);
-      rememberEvent("chat_command", { username, message: rawMessage, command: "stop", cancelled });
-      wakeBrain();
-      return true;
+      if (String(username || "").toLowerCase() === ownerKey) {
+        const cancelled = cancelCurrentTask("owner command");
+        const reply = cancelled ? "Okay, I'll stop here." : "Okay, I'm staying here.";
+        if (channel === "whisper") bot.whisper(username, reply);
+        else bot.chat(reply);
+        rememberEvent("chat_command", { username, message: rawMessage, command: "stop", cancelled, authorized: true });
+        wakeBrain();
+        return true;
+      }
+
+      const requested = askOwner(
+        username,
+        "stop",
+        "stop/cancel my active task",
+        async () => cancelCurrentTask("owner-approved player cancellation")
+      );
+      if (channel === "whisper") {
+        bot.whisper(username, requested
+          ? "I need my owner's permission before I can stop an active task."
+          : "I could not request my owner's permission right now.");
+      } else {
+        bot.chat(requested
+          ? "[ZOYA] I need my owner's permission before I can stop an active task."
+          : "[ZOYA] I could not request my owner's permission right now.");
+      }
+      rememberEvent("chat_command", { username, message: rawMessage, command: "stop", authorized: false, permissionRequested: requested });
+      return requested;
     }
 
     rememberEvent("chat_input", { username: String(username || ""), channel, message: rawMessage.slice(0, 500) });
