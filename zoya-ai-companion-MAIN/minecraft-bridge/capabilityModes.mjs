@@ -98,7 +98,17 @@ const defs = [
 ["coordinate_with_player","Coordinate With Player","coordinate_with_player {username} {task}","username task","continuous"],
 ["op_command","Use OP Command","op_command {command}","command","finite"],
 ["equip_best_armor","Equip Best Armor","equip_best_armor","none","finite"],
-["remember_home","Remember Home","remember_home {x} {y} {z}","coordinates","control"]
+["remember_home","Remember Home","remember_home {x} {y} {z}","coordinates","control"],
+["return_home","Return Home","return_home","none","finite"],
+["forget_home","Forget Home","forget_home","none","control"],
+["remember_location","Remember Location","remember_location {name} {x} {y} {z}","name coordinates","control"],
+["return_to_location","Return To Location","return_to_location {name}","name","finite"],
+["find_structure","Find Structure","find_structure {structure}","structure","finite"],
+["find_biome","Find Biome","find_biome {biome}","biome","finite"],
+["recover_items_after_death","Recover Items After Death","recover_items_after_death","none","finite"],
+["repair_equipment","Repair Equipment","repair_equipment {item}","item","finite"],
+["breed_animals","Breed Animals","breed_animals {animal}","animal","finite"],
+["enchant_item","Enchant Item","enchant_item {item}","item","finite"]
 ];
 
 export const CAPABILITY_MODES = Object.freeze(defs.map(([id,label,usage,argSchema,execution]) => Object.freeze({
@@ -113,8 +123,8 @@ export const CAPABILITY_IDS = Object.freeze(CAPABILITY_MODES.map(m => m.id));
 export const CAPABILITY_BY_ID = Object.freeze(Object.fromEntries(CAPABILITY_MODES.map(m => [m.id,m])));
 
 export function assertCapabilityRegistry(handlers) {
-  if (CAPABILITY_MODES.length !== 95) throw new Error("Expected exactly 95 capability modes.");
-  if (new Set(CAPABILITY_IDS).size !== 95) throw new Error("Capability IDs must be unique.");
+  if (CAPABILITY_MODES.length !== 105) throw new Error("Expected exactly 95 capability modes.");
+  if (new Set(CAPABILITY_IDS).size !== 105) throw new Error("Capability IDs must be unique.");
   for (const mode of CAPABILITY_MODES) {
     if (!mode.id || !mode.label || !mode.usage || !mode.argSchema || !mode.execution) {
       throw new Error("Incomplete capability contract: " + String(mode.id));
