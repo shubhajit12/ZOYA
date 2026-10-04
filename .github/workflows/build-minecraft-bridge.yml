@@ -93,7 +93,7 @@ jobs:
             foreach ($requiredBrainText in @('api.groq.com/openai/v1/chat/completions','json_schema','capabilityIds()','ownerUsername','requestOwnerPermission','dispatchCapability','MAX_ACTIONS_PER_PLAN','handlePlayerMessage')) {
               if ($brainSource -notmatch [regex]::Escape($requiredBrainText)) { throw "Groq brain guard is missing: $requiredBrainText" }
             }
-            foreach ($requiredPermissionText in @('function askOwner(requester, action, displayAction = action, execution = null)','pending.set(key, { id, requester, action, displayAction, execution','Owner permission','owner-approved player cancellation')) {
+            foreach ($requiredPermissionText in @('function askOwner(requester, action, displayAction = action, execution = null)','pending.set(key, { id, requester, action, displayAction, execution','ownerUsername','owner-approved player cancellation')) {
               if ($runtimeSource -notmatch [regex]::Escape($requiredPermissionText)) { throw "Owner permission guard is missing: $requiredPermissionText" }
             }
             foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','assertTaskActive','runManualCapability','lastTaskResult','bot.stopDigging?.()','bot.collectBlock.movements = movements','bot.collectBlock?.cancelTask?.()','target_lost','target_not_found','bot.isSleeping === true','bot.wake')) {
