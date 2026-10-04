@@ -617,7 +617,7 @@ const H = {
     ctx.log?.("[SHIELD] off-hand shield activated.");
     return true;
   },
-  use_ranged_weapon: async(ctx,a)=>{const t=player(ctx.bot,a)?.entity||nearest(ctx.bot,e=>!HOSTILES.has(entityName(e))&&entityName(e).includes(String(a||"").toLowerCase()),32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await ctx.bot.equip(i,"hand");await lookAtEntity(ctx,t);ctx.bot.activateItem();await wait(ctx,1200);ctx.bot.deactivateItem();return true;},
+  use_ranged_weapon: async(ctx,a)=>{const target=required(a,"Target is required.");const t=player(ctx.bot,target)?.entity||findSearchTarget(ctx.bot,target,32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");await ctx.bot.equip(i,"hand");await lookAtEntity(ctx,t);ctx.bot.activateItem();await wait(ctx,1200);ctx.bot.deactivateItem();return true;},
   dig: async(ctx,a)=>digBlock(ctx,ctx.bot.blockAt(vec(ctx.bot,coords(a)))),
   harvest_crops: async(ctx)=>{const b=ctx.bot.findBlock({matching:x=>CROPS.has(String(x?.name||"")),maxDistance:32});if(!b)throw new Error("No crop found nearby.");return digBlock(ctx,b);},
   fish: async(ctx)=>{
