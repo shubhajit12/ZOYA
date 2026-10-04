@@ -10,7 +10,7 @@ const CROPS = new Set(["wheat","carrots","potatoes","beetroots","nether_wart"]);
 const CONTAINERS = new Set(["chest","trapped_chest","barrel","shulker_box"]);
 const WEAPON_KINDS = ["mace","sword","axe","trident"];
 
-const CAPABILITY_ENGINE_PATCH = "guard-v23-protect-v30-deduped-active-combat-armor-v1-rebuild-v5-fish-reachable-spot-2026-10-03";
+const CAPABILITY_ENGINE_PATCH = "combat-survival-interruption-v1-workstations-liquids-vehicle-2026-10-04";
 const required = (v,msg="Argument is required.") => {
   const s=String(v??"").trim(); if(!s) throw new Error(msg); return s;
 };
@@ -442,6 +442,136 @@ async function extinguishFire(ctx){
   ctx.log?.("[FIRE] extinguished "+String(extinguished)+" fire source(s).");
   return true;
 }
+
+async function tradeVillager(ctx,a){
+  const q=parts(a), index=Math.max(0,Math.floor(Number(q.shift()??0))), times=Math.max(1,Math.floor(Number(q.shift()??1)));
+  const target=nearest(ctx.bot,e=>entityName(e)==="villager",24);
+  if(!target)throw new Error("No villager nearby.");
+  if(typeof ctx.bot.openVillager!=="function")throw new Error("Mineflayer villager API is unavailable.");
+  await navigate(ctx,target.position,3.5,30000,"villager");
+  active(ctx);
+  const villager=await ctx.bot.openVillager(target);
+  try{
+    const deadline=Date.now()+5000;
+    while(Date.now()<deadline&&(!Array.isArray(villager.trades)||villager.trades.length===0)){active(ctx);await wait(ctx,100);}
+    const trade=villager.trades?.[index];
+    if(!trade)throw new Error("Villager trade index out of range: "+index);
+    if(trade.disabled)throw new Error("Selected villager trade is disabled.");
+    active(ctx);
+    await villager.trade(index,times);
+    ctx.log?.("[TRADE] completed trade="+String(index)+" times="+String(times));
+    return true;
+  }finally{try{await villager.close?.();}catch{}}
+}
+async function useAnvil(ctx,a){
+  const q=parts(a), first=required(q.shift(),"Item is required."), secondName=q.shift()||null, rename=q.join(" ")||undefined;
+  const item=inventoryItem(ctx.bot,first);
+  if(!item)throw new Error("Item not found: "+first);
+  const second=secondName?inventoryItem(ctx.bot,secondName):null;
+  if(secondName&&!second)throw new Error("Second item not found: "+secondName);
+  const anvil=ctx.bot.findBlock({matching:x=>String(x?.name||"").endsWith("_anvil"),maxDistance:24});
+  if(!anvil)throw new Error("No anvil nearby.");
+  if(typeof ctx.bot.openAnvil!=="function")throw new Error("Mineflayer anvil API is unavailable.");
+  await navigate(ctx,anvil.position,3.5,30000,"anvil");
+  active(ctx);
+  const av=await ctx.bot.openAnvil(anvil);
+  try{
+    active(ctx);
+    if(second)await av.combine(item,second,rename);
+    else if(rename&&typeof av.rename==="function")await av.rename(item,rename);
+    else await av.combine(item,undefined);
+    ctx.log?.("[ANVIL] operation completed for "+item.name);
+    return true;
+  }finally{try{await av.close?.();}catch{}}
+}
+async function useBrewingStand(ctx,a){
+  const q=parts(a), ingredient=required(q.shift(),"Brewing ingredient is required."), potion=q.shift()||"water_bottle";
+  const count=Math.max(1,Math.min(3,Math.floor(Number(q.shift()||3))));
+  const stand=ctx.bot.findBlock({matching:ctx.bot.registry?.blocksByName?.[ "brewing_stand"]?.id,maxDistance:24});
+  if(!stand)throw new Error("No brewing stand nearby.");
+  if(typeof ctx.bot.openBrewingStand!=="function")throw new Error("Mineflayer brewing-stand API is unavailable.");
+  await navigate(ctx,stand.position,3.5,30000,"brewing stand");
+  active(ctx);
+  const brew=await ctx.bot.openBrewingStand(stand);
+  try{
+    const ing=inventoryItem(ctx.bot,ingredient), fuel=inventoryItem(ctx.bot,"blaze_powder");
+    if(!ing)throw new Error("Brewing ingredient not found: "+ingredient);
+    if(!fuel)throw new Error("Blaze powder not found.");
+    const potionItem=inventoryItem(ctx.bot,potion);
+    if(!potionItem)throw new Error("Potion bottle not found: "+potion);
+    active(ctx);
+    if(brew.fuelItem?.()==null)await brew.putFuel(fuel.type??fuel.id,null,1);
+    await brew.putIngredient(ing.type??ing.id,null,1);
+    for(let slot=0;slot<count;slot++){
+      active(ctx);
+      const p=inventoryItem(ctx.bot,potion);
+      if(!p)break;
+      await brew.putPotion(slot,p.type??p.id,null,1);
+    }
+    const deadline=Date.now()+30000;
+    while(Date.now()<deadline){
+      active(ctx);
+      if(Number(brew.progress||0)>=1||brew.brewingStopped===true)break;
+      await wait(ctx,250);
+    }
+    ctx.log?.("[BREW] brewing operation completed/started with "+ingredient);
+    return true;
+  }finally{try{await brew.close?.();}catch{}}
+}
+async function useShulkerBox(ctx,a){
+  const q=parts(a), action=(q.shift()||"open").toLowerCase(), itemName=q.shift()||null, amount=q.shift()?Math.max(1,Number(q.pop())):null;
+  const p=coords(q.join(" "));
+  const box=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!box||String(box.name)!=="shulker_box")throw new Error("Target is not a shulker box.");
+  const c=await container(ctx,p,"shulker_box");
+  try{
+    if(action==="deposit"&&itemName){const item=inventoryItem(ctx.bot,itemName);if(!item)throw new Error("Item not found: "+itemName);await c.deposit(item.type??item.id,null,amount);return true;}
+    if(action==="retrieve"&&itemName){const type=ctx.bot.registry?.itemsByName?.[String(itemName).toLowerCase().replace(/\s+/g,"_")];if(!type)throw new Error("Unknown item: "+itemName);await c.withdraw(type.id,null,amount);return true;}
+    if(action!=="open")throw new Error("Shulker action must be open, deposit, or retrieve.");
+    ctx.log?.("[SHULKER] opened.");
+    return true;
+  }finally{try{await c.close?.();}catch{}}
+}
+async function fillBucket(ctx,a){
+  const p=coords(a), b=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!b)throw new Error("Target block is not loaded.");
+  const bucket=inventoryItem(ctx.bot,"bucket");
+  if(!bucket)throw new Error("Empty bucket not found.");
+  const sourceNames=new Set(["water","flowing_water","lava","flowing_lava"]);
+  if(!sourceNames.has(String(b.name)))throw new Error("Target is not a water/lava source or flowing block.");
+  await navigate(ctx,b.position,3.5,15000,"bucket source");
+  active(ctx);await ctx.bot.equip(bucket,"hand");active(ctx);await ctx.bot.lookAt(b.position.offset(0.5,0.5,0.5),true);active(ctx);ctx.bot.activateItem();await wait(ctx,600);
+  const filled=inventoryItem(ctx.bot,String(b.name).includes("lava")?"lava_bucket":"water_bucket");
+  if(!filled)throw new Error("Bucket pickup was not confirmed.");
+  ctx.log?.("[BUCKET] filled from "+b.name);
+  return true;
+}
+async function placeLiquid(ctx,a){
+  const q=parts(a), liquid=required(q.shift(),"Liquid bucket is required."), p=coords(q.join(" "));
+  const item=inventoryItem(ctx.bot,liquid);
+  if(!item||!/(water_bucket|lava_bucket)$/.test(item.name))throw new Error("Water/lava bucket not found.");
+  const target=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!target)throw new Error("Target block is not loaded.");
+  const ref=ctx.bot.blockAt(vec(ctx.bot,{x:p.x,y:p.y-1,z:p.z}));
+  if(!ref||ref.name==="air")throw new Error("No reference block below liquid target.");
+  await navigate(ctx,ref.position,3.5,15000,"liquid placement");
+  active(ctx);await ctx.bot.equip(item,"hand");active(ctx);await ctx.bot.lookAt(ref.position.offset(0.5,1,0.5),true);active(ctx);ctx.bot.activateItem();await wait(ctx,600);
+  const after=ctx.bot.blockAt(vec(ctx.bot,p));
+  if(!after||!["water","lava"].includes(String(after.name)))throw new Error("Liquid placement was not confirmed.");
+  ctx.log?.("[BUCKET] placed "+liquid+" at "+String(p));
+  return true;
+}
+async function controlVehicle(ctx,a){
+  const q=parts(a),seconds=Math.max(0.1,Number(q.shift()||2)),forward=Number(q.shift()??1),sideways=Number(q.shift()??0);
+  if(!ctx.bot.vehicle)throw new Error("Bot is not mounted.");
+  if(typeof ctx.bot.moveVehicle==="function"){
+    active(ctx);ctx.bot.moveVehicle(forward,sideways);await wait(ctx,seconds*1000);ctx.bot.moveVehicle(0,0);return true;
+  }
+  ctx.bot.setControlState("forward",forward>0);ctx.bot.setControlState("back",forward<0);ctx.bot.setControlState("left",sideways<0);ctx.bot.setControlState("right",sideways>0);
+  try{await wait(ctx,seconds*1000);}finally{ctx.bot.setControlState("forward",false);ctx.bot.setControlState("back",false);ctx.bot.setControlState("left",false);ctx.bot.setControlState("right",false);}
+  return true;
+}
+
 async function clearHostiles(ctx,a){
   const raw=String(a??"").trim();
   const radius=raw?Number(raw):16;
@@ -452,7 +582,7 @@ async function clearHostiles(ctx,a){
     if(!target) break;
     const weapon=bestWeapon(ctx.bot);
     if(weapon) await ctx.bot.equip(weapon,"hand");
-    const killed=await attack(ctx,target,15000);
+    const killed=await combatAttack(ctx,target,15000);
     if(!killed) throw new Error("Failed to clear hostile target: "+entityName(target));
     defeated++;
   }
@@ -786,6 +916,77 @@ async function recoveryMission(ctx){
   return true;
 }
 
+
+async function combatPrepare(ctx){
+  const {bot}=ctx;
+  active(ctx);
+  try{ await H.equip_best_armor(ctx,""); }catch{}
+  const weapon=bestWeapon(bot);
+  if(weapon){ active(ctx); await bot.equip(weapon,"hand"); active(ctx); }
+  return true;
+}
+function combatShouldBlock(target){
+  const n=entityName(target);
+  return /skeleton|stray|pillager|piglin|piglin_brute|blaze|guardian|elder_guardian/.test(n);
+}
+async function briefShieldBlock(ctx,duration=300){
+  const {bot}=ctx;
+  const shield=inventoryItem(bot,"shield");
+  if(!shield)return false;
+  active(ctx);
+  if(String(bot.inventory?.slots?.[45]?.name||"").toLowerCase()!=="shield"){
+    await bot.equip(shield,"off-hand");
+    active(ctx);
+  }
+  if(String(bot.inventory?.slots?.[45]?.name||"").toLowerCase()!=="shield")return false;
+  bot.activateItem(true);
+  try{await wait(ctx,duration);return true;}finally{bot.deactivateItem();}
+}
+async function combatAttack(ctx,target,timeout=15000){
+  const {bot}=ctx;
+  await combatPrepare(ctx);
+  const deadline=Date.now()+timeout;
+  let swings=0;
+  while(target?.isValid!==false&&(target?.health==null||target.health>0)&&Date.now()<deadline){
+    active(ctx);
+    const current=target;
+    const d=distance(bot,current);
+    if(d>3.1){
+      bot.pathfinder.setGoal(new goals.GoalFollow(current,2.7),true);
+      await wait(ctx,150);
+      continue;
+    }
+    try{bot.pathfinder.setGoal(null);}catch{}
+    if(combatShouldBlock(current)){
+      await briefShieldBlock(ctx,250);
+      active(ctx);
+    }
+    await bot.lookAt(current.position.offset(0,current.height||1.2,0),true);
+    active(ctx);
+    bot.attack(current);
+    swings++;
+    await wait(ctx,450);
+    const uuid=current?.uuid;
+    if(uuid){
+      const fresh=Object.values(bot.entities||{}).find(x=>x?.uuid===uuid&&x!==bot.entity&&x.isValid!==false);
+      if(fresh)target=fresh;
+    }
+  }
+  try{bot.pathfinder.setGoal(null);}catch{}
+  const killed=(target?.health!=null&&target.health<=0)||(target?.isValid===false&&swings>0);
+  ctx.log?.("[COMBAT] target="+entityName(target)+" swings="+String(swings)+" killed="+String(killed));
+  return killed;
+}
+async function defendNearbyThreat(ctx,radius=10){
+  active(ctx);
+  const target=nearestHostile(ctx,radius);
+  if(!target)return false;
+  ctx.log?.("[SAFETY] Threat detected; temporarily defending task.");
+  await combatAttack(ctx,target,15000);
+  active(ctx);
+  return true;
+}
+
 const H = {
   follow_player: async(ctx,a)=>follow(ctx,player(ctx.bot,a)?.entity||(()=>{throw new Error("Player not found.");})(),3),
   roam: async(ctx)=>{
@@ -812,7 +1013,7 @@ const H = {
   gather_resources: async(ctx,a)=>{
     const q=parts(a),name=required(q[0],"Resource name is required."),amount=Math.max(1,Math.floor(Number(q[1])||1));
     let got=countItem(ctx.bot,name);
-    while(got<amount){active(ctx);const id=ctx.bot.registry.itemsByName[name.toLowerCase()]?.id;if(id==null)throw new Error("Unknown resource: "+name);
+    while(got<amount){active(ctx);await defendNearbyThreat(ctx,10);active(ctx);const id=ctx.bot.registry.itemsByName[name.toLowerCase()]?.id;if(id==null)throw new Error("Unknown resource: "+name);
       const block=ctx.bot.findBlock({matching:b=>{
         const bn=String(b?.name||"").toLowerCase();
         if(bn===name.toLowerCase()||bn.includes(name.toLowerCase())) return true;
@@ -843,11 +1044,11 @@ const H = {
   mine: async(ctx,a)=>{
     const name=required(a,"Block name is required()").toLowerCase();
     const b=ctx.bot.findBlock({matching:x=>String(x?.name||"").toLowerCase()===name,maxDistance:48});
-    if(!b)throw new Error("Block not found nearby: "+name);return digBlock(ctx,b);
+    if(!b)throw new Error("Block not found nearby: "+name);await defendNearbyThreat(ctx,10);return digBlock(ctx,b);
   },
   chop_tree: async(ctx)=>{
-    const b=ctx.bot.findBlock({matching:x=>/(_log|_stem)$/.test(String(x?.name||"")),maxDistance:32});
-    if(!b)throw new Error("No tree log found nearby.");return digBlock(ctx,b);
+    await defendNearbyThreat(ctx,10); const b=ctx.bot.findBlock({matching:x=>/(_log|_stem)$/.test(String(x?.name||"")),maxDistance:32});
+    if(!b)throw new Error("No tree log found nearby.");await defendNearbyThreat(ctx,10);return digBlock(ctx,b);
   },
   craft: async(ctx,a)=>{const q=parts(a),amount=Math.max(1,Number(q.at(-1))||1),name=q.length>1?q.slice(0,-1).join("_"):q[0];return craft(ctx,name,amount);},
   eat: async(ctx,a)=>{
@@ -880,8 +1081,8 @@ const H = {
     if(ctx.bot.vehicle){active(ctx);ctx.bot.dismount();return true;}
     const v=nearest(ctx.bot,e=>["boat","chest_boat","minecart"].includes(entityName(e)),6);if(!v)throw new Error("No nearby mountable vehicle.");if(typeof ctx.bot.mount!=="function")throw new Error("Mineflayer mount API is unavailable.");active(ctx);await ctx.bot.mount(v);return true;
   },
-  attack_mob: async(ctx,a)=>{const t=nearest(ctx.bot,e=>HOSTILES.has(entityName(e))&&(!a||entityName(e).includes(String(a).toLowerCase())),32);if(!t)throw new Error("Target mob not found.");return attack(ctx,t);},
-  defend: async(ctx)=>{while(true){active(ctx);const t=await nearestHostile(ctx,12);if(t)await attack(ctx,t);else await wait(ctx,250);}},
+  attack_mob: async(ctx,a)=>{const t=nearest(ctx.bot,e=>HOSTILES.has(entityName(e))&&(!a||entityName(e).includes(String(a).toLowerCase())),32);if(!t)throw new Error("Target mob not found.");return combatAttack(ctx,t);},
+  defend: async(ctx)=>{while(true){active(ctx);const t=await nearestHostile(ctx,12);if(t)await combatAttack(ctx,t);else await wait(ctx,250);}},
   guard: async(ctx,a)=>guard(ctx,coords(a)),
   escape: async(ctx)=>{
     const t=await nearestHostile(ctx,12);if(!t)return true;
@@ -949,7 +1150,7 @@ const H = {
   },
   use_ranged_weapon: async(ctx,a)=>{const target=required(a,"Target is required.");const t=player(ctx.bot,target)?.entity||findSearchTarget(ctx.bot,target,32);if(!t)throw new Error("Target not found.");const i=inventoryItem(ctx.bot,"bow")||inventoryItem(ctx.bot,"crossbow");if(!i)throw new Error("Bow/crossbow not found.");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await lookAtEntity(ctx,t);active(ctx);ctx.bot.activateItem();try{await wait(ctx,1200);}finally{ctx.bot.deactivateItem();}return true;},
   dig: async(ctx,a)=>digBlock(ctx,ctx.bot.blockAt(vec(ctx.bot,coords(a)))),
-  harvest_crops: async(ctx)=>{const b=ctx.bot.findBlock({matching:x=>CROPS.has(String(x?.name||"")),maxDistance:32});if(!b)throw new Error("No crop found nearby.");return digBlock(ctx,b);},
+  harvest_crops: async(ctx)=>{await defendNearbyThreat(ctx,10);const b=ctx.bot.findBlock({matching:x=>CROPS.has(String(x?.name||"")),maxDistance:32});if(!b)throw new Error("No crop found nearby.");return digBlock(ctx,b);},
   fish: async(ctx)=>{
     const {bot}=ctx;
     const rod=inventoryItem(bot,"fishing_rod");
@@ -993,7 +1194,7 @@ const H = {
     if(!t)throw new Error("No huntable animal nearby.");
     const weapon=bestWeapon(ctx.bot);
     if(weapon){active(ctx);await ctx.bot.equip(weapon,"hand");active(ctx);}
-    const killed=await attack(ctx,t,15000);
+    const killed=await combatAttack(ctx,t,15000);
     if(!killed)throw new Error("Hunt target was not killed before timeout.");
     return true;
   },
@@ -1103,6 +1304,13 @@ const H = {
   shear_animal: async(ctx,a)=>shearAnimal(ctx,a),
   extinguish_fire: async(ctx)=>extinguishFire(ctx),
   clear_hostiles: async(ctx,a)=>clearHostiles(ctx,a),
+  trade_villager: async(ctx,a)=>tradeVillager(ctx,a),
+  use_anvil: async(ctx,a)=>useAnvil(ctx,a),
+  use_brewing_stand: async(ctx,a)=>useBrewingStand(ctx,a),
+  use_shulker_box: async(ctx,a)=>useShulkerBox(ctx,a),
+  fill_bucket: async(ctx,a)=>fillBucket(ctx,a),
+  place_liquid: async(ctx,a)=>placeLiquid(ctx,a),
+  control_vehicle: async(ctx,a)=>controlVehicle(ctx,a),
   recovery_mission: async(ctx)=>recoveryMission(ctx),
   goal: async(ctx,a)=>runGoalPlan(ctx,a),
   remember_home: async(ctx,a)=>{
@@ -1575,6 +1783,8 @@ async function smelt(ctx,a){
     const deadline=Date.now()+30000;
     while(Date.now()<deadline){
       active(ctx);
+      await defendNearbyThreat(ctx,10);
+      active(ctx);
       const output=f.outputItem?.();      if(output && (!beforeOutput || output.count>beforeOutput.count || output.type!==beforeOutput.type)){
         await f.takeOutput();
         ctx.log?.("[SMELT] output ready: "+String(output.name||"item"));
@@ -1608,6 +1818,8 @@ async function build(ctx,a){
   if(!support)throw new Error("No safe solid build location nearby.");
   const placed=[];
   for(let i=0;i<n;i++){
+    active(ctx);
+    await defendNearbyThreat(ctx,10);
     active(ctx);
     const p=kind==="line"
       ? {x:support.x+i,y:support.y,z:support.z}
