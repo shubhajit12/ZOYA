@@ -1,5 +1,5 @@
 
-// ZOYA Minecraft — canonical 127-capability contract registry.
+// ZOYA Minecraft — canonical 168-capability contract registry.
 // This file is the single source of truth for mode identity, arguments,
 // execution class, lifecycle, cancellation and safety metadata.
 
@@ -113,6 +113,47 @@ const defs = [
 ["shear_animal","Shear Animal","shear_animal {animal}","animal","finite"],
 ["extinguish_fire","Extinguish Fire","extinguish_fire","none","finite"],
 ["clear_hostiles","Clear Hostiles","clear_hostiles [radius]","optional_radius","finite"],
+["use_grindstone","Use Grindstone","use_grindstone {x} {y} {z} [item]","coordinates optional_item","finite"],
+["use_loom","Use Loom","use_loom {x} {y} {z}","coordinates","finite"],
+["use_stonecutter","Use Stonecutter","use_stonecutter {x} {y} {z}","coordinates","finite"],
+["use_cartography_table","Use Cartography Table","use_cartography_table {x} {y} {z}","coordinates","finite"],
+["use_smithing_table","Use Smithing Table","use_smithing_table {x} {y} {z}","coordinates","finite"],
+["ignite","Ignite","ignite {x} {y} {z}","coordinates","finite"],
+["activate_respawn_anchor","Activate Respawn Anchor","activate_respawn_anchor {x} {y} {z}","coordinates","finite"],
+["use_totem","Use Totem","use_totem","none","finite"],
+["use_water_bucket","Use Water Bucket","use_water_bucket {x} {y} {z}","coordinates","finite"],
+["use_lava_bucket","Use Lava Bucket","use_lava_bucket {x} {y} {z}","coordinates","finite"],
+["collect_powder_snow","Collect Powder Snow","collect_powder_snow {x} {y} {z}","coordinates","finite"],
+["use_spyglass","Use Spyglass {time}","use_spyglass {time}","time_seconds","finite"],
+["use_compass","Use Compass","use_compass","none","finite"],
+["use_recovery_compass","Use Recovery Compass","use_recovery_compass","none","finite"],
+["bow_charge","Bow Charge","bow_charge {time}","time_seconds","finite"],
+["crossbow_charge","Crossbow Charge","crossbow_charge","none","finite"],
+["trident_attack","Trident Attack","trident_attack {target}","target","finite"],
+["throw_trident","Throw Trident","throw_trident {time}","time_seconds","finite"],
+["throw_splash_potion","Throw Splash Potion","throw_splash_potion {item}","item","finite"],
+["throw_lingering_potion","Throw Lingering Potion","throw_lingering_potion {item}","item","finite"],
+["knockback_target","Knockback Target","knockback_target {target}","target","finite"],
+["critical_attack","Critical Attack","critical_attack {target}","target","finite"],
+["plant_seeds","Plant Seeds","plant_seeds {item} {x} {y} {z}","item coordinates","finite"],
+["plant_sapling","Plant Sapling","plant_sapling {item} {x} {y} {z}","item coordinates","finite"],
+["harvest_and_replant","Harvest And Replant","harvest_and_replant","none","finite"],
+["bone_meal","Bone Meal","bone_meal {x} {y} {z}","coordinates","finite"],
+["feed_animal","Feed Animal","feed_animal {animal}","animal","finite"],
+["tame_animal","Tame Animal","tame_animal {animal}","animal","finite"],
+["lead_animal","Lead Animal","lead_animal {animal}","animal","finite"],
+["move_animal","Move Animal","move_animal {animal} {x} {y} {z}","animal coordinates","finite"],
+["collect_eggs","Collect Eggs","collect_eggs [radius]","optional_radius","finite"],
+["control_boat","Control Boat","control_boat {seconds} {forward} {sideways}","seconds forward sideways","finite"],
+["control_horse","Control Horse","control_horse {seconds} {forward} {sideways}","seconds forward sideways","finite"],
+["control_strider","Control Strider","control_strider {seconds} {forward} {sideways}","seconds forward sideways","finite"],
+["use_elytra","Use Elytra","use_elytra {seconds}","time_seconds","finite"],
+["build_blueprint","Build Blueprint","build_blueprint {plan}","plan","finite"],
+["copy_structure","Copy Structure","copy_structure {x1} {y1} {z1} {x2} {y2} {z2}","coordinates","finite"],
+["rotate_structure","Rotate Structure","rotate_structure {degrees}","degrees","finite"],
+["mirror_structure","Mirror Structure","mirror_structure {axis}","axis","finite"],
+["repair_structure","Repair Structure","repair_structure","none","finite"],
+["light_area","Light Area","light_area {x1} {y1} {z1} {x2} {y2} {z2}","coordinates","finite"],
 ["recovery_mission","Recovery Mission","recovery_mission","none","finite"],
 ["trade_villager","Trade Villager","trade_villager {tradeIndex} {times}","tradeIndex times","finite"],
 ["use_potion","Use Potion","use_potion {item}","item","finite"],
@@ -145,8 +186,8 @@ export const CAPABILITY_IDS = Object.freeze(CAPABILITY_MODES.map(m => m.id));
 export const CAPABILITY_BY_ID = Object.freeze(Object.fromEntries(CAPABILITY_MODES.map(m => [m.id,m])));
 
 export function assertCapabilityRegistry(handlers) {
-  if (CAPABILITY_MODES.length !== 127) throw new Error("Expected exactly 127 capability modes.");
-  if (new Set(CAPABILITY_IDS).size !== 127) throw new Error("Capability IDs must be unique.");
+  if (CAPABILITY_MODES.length !== 168) throw new Error("Expected exactly 168 capability modes.");
+  if (new Set(CAPABILITY_IDS).size !== 168) throw new Error("Capability IDs must be unique.");
   for (const mode of CAPABILITY_MODES) {
     if (!mode.id || !mode.label || !mode.usage || !mode.argSchema || !mode.execution) {
       throw new Error("Incomplete capability contract: " + String(mode.id));
