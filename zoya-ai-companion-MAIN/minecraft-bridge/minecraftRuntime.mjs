@@ -1480,7 +1480,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         const mode = String(match?.[1] || "pvp").trim().toLowerCase();
         const result = training.start(sender, mode);
         if (result.ok) {
-          try { bot.whisper(sender, "[ZOYA] Training mode enabled for " + result.mode + ". Teach me a move, then say \\"this is part of this mode\\" to save it."); } catch {}
+          try { bot.whisper(sender, "[ZOYA] Training mode enabled for " + result.mode + ". Teach me a move, then say \"this is part of this mode\" to save it."); } catch {}
         } else {
           try { bot.whisper(sender, "[ZOYA] " + result.error); } catch {}
         }
@@ -1518,7 +1518,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       if (/^(?:zoya[, ]*)?(?:when|if)\s+.+\s+copy me(?:\.|!)?$/i.test(text)) {
         const result = training.setInstruction(sender, text);
         if (result.ok) {
-          try { bot.whisper(sender, "[ZOYA] Got it. Demonstrate the move now. Say \\"this is part of this mode\\" when you're finished."); } catch {}
+          try { bot.whisper(sender, "[ZOYA] Got it. Demonstrate the move now. Say \"this is part of this mode\" when you're finished."); } catch {}
         } else {
           try { bot.whisper(sender, "[ZOYA] " + result.error); } catch {}
         }
