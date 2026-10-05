@@ -481,6 +481,14 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
           bot,
           config: { ...config, capabilityDebugMode },
           stateDir: path.dirname(CONFIG_PATH),
+          dispatchCapability: async ({ bot: capabilityBot, runtime: capabilityRuntime, id, arg, log: capabilityLog }) =>
+            dispatchCapability({
+              bot: capabilityBot,
+              runtime: minecraftRuntime || capabilityRuntime,
+              id,
+              arg,
+              log: capabilityLog || debugLog
+            }),
           wakeBrain: (reason = "event", request = null) => {
             if (capabilityDebugMode) return false;
             if (reason === "player_message" && request) {
