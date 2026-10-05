@@ -56,6 +56,7 @@ export function createZoyaBrain({
   dispatchCapability = null,
   getMemory = () => null,
   getActiveTask = () => null,
+  cancelActiveTask = () => false,
   getOwnerUsername = () => "",
   askOwnerPermission = null,
   log = () => {}
@@ -270,7 +271,19 @@ export function createZoyaBrain({
 
     const activeTask = getActiveTask?.() || null;
     if (activeTask) {
-      log("[BRAIN] Active task '" + activeTask.action + "' is still running; no new Groq request.");
+      // A cancelled Mineflayer task may need a few ticks to unwind its async
+      // handler. Never discard the owner request while that happens; keep it
+      // queued and retry once the task lifecycle is actually idle.
+      queuedReason = reason;
+      queuedRequest = request;
+      if (activeTask.cancelled) {
+        log("[BRAIN] Waiting for cancelled task '" + activeTask.action + "' to finish before planning the queued request.");
+        setTimeout(() => {
+          if (started && !thinking && !getActiveTask?.()) void think();
+        }, 100);
+      } else {
+        log("[BRAIN] Active task '" + activeTask.action + "' is still running; queued request will wait.");
+      }
       return;
     }
 
@@ -448,6 +461,22 @@ export function createZoyaBrain({
     const requester = String(username || "").trim();
     const text = String(message || "").trim();
     if (!requester || !text || !started) return false;
+
+    // Defensive owner cancellation path. The runtime normally handles this
+    // before reaching Groq, but keeping it here guarantees an owner stop can
+    // never be blocked behind the planner's active-task gate.
+    const owner = isOwner(requester);
+    const stopMatch = owner && text.match(/^(?:stop|stop here|wait here|stay here|cancel|cancel task|hold here|don't move|do not move)\b[\\s,;:.-]*(.*)$/i);
+    if (stopMatch) {
+      const remainder = String(stopMatch[1] || "").trim();
+      cancelActiveTask("owner command");
+      if (!remainder) {
+        return true;
+      }
+      requestThink("player_message", { requester, message: remainder, channel });
+      return true;
+    }
+
     requestThink("player_message", { requester, message: text, channel });
     return true;
   }
