@@ -4,6 +4,7 @@ import pathfinderPackage from "mineflayer-pathfinder";
 import toolPackage from "mineflayer-tool";
 import collectBlockPackage from "mineflayer-collectblock";
 import craftingUtilPackage from "mineflayer-crafting-util";
+import { createTrainingRuntime } from "./trainingRuntime.mjs";
 
 const { pathfinder, Movements, goals } = pathfinderPackage;
 const { plugin: toolPlugin } = toolPackage;
@@ -56,6 +57,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   movements.maxDropDown = 3;
   bot.pathfinder.setMovements(movements);
   if (bot.collectBlock) bot.collectBlock.movements = movements;
+
+  const training = createTrainingRuntime({
+    bot,
+    stateDir,
+    ownerUsername: config?.ownerUsername || "",
+    log
+  });
 
   const memoryPath = path.join(stateDir, MEMORY_FILE);
   const memory = readJson(memoryPath, DEFAULT_MEMORY);
@@ -1463,6 +1471,49 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function answerPlayer(username, message, channel = "public") {
+{
+    const sender = String(username || "").trim();
+    const text = String(message || "").trim();
+    const lower = text.toLowerCase();
+    if (sender && text && sender.toLowerCase() === ownerKey) {
+      if (/^(?:let's|lets)\\s+train(?:\\s+(.+))?$/i.test(text)) {
+        const match = text.match(/^(?:let's|lets)\\s+train(?:\\s+(.+))?$/i);
+        const mode = String(match?.[1] || "pvp").trim().toLowerCase();
+        const result = training.start(sender, mode);
+        if (result.ok) {
+          try { bot.whisper(sender, "[ZOYA] Training mode enabled for " + result.mode + ". Teach me a move, then say \\"this is part of this mode\\" to save it."); } catch {}
+        } else {
+          try { bot.whisper(sender, "[ZOYA] " + result.error); } catch {}
+        }
+        return true;
+      }
+      if (/^(?:stop|end)\\s+training$/i.test(text)) {
+        training.stop();
+        try { bot.whisper(sender, "[ZOYA] Training mode stopped."); } catch {}
+        return true;
+      }
+      if (/^(?:this is|save this|add this)\\s+(?:part of|to)\\s+(?:this|the)\\s+mode(?:\\s+as\\s+(.+))?$/i.test(text) ||
+          /^(?:this is part of this mode)(?:\\s+as\\s+(.+))?$/i.test(text)) {
+        const match = text.match(/^(?:this is|save this|add this)\\s+(?:part of|to)\\s+(?:this|the)\\s+mode(?:\\s+as\\s+(.+))?$/i) ||
+          text.match(/^(?:this is part of this mode)(?:\\s+as\\s+(.+))?$/i);
+        const name = String(match?.[1] || "").trim();
+        const result = training.saveSegment(sender, name);
+        try { bot.whisper(sender, result.ok ? "[ZOYA] Saved learned technique: " + result.technique.name : "[ZOYA] " + result.error); } catch {}
+        return true;
+      }
+      if (/^(?:zoya[, ]*)?(?:when|if)\\s+.+\\s+copy me(?:\\.|!)?$/i.test(text)) {
+        const result = training.setInstruction(sender, text);
+        if (result.ok) {
+          try { bot.whisper(sender, "[ZOYA] Got it. Demonstrate the move now. Say \\"this is part of this mode\\" when you're finished."); } catch {}
+        } else {
+          try { bot.whisper(sender, "[ZOYA] " + result.error); } catch {}
+        }
+        return true;
+      }
+    }
+  }
+
+
     const rawMessage = String(message || "").trim();
     if (!rawMessage) return false;
 
@@ -1694,6 +1745,14 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
   return {
     memory,
+    training,
+    startTraining: training.start,
+    stopTraining: training.stop,
+    setTrainingInstruction: training.setInstruction,
+    saveTrainingSegment: training.saveSegment,
+    getTrainingStatus: training.status,
+    exportTraining: training.exportLibrary,
+    importTraining: training.importLibrary,
     rememberPlayer,
     rememberHome,
     forgetHome,
