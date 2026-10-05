@@ -1492,6 +1492,28 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         try { bot.whisper(sender, "[ZOYA] Learned PvP techniques: " + names); } catch {}
         return true;
       }
+      if (/^(?:now\s+)?test(?:\s+the)?\s+(?:training\s+)?mode(?:\s+on\s+me)?$|^now\s+test\s+on\s+me$/i.test(text)) {
+        if (typeof dispatchCapability !== "function") {
+          try { bot.whisper(sender, "[ZOYA] My capability executor is unavailable."); } catch {}
+          return true;
+        }
+        try {
+          const result = await dispatchCapability({
+            bot,
+            runtime: { getActiveTask: () => activeTask },
+            id: "pvp",
+            arg: sender,
+            log
+          });
+          try { bot.whisper(sender, result === true
+            ? "[ZOYA] Testing the PvP mode on you now."
+            : "[ZOYA] I could not start the PvP mode test."); } catch {}
+        } catch (error) {
+          log("[TRAINING] Mode test failed: " + (error instanceof Error ? error.message : String(error)));
+          try { bot.whisper(sender, "[ZOYA] Mode test failed: " + (error instanceof Error ? error.message : String(error))); } catch {}
+        }
+        return true;
+      }
       if (/^(?:test|try|replay)\s+(?:training|technique)\s+(.+)$/i.test(text)) {
         const name = text.match(/^(?:test|try|replay)\s+(?:training|technique)\s+(.+)$/i)?.[1]?.trim();
         const result = await training.executeTechnique(name, { ctx: { bot, assertActive: () => {
