@@ -86,24 +86,24 @@ export function createZoyaBrain({
       if (!hints.some(item => item.mode === mode)) hints.push({ mode, usage, reason });
     };
 
-    if (/\\b(?:time|day|night|weather|difficulty|gamemode|game mode|teleport|\\btp\\b|\\bset\\b.*time)/i.test(text)) {
+    if (/\b(?:time|day|night|weather|difficulty|gamemode|game mode|teleport|\btp\b|\bset\b.*time)/i.test(text)) {
       add("op_command", "op_command {command}", "server/world administrative command; for time use args like: time set 1000");
     }
     if (/(?:give|drop|hand|deliver|bring).*(?:shield|sword|pickaxe|axe|food|item|bread|porkchop|diamond|iron|gold)/i.test(text) ||
         /(?:shield|sword|pickaxe|axe|food|bread|porkchop|diamond|iron|gold).*(?:give|drop|hand|deliver|bring)/i.test(text)) {
-      if (/\\b(?:me|owner|shubh|shubhthegoat)\\b/i.test(text) || /drop me|give me|hand me|bring me/i.test(text)) {
+      if (/\b(?:me|owner|shubh|shubhthegoat)\b/i.test(text) || /drop me|give me|hand me|bring me/i.test(text)) {
         add("give_item", "give_item {item} {username}", "give the requested item directly to the requester/owner");
       } else {
         add("drop_item", "drop_item {item}", "drop the requested item into the world");
       }
     }
-    if (/\\b(?:follow|come with me|stay with me|escort)\\b/i.test(text)) {
+    if (/\b(?:follow|come with me|stay with me|escort)\b/i.test(text)) {
       add("follow_player", "follow_player {username}", "follow the requester");
     }
-    if (/\\b(?:eat|consume)\\b/i.test(text)) {
+    if (/\b(?:eat|consume)\b/i.test(text)) {
       add("eat", "eat {item}", "explicit eating request");
     }
-    if (/\\b(?:stop|cancel|wait here|stay here|don't move|do not move)\\b/i.test(text)) {
+    if (/\b(?:stop|cancel|wait here|stay here|don't move|do not move)\b/i.test(text)) {
       add("stop", "stop", "explicit cancellation/control request");
     }
     return hints.slice(0, 6);
