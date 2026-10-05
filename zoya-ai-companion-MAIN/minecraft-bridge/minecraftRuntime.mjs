@@ -1298,6 +1298,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     } finally {
       const wasActive = activeTask === task;
       if (wasActive) {
+        // A capability may fail after leaving a Pathfinder goal/control state
+        // behind. Never let a completed/failed task keep moving the bot after
+        // its lifecycle has ended; the next capability must own movement.
+        try { bot.pathfinder?.setGoal(null); } catch {}
+        try { bot.clearControlStates?.(); } catch {}
         activeTask = null;
         currentGoal = null;
       }
