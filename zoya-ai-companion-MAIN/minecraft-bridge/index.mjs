@@ -601,6 +601,14 @@ const server = http.createServer((req, res) => {
     void ensureZoyaBrain().thinkNow();
     return send(res, 202, { ok: true });
   }
+  if (req.method === "GET" && url.pathname === "/training") {
+    if (!minecraftRuntime) return send(res, 409, { ok: false, error: "Minecraft runtime is not initialized." });
+    return send(res, 200, { ok: true, ...minecraftRuntime.getTrainingStatus?.() });
+  }
+  if (req.method === "GET" && url.pathname === "/training/export") {
+    if (!minecraftRuntime) return send(res, 409, { ok: false, error: "Minecraft runtime is not initialized." });
+    return send(res, 200, minecraftRuntime.exportTraining?.() || { ok: false, error: "Training export unavailable." });
+  }
   if (req.method === "GET" && url.pathname === "/task") {
     return send(res, 200, {
       ok: true,
