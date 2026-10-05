@@ -563,7 +563,7 @@ export function createZoyaBrain({
       }
     } finally {
       thinking = false;
-      if (queuedReason && started) requestThink(queuedReason);
+      scheduleThink();
     }
   }
 
