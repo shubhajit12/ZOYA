@@ -367,7 +367,6 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
         bot.setControlState?.("back", forward < -0.05);
         bot.setControlState?.("right", strafe > 0.05);
         bot.setControlState?.("left", strafe < -0.05);
-        if (recordedDelta > 0) await new Promise(resolve => setTimeout(resolve, Math.min(600, recordedDelta)));
         bot.clearControlStates?.();
       } else if (event.type === "sprint_start") {
         bot.setControlState?.("sprint", true);
