@@ -126,6 +126,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function autoEatForSurvival(trigger = "monitor") {
+    // PvP owns the combat hand during an active fight. Its tactical survival
+    // layer chooses gapples/pearls/totems itself; the background food monitor
+    // must not equip/consume at the same time or Mineflayer can reject the
+    // overlapping inventory/use operation as "invalid operation".
+    const activeAction = String(activeTask?.action || "").replace(/^manual:(?:clean:)?/, "");
+    if (activeAction === "pvp") return false;
     if (!survivalNeedsFood() || survivalEating || Date.now() - lastSurvivalEatAt < SURVIVAL_EAT_COOLDOWN_MS) return false;
     if (survivalEatPromise) return survivalEatPromise;
 
