@@ -513,7 +513,11 @@ export function createZoyaBrain({
     const owner = isOwner(requester);
     const stopMatch = owner && text.match(/^(?:(?:ok|okay|please|can you|could you|would you)[\s]+)*(?:stop|cancel)\b[\s]*(.*)$/i);
     if (stopMatch) {
-      const remainder = String(stopMatch[1] || "").trim();
+      let remainder = String(stopMatch[1] || "").trim();
+      remainder = remainder
+        .replace(/^(?:here|now|the mode|this mode|the task|this task|the task you are doing|what you are doing)\b[\s]*/i, "")
+        .replace(/^and\b[\s]*/i, "")
+        .trim();
       cancelActiveTask("owner command");
       if (!remainder) {
         return true;
