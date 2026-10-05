@@ -275,6 +275,81 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
     return { ok: true, technique };
   }
 
+  function getTechniques(mode = "pvp") {
+    return Array.isArray(library.modes?.[mode]?.techniques)
+      ? library.modes[mode].techniques.slice()
+      : [];
+  }
+
+  function findTechnique(name, mode = "pvp") {
+    const wanted = clean(name, 120).toLowerCase().replace(/\s+/g, "_");
+    return getTechniques(mode).find(t => String(t.name || "").toLowerCase() === wanted ||
+      String(t.id || "").toLowerCase() === wanted) || null;
+  }
+
+  function techniqueMatches(technique, context = "") {
+    const text = String(technique?.instruction || "").toLowerCase();
+    const c = String(context || "").toLowerCase();
+    if (!text) return false;
+    if (c === "shield") return /shield|block(?:ing|ed|up)/.test(text);
+    if (c === "clutch") return /clutch|water bucket|lava bucket|mlg/.test(text);
+    if (c === "combo") return /combo|sword|axe|attack|pvp/.test(text);
+    return false;
+  }
+
+  async function executeTechnique(name, { target = null, context = "", ctx = null } = {}) {
+    const technique = findTechnique(name) || getTechniques("pvp").find(t => techniqueMatches(t, context));
+    if (!technique) return { ok: false, error: "Learned technique not found." };
+    const bot = ctx?.bot || null;
+    if (!bot) return { ok: false, error: "Training execution requires a bot context." };
+    const active = () => {
+      ctx?.assertActive?.();
+    };
+    const targetEntity = target?.entity || target || null;
+    const events = Array.isArray(technique.events) ? technique.events : [];
+    const started = Date.now();
+
+    for (let i = 0; i < events.length; i++) {
+      const event = events[i];
+      active();
+      const nextAt = Number(events[i + 1]?.at ?? event.at);
+      const recordedDelta = Math.max(0, Math.min(1200, nextAt - Number(event.at || nextAt)));
+      if (event.type === "equip_change" && event.item && event.item !== "empty") {
+        const item = bot.inventory?.items?.().find(x => String(x.name).toLowerCase() === String(event.item).toLowerCase());
+        if (item) await bot.equip(item, "hand");
+      } else if (event.type === "attack_or_swing" && targetEntity) {
+        const live = targetEntity.uuid
+          ? Object.values(bot.entities || {}).find(e => e?.uuid === targetEntity.uuid && e !== bot.entity && e.isValid !== false)
+          : targetEntity;
+        if (live && live.isValid !== false && (live.health == null || live.health > 0)) {
+          await bot.lookAt(live.position.offset(0, live.height || 1.2, 0), true);
+          active();
+          bot.attack(live);
+        }
+      } else if (event.type === "sprint_start") {
+        bot.setControlState?.("sprint", true);
+      } else if (event.type === "sprint_stop") {
+        bot.setControlState?.("sprint", false);
+      } else if (event.type === "sneak_start") {
+        bot.setControlState?.("sneak", true);
+      } else if (event.type === "sneak_stop") {
+        bot.setControlState?.("sneak", false);
+      }
+      if (recordedDelta > 0) {
+        await new Promise(resolve => setTimeout(resolve, recordedDelta));
+      }
+      if (Date.now() - started > 15000) break;
+    }
+
+    bot.setControlState?.("sprint", false);
+    bot.setControlState?.("sneak", false);
+    return { ok: true, technique: technique.name };
+  }
+
+  function findApplicable(context = "combo") {
+    return getTechniques("pvp").find(t => techniqueMatches(t, context)) || null;
+  }
+
   function status() {
     return {
       active: Boolean(session.instructor),
@@ -315,6 +390,10 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
     saveSegment,
     status,
     exportLibrary,
-    importLibrary
+    importLibrary,
+    getTechniques,
+    findTechnique,
+    findApplicable,
+    executeTechnique
   };
 }
