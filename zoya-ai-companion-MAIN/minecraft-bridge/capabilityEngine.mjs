@@ -213,12 +213,7 @@ function targetBlocking(target) {
   if (String(offhand?.name || "").toLowerCase() !== "shield" && String(mainhand?.name || "").toLowerCase() !== "shield") return false;
   // The protocol metadata layout is version dependent. Never treat a magic
   // index as authoritative; use it only as a best-effort hint when present.
-  const md = target.metadata;
-  const hints = Array.isArray(md) ? md : Object.values(md || {});
-  return hints.some(v => {
-    const n = Number(v?.value ?? v);
-    return n === 1 || n === 128 || n === 3 || n === 129;
-  }) || Boolean(target.isBlocking === true);
+  return Boolean(target.isBlocking === true);
 }
 async function combatEquip(ctx, item, destination = "hand") {
   if (!item) return false;
