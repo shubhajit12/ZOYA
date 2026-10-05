@@ -120,7 +120,7 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
         const targetUsername = String(arg || "").trim().split(/\s+/)[0] || "";
         const targetRequired = /^(?:follow_player|escort_player|protect_player|chase_target|coordinate_with_player)$/i.test(mode);
         if (targetRequired && targetUsername) {
-          const readyDeadline = Date.now() + 5000;
+          const readyDeadline = Date.now() + 10000;
           while(Date.now() < readyDeadline){
             const player = bot.players?.[targetUsername] ||
               Object.values(bot.players || {}).find(p => String(p?.username || "").toLowerCase() === targetUsername.toLowerCase());
