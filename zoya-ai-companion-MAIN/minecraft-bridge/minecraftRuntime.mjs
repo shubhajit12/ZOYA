@@ -1448,7 +1448,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     // cancel first, then send only the remaining request to Groq after the
     // cancelled task has unwound.
     const ownerStopMatch = requesterIsOwner
-      ? normalizedMessage.match(/^(?:ok(?:ay)?[\\s,;:.-]*)?(?:please[\\s,;:.-]*)?(?:stop|cancel)(?:[\\s,;:.-]+(?:here|now|the task|this task))?(?:[\\s,;:.-]+and)?[\\s,;:.-]*(.*)$/i)
+      ? normalizedMessage.match(/^(?:ok(?:ay)?[\s,;:.-]*)?(?:please[\s,;:.-]*)?(?:stop|cancel)(?:[\s,;:.-]+(?:here|now|the task|this task))?(?:[\s,;:.-]+and)?[\s,;:.-]*(.*)$/i)
       : null;
     if (ownerStopMatch) {
       const remainder = String(ownerStopMatch[1] || "").trim();
