@@ -444,6 +444,29 @@ export function createZoyaBrain({
         reasonSummary: typeof plan.reasonSummary === "string" ? plan.reasonSummary.slice(0, 300) : ""
       };
 
+      // A player message must never disappear silently. If Groq returns an
+      // empty plan (or an empty chat action), provide a deterministic fallback
+      // response so the player always gets an acknowledgement.
+      if (reason === "player_message") {
+        const chatAction = normalized.actions.find(item => item.mode === "chat" || item.mode === "private_chat" || item.mode === "whisper_player");
+        if (chatAction && !chatAction.args) {
+          chatAction.mode = request?.channel === "whisper" ? "private_chat" : "chat";
+          chatAction.args = request?.channel === "whisper"
+            ? requester + " I'm listening. Tell me what you need."
+            : "I'm listening. Tell me what you need.";
+        } else if (!normalized.actions.length) {
+          normalized.actions = [{
+            mode: request?.channel === "whisper" ? "private_chat" : "chat",
+            args: request?.channel === "whisper"
+              ? requester + " I'm listening. Tell me what you need."
+              : "I'm listening. Tell me what you need."
+          }];
+          normalized.goal = "Respond to the player";
+          normalized.reasonSummary = "Groq returned no action for a player message, so Zoya sent a deterministic acknowledgement.";
+          log("[BRAIN] Groq returned no action for player_message; using chat acknowledgement fallback.");
+        }
+      }
+
       lastDecision = new Date().toISOString();
       lastPlan = normalized;
       lastGoal = normalized.goal;
