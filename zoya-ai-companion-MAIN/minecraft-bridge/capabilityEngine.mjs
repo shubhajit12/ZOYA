@@ -1366,6 +1366,7 @@ const H = {
   pvp: async(ctx,a)=>{
     const username=required(a,"Player username is required.");
     let lastStrafe=0, lastBow=0, lastPearl=0, lastAdvanced=0, lastLearned=0, lastCritical=0;
+    let lastShieldBreak=0, meleeWeaponKind="sword", meleeWeaponCommitUntil=0;
     let previousTargetHealth=null;
     while(true){
       active(ctx);
@@ -1395,9 +1396,15 @@ const H = {
       const targetHasShield=Array.isArray(target.equipment) &&
         target.equipment.some(item=>String(item?.name||"").toLowerCase()==="shield");
       const blocking=targetBlocking(target);
-      if(targetHasShield && (blocking || dist<=3.4)){
+      // Shield-break is a deliberate tactical transition, not a per-tick
+      // weapon choice. Repeatedly selecting the axe against a merely equipped
+      // shield caused rapid axe <-> sword oscillation during live PvP.
+      if(targetHasShield && blocking && now-lastShieldBreak>=1200){
         const axe=combatWeapon(bot,"axe");
         if(axe){
+          meleeWeaponKind="axe";
+          meleeWeaponCommitUntil=now+850;
+          lastShieldBreak=now;
           await combatEquip(ctx,axe,"hand");
           await combatAim(ctx,target,60);
           bot.attack(target);
@@ -1446,10 +1453,13 @@ const H = {
       }
       previousTargetHealth=targetHealth;
 
-      // Prefer sword for sustained melee; fall back to any weapon.
-      const sword=combatWeapon(bot,"sword");
-      const axe=combatWeapon(bot,"axe");
-      const melee=sword||axe||combatWeapon(bot,"mace")||combatWeapon(bot,"spear");
+      // Prefer sword for sustained melee. Keep an axe only for the short
+      // post-shield-break commitment; never oscillate weapons just because the
+      // target still has a shield equipped.
+      if(Date.now()>=meleeWeaponCommitUntil) meleeWeaponKind="sword";
+      const preferred = meleeWeaponKind==="axe" ? combatWeapon(bot,"axe") : combatWeapon(bot,"sword");
+      const fallback = combatWeapon(bot,"mace")||combatWeapon(bot,"spear")||combatWeapon(bot,"axe");
+      const melee=preferred||fallback;
       if(melee) await combatEquip(ctx,melee,"hand");
       await combatAim(ctx,target,70);
       await combatSprintReset(ctx);
@@ -2240,8 +2250,30 @@ async function protect(ctx,a){
   }
 }
 async function give(ctx,a){
-  const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required."),p=player(ctx.bot,u)?.entity,i=inventoryItem(ctx.bot,name);
-  if(!p)throw new Error("Player not found.");if(!i)throw new Error("Item not found.");await navigate(ctx,p.position,3,20000,"delivery");active(ctx);await ctx.bot.equip(i,"hand");active(ctx);await ctx.bot.tossStack(i);return true;
+  const q=parts(a),name=required(q.shift(),"Item is required."),u=required(q.shift(),"Username is required.");
+  const bot=ctx.bot;
+  const wanted=String(u||"").trim().toLowerCase();
+  let p=player(bot,u)?.entity||Object.values(bot.entities||{}).find(e=>String(e?.username||"").toLowerCase()===wanted);
+  if(!p){
+    const deadline=Date.now()+3000;
+    while(Date.now()<deadline){
+      active(ctx);
+      p=player(bot,u)?.entity||Object.values(bot.entities||{}).find(e=>String(e?.username||"").toLowerCase()===wanted);
+      if(p)break;
+      await wait(ctx,150);
+    }
+  }
+  const i=inventoryItem(bot,name);
+  if(!p)throw new Error("Player not found: "+u);
+  if(!i)throw new Error("Item not found.");
+  await navigate(ctx,p.position,3,20000,"delivery");
+  active(ctx);
+  const currentItem=inventoryItem(bot,name);
+  if(!currentItem)throw new Error("Item disappeared before delivery.");
+  await bot.equip(currentItem,"hand");
+  active(ctx);
+  await bot.tossStack(currentItem);
+  return true;
 }
 async function storage(ctx,a,deposit){
   const q=parts(a),name=required(q.shift(),"Item is required."),p=coords(q.splice(0,3).join(" ")),c=await container(ctx,p);
