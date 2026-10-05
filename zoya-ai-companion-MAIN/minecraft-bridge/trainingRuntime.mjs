@@ -299,11 +299,13 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
     const text = String(technique?.instruction || "").toLowerCase();
     const c = String(context || "").toLowerCase();
     if (!text) return false;
-    if (c === "shield") return /shield|block(?:ing|ed|up)/.test(text);
-    if (c === "clutch") return /clutch|water bucket|lava bucket|mlg/.test(text);
+    if (c === "shield") return /shield|block(?:ing|ed|up)|axe/.test(text);
+    if (c === "clutch") return /clutch|water bucket|lava bucket|mlg|fall/.test(text);
+    if (c === "ranged") return /bow|crossbow|trident|ranged|shoot|arrow|pearl/.test(text);
+    if (c === "mobility") return /strafe|s[- ]?tap|w[- ]?tap|sprint|jump|movement|move/.test(text);
     if (c === "combo") {
-      if (/shield|clutch|water bucket|lava bucket|mlg/.test(text)) return false;
-      return /combo|sword|axe|attack|pvp|strafe/.test(text);
+      if (/clutch|water bucket|lava bucket|mlg/.test(text)) return false;
+      return /combo|sword|axe|attack|pvp|strafe|crit|sprint/.test(text);
     }
     return false;
   }
@@ -367,6 +369,9 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
         bot.setControlState?.("back", forward < -0.05);
         bot.setControlState?.("right", strafe > 0.05);
         bot.setControlState?.("left", strafe < -0.05);
+        // Keep the recorded control state active for the recorded interval.
+        // Clearing it before the delay made learned movement effectively a no-op.
+        if (recordedDelta > 0) await new Promise(resolve => setTimeout(resolve, recordedDelta));
         bot.clearControlStates?.();
       } else if (event.type === "sprint_start") {
         bot.setControlState?.("sprint", true);
@@ -377,7 +382,7 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
       } else if (event.type === "sneak_stop") {
         bot.setControlState?.("sneak", false);
       }
-      if (recordedDelta > 0) {
+      if (recordedDelta > 0 && event.type !== "move") {
         await new Promise(resolve => setTimeout(resolve, recordedDelta));
       }
       if (Date.now() - started > 15000) break;
