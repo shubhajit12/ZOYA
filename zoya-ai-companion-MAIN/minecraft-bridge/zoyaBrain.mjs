@@ -298,10 +298,25 @@ export function createZoyaBrain({
       return;
     }
     noApiKeyLogged = false;
-    if (!minecraftState?.available || !minecraftState.player) return;
+    if (!minecraftState?.available || !minecraftState.player) {
+      if (request) {
+        queuedReason = reason;
+        queuedRequest = request;
+        requestThink(reason, request);
+      }
+      return;
+    }
 
     if (Date.now() < rateLimitedUntil) {
-      log("[BRAIN] Groq rate-limit backoff active; event coalesced.");
+      // Preserve the exact request that triggered this think. The previous
+      // implementation cleared queuedRequest before checking the backoff,
+      // which could permanently lose player messages during a Groq 429.
+      if (request) {
+        queuedReason = reason;
+        queuedRequest = request;
+      }
+      log("[BRAIN] Groq rate-limit backoff active; request preserved for retry.");
+      requestThink(reason, request);
       return;
     }
 
