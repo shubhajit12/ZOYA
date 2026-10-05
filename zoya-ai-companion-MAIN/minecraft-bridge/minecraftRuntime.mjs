@@ -1491,16 +1491,16 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         try { bot.whisper(sender, "[ZOYA] Training mode stopped."); } catch {}
         return true;
       }
-      if (/^(?:this is|save this|add this)\s+(?:part of|to)\s+(?:this|the)\s+mode(?:\s+as\s+(.+))?$/i.test(text) ||
-          /^(?:this is part of this mode)(?:\s+as\s+(.+))?$/i.test(text)) {
-        const match = text.match(/^(?:this is|save this|add this)\s+(?:part of|to)\s+(?:this|the)\s+mode(?:\s+as\s+(.+))?$/i) ||
-          text.match(/^(?:this is part of this mode)(?:\s+as\s+(.+))?$/i);
+      if (/^(?:this is|save this|add this)\s+(?:a\s+)?(?:part of|to)\s+(?:this|the)\s+mode(?:\s+as\s+(.+))?$/i.test(text) ||
+          /^(?:this is)(?:\s+a)?\s+part of this mode(?:\s+as\s+(.+))?$/i.test(text)) {
+        const match = text.match(/^(?:this is|save this|add this)\s+(?:a\s+)?(?:part of|to)\s+(?:this|the)\s+mode(?:\s+as\s+(.+))?$/i) ||
+          text.match(/^(?:this is)(?:\s+a)?\s+part of this mode(?:\s+as\s+(.+))?$/i);
         const name = String(match?.[1] || "").trim();
         const result = training.saveSegment(sender, name);
         try { bot.whisper(sender, result.ok ? "[ZOYA] Saved learned technique: " + result.technique.name : "[ZOYA] " + result.error); } catch {}
         return true;
       }
-      if (/^(?:zoya[, ]*)?(?:when|if)\s+.+\s+copy me(?:\\.|!)?$/i.test(text)) {
+      if (/^(?:zoya[, ]*)?(?:when|if)\s+.+\s+copy me(?:\.|!)?$/i.test(text)) {
         const result = training.setInstruction(sender, text);
         if (result.ok) {
           try { bot.whisper(sender, "[ZOYA] Got it. Demonstrate the move now. Say \\"this is part of this mode\\" when you're finished."); } catch {}
