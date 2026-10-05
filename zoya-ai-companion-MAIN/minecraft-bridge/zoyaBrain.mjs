@@ -501,7 +501,7 @@ export function createZoyaBrain({
     // before reaching Groq, but keeping it here guarantees an owner stop can
     // never be blocked behind the planner's active-task gate.
     const owner = isOwner(requester);
-    const stopMatch = owner && text.match(/^(?:stop|stop here|wait here|stay here|cancel|cancel task|hold here|don't move|do not move)\b[\\s,;:.-]*(.*)$/i);
+    const stopMatch = owner && text.match(/^(?:(?:ok|okay|please|can you|could you|would you)[\s]+)*(?:stop|cancel)(?:[\s]+(?:here|now|the task you are doing|the task you’re doing|what you are doing|what you’re doing|the task|this task))?(?:[\s]+and[\s]+)?(.*)$/i);
     if (stopMatch) {
       const remainder = String(stopMatch[1] || "").trim();
       cancelActiveTask("owner command");
