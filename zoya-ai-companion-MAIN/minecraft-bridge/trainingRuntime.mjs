@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { Vec3 } from "vec3";
 
 const VERSION = 1;
 const FILE = "minecraft-training.json";
@@ -306,6 +307,28 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
       ctx?.assertActive?.();
     };
     const targetEntity = target?.entity || target || null;
+    if (context === "clutch" && /water_bucket|water bucket|mlg/.test(String(technique.instruction || "").toLowerCase())) {
+      const bucket = bot.inventory?.items?.().find(x => /^(?:water_bucket|lava_bucket)$/.test(String(x.name || "").toLowerCase()));
+      if (bucket) {
+        await bot.equip(bucket, "hand");
+        const deadline = Date.now() + 3500;
+        while (Date.now() < deadline) {
+          active();
+          const vy = Number(bot.entity?.velocity?.y ?? 0);
+          if (vy < -0.18 && bot.entity?.position) {
+            const below = bot.blockAt(bot.entity.position.offset(0, -1, 0));
+            if (below && below.name !== "air" && !/water|lava/.test(String(below.name))) {
+              await bot.lookAt(below.position.offset(0.5, 1, 0.5), true);
+              try {
+                await bot.placeBlock(below, new Vec3(0, 1, 0));
+                return { ok: true, technique: technique.name, action: "clutch" };
+              } catch {}
+            }
+          }
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+    }
     const events = Array.isArray(technique.events) ? technique.events : [];
     const started = Date.now();
 
