@@ -377,7 +377,7 @@ export function createZoyaBrain({
       // which could permanently lose player messages during a Groq 429.
       requeueFront(reason, request);
       log("[BRAIN] Groq rate-limit backoff active; request preserved for retry.");
-      requestThink(reason, request);
+      requestThink();
       return;
     }
 
