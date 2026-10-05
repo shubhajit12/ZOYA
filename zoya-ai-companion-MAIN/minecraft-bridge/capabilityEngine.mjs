@@ -164,6 +164,183 @@ async function navigateXZ(ctx,p,range=3,timeout=30000,label="navigation"){
 async function lookAt(ctx,p){ active(ctx); await ctx.bot.lookAt(vec(ctx.bot,p),true); return true; }
 async function lookAtEntity(ctx,e){ active(ctx); await ctx.bot.lookAt(e.position.offset(0,e.height||1.4,0),true); return true; }
 
+function combatItem(bot, predicate) {
+  return bot.inventory?.items?.().find(item => predicate(String(item?.name || "").toLowerCase())) || null;
+}
+function combatWeapon(bot, kind) {
+  const order = kind === "axe" ? ["netherite_axe","diamond_axe","iron_axe","stone_axe","golden_axe","wooden_axe"]
+    : kind === "mace" ? ["mace"]
+    : kind === "spear" ? ["netherite_spear","diamond_spear","iron_spear","stone_spear","golden_spear","wooden_spear","spear"]
+    : ["netherite_sword","diamond_sword","iron_sword","stone_sword","golden_sword","wooden_sword"];
+  for (const wanted of order) {
+    const item = bot.inventory?.items?.().find(x => String(x?.name || "").toLowerCase() === wanted);
+    if (item) return item;
+  }
+  return null;
+}
+function combatShield(bot) {
+  return bot.inventory?.items?.().find(x => String(x?.name || "").toLowerCase() === "shield") || null;
+}
+function combatGapple(bot) {
+  return combatItem(bot, n => n === "enchanted_golden_apple" || n === "golden_apple");
+}
+function combatPearl(bot) {
+  return combatItem(bot, n => n === "ender_pearl");
+}
+function combatBow(bot) {
+  return combatItem(bot, n => n === "bow") && combatItem(bot, n => n === "arrow" || n.endsWith("_arrow"));
+}
+function combatDistance(bot, target) {
+  return target?.position ? bot.entity.position.distanceTo(target.position) : Infinity;
+}
+function combatPredictedPosition(target, leadMs = 120) {
+  const p = target?.position;
+  const v = target?.velocity;
+  if (!p) return null;
+  const t = Math.max(0, Math.min(350, Number(leadMs) || 0)) / 1000;
+  return { x: p.x + Number(v?.x || 0) * t, y: p.y + Number(v?.y || 0) * t, z: p.z + Number(v?.z || 0) * t };
+}
+async function combatAim(ctx, target, leadMs = 80) {
+  active(ctx);
+  const point = combatPredictedPosition(target, leadMs) || target.position;
+  await ctx.bot.lookAt(vec(ctx.bot, { x: point.x, y: point.y + Math.max(0.9, Number(target.height || 1.2) * 0.65), z: point.z }), true);
+}
+function targetBlocking(target) {
+  if (!target) return false;
+  const offhand = target.equipment?.[1];
+  const mainhand = target.equipment?.[0];
+  if (!offhand && !mainhand) return false;
+  if (String(offhand?.name || "").toLowerCase() !== "shield" && String(mainhand?.name || "").toLowerCase() !== "shield") return false;
+  // The protocol metadata layout is version dependent. Never treat a magic
+  // index as authoritative; use it only as a best-effort hint when present.
+  const md = target.metadata;
+  const hints = Array.isArray(md) ? md : Object.values(md || {});
+  return hints.some(v => {
+    const n = Number(v?.value ?? v);
+    return n === 1 || n === 128 || n === 3 || n === 129;
+  }) || Boolean(target.isBlocking === true);
+}
+async function combatEquip(ctx, item, destination = "hand") {
+  if (!item) return false;
+  active(ctx);
+  await ctx.bot.equip(item, destination);
+  active(ctx);
+  return true;
+}
+async function combatSprintReset(ctx) {
+  const bot = ctx.bot;
+  active(ctx);
+  bot.setControlState?.("sprint", false);
+  await wait(ctx, 60);
+  bot.setControlState?.("sprint", true);
+  await wait(ctx, 90);
+  bot.setControlState?.("sprint", false);
+}
+async function combatStrafe(ctx, target, direction = 1, ms = 180) {
+  const bot = ctx.bot;
+  active(ctx);
+  try { bot.pathfinder?.setGoal?.(null); } catch {}
+  await combatAim(ctx, target, 40);
+  bot.setControlState?.("forward", true);
+  bot.setControlState?.("left", direction < 0);
+  bot.setControlState?.("right", direction > 0);
+  bot.setControlState?.("sprint", true);
+  try { await wait(ctx, ms); } finally {
+    bot.clearControlStates?.();
+  }
+}
+async function combatJumpReset(ctx) {
+  const bot = ctx.bot;
+  if (!bot.entity?.onGround) return;
+  active(ctx);
+  bot.setControlState?.("jump", true);
+  await wait(ctx, 70);
+  bot.setControlState?.("jump", false);
+}
+async function combatRetreat(ctx, target) {
+  const bot = ctx.bot;
+  const dx = bot.entity.position.x - target.position.x;
+  const dz = bot.entity.position.z - target.position.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const point = { x: bot.entity.position.x + dx / len * 8, y: bot.entity.position.y, z: bot.entity.position.z + dz / len * 8 };
+  try { await navigate(ctx, point, 4, 4500, "combat retreat"); } catch {}
+}
+async function combatUseGapple(ctx) {
+  const item = combatGapple(ctx.bot);
+  if (!item) return false;
+  await combatEquip(ctx, item, "hand");
+  try { await ctx.bot.consume(); return true; } catch { return false; }
+}
+async function combatPrepareTotem(ctx) {
+  if (Number(ctx.bot.health || 20) > 8) return false;
+  const item = inventoryItem(ctx.bot, "totem_of_undying");
+  if (!item) return false;
+  try { await combatEquip(ctx, item, "off-hand"); return true; } catch { return false; }
+}
+async function combatPearlEscape(ctx, target) {
+  const pearl = combatPearl(ctx.bot);
+  if (!pearl) return false;
+  const bot = ctx.bot;
+  const dx = bot.entity.position.x - target.position.x;
+  const dz = bot.entity.position.z - target.position.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const point = { x: bot.entity.position.x + dx / len * 12, y: bot.entity.position.y + 2, z: bot.entity.position.z + dz / len * 12 };
+  await combatEquip(ctx, pearl, "hand");
+  await ctx.bot.lookAt(vec(ctx.bot, point), true);
+  active(ctx);
+  bot.activateItem();
+  await wait(ctx, 650);
+  return true;
+}
+async function combatBowAttack(ctx, target) {
+  const bow = combatItem(ctx.bot, n => n === "bow");
+  const arrow = combatItem(ctx.bot, n => n === "arrow" || n.endsWith("_arrow"));
+  if (!bow || !arrow) return false;
+  await combatEquip(ctx, bow, "hand");
+  await combatAim(ctx, target, 140);
+  active(ctx);
+  ctx.bot.activateItem();
+  try { await wait(ctx, 900); } finally { try { ctx.bot.deactivateItem(); } catch {} }
+  return true;
+}
+async function combatMaceAttack(ctx, target) {
+  const mace = combatWeapon(ctx.bot, "mace");
+  if (!mace) return false;
+  // Mace attacks are most useful while falling. If already airborne, wait for
+  // the descent window; otherwise take a bounded jump and strike on descent.
+  await combatEquip(ctx, mace, "hand");
+  if (ctx.bot.entity?.onGround) {
+    ctx.bot.setControlState?.("jump", true);
+    await wait(ctx, 90);
+    ctx.bot.setControlState?.("jump", false);
+  }
+  const deadline = Date.now() + 1100;
+  while (Date.now() < deadline) {
+    active(ctx);
+    const vy = Number(ctx.bot.entity?.velocity?.y || 0);
+    if (vy < -0.12) {
+      await combatAim(ctx, target, 50);
+      ctx.bot.attack(target);
+      return true;
+    }
+    await wait(ctx, 35);
+  }
+  return false;
+}
+async function combatAdvancedAttack(ctx, target) {
+  const mace = combatWeapon(ctx.bot, "mace");
+  if (mace && Number(target?.position?.y || 0) - Number(ctx.bot.entity?.position?.y || 0) > 2) {
+    return combatMaceAttack(ctx, target);
+  }
+  const spear = combatWeapon(ctx.bot, "spear");
+  if (spear && combatDistance(ctx.bot, target) > 3.2 && combatDistance(ctx.bot, target) < 6.0) {
+    await combatEquip(ctx, spear, "hand");
+    await combatAim(ctx, target, 90);
+    ctx.bot.attack(target);
+    return true;
+  }
+  return false;
+}
 async function attack(ctx,target,timeout=15000){
   const {bot}=ctx; const deadline=Date.now()+timeout;
   let lastEntityId=target?.id;
@@ -1193,44 +1370,97 @@ const H = {
   },
   pvp: async(ctx,a)=>{
     const username=required(a,"Player username is required.");
-    let lastShieldTechniqueAt=0;
-    let lastComboTechniqueAt=0;
-    let lastClutchTechniqueAt=0;
+    let lastStrafe=0, lastBow=0, lastPearl=0, lastAdvanced=0, lastLearned=0, lastCritical=0;
+    let previousTargetHealth=null;
     while(true){
       active(ctx);
       const p=player(ctx.bot,username);
       if(!p?.entity)throw new Error("Player not found: "+username);
       const target=p.entity;
-      const training=ctx.runtime?.training;
-      const shieldTechnique=training?.findApplicable?.("shield")||null;
-      const comboTechnique=training?.findApplicable?.("combo")||null;
-      const clutchTechnique=training?.findApplicable?.("clutch")||null;
+      if(target.isValid===false || (target.health!=null && target.health<=0)) return true;
+
+      const bot=ctx.bot;
+      const dist=combatDistance(bot,target);
+      const health=Number(bot.health||20);
+      const targetHealth=Number(target.health??20);
       const now=Date.now();
 
-      // Learned techniques are a tactical layer over the canonical PvP mode.
-      // They never replace the underlying combat safety/targeting logic.
-      if(clutchTechnique && Number(ctx.bot.entity?.velocity?.y||0)<-0.18 && now-lastClutchTechniqueAt>1500){
-        const result=await training.executeTechnique(clutchTechnique.name,{target,context:"clutch",ctx});
-        if(result?.ok) lastClutchTechniqueAt=Date.now();
+      // Phase 3: survival and defense.
+      await combatPrepareTotem(ctx);
+      if(health<=7 && combatGapple(bot)){
+        await combatUseGapple(ctx);
+        await combatRetreat(ctx,target);
+        continue;
+      }
+      if(health<=5 && dist<6 && combatPearl(bot) && now-lastPearl>3500){
+        if(await combatPearlEscape(ctx,target)){ lastPearl=Date.now(); continue; }
       }
 
-      const equipment=Array.isArray(target.equipment)?target.equipment:[];
-      const hasShield=equipment.some(item=>String(item?.name||"").toLowerCase()==="shield");
-      if(shieldTechnique && hasShield && now-lastShieldTechniqueAt>1200){
-        const result=await training.executeTechnique(shieldTechnique.name,{target,context:"shield",ctx});
-        if(result?.ok) lastShieldTechniqueAt=Date.now();
-        active(ctx);
+      // Phase 2: shield defense / shield breaking.
+      const targetHasShield=Array.isArray(target.equipment) &&
+        target.equipment.some(item=>String(item?.name||"").toLowerCase()==="shield");
+      const blocking=targetBlocking(target);
+      if(targetHasShield && (blocking || dist<=3.4)){
+        const axe=combatWeapon(bot,"axe");
+        if(axe){
+          await combatEquip(ctx,axe,"hand");
+          await combatAim(ctx,target,60);
+          bot.attack(target);
+          await wait(ctx,260);
+          await combatSprintReset(ctx);
+        }
       }
 
-      if(comboTechnique && now-lastComboTechniqueAt>2500 && !hasShield){
-        const result=await training.executeTechnique(comboTechnique.name,{target,context:"combo",ctx});
-        if(result?.ok) lastComboTechniqueAt=Date.now();
-        active(ctx);
+      // Phase 4: ranged pressure when the target is outside reliable melee range.
+      if(dist>8 && now-lastBow>1800 && combatBow(bot)){
+        if(await combatBowAttack(ctx,target)){ lastBow=Date.now(); continue; }
       }
 
-      await attack(ctx,target,5000);
+      // Phase 5: advanced 1.21+ weapons, guarded by inventory availability.
+      if(now-lastAdvanced>1400){
+        if(await combatAdvancedAttack(ctx,target)){ lastAdvanced=Date.now(); continue; }
+      }
+
+      // Phase 6: owner-trained techniques remain a tactical overlay, never a
+      // second movement/combat engine.
+      const training=ctx.runtime?.training;
+      const learned=training?.findApplicable?.(blocking?"shield":"combo")||null;
+      if(learned && now-lastLearned>1800){
+        const result=await training.executeTechnique(learned.name,{target,context:blocking?"shield":"combo",ctx});
+        if(result?.ok){ lastLearned=Date.now(); active(ctx); }
+      }
+
+      // Phase 2: crit window + sprint reset + short strafing.
+      if(dist>3.1){
+        bot.pathfinder.setGoal(new goals.GoalFollow(target,2.6),true);
+        await wait(ctx,120);
+        continue;
+      }
+      try{bot.pathfinder.setGoal(null);}catch{}
+      await combatAim(ctx,target,55);
+
+      if(now-lastStrafe>650){
+        const dir=((Math.floor(now/650)&1)===0)?1:-1;
+        await combatStrafe(ctx,target,dir,120);
+        lastStrafe=Date.now();
+      }
+
+      if(previousTargetHealth!=null && targetHealth<previousTargetHealth && health>8 && now-lastCritical>900){
+        await combatJumpReset(ctx);
+        lastCritical=Date.now();
+      }
+      previousTargetHealth=targetHealth;
+
+      // Prefer sword for sustained melee; fall back to any weapon.
+      const sword=combatWeapon(bot,"sword");
+      const axe=combatWeapon(bot,"axe");
+      const melee=sword||axe||combatWeapon(bot,"mace")||combatWeapon(bot,"spear");
+      if(melee) await combatEquip(ctx,melee,"hand");
+      await combatAim(ctx,target,70);
+      await combatSprintReset(ctx);
       active(ctx);
-      await wait(ctx,100);
+      bot.attack(target);
+      await wait(ctx,280);
     }
   },
   hit: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return attack(ctx,p.entity,10000);},
