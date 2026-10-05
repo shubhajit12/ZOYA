@@ -120,7 +120,7 @@ function ensureZoyaBrain() {
     dispatchCapability: async (mode, args = "") => minecraftRuntime && bot
       ? dispatchCapability({ bot, runtime: minecraftRuntime, id: mode, arg: args, log: debugLog })
       : false,
-    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-30), home: minecraftRuntime.memory.home || null, locations: minecraftRuntime.memory.locations || {} } : null,
+    getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-10), home: minecraftRuntime.memory.home || null, locations: minecraftRuntime.memory.locations || {} } : null,
     getActiveTask: () => minecraftRuntime ? minecraftRuntime.getActiveTask() : null,
     cancelActiveTask: reason => minecraftRuntime ? minecraftRuntime.cancelCurrentTask(reason || "owner command") : false,
     getOwnerUsername: () => String(currentConfig?.ownerUsername || "").trim(),
