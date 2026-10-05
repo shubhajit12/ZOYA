@@ -79,6 +79,36 @@ export function createZoyaBrain({
   const capabilityIds = () => registry().map(item => item.id);
   const capabilityById = mode => registry().find(item => item.id === mode);
 
+  function capabilityHintsForRequest(message = "") {
+    const text = String(message || "").toLowerCase();
+    const hints = [];
+    const add = (mode, usage, reason) => {
+      if (!hints.some(item => item.mode === mode)) hints.push({ mode, usage, reason });
+    };
+
+    if (/\\b(?:time|day|night|weather|difficulty|gamemode|game mode|teleport|\\btp\\b|\\bset\\b.*time)/i.test(text)) {
+      add("op_command", "op_command {command}", "server/world administrative command; for time use args like: time set 1000");
+    }
+    if (/(?:give|drop|hand|deliver|bring).*(?:shield|sword|pickaxe|axe|food|item|bread|porkchop|diamond|iron|gold)/i.test(text) ||
+        /(?:shield|sword|pickaxe|axe|food|bread|porkchop|diamond|iron|gold).*(?:give|drop|hand|deliver|bring)/i.test(text)) {
+      if (/\\b(?:me|owner|shubh|shubhthegoat)\\b/i.test(text) || /drop me|give me|hand me|bring me/i.test(text)) {
+        add("give_item", "give_item {item} {username}", "give the requested item directly to the requester/owner");
+      } else {
+        add("drop_item", "drop_item {item}", "drop the requested item into the world");
+      }
+    }
+    if (/\\b(?:follow|come with me|stay with me|escort)\\b/i.test(text)) {
+      add("follow_player", "follow_player {username}", "follow the requester");
+    }
+    if (/\\b(?:eat|consume)\\b/i.test(text)) {
+      add("eat", "eat {item}", "explicit eating request");
+    }
+    if (/\\b(?:stop|cancel|wait here|stay here|don't move|do not move)\\b/i.test(text)) {
+      add("stop", "stop", "explicit cancellation/control request");
+    }
+    return hints.slice(0, 6);
+  }
+
   function ownerUsername() {
     return String(getOwnerUsername?.() || getConfig()?.ownerUsername || "").trim();
   }
@@ -308,6 +338,10 @@ export function createZoyaBrain({
         "Owner requests may be executed directly, subject to the capability engine's safety/cancellation/death rules.",
         "Autonomous actions are allowed only when autonomous movement is enabled. Never fabricate permission.",
         "Prioritize survival, active owner goals, explicit requests, and then useful autonomous work.",
+        "Survival eating is handled locally by the runtime. Do not select eat/use_item just to maintain survival unless food is <= 10, or health is <= 14 with food < 18; explicit player requests to eat are still valid.",
+        "For administrative/world commands such as setting time, select op_command and put the actual Minecraft command in args (example: request 'set the time to 1000' -> mode op_command, args 'time set 1000').",
+        "For 'give me/drop me/hand me' an item, prefer give_item with args '<item> <requester username>'; use drop_item only when the user explicitly wants the item dropped into the world.",
+        "If capabilityHints are supplied, treat them as trusted local candidate guidance for matching natural-language intent; still output only canonical modes.",
         "If an action fails, use the failure result to choose a safer alternative or stop; do not blindly repeat the same failed action.",
         "Do not reveal hidden chain-of-thought. reasonSummary must be a brief operational explanation."
       ].join("\n");
@@ -328,6 +362,7 @@ export function createZoyaBrain({
           channel: request.channel || null,
           message: String(request.message || "").slice(0, 1200)
         } : null,
+        capabilityHints: capabilityHintsForRequest(request?.message || ""),
         capabilities: "Validated locally; do not enumerate capabilities in the response."
       };
 
