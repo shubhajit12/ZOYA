@@ -24,7 +24,7 @@ function writeJson(file, value) {
   fs.writeFileSync(file, JSON.stringify(value, null, 2), "utf8");
 }
 
-export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () => {}, log = () => {} }) {
+export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () => {}, dispatchCapability = null, log = () => {} }) {
   const capabilityDebugMode = config?.capabilityDebugMode === true;
   if (typeof pathfinder !== "function" || typeof Movements !== "function" || !goals?.GoalNear) {
     throw new Error("mineflayer-pathfinder loaded without the expected CommonJS exports.");
@@ -1501,11 +1501,24 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
               try { bot.whisper(username, "[ZOYA] Permission was granted. Please make the task specific so I know what to do."); } catch {}
               return false;
             }
-            return execute(intent.action, {
-              targetUsername: username,
-              args: intent.args,
-              permissionGranted: true
-            });
+            if (typeof dispatchCapability !== "function") {
+              try { bot.whisper(username, "[ZOYA] Permission was granted, but my capability executor is unavailable."); } catch {}
+              return false;
+            }
+            try {
+              const result = await dispatchCapability({
+                bot,
+                runtime: { getActiveTask: () => activeTask },
+                id: intent.action,
+                arg: intent.args,
+                log
+              });
+              return result === true;
+            } catch (error) {
+              log("[PERMISSION] Approved canonical capability failed: " +
+                (error instanceof Error ? error.message : String(error)));
+              return false;
+            }
           }
         );
         if (requested) {
