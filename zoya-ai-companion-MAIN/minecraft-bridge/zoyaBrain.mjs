@@ -130,20 +130,22 @@ export function createZoyaBrain({
     }
   }
 
-  function requestThink(reason = "event", request = null) {
-    if (!started) return;
-    enqueueRequest(reason, request);
-    if (thinking || eventTimer) return;
-
+  function scheduleThink() {
+    if (!started || thinking || eventTimer || !requestQueue.length) return;
     const now = Date.now();
     const waitForRateLimit = Math.max(0, rateLimitedUntil - now);
     const waitForGap = Math.max(0, MIN_THINK_GAP_MS - (now - lastThinkAt));
     const wait = Math.max(EVENT_COALESCE_MS, waitForRateLimit, waitForGap);
-
     eventTimer = setTimeout(() => {
       eventTimer = null;
       if (started && !thinking && requestQueue.length) void think();
     }, wait);
+  }
+
+  function requestThink(reason = "event", request = null) {
+    if (!started) return;
+    enqueueRequest(reason, request);
+    scheduleThink();
   }
 
   const registry = () => getCapabilityRegistry();
@@ -377,7 +379,7 @@ export function createZoyaBrain({
       // which could permanently lose player messages during a Groq 429.
       requeueFront(reason, request);
       log("[BRAIN] Groq rate-limit backoff active; request preserved for retry.");
-      requestThink();
+      scheduleThink();
       return;
     }
 
