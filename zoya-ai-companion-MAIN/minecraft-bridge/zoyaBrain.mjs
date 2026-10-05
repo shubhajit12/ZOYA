@@ -97,6 +97,9 @@ export function createZoyaBrain({
         add("drop_item", "drop_item {item}", "drop the requested item into the world");
       }
     }
+    if (/\b(?:hit me|attack me|fight me|pvp|spar with me)\b/i.test(text)) {
+      add("pvp", "pvp {username}", "owner explicitly requested combat against the named requester");
+    }
     if (/\b(?:follow|come with me|stay with me|escort)\b/i.test(text)) {
       add("follow_player", "follow_player {username}", "follow the requester");
     }
