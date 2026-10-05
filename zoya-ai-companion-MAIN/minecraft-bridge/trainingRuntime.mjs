@@ -73,6 +73,13 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
     const held = e?.equipment?.[0] || null;
     const position = e?.position;
     const velocity = e?.velocity;
+    let blockBelow = null;
+    try {
+      if (position) {
+        const b = bot.blockAt(position.offset(0, -1, 0));
+        blockBelow = b?.name || null;
+      }
+    } catch {}
     return {
       at: Date.now(),
       instructor: session.instructor,
@@ -81,7 +88,10 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
       pitch: round(e?.pitch),
       velocity: velocity ? { x: round(velocity.x), y: round(velocity.y), z: round(velocity.z) } : null,
       onGround: e?.onGround === true,
+      sneaking: e?.isSneaking === true,
+      sprinting: e?.isSprinting === true,
       heldItem: held ? { name: clean(held.name, 80), type: Number(held.type ?? 0), count: Number(held.count ?? 0) } : null,
+      blockBelow,
       entityHealth: Number(e?.health ?? 0) || null
     };
   }
@@ -143,6 +153,15 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
         }
         if (s.onGround !== previous.onGround) {
           events.push({ type: s.onGround ? "land" : "airborne", at: s.at });
+        }
+        if (s.sprinting !== previous.sprinting) {
+          events.push({ type: s.sprinting ? "sprint_start" : "sprint_stop", at: s.at });
+        }
+        if (s.sneaking !== previous.sneaking) {
+          events.push({ type: s.sneaking ? "sneak_start" : "sneak_stop", at: s.at });
+        }
+        if (s.blockBelow !== previous.blockBelow && (s.blockBelow || previous.blockBelow)) {
+          events.push({ type: "block_below_change", from: previous.blockBelow, to: s.blockBelow, at: s.at });
         }
         if (s.position && previous.position) {
           const dx = s.position.x - previous.position.x;
