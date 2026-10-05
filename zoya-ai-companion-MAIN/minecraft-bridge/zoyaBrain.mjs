@@ -109,6 +109,9 @@ export function createZoyaBrain({
     if (/\b(?:stop|cancel|wait here|stay here|don't move|do not move)\b/i.test(text)) {
       add("stop", "stop", "explicit cancellation/control request");
     }
+    if (text.trim()) {
+      add("chat", "chat {message}", "respond to the player in public chat when the message is conversational or does not require a physical task");
+    }
     return hints.slice(0, 6);
   }
 
@@ -345,6 +348,7 @@ export function createZoyaBrain({
         "For administrative/world commands such as setting time, select op_command and put the actual Minecraft command in args (example: request 'set the time to 1000' -> mode op_command, args 'time set 1000').",
         "For 'give me/drop me/hand me' an item, prefer give_item with args '<item> <requester username>'; use drop_item only when the user explicitly wants the item dropped into the world.",
         "If capabilityHints are supplied, treat them as trusted local candidate guidance for matching natural-language intent; still output only canonical modes.",
+        "Every player_message must receive a response. For a conversational message, greeting, question, thanks, clarification, or request that does not require a physical task, use the chat capability with a natural concise reply in args. For a whisper request, use private_chat/whisper_player as appropriate. Do not return an empty actions array for a player_message unless the message is purely a control event already handled locally.",
         "If an action fails, use the failure result to choose a safer alternative or stop; do not blindly repeat the same failed action.",
         "Do not reveal hidden chain-of-thought. reasonSummary must be a brief operational explanation."
       ].join("\n");
@@ -474,6 +478,9 @@ export function createZoyaBrain({
       const message = error instanceof Error ? error.message : String(error);
       const rateMatch = message.match(/try again in ([0-9]+(?:\.[0-9]+)?)s/i);
       if (/rate_limit_exceeded|rate limit reached/i.test(message)) {
+        // Never lose a player message just because Groq is temporarily rate-limited.
+        queuedReason = reason;
+        queuedRequest = request;
         const retryMs = rateMatch
           ? Math.ceil(Number(rateMatch[1]) * 1000) + 1000
           : RATE_LIMIT_FALLBACK_MS;
@@ -504,7 +511,7 @@ export function createZoyaBrain({
     // before reaching Groq, but keeping it here guarantees an owner stop can
     // never be blocked behind the planner's active-task gate.
     const owner = isOwner(requester);
-    const stopMatch = owner && text.match(/^(?:(?:ok|okay|please|can you|could you|would you)[\s]+)*(?:stop|cancel)(?:[\s]+(?:here|now|the task you are doing|the task you’re doing|what you are doing|what you’re doing|the task|this task))?(?:[\s]+and[\s]+)?(.*)$/i);
+    const stopMatch = owner && text.match(/^(?:(?:ok|okay|please|can you|could you|would you)[\s]+)*(?:stop|cancel)\b[\s]*(.*)$/i);
     if (stopMatch) {
       const remainder = String(stopMatch[1] || "").trim();
       cancelActiveTask("owner command");
