@@ -105,6 +105,26 @@ jobs:
             Write-Host "Clean bridge static guards passed: $registeredCapabilities definitions / $logicalHandlerCount handlers + Groq owner-permission controller."
           } finally { Pop-Location }
 
+      - name: Verify executable training integration
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          Push-Location $bridgeDist
+          try {
+            foreach ($required in @(
+              'createTrainingRuntime',
+              'executeTechnique',
+              'findApplicable',
+              'minecraft-training.json',
+              'Training mode enabled for',
+              'this is part of this mode',
+              'Learned techniques are a tactical layer over the canonical PvP mode'
+            )) {
+              $found = Select-String -Path trainingRuntime.mjs,minecraftRuntime.mjs,capabilityEngine.mjs -Pattern $required -SimpleMatch -Quiet
+              if (-not $found) { throw "Training integration guard failed: $required" }
+            }
+          } finally { Pop-Location }
+
       - name: Verify Mineflayer plugin imports
         shell: pwsh
         run: |
