@@ -1461,7 +1461,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       ? normalizedMessage.match(/^(?:(?:ok|okay|please|can you|could you|would you)[\s]+)*(?:stop|cancel)\b[\s]*(.*)$/i)
       : null;
     if (ownerStopMatch) {
-      const remainder = String(ownerStopMatch[1] || "").trim();
+      let remainder = String(ownerStopMatch[1] || "").trim();
+      remainder = remainder
+        .replace(/^(?:here|now|the mode|this mode|the task|this task|the task you are doing|what you are doing)\b[\s]*/i, "")
+        .replace(/^and\b[\s]*/i, "")
+        .trim();
       const cancelled = cancelCurrentTask("owner command");
       rememberEvent("chat_command", {
         username,
