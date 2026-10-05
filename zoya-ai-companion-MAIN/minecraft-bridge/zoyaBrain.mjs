@@ -68,12 +68,83 @@ export function createZoyaBrain({
   let lastGoal = null;
   let lastActionResult = null;
   let consecutiveFailures = 0;
-  let queuedReason = null;
-  let queuedRequest = null;
+
+  // Real FIFO request arbitration. Player messages must never overwrite one
+  // another while Zoya is thinking, performing a task, or rate-limited.
+  const MAX_REQUEST_QUEUE = 32;
+  const requestQueue = [];
   let lastThinkAt = 0;
   let eventTimer = null;
   let rateLimitedUntil = 0;
   let noApiKeyLogged = false;
+
+  function requestPriority(item) {
+    if (item.reason === "player_message" && isOwner(item.request?.requester)) return 0;
+    if (item.reason === "player_message") return 1;
+    if (item.reason === "owner_control") return 0;
+    return 2;
+  }
+
+  function enqueueRequest(reason = "event", request = null) {
+    const item = { reason, request };
+    // Coalesce autonomous/event notifications, but never coalesce player
+    // messages or explicit owner controls.
+    if (reason !== "player_message" && reason !== "owner_control") {
+      const existing = requestQueue.find(q => q.reason === reason);
+      if (existing) {
+        existing.request = request || existing.request;
+        return;
+      }
+    }
+
+    if (requestQueue.length >= MAX_REQUEST_QUEUE) {
+      // Preserve explicit player/owner requests by evicting the oldest
+      // autonomous event first.
+      const evict = requestQueue.findIndex(q =>
+        q.reason !== "player_message" && q.reason !== "owner_control"
+      );
+      if (evict >= 0) requestQueue.splice(evict, 1);
+      else requestQueue.shift();
+    }
+
+    requestQueue.push(item);
+    requestQueue.sort((a, b) => requestPriority(a) - requestPriority(b));
+  }
+
+  function dequeueRequest() {
+    return requestQueue.shift() || { reason: "event", request: null };
+  }
+
+  function requeueFront(reason, request) {
+    requestQueue.unshift({ reason, request });
+    if (requestQueue.length > MAX_REQUEST_QUEUE) requestQueue.pop();
+  }
+
+  function stop() {
+    started = false;
+    requestQueue.length = 0;
+    thinking = false;
+    if (eventTimer) {
+      clearTimeout(eventTimer);
+      eventTimer = null;
+    }
+  }
+
+  function requestThink(reason = "event", request = null) {
+    if (!started) return;
+    enqueueRequest(reason, request);
+    if (thinking || eventTimer) return;
+
+    const now = Date.now();
+    const waitForRateLimit = Math.max(0, rateLimitedUntil - now);
+    const waitForGap = Math.max(0, MIN_THINK_GAP_MS - (now - lastThinkAt));
+    const wait = Math.max(EVENT_COALESCE_MS, waitForRateLimit, waitForGap);
+
+    eventTimer = setTimeout(() => {
+      eventTimer = null;
+      if (started && !thinking && requestQueue.length) void think();
+    }, wait);
+  }
 
   const registry = () => getCapabilityRegistry();
   const capabilityIds = () => registry().map(item => item.id);
@@ -278,10 +349,7 @@ export function createZoyaBrain({
 
   async function think() {
     if (!started || thinking) return;
-    const reason = queuedReason || "event";
-    const request = queuedRequest;
-    queuedReason = null;
-    queuedRequest = null;
+    const { reason, request } = dequeueRequest();
 
     const config = getConfig() || {};
     if (config.capabilityDebugMode === true) {
@@ -299,11 +367,7 @@ export function createZoyaBrain({
     }
     noApiKeyLogged = false;
     if (!minecraftState?.available || !minecraftState.player) {
-      if (request) {
-        queuedReason = reason;
-        queuedRequest = request;
-        requestThink(reason, request);
-      }
+      if (request) requeueFront(reason, request);
       return;
     }
 
@@ -311,10 +375,7 @@ export function createZoyaBrain({
       // Preserve the exact request that triggered this think. The previous
       // implementation cleared queuedRequest before checking the backoff,
       // which could permanently lose player messages during a Groq 429.
-      if (request) {
-        queuedReason = reason;
-        queuedRequest = request;
-      }
+      requeueFront(reason, request);
       log("[BRAIN] Groq rate-limit backoff active; request preserved for retry.");
       requestThink(reason, request);
       return;
@@ -325,8 +386,7 @@ export function createZoyaBrain({
       // A cancelled Mineflayer task may need a few ticks to unwind its async
       // handler. Never discard the owner request while that happens; keep it
       // queued and retry once the task lifecycle is actually idle.
-      queuedReason = reason;
-      queuedRequest = request;
+      requeueFront(reason, request);
       if (activeTask.cancelled) {
         log("[BRAIN] Waiting for cancelled task '" + activeTask.action + "' to finish before planning the queued request.");
         setTimeout(() => {
