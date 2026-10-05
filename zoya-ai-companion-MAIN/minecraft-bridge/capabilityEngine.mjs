@@ -1193,11 +1193,42 @@ const H = {
   },
   pvp: async(ctx,a)=>{
     const username=required(a,"Player username is required.");
+    let lastShieldTechniqueAt=0;
+    let lastComboTechniqueAt=0;
+    let lastClutchTechniqueAt=0;
     while(true){
       active(ctx);
       const p=player(ctx.bot,username);
       if(!p?.entity)throw new Error("Player not found: "+username);
-      await attack(ctx,p.entity,5000);
+      const target=p.entity;
+      const training=ctx.runtime?.training;
+      const shieldTechnique=training?.findApplicable?.("shield")||null;
+      const comboTechnique=training?.findApplicable?.("combo")||null;
+      const clutchTechnique=training?.findApplicable?.("clutch")||null;
+      const now=Date.now();
+
+      // Learned techniques are a tactical layer over the canonical PvP mode.
+      // They never replace the underlying combat safety/targeting logic.
+      if(clutchTechnique && Number(ctx.bot.entity?.velocity?.y||0)<-0.18 && now-lastClutchTechniqueAt>1500){
+        const result=await training.executeTechnique(clutchTechnique.name,{target,context:"clutch",ctx});
+        if(result?.ok) lastClutchTechniqueAt=Date.now();
+      }
+
+      const equipment=Array.isArray(target.equipment)?target.equipment:[];
+      const hasShield=equipment.some(item=>String(item?.name||"").toLowerCase()==="shield");
+      if(shieldTechnique && hasShield && now-lastShieldTechniqueAt>1200){
+        const result=await training.executeTechnique(shieldTechnique.name,{target,context:"shield",ctx});
+        if(result?.ok) lastShieldTechniqueAt=Date.now();
+        active(ctx);
+      }
+
+      if(comboTechnique && now-lastComboTechniqueAt>2500 && !hasShield){
+        const result=await training.executeTechnique(comboTechnique.name,{target,context:"combo",ctx});
+        if(result?.ok) lastComboTechniqueAt=Date.now();
+        active(ctx);
+      }
+
+      await attack(ctx,target,5000);
       active(ctx);
       await wait(ctx,100);
     }
