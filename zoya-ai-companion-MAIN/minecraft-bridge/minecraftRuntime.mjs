@@ -1407,6 +1407,11 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       if (!reusedTask) {
         const wasActive = activeTask === task;
         if (wasActive) {
+          // Always release movement/control state when the task lifecycle ends.
+          // This prevents a failed movement capability from continuing to walk
+          // after the planner has already moved on.
+          try { bot.pathfinder?.setGoal(null); } catch {}
+          try { bot.clearControlStates?.(); } catch {}
           activeTask = null;
           currentGoal = null;
         }
