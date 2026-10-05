@@ -221,14 +221,27 @@ function logMinecraftState() {
 
     for (const entity of nearby) {
       const id = String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown")));
-      if (!lastEntityIds.has(id)) {
+      // Dropped-item entities can enter/leave the 16-block observation window
+      // dozens of times while players are fighting or collecting loot. They
+      // are already handled directly by item-pickup capabilities, so logging
+      // every item entity creates enormous terminal noise without adding
+      // actionable information.
+      const isDroppedItem = String(entity.type || "").toLowerCase() === "object" &&
+        String(entity.name || "").toLowerCase() === "item";
+      if (!isDroppedItem && !lastEntityIds.has(id)) {
         debugLog("[EVENT] Entity detected: " + (entity.username || entity.displayName || entity.name || entity.type || "unknown") + " (distance " + entity.distance + "m)");
       }
     }
 
     for (const id of lastEntityIds) {
       if (!nearbyIds.has(id)) {
-        debugLog("[EVENT] Entity left nearby range: " + id);
+        // The ID alone is insufficient to know whether this was a dropped
+        // item. Build the previous nearby snapshot when possible; item churn
+        // should never flood the log.
+        const previous = lastLoggedState?.nearbyEntitiesById?.[id];
+        if (!previous?.isDroppedItem) {
+          debugLog("[EVENT] Entity left nearby range: " + id);
+        }
       }
     }
 
@@ -256,7 +269,14 @@ function logMinecraftState() {
     xpLevel: p.experience?.level ?? 0,
     xpPoints: p.experience?.points ?? 0,
     inventorySignature: currentInventorySignature,
-    blockBelow: current.environment?.blockBelow || null
+    blockBelow: current.environment?.blockBelow || null,
+    nearbyEntitiesById: Object.fromEntries(nearby.map(entity => [
+      String(entity.id ?? (entity.type + ":" + (entity.username || entity.name || "unknown"))),
+      {
+        isDroppedItem: String(entity.type || "").toLowerCase() === "object" &&
+          String(entity.name || "").toLowerCase() === "item"
+      }
+    ]))
   };
   lastEntityIds = nearbyIds;
 }
