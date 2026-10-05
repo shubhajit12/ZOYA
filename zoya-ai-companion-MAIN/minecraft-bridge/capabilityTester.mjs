@@ -112,9 +112,26 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
           await sleep(250);
         }
 
+        // Positive health alone is not enough after respawn. Mineflayer can
+        // restore health before the player/entity table has been rebuilt.
+        // Persistent player-targeted modes must wait for the target to become
+        // resolvable again, otherwise a valid assignment can fail immediately
+        // with "Player not found".
+        const targetUsername = String(arg || "").trim().split(/\s+/)[0] || "";
+        const targetRequired = /^(?:follow_player|escort_player|protect_player|chase_target|coordinate_with_player)$/i.test(mode);
+        if (targetRequired && targetUsername) {
+          const readyDeadline = Date.now() + 5000;
+          while(Date.now() < readyDeadline){
+            const player = bot.players?.[targetUsername] ||
+              Object.values(bot.players || {}).find(p => String(p?.username || "").toLowerCase() === targetUsername.toLowerCase());
+            if (player?.entity) break;
+            await sleep(200);
+          }
+        }
+
         // Mineflayer restores the bot during its death/respawn lifecycle.
-        // Waiting for positive health prevents navigation/action calls
-        // during the pre-spawn transition.
+        // Waiting for positive health and target re-resolution prevents the
+        // assignment from restarting against stale pre-death player state.
         log("[MODE] "+mode+" respawn detected. Resuming the assignment.");
       }
     });
