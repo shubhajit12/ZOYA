@@ -1486,6 +1486,21 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
         }
         return true;
       }
+      if (/^(?:show|list)\s+(?:my\s+)?training(?:\s+techniques)?$/i.test(text)) {
+        const techniques = training.getTechniques?.("pvp") || [];
+        const names = techniques.map(t => t.name).join(", ") || "none yet";
+        try { bot.whisper(sender, "[ZOYA] Learned PvP techniques: " + names); } catch {}
+        return true;
+      }
+      if (/^(?:test|try|replay)\s+(?:training|technique)\s+(.+)$/i.test(text)) {
+        const name = text.match(/^(?:test|try|replay)\s+(?:training|technique)\s+(.+)$/i)?.[1]?.trim();
+        const result = await training.executeTechnique(name, { ctx: { bot, assertActive: () => {
+          const task = getActiveTask?.();
+          if (!task || task.cancelled) throw new Error("Training test cancelled.");
+        }} });
+        try { bot.whisper(sender, result.ok ? "[ZOYA] Training technique executed: " + result.technique : "[ZOYA] " + result.error); } catch {}
+        return true;
+      }
       if (/^(?:stop|end)\s+training$/i.test(text)) {
         training.stop();
         try { bot.whisper(sender, "[ZOYA] Training mode stopped."); } catch {}
