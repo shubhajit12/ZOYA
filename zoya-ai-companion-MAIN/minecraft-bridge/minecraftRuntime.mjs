@@ -1441,18 +1441,45 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     }
 
     const normalizedMessage = rawMessage.toLowerCase().replace(/[!?.,]+$/g, "").trim();
-    const localStop = /^(stop|stop here|wait here|stay here|cancel|cancel task|hold here|don't move|do not move)$/.test(normalizedMessage);
-    if (localStop) {
-      if (String(username || "").toLowerCase() === ownerKey) {
-        const cancelled = cancelCurrentTask("owner command");
+    const requesterIsOwner = String(username || "").toLowerCase() === ownerKey;
+
+    // Owner stop commands have control priority over the planner. If the same
+    // message contains a follow-up request ("stop here and drop me a shield"),
+    // cancel first, then send only the remaining request to Groq after the
+    // cancelled task has unwound.
+    const ownerStopMatch = requesterIsOwner
+      ? normalizedMessage.match(/^(?:ok(?:ay)?[\\s,;:.-]*)?(?:please[\\s,;:.-]*)?(?:stop|cancel)(?:[\\s,;:.-]+(?:here|now|the task|this task))?(?:[\\s,;:.-]+and)?[\\s,;:.-]*(.*)$/i)
+      : null;
+    if (ownerStopMatch) {
+      const remainder = String(ownerStopMatch[1] || "").trim();
+      const cancelled = cancelCurrentTask("owner command");
+      rememberEvent("chat_command", {
+        username,
+        message: rawMessage,
+        command: "stop",
+        cancelled,
+        authorized: true,
+        remainder: remainder || null
+      });
+
+      if (!remainder) {
         const reply = cancelled ? "Okay, I'll stop here." : "Okay, I'm staying here.";
         if (channel === "whisper") bot.whisper(username, reply);
         else bot.chat(reply);
-        rememberEvent("chat_command", { username, message: rawMessage, command: "stop", cancelled, authorized: true });
         wakeBrain();
         return true;
       }
 
+      log("[CHAT] Owner cancelled the active task; routing remaining request to Groq: " + remainder.slice(0, 180));
+      return Boolean(wakeBrain("player_message", {
+        requester: String(username || ""),
+        message: remainder,
+        channel
+      }));
+    }
+
+    const localStop = /^(stop|stop here|wait here|stay here|cancel|cancel task|hold here|don't move|do not move)$/.test(normalizedMessage);
+    if (localStop) {
       const requested = askOwner(
         username,
         "stop",
