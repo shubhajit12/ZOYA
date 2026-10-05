@@ -122,6 +122,7 @@ function ensureZoyaBrain() {
       : false,
     getMemory: () => minecraftRuntime ? { players: minecraftRuntime.memory.players, events: minecraftRuntime.memory.events.slice(-30), home: minecraftRuntime.memory.home || null, locations: minecraftRuntime.memory.locations || {} } : null,
     getActiveTask: () => minecraftRuntime ? minecraftRuntime.getActiveTask() : null,
+    cancelActiveTask: reason => minecraftRuntime ? minecraftRuntime.cancelCurrentTask(reason || "owner command") : false,
     getOwnerUsername: () => String(currentConfig?.ownerUsername || "").trim(),
     askOwnerPermission: (requester, action, displayAction, metadata = {}) => {
       if (!minecraftRuntime) return false;
@@ -185,8 +186,14 @@ function logMinecraftState() {
 
     if (p.health !== lastLoggedState.health) {
       debugLog("[EVENT] Health changed: " + lastLoggedState.health + " -> " + p.health);
-      if (lastLoggedState.health > 0 && p.health <= 0) debugLog("[EVENT] Zoya died (health reached 0).");
-      if (lastLoggedState.health <= 0 && p.health > 0) debugLog("[EVENT] Zoya respawned (health restored).");
+      const previousHealth = Number(lastLoggedState.health);
+      const currentHealth = Number(p.health);
+      if (Number.isFinite(previousHealth) && previousHealth > 0 && Number.isFinite(currentHealth) && currentHealth <= 0) {
+        debugLog("[EVENT] Zoya died (health reached 0).");
+      }
+      if (Number.isFinite(previousHealth) && previousHealth <= 0 && Number.isFinite(currentHealth) && currentHealth > 0) {
+        debugLog("[EVENT] Zoya respawned (health restored).");
+      }
     }
 
     if (p.food !== lastLoggedState.food) {
