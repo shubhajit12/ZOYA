@@ -551,8 +551,7 @@ export function createZoyaBrain({
       const rateMatch = message.match(/try again in ([0-9]+(?:\.[0-9]+)?)s/i);
       if (/rate_limit_exceeded|rate limit reached/i.test(message)) {
         // Never lose a player message just because Groq is temporarily rate-limited.
-        queuedReason = reason;
-        queuedRequest = request;
+        requeueFront(reason, request);
         const retryMs = rateMatch
           ? Math.ceil(Number(rateMatch[1]) * 1000) + 1000
           : RATE_LIMIT_FALLBACK_MS;
