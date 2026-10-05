@@ -49,6 +49,51 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
 
   let session = emptySession();
   let timer = null;
+  const listeners = [];
+
+  function observeEvent(type, entity = null, extra = {}) {
+    if (!session.instructor) return;
+    if (entity && String(entity.username || "").toLowerCase() !== String(session.instructor).toLowerCase()) return;
+    session.samples.push({
+      at: Date.now(),
+      instructor: session.instructor,
+      event: { type, ...extra }
+    });
+  }
+
+  function attachListeners() {
+    const add = (event, handler) => {
+      if (typeof bot.on !== "function") return;
+      bot.on(event, handler);
+      listeners.push([event, handler]);
+    };
+    add("entitySwingArm", entity => observeEvent("attack_or_swing", entity));
+    add("entityCrouch", entity => observeEvent("sneak_start", entity));
+    add("entityUncrouch", entity => observeEvent("sneak_stop", entity));
+    add("entityHurt", entity => observeEvent("hurt", entity));
+    add("entityCriticalEffect", entity => observeEvent("critical_effect", entity));
+    add("entityHandSwap", entity => observeEvent("hand_swap", entity));
+    add("blockUpdate", (oldBlock, newBlock) => {
+      if (!session.instructor) return;
+      const p = findPlayer(session.instructor)?.entity;
+      const pos = p?.position;
+      const np = newBlock?.position;
+      if (!pos || !np || Math.hypot(np.x - pos.x, np.y - pos.y, np.z - pos.z) > 4) return;
+      observeEvent("nearby_block_change", null, {
+        position: { x: Number(np.x), y: Number(np.y), z: Number(np.z) },
+        from: oldBlock?.name || null,
+        to: newBlock?.name || null
+      });
+    });
+  }
+
+  function detachListeners() {
+    for (const [event, handler] of listeners.splice(0)) {
+      try { bot.removeListener?.(event, handler); } catch {}
+    }
+  }
+
+  attachListeners();
 
   function save() {
     library.updatedAt = new Date().toISOString();
@@ -149,6 +194,10 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
     const events = [];
     let previous = null;
     for (const s of samples) {
+      if (s.event) {
+        events.push({ ...s.event, at: s.at });
+        continue;
+      }
       if (previous) {
         if (s.heldItem?.name !== previous.heldItem?.name && (s.heldItem?.name || previous.heldItem?.name)) {
           events.push({ type: "equip_change", item: s.heldItem?.name || "empty", at: s.at });
