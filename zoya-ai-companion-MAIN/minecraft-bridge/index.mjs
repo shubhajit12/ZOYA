@@ -534,6 +534,7 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
       // Ignore a stale bot instance that was intentionally replaced or shut down.
       if (bot !== botInstance) return;
 
+      try { minecraftRuntime?.stopTraining?.(); } catch {}
       const activeTaskAtEnd = minecraftRuntime?.getActiveTask?.();
       if (activeTaskAtEnd) {
         try { minecraftRuntime.cancelCurrentTask("Minecraft connection ended"); } catch {}
