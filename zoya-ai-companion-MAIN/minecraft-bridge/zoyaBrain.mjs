@@ -346,9 +346,7 @@ export function createZoyaBrain({
     }
 
     if (Date.now() < rateLimitedUntil) {
-      // Preserve the exact request that triggered this think. The previous
-      // implementation cleared queuedRequest before checking the backoff,
-      // which could permanently lose player messages during a Groq 429.
+      // Preserve the exact dequeued request while Groq is rate-limited.
       requeueFront(reason, request);
       log("[BRAIN] Groq rate-limit backoff active; request preserved for retry.");
       scheduleThink();
