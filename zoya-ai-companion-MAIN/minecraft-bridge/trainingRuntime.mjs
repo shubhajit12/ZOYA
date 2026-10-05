@@ -98,7 +98,7 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
 
   function start(instructor, mode = "pvp") {
     if (!owner(instructor)) return { ok: false, error: "Only the configured owner can teach Zoya." };
-    const normalizedMode = clean(mode, 60).toLowerCase().replace(/\\s+/g, "_") || "pvp";
+    const normalizedMode = clean(mode, 60).toLowerCase().replace(/\s+/g, "_") || "pvp";
     if (!library.modes[normalizedMode]) library.modes[normalizedMode] = { techniques: [] };
     session = {
       ...emptySession(),
