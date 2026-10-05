@@ -216,34 +216,6 @@ export function createZoyaBrain({
     };
   }
 
-  function stop() {
-    started = false;
-    queuedReason = null;
-    queuedRequest = null;
-    thinking = false;
-    if (eventTimer) {
-      clearTimeout(eventTimer);
-      eventTimer = null;
-    }
-  }
-
-  function requestThink(reason = "event", request = null) {
-    if (!started) return;
-    queuedReason = reason;
-    if (request) queuedRequest = request;
-    if (thinking || eventTimer) return;
-
-    const now = Date.now();
-    const waitForRateLimit = Math.max(0, rateLimitedUntil - now);
-    const waitForGap = Math.max(0, MIN_THINK_GAP_MS - (now - lastThinkAt));
-    const wait = Math.max(EVENT_COALESCE_MS, waitForRateLimit, waitForGap);
-
-    eventTimer = setTimeout(() => {
-      eventTimer = null;
-      if (started && !thinking) void think();
-    }, wait);
-  }
-
   async function requestOwnerPermission({ requester, mode, args, reason }) {
     if (isOwner(requester)) return { allowed: true, source: "owner" };
     if (!ownerUsername()) {
