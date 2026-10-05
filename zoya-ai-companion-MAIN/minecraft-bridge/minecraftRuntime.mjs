@@ -1492,7 +1492,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       }));
     }
 
-    const localStop = /^(stop|stop here|wait here|stay here|cancel|cancel task|hold here|don't move|do not move)$/.test(normalizedMessage);
+    const localStop = /^(?:stop|cancel)(?:\s+(?:here|now|the\s+mode|this\s+mode|the\s+task|this\s+task))?$|^(?:wait here|stay here|hold here|don't move|do not move)$/.test(normalizedMessage);
     if (localStop) {
       const requested = askOwner(
         username,
