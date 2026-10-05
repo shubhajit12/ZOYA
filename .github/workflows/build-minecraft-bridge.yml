@@ -118,7 +118,7 @@ jobs:
               'minecraft-training.json',
               'Training mode enabled for',
               'this is part of this mode',
-              'Training techniques are integrated into the canonical capability engine'
+              'const training=ctx.runtime?.training;','training?.findApplicable?.','training.executeTechnique'
             )) {
               $found = Select-String -Path trainingRuntime.mjs,minecraftRuntime.mjs,capabilityEngine.mjs -Pattern $required -SimpleMatch -Quiet
               if (-not $found) { throw "Training integration guard failed: $required" }
