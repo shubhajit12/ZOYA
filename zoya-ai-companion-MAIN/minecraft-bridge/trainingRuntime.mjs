@@ -221,9 +221,16 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
           const dz = s.position.z - previous.position.z;
           const distance = Math.hypot(dx, dy, dz);
           if (distance >= 0.18) {
+            const yaw = Number(previous.yaw ?? s.yaw ?? 0);
+            const forwardX = -Math.sin(yaw);
+            const forwardZ = -Math.cos(yaw);
+            const rightX = Math.cos(yaw);
+            const rightZ = -Math.sin(yaw);
             events.push({
               type: "move",
               dx: round(dx), dy: round(dy), dz: round(dz),
+              forward: round(dx * forwardX + dz * forwardZ),
+              strafe: round(dx * rightX + dz * rightZ),
               distance: round(distance), at: s.at
             });
           }
@@ -294,7 +301,10 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
     if (!text) return false;
     if (c === "shield") return /shield|block(?:ing|ed|up)/.test(text);
     if (c === "clutch") return /clutch|water bucket|lava bucket|mlg/.test(text);
-    if (c === "combo") return /combo|sword|axe|attack|pvp/.test(text);
+    if (c === "combo") {
+      if (/shield|clutch|water bucket|lava bucket|mlg/.test(text)) return false;
+      return /combo|sword|axe|attack|pvp|strafe/.test(text);
+    }
     return false;
   }
 
@@ -349,6 +359,16 @@ export function createTrainingRuntime({ bot, stateDir, ownerUsername = "", log =
           active();
           bot.attack(live);
         }
+      } else if (event.type === "move") {
+        try { bot.pathfinder?.setGoal?.(null); } catch {}
+        const forward = Number(event.forward || 0);
+        const strafe = Number(event.strafe || 0);
+        bot.setControlState?.("forward", forward > 0.05);
+        bot.setControlState?.("back", forward < -0.05);
+        bot.setControlState?.("right", strafe > 0.05);
+        bot.setControlState?.("left", strafe < -0.05);
+        if (recordedDelta > 0) await new Promise(resolve => setTimeout(resolve, Math.min(600, recordedDelta)));
+        bot.clearControlStates?.();
       } else if (event.type === "sprint_start") {
         bot.setControlState?.("sprint", true);
       } else if (event.type === "sprint_stop") {
