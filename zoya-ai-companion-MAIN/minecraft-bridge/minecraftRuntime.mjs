@@ -1433,6 +1433,35 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
 
+  function nonOwnerPhysicalIntent(username, message) {
+    const text = String(message || "").trim();
+    const requester = String(username || "").trim();
+    if (!requester || requester.toLowerCase() === ownerKey) return null;
+    const q = text.toLowerCase();
+    const make = (action, args, display) => ({ action, args, display });
+
+    if (/\b(?:follow|come with me|stay with me|escort)\b/i.test(q)) {
+      return make("follow_player", requester, "follow " + requester);
+    }
+    if (/\b(?:protect|guard)\b/i.test(q)) {
+      return make("protect_player", requester, "protect " + requester);
+    }
+    if (/\b(?:fight|attack|hit|pvp|spar)\b/i.test(q)) {
+      return make("pvp", requester, "fight " + requester);
+    }
+    if (/\b(?:give|drop|hand|bring|deliver)\s+(?:me|me a|me the)\b/i.test(q)) {
+      return make("give_item", text.replace(/^(?:give|drop|hand|bring|deliver)\s+(?:me\s+(?:a|the)?\s*)?/i, "").trim() + " " + requester,
+        "give " + text.replace(/^(?:give|drop|hand|bring|deliver)\s+(?:me\s+(?:a|the)?\s*)?/i, "").trim() + " to " + requester);
+    }
+    if (/\b(?:mine|build|craft|collect|gather|explore|chop|go to|teleport|tp)\b/i.test(q)) {
+      return make("task", "", "perform a Minecraft task requested by " + requester);
+    }
+    if (/\b(?:op|set the time|set time|change weather|change difficulty|gamemode)\b/i.test(q)) {
+      return make("op_command", "", "run an administrative Minecraft command");
+    }
+    return null;
+  }
+
   async function answerPlayer(username, message, channel = "public") {
     const rawMessage = String(message || "").trim();
     if (!rawMessage) return false;
@@ -1452,6 +1481,49 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
     const normalizedMessage = rawMessage.toLowerCase().replace(/[!?.,]+$/g, "").trim();
     const requesterIsOwner = String(username || "").toLowerCase() === ownerKey;
+
+    // Permission must be decided before the planner's active-task gate. A
+    // non-owner request must never inherit, merge into, or wait behind the
+    // owner's active task as if it were the owner's request.
+    if (!requesterIsOwner) {
+      const intent = nonOwnerPhysicalIntent(username, rawMessage);
+      if (intent) {
+        const requested = askOwner(
+          username,
+          intent.action,
+          intent.display,
+          async () => {
+            if (activeTask) {
+              try { bot.whisper(username, "[ZOYA] Permission was granted, but I am currently busy with another task."); } catch {}
+              return false;
+            }
+            if (intent.action === "task") {
+              try { bot.whisper(username, "[ZOYA] Permission was granted. Please make the task specific so I know what to do."); } catch {}
+              return false;
+            }
+            return execute(intent.action, {
+              targetUsername: username,
+              args: intent.args,
+              permissionGranted: true
+            });
+          }
+        );
+        if (requested) {
+          const reply = "[ZOYA] I asked my owner for permission before doing that.";
+          if (channel === "whisper") bot.whisper(username, reply);
+          else bot.chat(reply);
+        }
+        rememberEvent("chat_command", {
+          username,
+          message: rawMessage,
+          command: "permission_preflight",
+          action: intent.action,
+          authorized: false,
+          permissionRequested: requested
+        });
+        return requested;
+      }
+    }
 
     // Owner stop commands have control priority over the planner. If the same
     // message contains a follow-up request ("stop here and drop me a shield"),
