@@ -463,10 +463,10 @@ async function activateElytraForZoya(ctx) {
     // "start_fall_flying". Do not gate this on registry.supportFeature():
     // that helper is not present in every Mineflayer registry build even when
     // the protocol schema itself supports the mapped action.
-    ctx.log?.("[PVP] elytra packet | version=1.21.11 protocol=774 action=start_fall_flying");
+    ctx.log?.("[PVP] elytra packet | version=1.21.11 protocol=774 action=8(start_fall_flying)");
     bot._client.write("entity_action", {
       entityId: bot.entity.id,
-      actionId: "start_fall_flying",
+      actionId: 8,
       jumpBoost: 0
     });
     return true;
