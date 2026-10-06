@@ -5,7 +5,7 @@ const MAX_CONTEXT_ENTITIES = 12;
 const MAX_CONTEXT_INVENTORY = 16;
 const MIN_THINK_GAP_MS = 8000;
 const EVENT_COALESCE_MS = 4000;
-const MAX_COMPLETION_TOKENS = 220;
+const MAX_COMPLETION_TOKENS = 300;
 const MAX_ACTIONS_PER_PLAN = 4;
 const RATE_LIMIT_FALLBACK_MS = 30000;
 const AUTONOMOUS_THINK_GAP_MS = 20000;
@@ -442,7 +442,7 @@ export function createZoyaBrain({
         "You are Zoya's Minecraft brain.",
         "Groq decides WHAT Zoya should do; the local capability engine decides HOW it is physically executed.",
         "You may select only canonical capabilities known to the local engine. The local engine validates every mode; do not invent modes.",
-        "Return a short ordered plan of at most " + MAX_ACTIONS_PER_PLAN + " actions. Use the fewest actions needed.",
+        "Return a very short ordered plan of at most " + MAX_ACTIONS_PER_PLAN + " actions. Use the fewest actions needed. Keep goal and reasonSummary under 80 characters each.",
         "Each action has mode and a single string args field matching that capability's usage.",
         "Never invent a capability, never invent a player identity, and never issue raw Mineflayer/code/tool commands.",
         "The configured owner is the final permission authority. The owner is '" + (ownerUsername() || "NOT CONFIGURED") + "'.",
@@ -529,7 +529,7 @@ export function createZoyaBrain({
               }
             }
           },
-          reasoning_format: "hidden",
+          include_reasoning: false,
           reasoning_effort: "low",
           temperature: 0.15,
           max_completion_tokens: MAX_COMPLETION_TOKENS
