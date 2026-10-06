@@ -235,7 +235,7 @@ export function createZoyaBrain({
 
     // Natural confirmations such as "yup do it" should continue the most
     // recent explicit physical request instead of becoming a chat response.
-    const confirmation = /^(?:yes|yeah|yep|yup|ok|okay|sure|do it|go ahead|yes do it|yup do it|okay do it)[.!\\s]*$/i.test(message);
+    const confirmation = /^(?:yes|yeah|yep|yup|ok|okay|sure|do it|go ahead|yes do it|yup do it|okay do it)[.!\s]*$/i.test(message);
     if (confirmation && lastExplicitPhysicalIntent && Date.now() - lastExplicitPhysicalIntent.at <= 120000 &&
         lastExplicitPhysicalIntent.requester.toLowerCase() === requester.toLowerCase()) {
       return {
@@ -482,7 +482,13 @@ export function createZoyaBrain({
       };
 
       const deterministicPlan = reason === "player_message" ? deterministicPlayerPlan(request) : null;
-      let normalized;\n\n      if (deterministicPlan) {\n        normalized = deterministicPlan;\n        log("[BRAIN] Local intent match: " + normalized.actions.map(item => item.mode).join(", ") + ". Groq intent selection bypassed.");\n      } else {\n      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      let normalized;
+
+      if (deterministicPlan) {
+        normalized = deterministicPlan;
+        log("[BRAIN] Local intent match: " + normalized.actions.map(item => item.mode).join(", ") + ". Groq intent selection bypassed.");
+      } else {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: "Bearer " + apiKey,
