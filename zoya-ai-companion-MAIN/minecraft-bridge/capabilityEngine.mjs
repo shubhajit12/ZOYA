@@ -478,12 +478,13 @@ async function combatElytraMaceAttack(ctx, target) {
 
     await combatAim(ctx, target, 180);
     bot.setControlState?.("jump", true);
-    await bot.waitForTicks?.(5);
+    await wait(ctx, 250);
     bot.setControlState?.("jump", false);
 
-    // Give physics one more tick to establish an airborne state before
-    // requesting fall-flying. Calling elytraFly while still grounded can fail.
-    await bot.waitForTicks?.(2);
+    // Give physics a little more time to establish an airborne state before
+    // requesting fall-flying. Runtime-aware wait exits with task cancellation
+    // instead of hanging if the server disconnects during the launch.
+    await wait(ctx, 100);
     if (bot.entity?.onGround) {
       ctx.log?.("[PVP] elytra launch failed: still grounded");
       return false;
