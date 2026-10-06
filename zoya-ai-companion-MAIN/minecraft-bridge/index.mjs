@@ -443,6 +443,21 @@ function disconnect({ resetReconnect = true } = {}) {
   setState("DISCONNECTED", { host: null, port: null, username: null, version: null, error: null });
 }
 
+function assessElytraProtocol(bot, configuredVersion) {
+  const version = String(bot?.version || configuredVersion || "").trim();
+  const protocol = Number(bot?.protocolVersion ?? bot?._client?.protocolVersion ?? bot?._client?.version);
+  // Protocol 775 (Minecraft 26.1.x) is particularly sensitive because older
+  // minecraft-data mappings can encode serverbound player_command with the
+  // wrong packet id. Elytra activation uses that packet, so never risk sending
+  // it unless the negotiated version is the specifically supported 26.1 data
+  // set. Unknown protocol/version combinations fail closed to the safe mace
+  // alternatives instead of disconnecting Zoya.
+  const safe = Number.isFinite(protocol)
+    ? (protocol !== 775 || version === "26.1")
+    : !/^26\.1(?:\.\d+)?$/.test(version);
+  return { version, protocol: Number.isFinite(protocol) ? protocol : null, safe };
+}
+
 function connect(config, { preserveReconnectAttempt = false } = {}) {
   capabilityDebugMode = CAPABILITY_DEBUG_ENV;
   currentConfig = { ...config, capabilityDebugMode };
@@ -462,6 +477,15 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
     bot.once("spawn", () => {
       debugLog("[EVENT] Zoya spawned into the Minecraft world.");
       debugLog(`[ZOYA Minecraft Bridge] Mineflayer login: ${bot?.username || username}`);
+      const elytraProtocol = assessElytraProtocol(bot, version);
+      bot.__zoyaElytraSafe = elytraProtocol.safe;
+      debugLog("[PROTOCOL] negotiatedVersion=" + (elytraProtocol.version || "unknown") +
+        " protocol=" + (elytraProtocol.protocol ?? "unknown") +
+        " configuredVersion=" + (version || "auto") +
+        " elytra=" + (elytraProtocol.safe ? "ENABLED" : "DISABLED"));
+      if (!elytraProtocol.safe) {
+        debugWarn("[PROTOCOL] Elytra-mace disabled for this protocol/version; using non-Elytra mace tactics to prevent player_command decode disconnects.");
+      }
       // Keep physics explicitly enabled for combat/knockback. Mineflayer defaults this to true, but Zoya relies on it and should not inherit a disabled state from another layer.
       bot.physicsEnabled = true;
       debugLog("[PHYSICS] Mineflayer physics enabled for movement and knockback.");
