@@ -373,7 +373,7 @@ async function combatWindMaceAttack(ctx, target) {
   if (!wind || !mace) return false;
 
   const initialDistance = combatDistance(bot, target);
-  if (initialDistance > 18 || !bot.entity?.onGround) return false;
+  if (initialDistance > 10 || !bot.entity?.onGround) return false;
 
   // The wind charge must explode underneath Zoya. Looking upward sends the
   // charge away from the launch point and does not reliably create a usable
@@ -383,7 +383,7 @@ async function combatWindMaceAttack(ctx, target) {
   active(ctx);
   await bot.lookAt(vec(bot, {
     x: bot.entity.position.x,
-    y: bot.entity.position.y - 4,
+    y: bot.entity.position.y - 1.5,
     z: bot.entity.position.z
   }), true);
   ctx.log?.("[PVP] wind-mace launch | dist=" + initialDistance.toFixed(2));
@@ -424,11 +424,16 @@ async function combatWindMaceAttack(ctx, target) {
     if (now - lastAimAt >= 45) {
       await combatAim(ctx, target, 25);
       lastAimAt = now;
+      if (d > 3.2) {
+        bot.setControlState?.("forward", true);
+        bot.setControlState?.("sprint", true);
+      }
     }
 
-    if (!bot.entity?.onGround && fall > 1.5 && d <= 4.0 && vy < 0.1) {
+    if (!bot.entity?.onGround && fall > 1.5 && d <= 3.2 && vy < 0.1) {
       ctx.log?.("[PVP] wind-mace attack window | dist=" + d.toFixed(2) +
         " fall=" + fall.toFixed(2) + " vy=" + vy.toFixed(2));
+      bot.clearControlStates?.();
       bot.attack(target);
       return true;
     }
