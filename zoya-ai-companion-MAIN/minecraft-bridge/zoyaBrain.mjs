@@ -3,11 +3,12 @@ import { getCapabilityRegistry } from "./capabilityTester.mjs";
 const MODEL = "openai/gpt-oss-20b";
 const MAX_CONTEXT_ENTITIES = 12;
 const MAX_CONTEXT_INVENTORY = 16;
-const MIN_THINK_GAP_MS = 5000;
-const EVENT_COALESCE_MS = 1500;
-const MAX_COMPLETION_TOKENS = 300;
+const MIN_THINK_GAP_MS = 8000;
+const EVENT_COALESCE_MS = 4000;
+const MAX_COMPLETION_TOKENS = 220;
 const MAX_ACTIONS_PER_PLAN = 4;
-const RATE_LIMIT_FALLBACK_MS = 15000;
+const RATE_LIMIT_FALLBACK_MS = 30000;
+const AUTONOMOUS_THINK_GAP_MS = 20000;
 
 function compactState(state) {
   const nearby = (state?.nearbyEntities || [])
@@ -77,6 +78,7 @@ export function createZoyaBrain({
   let eventTimer = null;
   let rateLimitedUntil = 0;
   let noApiKeyLogged = false;
+  let rateLimitCount = 0;
 
   function requestPriority(item) {
     if (item.reason === "player_message" && isOwner(item.request?.requester)) return 0;
@@ -133,9 +135,16 @@ export function createZoyaBrain({
   function scheduleThink() {
     if (!started || thinking || eventTimer || !requestQueue.length) return;
     const now = Date.now();
+    const next = requestQueue[0];
+    const playerRequest = next?.reason === "player_message" || next?.reason === "owner_control";
     const waitForRateLimit = Math.max(0, rateLimitedUntil - now);
     const waitForGap = Math.max(0, MIN_THINK_GAP_MS - (now - lastThinkAt));
-    const wait = Math.max(EVENT_COALESCE_MS, waitForRateLimit, waitForGap);
+    // Autonomous state/event thinking is deliberately slower than explicit
+    // player commands. This keeps the free Groq tier from being consumed by
+    // heartbeat-like planning while preserving queued player requests.
+    const baseGap = playerRequest ? MIN_THINK_GAP_MS : AUTONOMOUS_THINK_GAP_MS;
+    const waitForTypeGap = Math.max(0, baseGap - (now - lastThinkAt));
+    const wait = Math.max(EVENT_COALESCE_MS, waitForRateLimit, waitForGap, waitForTypeGap);
     eventTimer = setTimeout(() => {
       eventTimer = null;
       if (started && !thinking && requestQueue.length) void think();
@@ -474,6 +483,8 @@ export function createZoyaBrain({
       }
 
       const payload = await response.json();
+      rateLimitCount = 0;
+      rateLimitedUntil = 0;
       const raw = payload?.choices?.[0]?.message?.content;
       if (!raw) throw new Error("Groq returned an empty Minecraft plan.");
       const plan = JSON.parse(raw);
@@ -547,15 +558,18 @@ export function createZoyaBrain({
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const rateMatch = message.match(/try again in ([0-9]+(?:\.[0-9]+)?)s/i);
-      if (/rate_limit_exceeded|rate limit reached/i.test(message)) {
-        // Never lose a player message just because Groq is temporarily rate-limited.
+      if (/rate_limit_exceeded|rate limit reached|too many requests|429/i.test(message)) {
+        // Never lose an explicit request. Back off progressively so repeated
+        // 429s cannot create a tight retry loop.
         requeueFront(reason, request);
-        const retryMs = rateMatch
-          ? Math.ceil(Number(rateMatch[1]) * 1000) + 1000
-          : RATE_LIMIT_FALLBACK_MS;
+        rateLimitCount = Math.min(rateLimitCount + 1, 5);
+        const serverWait = rateMatch ? Math.ceil(Number(rateMatch[1]) * 1000) + 1500 : 0;
+        const progressiveWait = RATE_LIMIT_FALLBACK_MS * Math.pow(2, Math.max(0, rateLimitCount - 1));
+        const retryMs = Math.min(120000, Math.max(serverWait, progressiveWait));
         rateLimitedUntil = Date.now() + retryMs;
-        log("[BRAIN] Groq rate limit; backing off for " + Math.ceil(retryMs / 1000) + "s and coalescing events.");
+        log("[BRAIN] Groq 429; preserving request and backing off for " + Math.ceil(retryMs / 1000) + "s.");
       } else {
+        rateLimitCount = 0;
         log("[BRAIN] Decision failed: " + message);
       }
     } finally {
