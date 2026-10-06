@@ -1571,7 +1571,7 @@ const H = {
           " health="+String(typeof entity.health==="number"?entity.health:"unknown"));
       }
     };
-    bot.on("entityHurt",onTargetHurt);
+    ctx.bot.on("entityHurt",onTargetHurt);
 
     const skyClear=()=>{
       const p=ctx.bot.entity.position;
