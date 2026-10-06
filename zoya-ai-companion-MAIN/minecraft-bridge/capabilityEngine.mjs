@@ -306,26 +306,27 @@ async function combatBowAttack(ctx, target) {
   return true;
 }
 async function combatMaceAttack(ctx, target) {
-  const mace = combatWeapon(ctx.bot, "mace");
+  const bot = ctx.bot;
+  const mace = combatWeapon(bot, "mace");
   if (!mace) return false;
-  // Mace attacks are most useful while falling. If already airborne, wait for
-  // the descent window; otherwise take a bounded jump and strike on descent.
+  // Smash validity comes from falling/fallDistance, never a fake hold timer.
   await combatEquip(ctx, mace, "hand");
-  if (ctx.bot.entity?.onGround) {
-    ctx.bot.setControlState?.("jump", true);
+  if (bot.entity?.onGround) {
+    bot.setControlState?.("jump", true);
     await wait(ctx, 90);
-    ctx.bot.setControlState?.("jump", false);
+    bot.setControlState?.("jump", false);
   }
-  const deadline = Date.now() + 1100;
+  const deadline = Date.now() + 1400;
   while (Date.now() < deadline) {
     active(ctx);
-    const vy = Number(ctx.bot.entity?.velocity?.y || 0);
-    if (vy < -0.12) {
-      await combatAim(ctx, target, 50);
-      ctx.bot.attack(target);
+    const fall = Number(bot.entity?.fallDistance || 0);
+    const d = combatDistance(bot, target);
+    if (!bot.entity?.onGround && fall > 1.5 && d <= 4.2) {
+      await combatAim(ctx, target, 45);
+      bot.attack(target);
       return true;
     }
-    await wait(ctx, 35);
+    await wait(ctx, 30);
   }
   return false;
 }
@@ -335,11 +336,9 @@ async function combatWindMaceAttack(ctx, target) {
   const mace = combatWeapon(bot, "mace");
   if (!wind || !mace) return false;
   const dist = combatDistance(bot, target);
-  if (dist > 9 || !bot.entity?.onGround) return false;
+  if (dist > 18 || !bot.entity?.onGround) return false;
 
-  // Wind charge stays in the main hand; the totem can remain in off-hand.
-  // Far target: fire behind Zoya so the blast pushes her toward the target.
-  // Near target: fire downward to gain vertical lift.
+  // Setup and strike are one canonical task: no second physics/combat loop.
   await combatEquip(ctx, wind, "hand");
   active(ctx);
   if (dist > 7) {
@@ -358,8 +357,21 @@ async function combatWindMaceAttack(ctx, target) {
   bot.activateItem();
   await wait(ctx, 120);
   await combatEquip(ctx, mace, "hand");
-  active(ctx);
-  return true;
+
+  const deadline = Date.now() + 2400;
+  while (Date.now() < deadline) {
+    active(ctx);
+    const d = combatDistance(bot, target);
+    const fall = Number(bot.entity?.fallDistance || 0);
+    if (!bot.entity?.onGround && fall > 1.5 && d <= 4.2) {
+      await combatAim(ctx, target, 45);
+      bot.attack(target);
+      return true;
+    }
+    if (bot.entity?.onGround && Date.now() > deadline - 500) break;
+    await wait(ctx, 30);
+  }
+  return false;
 }
 
 async function combatElytraMaceAttack(ctx, target) {
@@ -1469,109 +1481,220 @@ const H = {
   },
   pvp: async(ctx,a)=>{
     const username=required(a,"Player username is required.");
-    let lastStrafe=0, lastBow=0, lastPearl=0, lastAdvanced=0, lastLearned=0, lastCritical=0;
-    let lastShieldBreak=0, meleeWeaponKind="sword", meleeWeaponCommitUntil=0;
-    let previousTargetHealth=null;
+    const seen=new Map(), planEV=Object.create(null);
+    let planCur=null,planSince=0,planStart=null,targetDamageSamples=0;
+    let lastStrafe=0,lastBow=0,lastPearl=0,lastAdvanced=0,lastLearned=0,lastShieldBreak=0;
+    let meleeWeaponKind="sword",meleeWeaponCommitUntil=0;
+    let enemyWasAirborne=false,enemyAirStart=0,punishUntil=0,lastEnemyHealth=null;
+
+    const now=()=>Date.now();
+    const rememberKit=(target)=>{
+      const t=now(),eq=Array.isArray(target?.equipment)?target.equipment:[];
+      for(const item of [target?.heldItem,...eq]){
+        const n=String(item?.name||"").toLowerCase();
+        if(n)seen.set(n,t);
+      }
+    };
+    const saw=(name,ms=15000)=>now()-(seen.get(name)||0)<ms;
+    const sawSuffix=(suffixes,ms=15000)=>[...seen.keys()].some(n=>suffixes.some(x=>n.endsWith(x))&&saw(n,ms));
+    const sawRanged=()=>saw("bow",20000)||saw("crossbow",20000)||sawSuffix(["_bow","_crossbow"],20000);
+    const sawAxe=()=>sawSuffix(["_axe"],15000);
+    const evBonus=name=>planEV[name]==null?0:Math.max(-10,Math.min(10,planEV[name]*1.5));
+
+    const skyClear=()=>{
+      const p=ctx.bot.entity.position;
+      for(let y=2;y<28;y++){
+        const b=ctx.bot.blockAt(p.offset(0,y,0));
+        if(b&&b.boundingBox!=="empty")return false;
+      }
+      return true;
+    };
+
+    const settle=()=>{
+      if(!planCur||!planStart)return;
+      const ownTaken=Math.max(0,planStart.hp-Number(ctx.bot.health||20));
+      const enemyDelta=typeof planStart.enemyHp==="number"&&typeof lastEnemyHealth==="number"
+        ? Math.max(0,planStart.enemyHp-lastEnemyHealth)
+        : targetDamageSamples*3;
+      const ev=enemyDelta-ownTaken;
+      planEV[planCur]=planEV[planCur]==null?ev:planEV[planCur]*0.7+ev*0.3;
+    };
+
+    const switchPlan=(p,c)=>{
+      settle();
+      planCur=p.name;planSince=c.now;
+      planStart={hp:Number(ctx.bot.health||20),enemyHp:c.enemyHp};
+      targetDamageSamples=0;
+      ctx.log?.("[PVP-BRAIN] "+p.name+" ("+p.score.toFixed(0)+") "+p.why+
+        " | dist="+c.dist.toFixed(1)+" hp="+Number(ctx.bot.health||0).toFixed(0)+
+        " enemyHp="+(c.enemyHp??"?"));
+    };
+
+    const choose=c=>{
+      const e=c.enemy,k=c.kit,plans=[];
+      const add=(name,score,why)=>{if(score>0)plans.push({name,score:score+evBonus(name),why});};
+      const finishing=typeof e.hp==="number"&&e.hp<=6;
+      const low=Number(ctx.bot.health||20)<=6;
+      const safeGap=c.dist>4.5;
+      const comboReady=c.now-c.lastAdvanced>1200&&Boolean(ctx.bot.entity?.onGround);
+      const rangedThreat=e.drawing||sawRanged();
+
+      add("defend_dive",c.diving?100:0,"enemy diving from above");
+      add("escape",c.shouldEscape?96:0,"critical health with no safe heal");
+      if(low&&safeGap&&k.gapple)add("heal",91,"low health, safe gap");
+      if(e.drawing&&c.dist>4&&c.shield)add("defend_ranged",90,"enemy drawing bow/crossbow");
+
+      add("punish",c.punish?88:0,"enemy just landed from an aerial attack");
+      if(e.blocking&&k.axe&&c.dist<=5)add("axe_break",84,"enemy shield is actually blocking");
+      if(finishing)add("melee",78,"enemy is low; finish instead of overcommitting");
+
+      if(comboReady&&k.mace&&k.wind&&c.dist>=3.5&&c.dist<=18&&c.myHp>8){
+        let score=68;
+        if(c.dist>8)score+=8;
+        if(finishing)score-=28;
+        if(e.blocking&&k.axe)score-=18;
+        if(rangedThreat)score-=8;
+        add("mace_wind",score,"mace+wind opportunity");
+      }
+      if(comboReady&&k.mace&&k.elytra&&k.rocket&&c.dist>15&&c.dist<50&&skyClear()){
+        let score=58;
+        if(sawRanged())score-=35;
+        if(finishing)score-=25;
+        if(e.gliding)score-=12;
+        add("mace_elytra",score,"far target, open sky");
+      }
+      if(k.bow&&c.dist>10&&c.dist<38&&c.now-lastBow>1800)
+        add("ranged",48+(sawRanged()?0:6),"ranged pressure");
+
+      let meleeScore=45;
+      if(c.dist<=5.5)meleeScore+=10;
+      if(finishing)meleeScore+=18;
+      if(rangedThreat&&c.dist>8)meleeScore-=8;
+      add("melee",meleeScore,"default pressure");
+
+      plans.sort((a,b)=>b.score-a.score);
+      const top=plans[0]||{name:"melee",score:40,why:"fallback"};
+      const current=plans.find(x=>x.name===planCur);
+      const urgent=new Set(["defend_dive","escape","heal","defend_ranged","punish"]);
+      let pick=top;
+      if(current&&!urgent.has(top.name)&&c.now-planSince<700&&current.score>=top.score-12)pick=current;
+      if(pick.name!==planCur)switchPlan(pick,c);
+      return pick;
+    };
+
     while(true){
       active(ctx);
       const p=player(ctx.bot,username);
       if(!p?.entity)throw new Error("Player not found: "+username);
       const target=p.entity;
-      if(target.isValid===false || (target.health!=null && target.health<=0)) return true;
+      if(target.isValid===false||(target.health!=null&&target.health<=0))return true;
 
-      const bot=ctx.bot;
-      const dist=combatDistance(bot,target);
-      const health=Number(bot.health||20);
-      const targetHealth=Number(target.health??20);
-      const now=Date.now();
+      const bot=ctx.bot,dist=combatDistance(bot,target),health=Number(bot.health||20),enemyHp=typeof target.health==="number"?Number(target.health):null,t=now();
+      rememberKit(target);
 
-      // Phase 3: survival and defense.
+      const held=String(target.heldItem?.name||"").toLowerCase();
+      const m8=target.metadata?.[8];
+      const usingItem=Boolean(target.isUsingItem===true||(typeof m8==="number"&&(m8&1)===1));
+      const hasShield=Array.isArray(target.equipment)&&target.equipment.some(i=>String(i?.name||"").toLowerCase()==="shield");
+      const blocking=targetBlocking(target);
+      const drawing=usingItem&&(held==="bow"||held==="crossbow");
+      const gliding=Boolean(target.elytraFlying||(typeof target.metadata?.[0]==="number"&&(target.metadata[0]&0x80)!==0));
+      const vy=Number(target.velocity?.y||0),dy=Number(target.position?.y||0)-Number(bot.entity?.position?.y||0),airborne=target.onGround===false;
+
+      if(airborne&&!enemyWasAirborne){enemyWasAirborne=true;enemyAirStart=t;}
+      if(!airborne&&enemyWasAirborne){
+        enemyWasAirborne=false;
+        if(t-enemyAirStart>600&&(saw("mace")||saw("wind_charge")))punishUntil=t+1700;
+      }
+
+      const k={
+        sword:combatWeapon(bot,"sword"),axe:combatWeapon(bot,"axe"),mace:combatWeapon(bot,"mace"),
+        wind:combatItem(bot,n=>n==="wind_charge"),elytra:inventoryItem(bot,"elytra"),
+        rocket:combatItem(bot,n=>n==="firework_rocket"),bow:combatBow(bot),
+        gapple:combatGapple(bot),spear:combatWeapon(bot,"spear"),pearl:combatPearl(bot)
+      };
+      const shouldEscape=health<=6&&!k.gapple;
+      const c={now:t,dist,enemy:{hp:enemyHp,held,blocking,drawing,gliding,vy,dy,onGround:!airborne},kit:k,
+        myHp:health,shield:combatShield(bot),diving:(vy<-0.6&&dy>1.5&&dist<10)||(gliding&&dy>2&&dist<16),
+        shouldEscape,punish:t<punishUntil,lastAdvanced,enemyHp};
+
       await combatPrepareTotem(ctx);
-      if(health<=7 && combatGapple(bot)){
-        await combatUseGapple(ctx);
-        await combatRetreat(ctx,target);
+      if(health<=7&&k.gapple){await combatUseGapple(ctx);await combatRetreat(ctx,target);continue;}
+      if(shouldEscape&&k.pearl&&t-lastPearl>3500){if(await combatPearlEscape(ctx,target)){lastPearl=now();continue;}}
+
+      if(planStart&&enemyHp!=null&&lastEnemyHealth!=null&&enemyHp<lastEnemyHealth)targetDamageSamples++;
+      lastEnemyHealth=enemyHp;
+
+      const pick=choose(c);
+
+      if(pick.name==="defend_dive"){
+        await briefShieldBlock(ctx,420);
+        const dir=((Math.floor(t/420)&1)===0)?1:-1;
+        await combatStrafe(ctx,target,dir,150);
         continue;
       }
-      if(health<=5 && dist<6 && combatPearl(bot) && now-lastPearl>3500){
-        if(await combatPearlEscape(ctx,target)){ lastPearl=Date.now(); continue; }
+      if(pick.name==="defend_ranged"){
+        await briefShieldBlock(ctx,550);
+        if(dist>6){bot.pathfinder.setGoal(new goals.GoalFollow(target,4.0),true);await wait(ctx,140);}
+        continue;
       }
-
-      // Phase 2: shield defense / shield breaking.
-      const targetHasShield=Array.isArray(target.equipment) &&
-        target.equipment.some(item=>String(item?.name||"").toLowerCase()==="shield");
-      const blocking=targetBlocking(target);
-      // Shield-break is a deliberate tactical transition, not a per-tick
-      // weapon choice. Repeatedly selecting the axe against a merely equipped
-      // shield caused rapid axe <-> sword oscillation during live PvP.
-      if(targetHasShield && blocking && now-lastShieldBreak>=1200){
-        const axe=combatWeapon(bot,"axe");
-        if(axe){
-          meleeWeaponKind="axe";
-          meleeWeaponCommitUntil=now+850;
-          lastShieldBreak=now;
-          await combatEquip(ctx,axe,"hand");
-          await combatAim(ctx,target,60);
-          bot.attack(target);
-          await wait(ctx,260);
-          await combatSprintReset(ctx);
+      if(pick.name==="escape"){
+        if(k.pearl&&t-lastPearl>3000&&await combatPearlEscape(ctx,target)){lastPearl=now();continue;}
+        await combatRetreat(ctx,target);continue;
+      }
+      if(pick.name==="heal"){
+        await combatUseGapple(ctx);await combatRetreat(ctx,target);continue;
+      }
+      if(pick.name==="axe_break"){
+        if(t-lastShieldBreak>=1200&&k.axe){
+          meleeWeaponKind="axe";meleeWeaponCommitUntil=t+850;lastShieldBreak=t;
+          await combatEquip(ctx,k.axe,"hand");await combatAim(ctx,target,45);bot.attack(target);await wait(ctx,260);
         }
+        continue;
+      }
+      if(pick.name==="punish"){
+        if(k.sword)await combatEquip(ctx,k.sword,"hand");
+        await combatAim(ctx,target,35);bot.setControlState?.("sprint",true);
+        if(dist>3.1)bot.pathfinder.setGoal(new goals.GoalFollow(target,2.2),true);
+        else{try{bot.pathfinder.setGoal(null);}catch{}bot.attack(target);}
+        await wait(ctx,170);continue;
+      }
+      if(pick.name==="mace_wind"){
+        if(t-lastAdvanced>1200&&await combatWindMaceAttack(ctx,target)){lastAdvanced=now();continue;}
+      }
+      if(pick.name==="mace_elytra"){
+        if(t-lastAdvanced>2200&&await combatElytraMaceAttack(ctx,target)){lastAdvanced=now();continue;}
+      }
+      if(pick.name==="ranged"){
+        if(t-lastBow>1800&&k.bow&&await combatBowAttack(ctx,target)){lastBow=now();continue;}
       }
 
-      // Phase 4: ranged pressure when the target is outside reliable melee range.
-      if(dist>8 && now-lastBow>1800 && combatBow(bot)){
-        if(await combatBowAttack(ctx,target)){ lastBow=Date.now(); continue; }
-      }
-
-      // Phase 5: advanced 1.21+ weapons and bounded aerial mace tactics.
-      if(now-lastAdvanced>1400){
-        if(await combatElytraMaceAttack(ctx,target)){ lastAdvanced=Date.now(); continue; }
-        if(await combatWindMaceAttack(ctx,target)){ lastAdvanced=Date.now(); continue; }
-        if(await combatAdvancedAttack(ctx,target)){ lastAdvanced=Date.now(); continue; }
-      }
-
-      // Phase 6: owner-trained techniques remain a tactical overlay, never a
-      // second movement/combat engine.
       const training=ctx.runtime?.training;
       const learned=training?.findApplicable?.(blocking?"shield":"combo")||null;
-      if(learned && now-lastLearned>1800){
+      if(learned&&t-lastLearned>1800){
         const result=await training.executeTechnique(learned.name,{target,context:blocking?"shield":"combo",ctx});
-        if(result?.ok){ lastLearned=Date.now(); active(ctx); }
+        if(result?.ok){lastLearned=now();active(ctx);}
       }
 
-      // Phase 2: crit window + sprint reset + short strafing.
-      if(dist>3.1){
-        bot.pathfinder.setGoal(new goals.GoalFollow(target,2.6),true);
-        await wait(ctx,120);
-        continue;
-      }
+      if(dist>3.1){bot.pathfinder.setGoal(new goals.GoalFollow(target,2.6),true);await wait(ctx,110);continue;}
       try{bot.pathfinder.setGoal(null);}catch{}
+      if(t-lastStrafe>600){
+        const dir=((Math.floor(t/600)&1)===0)?1:-1;
+        await combatStrafe(ctx,target,dir,105);lastStrafe=now();
+      }
+
+      if(Date.now()>=meleeWeaponCommitUntil)meleeWeaponKind="sword";
+      const preferred=meleeWeaponKind==="axe"?k.axe:k.sword;
+      const melee=preferred||k.sword||k.axe||k.spear;
+      if(melee)await combatEquip(ctx,melee,"hand");
       await combatAim(ctx,target,55);
 
-      if(now-lastStrafe>650){
-        const dir=((Math.floor(now/650)&1)===0)?1:-1;
-        await combatStrafe(ctx,target,dir,120);
-        lastStrafe=Date.now();
-      }
+      const enemyHasAxe=held.endsWith("_axe")||sawAxe();
+      if(!enemyHasAxe&&blocking)await briefShieldBlock(ctx,220);
 
-      if(previousTargetHealth!=null && targetHealth<previousTargetHealth && health>8 && now-lastCritical>900){
-        await combatJumpReset(ctx);
-        lastCritical=Date.now();
-      }
-      previousTargetHealth=targetHealth;
-
-      // Prefer sword for sustained melee. Keep an axe only for the short
-      // post-shield-break commitment; never oscillate weapons just because the
-      // target still has a shield equipped.
-      if(Date.now()>=meleeWeaponCommitUntil) meleeWeaponKind="sword";
-      const preferred = meleeWeaponKind==="axe" ? combatWeapon(bot,"axe") : combatWeapon(bot,"sword");
-      const fallback = combatWeapon(bot,"mace")||combatWeapon(bot,"spear")||combatWeapon(bot,"axe");
-      const melee=preferred||fallback;
-      if(melee) await combatEquip(ctx,melee,"hand");
-      await combatAim(ctx,target,70);
       await combatSprintReset(ctx);
-      active(ctx);
-      bot.attack(target);
-      await wait(ctx,280);
+      active(ctx);bot.attack(target);
+      await wait(ctx,enemyHp!=null&&enemyHp<=6?180:260);
     }
   },
   hit: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return attack(ctx,p.entity,10000);},
