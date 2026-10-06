@@ -458,13 +458,15 @@ async function activateElytraForZoya(ctx) {
   const protocol = Number(bot.protocolVersion ?? bot._client?.protocolVersion ?? bot._client?.version);
   if (version === "1.21.11" && protocol === 774) {
     if (!bot.entity || (bot.entity.id == null)) throw new Error("Missing player entity id for Elytra activation.");
-    if (!bot.registry?.supportFeature?.("entityActionUsesStringMapper")) {
-      throw new Error("Minecraft 1.21.11 protocol data is missing string-mapped entity_action support.");
-    }
-    ctx.log?.("[PVP] elytra packet | version=1.21.11 protocol=774 action=start_elytra_flying");
+    // Minecraft 1.21.6+ renamed the fall-flying action in the protocol
+    // mapper. On 1.21.11 the minecraft-data schema maps action 6 to
+    // "start_fall_flying". Do not gate this on registry.supportFeature():
+    // that helper is not present in every Mineflayer registry build even when
+    // the protocol schema itself supports the mapped action.
+    ctx.log?.("[PVP] elytra packet | version=1.21.11 protocol=774 action=start_fall_flying");
     bot._client.write("entity_action", {
       entityId: bot.entity.id,
-      actionId: "start_elytra_flying",
+      actionId: "start_fall_flying",
       jumpBoost: 0
     });
     return true;
@@ -1672,6 +1674,13 @@ const H = {
     let observedEnemyHealth=null,targetHurtAt=0,activeTargetUuid=null,activeTargetId=null;
     let lastStrafe=0,lastBow=0,lastPearl=0,lastAdvanced=0,lastLearned=0,lastShieldBreak=0;
     let meleeWeaponKind="sword",meleeWeaponCommitUntil=0;
+    // Tactical weapon ownership: once a PvP plan commits to a weapon, the
+    // generic melee fallback must not immediately overwrite it. This prevents
+    // mace <-> sword oscillation when the planner is reevaluating rapidly.
+    let weaponLockKind=null,weaponLockUntil=0;
+    const lockWeapon=(name,ms)=>{weaponLockKind=name;weaponLockUntil=now()+ms;};
+    const clearWeaponLock=()=>{weaponLockKind=null;weaponLockUntil=0;};
+    const weaponLocked=(name)=>weaponLockKind===name&&now()<weaponLockUntil;
     let enemyWasAirborne=false,enemyAirStart=0,punishUntil=0,lastEnemyHealth=null;
 
     const now=()=>Date.now();
@@ -1905,6 +1914,10 @@ const H = {
       }
       if(pick.name==="mace_counter"){
         if(k.mace){
+          // Hold mace ownership across several planner ticks. The normal
+          // melee fallback is explicitly blocked while this tactical counter
+          // is active, so sword cannot immediately overwrite the mace.
+          lockWeapon("mace",1800);
           await combatEquip(ctx,k.mace,"hand");
           if(dist>3.1){
             bot.pathfinder.setGoal(new goals.GoalFollow(target,2.6),true);
@@ -1921,13 +1934,27 @@ const H = {
         }
       }
       if(pick.name==="mace_wind"){
+        clearWeaponLock();
         if(t-lastAdvanced>1200&&await combatWindMaceAttack(ctx,target)){lastAdvanced=now();continue;}
       }
       if(pick.name==="mace_elytra"){
+        clearWeaponLock();
         if(t-lastAdvanced>2200&&await combatElytraMaceAttack(ctx,target)){lastAdvanced=now();continue;}
       }
       if(pick.name==="ranged"){
+        clearWeaponLock();
         if(t-lastBow>1800&&k.bow&&await combatBowAttack(ctx,target)){lastBow=now();continue;}
+      }
+
+      // A committed mace counter owns the hand until its short tactical lock
+      // expires. Do not let the generic sword/axe melee branch steal it.
+      if(weaponLocked("mace")&&k.mace){
+        await combatEquip(ctx,k.mace,"hand");
+        await combatAim(ctx,target,35);
+        active(ctx);
+        bot.attack(target);
+        await wait(ctx,220);
+        continue;
       }
 
       const training=ctx.runtime?.training;
