@@ -69,6 +69,7 @@ export function createZoyaBrain({
   let lastGoal = null;
   let lastActionResult = null;
   let consecutiveFailures = 0;
+  let lastExplicitPhysicalIntent = null;
 
   // Real FIFO request arbitration. Player messages must never overwrite one
   // another while Zoya is thinking, performing a task, or rate-limited.
@@ -195,6 +196,57 @@ export function createZoyaBrain({
       add("chat", "chat {message}", "respond to the player in public chat when the message is conversational or does not require a physical task");
     }
     return hints.slice(0, 6);
+  }
+
+  // High-confidence player commands must not be left entirely to the LLM.
+  // Groq is useful for ambiguous intent, but explicit physical commands such as
+  // "pvp with me", "wear the armour", and "gear up" have canonical local
+  // meanings and must reach the capability engine even if Groq would answer chat.
+  function deterministicPlayerPlan(request) {
+    if (!request || request.channel === "whisper") return null;
+    const message = String(request.message || "").trim();
+    if (!message) return null;
+    const text = message.toLowerCase();
+    const requester = String(request.requester || "").trim();
+    if (!requester) return null;
+
+    const pvp = /\\b(?:pvp|fight|spar|duel|battle)\\b/.test(text) &&
+      /\\b(?:me|with me|against me)\\b/.test(text);
+    const gear = /\\b(?:gear up|gear yourself|equip (?:up|yourself)|wear (?:the )?(?:armou?r|armor)|put on (?:the )?(?:armou?r|armor)|armou?r up)\\b/.test(text);
+    const explicitGear = /\\b(?:armou?r|armor)\\b/.test(text) &&
+      /\\b(?:wear|equip|put on|gear)\\b/.test(text);
+
+    if (pvp || gear || explicitGear) {
+      const actions = [];
+      if (gear || explicitGear) {
+        actions.push({ mode: "equip_best_armor", args: "" });
+        actions.push({ mode: "equip_best_weapon", args: "" });
+      }
+      if (pvp) actions.push({ mode: "pvp", args: requester });
+      const plan = {
+        goal: pvp ? (gear || explicitGear ? "Gear up and fight the requester" : "Fight the requester") : "Gear up",
+        actions,
+        priority: 1,
+        reasonSummary: "Explicit physical intent matched locally; bypassing ambiguous LLM intent selection."
+      };
+      lastExplicitPhysicalIntent = { requester, actions: actions.map(action => ({ ...action })), at: Date.now() };
+      return plan;
+    }
+
+    // Natural confirmations such as "yup do it" should continue the most
+    // recent explicit physical request instead of becoming a chat response.
+    const confirmation = /^(?:yes|yeah|yep|yup|ok|okay|sure|do it|go ahead|yes do it|yup do it|okay do it)[.!\\s]*$/i.test(message);
+    if (confirmation && lastExplicitPhysicalIntent && Date.now() - lastExplicitPhysicalIntent.at <= 120000 &&
+        lastExplicitPhysicalIntent.requester.toLowerCase() === requester.toLowerCase()) {
+      return {
+        goal: "Continue the previous physical request",
+        actions: lastExplicitPhysicalIntent.actions.map(action => ({ ...action })),
+        priority: 1,
+        reasonSummary: "Confirmation matched the most recent explicit physical request."
+      };
+    }
+
+    return null;
   }
 
   function ownerUsername() {
@@ -429,7 +481,7 @@ export function createZoyaBrain({
         capabilities: "Validated locally; do not enumerate capabilities in the response."
       };
 
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const deterministicPlan = reason === "player_message" ? deterministicPlayerPlan(request) : null;\n      let normalized;\n\n      if (deterministicPlan) {\n        normalized = deterministicPlan;\n        log("[BRAIN] Local intent match: " + normalized.actions.map(item => item.mode).join(", ") + ". Groq intent selection bypassed.");\n      } else {\n      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: "Bearer " + apiKey,
@@ -490,7 +542,7 @@ export function createZoyaBrain({
       const plan = JSON.parse(raw);
       const allowed = new Set(capabilityIds());
       const actions = Array.isArray(plan.actions) ? plan.actions.slice(0, MAX_ACTIONS_PER_PLAN) : [];
-      const normalized = {
+      normalized = {
         goal: typeof plan.goal === "string" && plan.goal.trim() ? plan.goal.trim().slice(0, 240) : "Stay safe and useful",
         actions: actions
           .map(item => ({
@@ -525,7 +577,7 @@ export function createZoyaBrain({
         }
       }
 
-      lastDecision = new Date().toISOString();
+      }\n\n      lastDecision = new Date().toISOString();
       lastPlan = normalized;
       lastGoal = normalized.goal;
       log("[BRAIN] Plan: " + normalized.goal + " | actions=" + normalized.actions.map(item => item.mode).join(", ") + ".");
