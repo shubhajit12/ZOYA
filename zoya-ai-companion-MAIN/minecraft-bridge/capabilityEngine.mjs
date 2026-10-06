@@ -370,44 +370,40 @@ async function combatWindMaceAttack(ctx, target) {
   const bot = ctx.bot;
   const wind = combatItem(bot, n => n === "wind_charge");
   const mace = combatWeapon(bot, "mace");
-  if (!wind || !mace) return false;
+  if (!wind || !mace || !bot.entity?.onGround) return false;
 
   const initialDistance = combatDistance(bot, target);
-  if (initialDistance > 10 || !bot.entity?.onGround) return false;
+  if (initialDistance < 3.5 || initialDistance > 12) return false;
 
-  // The wind charge must explode underneath Zoya. Looking upward sends the
-  // charge away from the launch point and does not reliably create a usable
-  // mace fall. We deliberately aim straight down at our feet, then switch to
-  // the mace and track the target during the resulting airborne phase.
+  // Vanilla wind-mace setup: jump first, then throw the wind charge near the
+  // top of the jump while looking straight down. Throwing from the ground
+  // without the jump produces a short/low launch and leaves no reliable smash
+  // window.
   await combatEquip(ctx, wind, "hand");
+  active(ctx);
+  bot.setControlState?.("jump", true);
+  await wait(ctx, 180);
+  bot.setControlState?.("jump", false);
+
+  await wait(ctx, 60);
   active(ctx);
   await bot.lookAt(vec(bot, {
     x: bot.entity.position.x,
-    y: bot.entity.position.y - 1.5,
+    y: bot.entity.position.y - 8,
     z: bot.entity.position.z
   }), true);
+
+  const damageBefore = targetDamageEvents;
   ctx.log?.("[PVP] wind-mace launch | dist=" + initialDistance.toFixed(2));
   bot.activateItem();
 
-  const launchDeadline = Date.now() + 1200;
-  let launched = false;
-  while (Date.now() < launchDeadline) {
-    active(ctx);
-    if (!bot.entity?.onGround) {
-      launched = true;
-      break;
-    }
-    await wait(ctx, 25);
-  }
-  if (!launched) {
-    try { bot.deactivateItem?.(); } catch {}
-    ctx.log?.("[PVP] wind-mace launch failed; aborting");
-    return false;
-  }
-
+  // Give the projectile time to collide and apply its upward knockback.
+  await wait(ctx, 180);
   await combatEquip(ctx, mace, "hand");
-  const smashDeadline = Date.now() + 2400;
+
+  const smashDeadline = Date.now() + 3000;
   let lastAimAt = 0;
+  let attackSent = false;
 
   while (Date.now() < smashDeadline) {
     active(ctx);
@@ -419,34 +415,40 @@ async function combatWindMaceAttack(ctx, target) {
     const vy = Number(bot.entity?.velocity?.y || 0);
     const now = Date.now();
 
-    // Keep the target under the crosshair throughout the descent, but do not
-    // spam look packets every physics tick.
-    if (now - lastAimAt >= 45) {
-      await combatAim(ctx, target, 25);
+    // Continuously put the target under the crosshair during descent.
+    if (now - lastAimAt >= 35) {
+      await combatAim(ctx, target, 20);
       lastAimAt = now;
-      if (d > 3.2) {
-        bot.setControlState?.("forward", true);
-        bot.setControlState?.("sprint", true);
-      }
     }
 
-    if (!bot.entity?.onGround && fall > 1.5 && d <= 3.2 && vy < 0.1) {
-      ctx.log?.("[PVP] wind-mace attack window | dist=" + d.toFixed(2) +
+    // Vanilla's mace smash becomes valid once fallDistance exceeds 1.5.
+    // Use a conservative normal-reach window and only swing while descending.
+    if (!attackSent && !bot.entity?.onGround && fall >= 1.55 && vy < -0.05 && d <= 3.0) {
+      ctx.log?.("[PVP] mace attack window | dist=" + d.toFixed(2) +
         " fall=" + fall.toFixed(2) + " vy=" + vy.toFixed(2));
-      bot.clearControlStates?.();
-      bot.attack(target);
-      return true;
-    }
 
-    if (bot.entity?.onGround) {
-      ctx.log?.("[PVP] wind-mace missed; no valid descent window");
+      // Ensure the mace is fully selected before the swing and avoid sending
+      // an early attack from the previous sword-combat cooldown.
+      await wait(ctx, 80);
+      await combatAim(ctx, target, 15);
+      bot.attack(target);
+      attackSent = true;
+
+      await wait(ctx, 180);
+      if (targetDamageEvents > damageBefore) {
+        ctx.log?.("[PVP] mace hit confirmed | damageEvents=" + String(targetDamageEvents));
+        return true;
+      }
+
+      ctx.log?.("[PVP] mace swing sent but no damage telemetry; aborting combo");
       return false;
     }
 
-    await wait(ctx, 25);
+    if (bot.entity?.onGround) break;
+    await wait(ctx, 20);
   }
 
-  ctx.log?.("[PVP] wind-mace timed out before hit");
+  ctx.log?.("[PVP] wind-mace missed; no valid smash window");
   return false;
 }
 
@@ -1682,7 +1684,7 @@ const H = {
       if(e.blocking&&k.axe&&c.dist<=5)add("axe_break",84,"enemy shield is actually blocking");
       if(finishing)add("melee",78,"enemy is low; finish instead of overcommitting");
 
-      if(comboReady&&k.mace&&k.wind&&c.dist>=3.5&&c.dist<=18&&c.myHp>9){
+      if(comboReady&&k.mace&&k.wind&&c.dist>=3.5&&c.dist<=12&&c.myHp>9){
         let score=68;
         if(c.dist>8)score+=8;
         if(finishing)score-=28;
