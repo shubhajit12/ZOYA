@@ -584,7 +584,9 @@ export function createZoyaBrain({
         }
       }
 
-      }\n\n      lastDecision = new Date().toISOString();
+      }
+
+      lastDecision = new Date().toISOString();
       lastPlan = normalized;
       lastGoal = normalized.goal;
       log("[BRAIN] Plan: " + normalized.goal + " | actions=" + normalized.actions.map(item => item.mode).join(", ") + ".");
