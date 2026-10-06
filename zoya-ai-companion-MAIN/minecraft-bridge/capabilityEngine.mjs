@@ -452,6 +452,32 @@ async function combatWindMaceAttack(ctx, target) {
   return false;
 }
 
+async function activateElytraForZoya(ctx) {
+  const bot = ctx.bot;
+  const version = String(bot.version || "").trim();
+  const protocol = Number(bot.protocolVersion ?? bot._client?.protocolVersion ?? bot._client?.version);
+
+  // 1.21.11 is protocol 774. Do not delegate this critical packet to an
+  // unknown/stale client mapping: send the exact Mineflayer packet name and
+  // mapper value used by the 1.21.11 protocol data.
+  if (version === "1.21.11" && protocol === 774) {
+    if (!bot.entity?.id && bot.entity?.id !== 0) throw new Error("Missing player entity id for Elytra activation.");
+    if (!bot.registry?.supportFeature?.("entityActionUsesStringMapper")) {
+      throw new Error("Minecraft 1.21.11 protocol data is missing the string-mapped entity_action feature.");
+    }
+    ctx.log?.("[PVP] elytra packet | version=1.21.11 protocol=774 action=start_elytra_flying");
+    bot._client.write("entity_action", {
+      entityId: bot.entity.id,
+      actionId: "start_elytra_flying",
+      jumpBoost: 0
+    });
+    return true;
+  }
+
+  await bot.elytraFly();
+  return true;
+}
+
 async function combatElytraMaceAttack(ctx, target) {
   const bot = ctx.bot;
   if (bot.__zoyaElytraSafe === false) {
@@ -499,7 +525,7 @@ async function combatElytraMaceAttack(ctx, target) {
     ctx.log?.("[PVP] elytra start request | version="+String(bot.version||"unknown")+
       " protocol="+String(bot._client?.version||bot._client?.protocolVersion||"unknown"));
     try {
-      await bot.elytraFly();
+      await activateElytraForZoya(ctx);
     } catch (err) {
       ctx.log?.("[PVP] elytraFly rejected: " + String(err?.message || err));
       return false;
