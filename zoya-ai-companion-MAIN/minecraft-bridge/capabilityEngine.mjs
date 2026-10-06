@@ -481,7 +481,6 @@ async function combatElytraMaceAttack(ctx, target) {
       String(bot.protocolVersion ?? bot._client?.protocolVersion ?? bot._client?.version ?? "unknown"));
     return false;
   }
-  const bot = ctx.bot;
   const mace = combatWeapon(bot, "mace");
   const elytra = inventoryItem(bot, "elytra");
   const rocket = combatItem(bot, n => n === "firework_rocket");
