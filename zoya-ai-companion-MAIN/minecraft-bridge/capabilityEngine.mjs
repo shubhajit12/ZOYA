@@ -1631,9 +1631,10 @@ const H = {
       return pick;
     };
 
-    while(true){
-      active(ctx);
-      const p=player(ctx.bot,username);
+    try {
+      while(true){
+        active(ctx);
+        const p=player(ctx.bot,username);
       if(!p?.entity)throw new Error("Player not found: "+username);
       const target=p.entity;
       if(target.isValid===false||(target.health!=null&&target.health<=0))return true;
@@ -1755,9 +1756,9 @@ const H = {
       await combatSprintReset(ctx);
       active(ctx);bot.attack(target);
       await wait(ctx,enemyHp!=null&&enemyHp<=6?180:260);
-    }
-  } finally {
-    activeTargetUuid=null;
+      }
+    } finally {
+      activeTargetUuid=null;
     bot.removeListener?.("entityHurt",onTargetHurt);
   },
   hit: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return attack(ctx,p.entity,10000);},
