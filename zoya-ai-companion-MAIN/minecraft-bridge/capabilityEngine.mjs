@@ -489,6 +489,8 @@ async function combatElytraMaceAttack(ctx, target) {
       return false;
     }
 
+    ctx.log?.("[PVP] elytra start request | version="+String(bot.version||"unknown")+
+      " protocol="+String(bot._client?.version||bot._client?.protocolVersion||"unknown"));
     try {
       await bot.elytraFly();
     } catch (err) {
@@ -498,7 +500,7 @@ async function combatElytraMaceAttack(ctx, target) {
 
     // Mineflayer documents elytraFly() as the fall-flying activation call.
     // Wait for the server/entity state before sending any rocket.
-    await bot.waitForTicks?.(3);
+    await wait(ctx, 150);
     if (!bot.entity?.elytraFlying) {
       ctx.log?.("[PVP] elytra launch not acknowledged");
       return false;
@@ -571,11 +573,11 @@ async function combatElytraMaceAttack(ctx, target) {
           fall >= 1.55 && vy < -0.05 && d <= 3.2) {
         ctx.log?.("[PVP] elytra-mace impact window | dist=" + d.toFixed(2) +
           " fall=" + fall.toFixed(2) + " vy=" + vy.toFixed(2));
-        await bot.waitForTicks?.(1);
+        await wait(ctx, 50);
         await combatAim(ctx, target, 15);
         bot.attack(target);
 
-        await bot.waitForTicks?.(4);
+        await wait(ctx, 200);
         if (targetDamageEvents > damageBefore) {
           ctx.log?.("[PVP] elytra-mace hit confirmed");
           return true;
@@ -1731,8 +1733,21 @@ const H = {
       if(e.blocking&&k.axe&&c.dist<=5)add("axe_break",84,"enemy shield is actually blocking");
       if(finishing)add("melee",78,"enemy is low; finish instead of overcommitting");
 
+      // If the opponent is actively using a mace, answer with Zoya's mace
+      // instead of silently falling back to the sword. This is an explicit
+      // counter-policy: advanced aerial mace combos remain preferred when
+      // their setup is genuinely available, otherwise use the mace directly.
+      const enemyUsingMace = held === "mace" || saw("mace", 20000);
+      if(enemyUsingMace && k.mace && c.myHp>7){
+        let score=94;
+        if(c.dist<=4.0)score+=10;
+        if(finishing)score-=8;
+        add("mace_counter",score,"opponent using mace; mirror with mace");
+      }
+
       if(comboReady&&k.mace&&k.wind&&c.dist>=3.5&&c.dist<=12&&c.myHp>9){
         let score=68;
+        if(enemyUsingMace)score+=22;
         if(c.dist>8)score+=8;
         if(finishing)score-=28;
         if(e.blocking&&k.axe)score-=18;
@@ -1743,6 +1758,7 @@ const H = {
         // Elytra-mace is the intended long-range finisher. Give it clear
         // priority over ordinary melee once the bot has a real aerial setup.
         let score=96;
+        if(enemyUsingMace)score+=16;
         if(c.dist<18)score-=8;
         if(sawRanged())score-=12;
         if(finishing)score-=8;
@@ -1857,6 +1873,23 @@ const H = {
         if(dist>3.1)bot.pathfinder.setGoal(new goals.GoalFollow(target,2.2),true);
         else{try{bot.pathfinder.setGoal(null);}catch{}bot.attack(target);}
         await wait(ctx,170);continue;
+      }
+      if(pick.name==="mace_counter"){
+        if(k.mace){
+          await combatEquip(ctx,k.mace,"hand");
+          if(dist>3.1){
+            bot.pathfinder.setGoal(new goals.GoalFollow(target,2.6),true);
+            await wait(ctx,110);
+            continue;
+          }
+          try{bot.pathfinder.setGoal(null);}catch{}
+          await combatAim(ctx,target,35);
+          active(ctx);
+          ctx.log?.("[PVP] mace counter | opponent mace detected | dist="+dist.toFixed(2));
+          bot.attack(target);
+          await wait(ctx,220);
+          continue;
+        }
       }
       if(pick.name==="mace_wind"){
         if(t-lastAdvanced>1200&&await combatWindMaceAttack(ctx,target)){lastAdvanced=now();continue;}
