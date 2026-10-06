@@ -446,16 +446,20 @@ function disconnect({ resetReconnect = true } = {}) {
 function assessElytraProtocol(bot, configuredVersion) {
   const version = String(bot?.version || configuredVersion || "").trim();
   const protocol = Number(bot?.protocolVersion ?? bot?._client?.protocolVersion ?? bot?._client?.version);
-  // Protocol 775 (Minecraft 26.1.x) is particularly sensitive because older
-  // minecraft-data mappings can encode serverbound player_command with the
-  // wrong packet id. Elytra activation uses that packet, so never risk sending
-  // it unless the negotiated version is the specifically supported 26.1 data
-  // set. Unknown protocol/version combinations fail closed to the safe mace
-  // alternatives instead of disconnecting Zoya.
-  const safe = Number.isFinite(protocol)
-    ? (protocol !== 775 || version === "26.1")
-    : !/^26\.1(?:\.\d+)?$/.test(version);
-  return { version, protocol: Number.isFinite(protocol) ? protocol : null, safe };
+  // Minecraft Java 1.21.11 is protocol 774. Its Player Command packet is
+  // serverbound ID 0x29 and Mineflayer/minecraft-data represent the Elytra
+  // action as the string mapper value "start_elytra_flying" (wire value 6).
+  // The old guard incorrectly treated protocol 775/26.1.x as the relevant
+  // failure mode and did not protect the actual 1.21.11 path.
+  const exact12111 = version === "1.21.11" && protocol === 774;
+  const knownModern = Number.isFinite(protocol) && protocol !== 774 && !/^26\.1/.test(version);
+  const safe = exact12111 || knownModern;
+  return {
+    version,
+    protocol: Number.isFinite(protocol) ? protocol : null,
+    safe,
+    elytraAction: exact12111 ? "start_elytra_flying" : "mineflayer-native"
+  };
 }
 
 function connect(config, { preserveReconnectAttempt = false } = {}) {
@@ -482,7 +486,8 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
       debugLog("[PROTOCOL] negotiatedVersion=" + (elytraProtocol.version || "unknown") +
         " protocol=" + (elytraProtocol.protocol ?? "unknown") +
         " configuredVersion=" + (version || "auto") +
-        " elytra=" + (elytraProtocol.safe ? "ENABLED" : "DISABLED"));
+        " elytra=" + (elytraProtocol.safe ? "ENABLED" : "DISABLED") +
+        " action=" + String(elytraProtocol.elytraAction || "unknown"));
       if (!elytraProtocol.safe) {
         debugWarn("[PROTOCOL] Elytra-mace disabled for this protocol/version; using non-Elytra mace tactics to prevent player_command decode disconnects.");
       }
