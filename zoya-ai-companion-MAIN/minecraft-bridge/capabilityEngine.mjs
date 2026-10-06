@@ -209,11 +209,34 @@ function targetBlocking(target) {
   if (!target) return false;
   const offhand = target.equipment?.[1];
   const mainhand = target.equipment?.[0];
-  if (!offhand && !mainhand) return false;
-  if (String(offhand?.name || "").toLowerCase() !== "shield" && String(mainhand?.name || "").toLowerCase() !== "shield") return false;
-  // The protocol metadata layout is version dependent. Never treat a magic
-  // index as authoritative; use it only as a best-effort hint when present.
-  return Boolean(target.isBlocking === true);
+  const offhandShield = String(offhand?.name || "").toLowerCase() === "shield";
+  const mainhandShield = String(mainhand?.name || "").toLowerCase() === "shield";
+  if (!offhandShield && !mainhandShield) return false;
+
+  // Mineflayer's Entity does not expose a stable, documented player
+  // "isBlocking" property. For player shield use, the protocol's living
+  // entity hand-state metadata is the authoritative signal we can observe:
+  // bit 0 = active item use, bit 1 = off-hand active. Prefer it when present.
+  const rawHandState = target.metadata?.[8];
+  const handState = Number(
+    rawHandState?.value ?? rawHandState
+  );
+  if (Number.isFinite(handState)) {
+    const usingItem = (handState & 0x01) !== 0;
+    if (!usingItem) return false;
+    const offhandActive = (handState & 0x02) !== 0;
+    return offhandActive ? offhandShield : mainhandShield;
+  }
+
+  // Compatibility fallbacks for servers/entity implementations that expose
+  // a higher-level flag instead of the raw hand-state metadata.
+  if (target.isBlocking === true) return true;
+  if (target.isUsingItem === true) {
+    // Without hand-state information, only trust the main-hand shield. This
+    // avoids falsely treating an off-hand shield as active while eating/bowing.
+    return mainhandShield && String(target.heldItem?.name || "").toLowerCase() === "shield";
+  }
+  return false;
 }
 async function combatEquip(ctx, item, destination = "hand") {
   if (!item) return false;
@@ -1647,8 +1670,15 @@ const H = {
       }
       if(pick.name==="axe_break"){
         if(t-lastShieldBreak>=1200&&k.axe){
-          meleeWeaponKind="axe";meleeWeaponCommitUntil=t+850;lastShieldBreak=t;
-          await combatEquip(ctx,k.axe,"hand");await combatAim(ctx,target,45);bot.attack(target);await wait(ctx,260);
+          meleeWeaponKind="axe";
+          meleeWeaponCommitUntil=t+1000;
+          lastShieldBreak=t;
+          await combatEquip(ctx,k.axe,"hand");
+          await combatAim(ctx,target,45);
+          active(ctx);
+          bot.attack(target);
+          await wait(ctx,320);
+          ctx.log?.("[PVP] shield-break axe hit | blockingAfterHit="+String(targetBlocking(target)));
         }
         continue;
       }
