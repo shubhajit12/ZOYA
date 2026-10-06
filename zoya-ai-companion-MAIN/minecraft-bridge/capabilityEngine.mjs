@@ -322,6 +322,103 @@ async function combatMaceAttack(ctx, target) {
   }
   return false;
 }
+async function combatWindMaceAttack(ctx, target) {
+  const bot = ctx.bot;
+  const wind = combatItem(bot, n => n === "wind_charge");
+  const mace = combatWeapon(bot, "mace");
+  if (!wind || !mace) return false;
+  const dist = combatDistance(bot, target);
+  if (dist > 9 || !bot.entity?.onGround) return false;
+
+  // Wind charge stays in the main hand; the totem can remain in off-hand.
+  // Far target: fire behind Zoya so the blast pushes her toward the target.
+  // Near target: fire downward to gain vertical lift.
+  await combatEquip(ctx, wind, "hand");
+  active(ctx);
+  if (dist > 7) {
+    await bot.lookAt(vec(bot, {
+      x: bot.entity.position.x + (bot.entity.position.x - target.position.x),
+      y: bot.entity.position.y - 1.2,
+      z: bot.entity.position.z + (bot.entity.position.z - target.position.z)
+    }), true);
+  } else {
+    await bot.look(bot.entity.yaw, -Math.PI / 2, true);
+  }
+  bot.setControlState?.("jump", true);
+  await wait(ctx, 90);
+  bot.setControlState?.("jump", false);
+  active(ctx);
+  bot.activateItem();
+  await wait(ctx, 120);
+  await combatEquip(ctx, mace, "hand");
+  active(ctx);
+  return true;
+}
+
+async function combatElytraMaceAttack(ctx, target) {
+  const bot = ctx.bot;
+  const mace = combatWeapon(bot, "mace");
+  const elytra = inventoryItem(bot, "elytra");
+  const rocket = combatItem(bot, n => n === "firework_rocket");
+  if (!mace || !elytra || !rocket || !bot.entity?.onGround) return false;
+  if (combatDistance(bot, target) < 10 || combatDistance(bot, target) > 50) return false;
+
+  // This is a bounded aerial setup. The smash is only attempted after
+  // gliding has stopped; holding the mace is not a "charge" mechanic.
+  try {
+    await combatEquip(ctx, elytra, "torso");
+    await combatEquip(ctx, rocket, "hand");
+    await bot.lookAt(vec(bot, {
+      x: target.position.x,
+      y: target.position.y + 20,
+      z: target.position.z
+    }), true);
+    bot.setControlState?.("jump", true);
+    await wait(ctx, 150);
+    bot.setControlState?.("jump", false);
+    await bot.elytraFly?.();
+    const climbDeadline = Date.now() + 3500;
+    while (Date.now() < climbDeadline && bot.entity?.position?.y < target.position.y + 18) {
+      active(ctx);
+      await combatEquip(ctx, rocket, "hand");
+      bot.activateItem();
+      await wait(ctx, 650);
+    }
+
+    await combatEquip(ctx, mace, "hand");
+    const glideDeadline = Date.now() + 3500;
+    while (Date.now() < glideDeadline) {
+      active(ctx);
+      const d = combatDistance(bot, target);
+      await combatAim(ctx, target, 70);
+      if (d <= 5) break;
+      await wait(ctx, 50);
+    }
+
+    // Equipping a chestplate/elytra swap is what terminates fall-flying.
+    const chest = combatItem(bot, n => /_(chestplate)$/.test(n));
+    if (chest) await combatEquip(ctx, chest, "torso");
+
+    const smashDeadline = Date.now() + 1800;
+    while (Date.now() < smashDeadline) {
+      active(ctx);
+      const fall = Number(bot.entity?.fallDistance || 0);
+      const gliding = Boolean(bot.entity?.elytraFlying);
+      const vy = Number(bot.entity?.velocity?.y || 0);
+      const d = combatDistance(bot, target);
+      if (!gliding && fall > 1.5 && d <= 4.0) {
+        await combatAim(ctx, target, 80);
+        bot.attack(target);
+        return true;
+      }
+      if (bot.entity?.onGround) break;
+      if (vy > 0.15) await wait(ctx, 35);
+      else await wait(ctx, 25);
+    }
+  } catch {}
+  return false;
+}
+
 async function combatAdvancedAttack(ctx, target) {
   const mace = combatWeapon(ctx.bot, "mace");
   if (mace && Number(target?.position?.y || 0) - Number(ctx.bot.entity?.position?.y || 0) > 2) {
@@ -1418,8 +1515,10 @@ const H = {
         if(await combatBowAttack(ctx,target)){ lastBow=Date.now(); continue; }
       }
 
-      // Phase 5: advanced 1.21+ weapons, guarded by inventory availability.
+      // Phase 5: advanced 1.21+ weapons and bounded aerial mace tactics.
       if(now-lastAdvanced>1400){
+        if(await combatElytraMaceAttack(ctx,target)){ lastAdvanced=Date.now(); continue; }
+        if(await combatWindMaceAttack(ctx,target)){ lastAdvanced=Date.now(); continue; }
         if(await combatAdvancedAttack(ctx,target)){ lastAdvanced=Date.now(); continue; }
       }
 
