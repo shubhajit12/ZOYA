@@ -1524,3 +1524,9 @@ async function runGoalPlan(ctx,input){
 
 async function recoveryMission(ctx){
   const {bot}=ctx;
+  const death=ctx.runtime?.memory?.lastDeath;
+  if(Number(bot.health??0)<=0){
+    await H.recover_after_death(ctx,"");
+  }
+  active(ctx);
+  let recovered=false;
