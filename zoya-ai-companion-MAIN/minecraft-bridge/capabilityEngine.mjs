@@ -2798,3 +2798,66 @@ async function smelt(ctx,a){
     const deadline=Date.now()+30000;
     while(Date.now()<deadline){
       active(ctx);
+      await defendNearbyThreat(ctx,10);
+      active(ctx);
+      const output=f.outputItem?.();      if(output && (!beforeOutput || output.count>beforeOutput.count || output.type!==beforeOutput.type)){
+        await f.takeOutput();
+        ctx.log?.("[SMELT] output ready: "+String(output.name||"item"));
+        return true;
+      }
+      await wait(ctx,250);
+    }
+    throw new Error("Furnace did not produce output before timeout.");
+  }finally{try{await f.close();}catch{}}
+}
+async function findSafe(ctx){
+  const {bot}=ctx;
+  for(let r=3;r<=24;r+=3) for(let i=0;i<16;i++){
+    active(ctx); const a=i*Math.PI/8;
+    const x=Math.floor(bot.entity.position.x+Math.cos(a)*r), z=Math.floor(bot.entity.position.z+Math.sin(a)*r), y=Math.floor(bot.entity.position.y);
+    const foot=bot.blockAt(new bot.entity.position.constructor(x,y,z));
+    const head=bot.blockAt(new bot.entity.position.constructor(x,y+1,z));
+    const floor=bot.blockAt(new bot.entity.position.constructor(x,y-1,z));
+    const hostiles=Object.values(bot.entities||{}).some(e=>e?.position&&HOSTILES.has(entityName(e))&&e.position.distanceTo(new bot.entity.position.constructor(x,y,z))<5);
+    if(!hostiles && foot?.name==="air" && head?.name==="air" && floor?.name!=="air" && floor?.boundingBox==="block")
+      return navigate(ctx,{x:x+0.5,y,z:z+0.5},1.5,10000,"safe location");
+  }
+  throw new Error("No safe location found in loaded area.");
+}
+
+async function build(ctx,a){
+  const m=required(a,"Build plan is required.").match(/^(pillar|tower|line)\s+(\S+)\s+(\d+)$/i);
+  if(!m)throw new Error("Build plan: pillar|tower|line <block> <count>.");
+  const kind=m[1].toLowerCase(),name=m[2],n=Math.max(1,Number(m[3]));
+  const support=findBuildSupport(ctx.bot,6);
+  if(!support)throw new Error("No safe solid build location nearby.");
+  const placed=[];
+  for(let i=0;i<n;i++){
+    active(ctx);
+    await defendNearbyThreat(ctx,10);
+    active(ctx);
+    const p=kind==="line"
+      ? {x:support.x+i,y:support.y,z:support.z}
+      : {x:support.x,y:support.y+i,z:support.z};
+    const b=ctx.bot.blockAt(vec(ctx.bot,p));
+    if(b?.name===name){placed.push(p);continue;}
+    if(b?.name!=="air")throw new Error("Build target occupied at ("+p.x+", "+p.y+", "+p.z+").");
+    await placeAt(ctx,name,p);
+    placed.push(p);
+  }
+  ctx.log?.("[BUILD] "+kind+" placed="+String(placed.length)+" block="+name);
+  return true;
+}
+
+export const RUNTIME_ACTIONS = new Set();
+export const HANDLERS = Object.freeze(H);
+assertCapabilityRegistry(HANDLERS);
+
+export async function executeCapability(id,arg,ctx){
+  const mode=CAPABILITY_MODES.find(x=>x.id===id);
+  if(!mode)throw new Error("Unknown capability: "+id);
+  const handler=HANDLERS[id];
+  if(typeof handler!=="function")throw new Error("Capability has no handler: "+id);
+  if(id==="stop"){ctx.runtime.cancelCurrentTask?.("manual stop");return true;}
+  return handler(ctx,arg);
+}
