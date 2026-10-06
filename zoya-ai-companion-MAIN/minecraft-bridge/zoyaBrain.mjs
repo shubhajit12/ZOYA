@@ -210,11 +210,11 @@ export function createZoyaBrain({
     const requester = String(request.requester || "").trim();
     if (!requester) return null;
 
-    const pvp = /\\b(?:pvp|fight|spar|duel|battle)\\b/.test(text) &&
-      /\\b(?:me|with me|against me)\\b/.test(text);
-    const gear = /\\b(?:gear up|gear yourself|equip (?:up|yourself)|wear (?:the )?(?:armou?r|armor)|put on (?:the )?(?:armou?r|armor)|armou?r up)\\b/.test(text);
-    const explicitGear = /\\b(?:armou?r|armor)\\b/.test(text) &&
-      /\\b(?:wear|equip|put on|gear)\\b/.test(text);
+    const pvp = /\b(?:pvp|fight|spar|duel|battle)\b/.test(text) &&
+      /\b(?:me|with me|against me)\b/.test(text);
+    const gear = /\b(?:gear up|gear yourself|equip (?:up|yourself)|wear (?:the )?(?:armou?r|armor)|put on (?:the )?(?:armou?r|armor)|armou?r up)\b/.test(text);
+    const explicitGear = /\b(?:armou?r|armor)\b/.test(text) &&
+      /\b(?:wear|equip|put on|gear)\b/.test(text);
 
     if (pvp || gear || explicitGear) {
       const actions = [];
@@ -481,7 +481,8 @@ export function createZoyaBrain({
         capabilities: "Validated locally; do not enumerate capabilities in the response."
       };
 
-      const deterministicPlan = reason === "player_message" ? deterministicPlayerPlan(request) : null;\n      let normalized;\n\n      if (deterministicPlan) {\n        normalized = deterministicPlan;\n        log("[BRAIN] Local intent match: " + normalized.actions.map(item => item.mode).join(", ") + ". Groq intent selection bypassed.");\n      } else {\n      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const deterministicPlan = reason === "player_message" ? deterministicPlayerPlan(request) : null;
+      let normalized;\n\n      if (deterministicPlan) {\n        normalized = deterministicPlan;\n        log("[BRAIN] Local intent match: " + normalized.actions.map(item => item.mode).join(", ") + ". Groq intent selection bypassed.");\n      } else {\n      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: "Bearer " + apiKey,
