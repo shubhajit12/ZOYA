@@ -1560,7 +1560,7 @@ const H = {
       const ownTaken=Math.max(0,planStart.hp-Number(ctx.bot.health||20));
       const enemyDelta=typeof planStart.enemyHp==="number"&&typeof lastEnemyHealth==="number"
         ? Math.max(0,planStart.enemyHp-lastEnemyHealth)
-        : targetDamageSamples*3;
+        : (targetDamageSamples>0 ? targetDamageSamples*3 : targetDamageEvents*3);
       const ev=enemyDelta-ownTaken;
       planEV[planCur]=planEV[planCur]==null?ev:planEV[planCur]*0.7+ev*0.3;
     };
