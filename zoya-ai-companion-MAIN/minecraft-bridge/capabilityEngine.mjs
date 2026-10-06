@@ -1665,6 +1665,7 @@ const H = {
     }
   },
   pvp: async(ctx,a)=>{
+    const bot=ctx.bot;
     const username=required(a,"Player username is required.");
     const seen=new Map(), planEV=Object.create(null);
     let planCur=null,planSince=0,planStart=null,targetDamageSamples=0,targetDamageEvents=0;
@@ -1820,7 +1821,7 @@ const H = {
       const target=p.entity;
       if(target.isValid===false||(target.health!=null&&target.health<=0))return true;
 
-      const bot=ctx.bot,dist=combatDistance(bot,target),health=Number(bot.health||20),directEnemyHp=typeof target.health==="number"?Number(target.health):null,t=now();
+      const dist=combatDistance(bot,target),health=Number(bot.health||20),directEnemyHp=typeof target.health==="number"?Number(target.health):null,t=now();
       activeTargetUuid=target.uuid||null;
       activeTargetId=target.id??null;
       if(directEnemyHp!=null) observedEnemyHealth=directEnemyHp;
