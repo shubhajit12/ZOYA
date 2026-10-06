@@ -459,7 +459,7 @@ async function activateElytraForZoya(ctx) {
   if (version === "1.21.11" && protocol === 774) {
     if (!bot.entity || (bot.entity.id == null)) throw new Error("Missing player entity id for Elytra activation.");
     // Minecraft 1.21.6+ renamed the fall-flying action in the protocol
-    // mapper. On 1.21.11 the minecraft-data schema maps action 6 to
+    // mapper. On 1.21.11 the minecraft-data schema maps action 8 to
     // "start_fall_flying". Do not gate this on registry.supportFeature():
     // that helper is not present in every Mineflayer registry build even when
     // the protocol schema itself supports the mapped action.
