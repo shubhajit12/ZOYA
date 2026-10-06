@@ -458,91 +458,138 @@ async function combatElytraMaceAttack(ctx, target) {
   const elytra = inventoryItem(bot, "elytra");
   const rocket = combatItem(bot, n => n === "firework_rocket");
   if (!mace || !elytra || !rocket || !bot.entity?.onGround) return false;
-  if (combatDistance(bot, target) < 10 || combatDistance(bot, target) > 50) return false;
 
-  // This is a bounded aerial setup. The smash is only attempted after
-  // gliding has stopped; holding the mace is not a "charge" mechanic.
+  const startDistance = combatDistance(bot, target);
+  if (startDistance < 15 || startDistance > 50) return false;
+
+  // Real Elytra-mace setup:
+  // 1) equip Elytra + rocket
+  // 2) jump high enough to leave the ground
+  // 3) explicitly enter fall-flying
+  // 4) use rockets to gain altitude
+  // 5) stop gliding, equip mace, and dive onto the target.
   try {
     await combatEquip(ctx, elytra, "torso");
     await combatEquip(ctx, rocket, "hand");
-    await bot.lookAt(vec(bot, {
-      x: target.position.x,
-      y: target.position.y + 20,
-      z: target.position.z
-    }), true);
+
+    // Pathfinder must not own movement during the aerial combo.
+    try { bot.pathfinder?.setGoal?.(null); } catch {}
+    bot.clearControlStates?.();
+
+    await combatAim(ctx, target, 180);
     bot.setControlState?.("jump", true);
-    await wait(ctx, 150);
+    await bot.waitForTicks?.(5);
     bot.setControlState?.("jump", false);
 
-    // Mineflayer's built-in elytraFly() initiates the server-side fall-flying
-    // state. Do not fire rockets until the server has acknowledged that state;
-    // immediately boosting during the handshake can produce invalid movement
-    // packets on stricter servers/anti-cheat and kick the bot.
-    try {
-      await bot.elytraFly?.();
-    } catch (err) {
-      ctx.log?.("[PVP] elytra launch rejected: "+String(err?.message||err));
+    // Give physics one more tick to establish an airborne state before
+    // requesting fall-flying. Calling elytraFly while still grounded can fail.
+    await bot.waitForTicks?.(2);
+    if (bot.entity?.onGround) {
+      ctx.log?.("[PVP] elytra launch failed: still grounded");
       return false;
     }
-    await bot.waitForTicks?.(20);
-    if (!bot.entity?.elytraFlying) {
-      ctx.log?.("[PVP] elytra launch not acknowledged; aborting safely");
-      try { bot.deactivateItem?.(); } catch {}
-      return false;
-    }
-    ctx.log?.("[PVP] elytra flight acknowledged");
 
-    const climbDeadline = Date.now() + 3000;
+    try {
+      await bot.elytraFly();
+    } catch (err) {
+      ctx.log?.("[PVP] elytraFly rejected: " + String(err?.message || err));
+      return false;
+    }
+
+    // Mineflayer documents elytraFly() as the fall-flying activation call.
+    // Wait for the server/entity state before sending any rocket.
+    await bot.waitForTicks?.(3);
+    if (!bot.entity?.elytraFlying) {
+      ctx.log?.("[PVP] elytra launch not acknowledged");
+      return false;
+    }
+
+    ctx.log?.("[PVP] elytra dive started | dist=" + startDistance.toFixed(2));
+
+    const climbDeadline = Date.now() + 5000;
     let lastRocketAt = 0;
-    while (Date.now() < climbDeadline && bot.entity?.position?.y < target.position.y + 18) {
+    let rocketCount = 0;
+
+    while (Date.now() < climbDeadline) {
       active(ctx);
       if (Number(bot.health || 20) <= 9) return false;
       if (!bot.entity?.elytraFlying) {
-        ctx.log?.("[PVP] elytra flight ended during climb; aborting");
+        ctx.log?.("[PVP] elytra flight ended during climb");
         return false;
       }
+
+      const targetY = Number(target.position?.y || 0);
+      const botY = Number(bot.entity?.position?.y || 0);
       const nowMs = Date.now();
-      if (nowMs - lastRocketAt >= 1000) {
+
+      // Stop climbing once we have useful vertical separation. The target
+      // must be below us for a real mace fall.
+      if (botY >= targetY + 12) break;
+
+      // Firework rockets are the actual Elytra propulsion mechanism.
+      if (nowMs - lastRocketAt >= 900) {
         await combatEquip(ctx, rocket, "hand");
+        await combatAim(ctx, target, 220);
+        active(ctx);
         bot.activateItem();
+        rocketCount++;
         lastRocketAt = nowMs;
+        ctx.log?.("[PVP] elytra rocket #" + String(rocketCount));
       }
-      await wait(ctx, 120);
+
+      await bot.waitForTicks?.(2);
     }
 
-    await combatEquip(ctx, mace, "hand");
-    const glideDeadline = Date.now() + 3500;
-    while (Date.now() < glideDeadline) {
-      active(ctx);
-      if (Number(bot.health || 20) <= 9) return false;
-      const d = combatDistance(bot, target);
-      await combatAim(ctx, target, 70);
-      if (d <= 5) break;
-      await wait(ctx, 50);
-    }
+    if (!bot.entity?.elytraFlying) return false;
 
-    // Equipping a chestplate/elytra swap is what terminates fall-flying.
+    // Stop fall-flying before the mace impact. Swapping the Elytra out of the
+    // torso slot is deterministic and leaves the bot in a normal fall.
     const chest = combatItem(bot, n => /_(chestplate)$/.test(n));
-    if (chest) await combatEquip(ctx, chest, "torso");
+    if (!chest) {
+      ctx.log?.("[PVP] elytra dive aborted: no chestplate to swap out");
+      return false;
+    }
+    await combatEquip(ctx, chest, "torso");
+    await combatEquip(ctx, mace, "hand");
 
-    const smashDeadline = Date.now() + 1800;
+    const damageBefore = targetDamageEvents;
+    const smashDeadline = Date.now() + 3000;
+
     while (Date.now() < smashDeadline) {
       active(ctx);
       if (Number(bot.health || 20) <= 7) return false;
+      if (target?.isValid === false) return false;
+
       const fall = Number(bot.entity?.fallDistance || 0);
-      const gliding = Boolean(bot.entity?.elytraFlying);
       const vy = Number(bot.entity?.velocity?.y || 0);
       const d = combatDistance(bot, target);
-      if (!gliding && fall > 1.5 && d <= 4.0) {
-        await combatAim(ctx, target, 80);
+
+      // Keep the target under the crosshair while descending.
+      await combatAim(ctx, target, 35);
+
+      if (!bot.entity?.onGround && !bot.entity?.elytraFlying &&
+          fall >= 1.55 && vy < -0.05 && d <= 3.2) {
+        ctx.log?.("[PVP] elytra-mace impact window | dist=" + d.toFixed(2) +
+          " fall=" + fall.toFixed(2) + " vy=" + vy.toFixed(2));
+        await bot.waitForTicks?.(1);
+        await combatAim(ctx, target, 15);
         bot.attack(target);
-        return true;
+
+        await bot.waitForTicks?.(4);
+        if (targetDamageEvents > damageBefore) {
+          ctx.log?.("[PVP] elytra-mace hit confirmed");
+          return true;
+        }
+        ctx.log?.("[PVP] elytra-mace swing sent but no damage telemetry");
+        return false;
       }
+
       if (bot.entity?.onGround) break;
-      if (vy > 0.15) await wait(ctx, 35);
-      else await wait(ctx, 25);
+      await bot.waitForTicks?.(1);
     }
-  } catch {}
+  } catch (err) {
+    ctx.log?.("[PVP] elytra-mace aborted: " + String(err?.message || err));
+  }
   return false;
 }
 
@@ -1692,12 +1739,15 @@ const H = {
         if(rangedThreat)score-=8;
         add("mace_wind",score,"mace+wind opportunity");
       }
-      if(comboReady&&k.mace&&k.elytra&&k.rocket&&c.dist>15&&c.dist<50&&c.myHp>10&&skyClear()){
-        let score=58;
-        if(sawRanged())score-=35;
-        if(finishing)score-=25;
-        if(e.gliding)score-=12;
-        add("mace_elytra",score,"far target, open sky");
+      if(comboReady&&k.mace&&k.elytra&&k.rocket&&c.dist>=15&&c.dist<=50&&c.myHp>10&&skyClear()){
+        // Elytra-mace is the intended long-range finisher. Give it clear
+        // priority over ordinary melee once the bot has a real aerial setup.
+        let score=96;
+        if(c.dist<18)score-=8;
+        if(sawRanged())score-=12;
+        if(finishing)score-=8;
+        if(e.gliding)score-=4;
+        add("mace_elytra",score,"far target, open sky, Elytra+mace ready");
       }
       if(k.bow&&c.dist>10&&c.dist<38&&c.now-lastBow>1800)
         add("ranged",48+(sawRanged()?0:6),"ranged pressure");
