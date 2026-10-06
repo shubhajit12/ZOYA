@@ -546,7 +546,7 @@ async function combatElytraMaceAttack(ctx, target) {
         ctx.log?.("[PVP] elytra rocket #" + String(rocketCount));
       }
 
-      await bot.waitForTicks?.(2);
+      await wait(ctx, 100);
     }
 
     if (!bot.entity?.elytraFlying) return false;
@@ -594,7 +594,7 @@ async function combatElytraMaceAttack(ctx, target) {
       }
 
       if (bot.entity?.onGround) break;
-      await bot.waitForTicks?.(1);
+      await wait(ctx, 50);
     }
   } catch (err) {
     ctx.log?.("[PVP] elytra-mace aborted: " + String(err?.message || err));
@@ -1498,9 +1498,3 @@ async function runGoalPlan(ctx,input){
 
 async function recoveryMission(ctx){
   const {bot}=ctx;
-  const death=ctx.runtime?.memory?.lastDeath;
-  if(Number(bot.health??0)<=0){
-    await H.recover_after_death(ctx,"");
-  }
-  active(ctx);
-  let recovered=false;
