@@ -1759,7 +1759,8 @@ const H = {
       }
     } finally {
       activeTargetUuid=null;
-    bot.removeListener?.("entityHurt",onTargetHurt);
+      bot.removeListener?.("entityHurt",onTargetHurt);
+    }
   },
   hit: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return attack(ctx,p.entity,10000);},
   gather_resources: async(ctx,a)=>{
