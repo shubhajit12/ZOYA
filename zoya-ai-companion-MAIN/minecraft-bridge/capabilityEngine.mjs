@@ -419,14 +419,41 @@ async function combatElytraMaceAttack(ctx, target) {
     bot.setControlState?.("jump", true);
     await wait(ctx, 150);
     bot.setControlState?.("jump", false);
-    await bot.elytraFly?.();
-    const climbDeadline = Date.now() + 3500;
+
+    // Mineflayer's built-in elytraFly() initiates the server-side fall-flying
+    // state. Do not fire rockets until the server has acknowledged that state;
+    // immediately boosting during the handshake can produce invalid movement
+    // packets on stricter servers/anti-cheat and kick the bot.
+    try {
+      await bot.elytraFly?.();
+    } catch (err) {
+      ctx.log?.("[PVP] elytra launch rejected: "+String(err?.message||err));
+      return false;
+    }
+    await bot.waitForTicks?.(20);
+    if (!bot.entity?.elytraFlying) {
+      ctx.log?.("[PVP] elytra launch not acknowledged; aborting safely");
+      try { bot.deactivateItem?.(); } catch {}
+      return false;
+    }
+    ctx.log?.("[PVP] elytra flight acknowledged");
+
+    const climbDeadline = Date.now() + 3000;
+    let lastRocketAt = 0;
     while (Date.now() < climbDeadline && bot.entity?.position?.y < target.position.y + 18) {
       active(ctx);
       if (Number(bot.health || 20) <= 9) return false;
-      await combatEquip(ctx, rocket, "hand");
-      bot.activateItem();
-      await wait(ctx, 650);
+      if (!bot.entity?.elytraFlying) {
+        ctx.log?.("[PVP] elytra flight ended during climb; aborting");
+        return false;
+      }
+      const nowMs = Date.now();
+      if (nowMs - lastRocketAt >= 1000) {
+        await combatEquip(ctx, rocket, "hand");
+        bot.activateItem();
+        lastRocketAt = nowMs;
+      }
+      await wait(ctx, 120);
     }
 
     await combatEquip(ctx, mace, "hand");
