@@ -381,7 +381,7 @@ async function combatWindMaceAttack(ctx, target) {
   await wait(ctx, 120);
   await combatEquip(ctx, mace, "hand");
 
-  const deadline = Date.now() + 2400;
+  const deadline = Date.now() + 1800;
   while (Date.now() < deadline) {
     active(ctx);
     const d = combatDistance(bot, target);
@@ -1505,7 +1505,8 @@ const H = {
   pvp: async(ctx,a)=>{
     const username=required(a,"Player username is required.");
     const seen=new Map(), planEV=Object.create(null);
-    let planCur=null,planSince=0,planStart=null,targetDamageSamples=0;
+    let planCur=null,planSince=0,planStart=null,targetDamageSamples=0,targetDamageEvents=0;
+    let observedEnemyHealth=null,targetHurtAt=0,activeTargetUuid=null;
     let lastStrafe=0,lastBow=0,lastPearl=0,lastAdvanced=0,lastLearned=0,lastShieldBreak=0;
     let meleeWeaponKind="sword",meleeWeaponCommitUntil=0;
     let enemyWasAirborne=false,enemyAirStart=0,punishUntil=0,lastEnemyHealth=null;
@@ -1523,6 +1524,21 @@ const H = {
     const sawRanged=()=>saw("bow",20000)||saw("crossbow",20000)||sawSuffix(["_bow","_crossbow"],20000);
     const sawAxe=()=>sawSuffix(["_axe"],15000);
     const evBonus=name=>planEV[name]==null?0:Math.max(-10,Math.min(10,planEV[name]*1.5));
+
+    // Player Entity.health is not reliably populated by Mineflayer for remote
+    // players. Use entityHurt as authoritative damage telemetry when health is
+    // unavailable, and keep the listener scoped to this PvP task.
+    const onTargetHurt=(entity)=>{
+      if(!activeTargetUuid||entity?.uuid!==activeTargetUuid)return;
+      targetDamageEvents++;
+      targetHurtAt=now();
+      if(typeof entity.health==="number")observedEnemyHealth=Number(entity.health);
+      if(targetDamageEvents<=12||targetDamageEvents%5===0){
+        ctx.log?.("[PVP] enemy damage telemetry | events="+String(targetDamageEvents)+
+          " health="+String(typeof entity.health==="number"?entity.health:"unknown"));
+      }
+    };
+    bot.on("entityHurt",onTargetHurt);
 
     const skyClear=()=>{
       const p=ctx.bot.entity.position;
@@ -1550,7 +1566,7 @@ const H = {
       targetDamageSamples=0;
       ctx.log?.("[PVP-BRAIN] "+p.name+" ("+p.score.toFixed(0)+") "+p.why+
         " | dist="+c.dist.toFixed(1)+" hp="+Number(ctx.bot.health||0).toFixed(0)+
-        " enemyHp="+(c.enemyHp??"?"));
+        " enemyHp="+(c.enemyHp??"?")+" dmgEvents="+String(c.damageEvents||0));
     };
 
     const choose=c=>{
@@ -1562,16 +1578,26 @@ const H = {
       const comboReady=c.now-c.lastAdvanced>1200&&Boolean(ctx.bot.entity?.onGround);
       const rangedThreat=e.drawing||sawRanged();
 
-      add("defend_dive",c.diving?100:0,"enemy diving from above");
-      add("escape",c.shouldEscape?96:0,"critical health with no safe heal");
-      if(low&&safeGap&&k.gapple)add("heal",91,"low health, safe gap");
+      // Survival is a hard tactical priority. Do not let an advanced
+      // combo outrank a bot that is already in lethal/critical health.
+      if(c.myHp<=4){
+        add("escape",140,"critical health hard gate");
+      }else if(c.myHp<=7&&k.gapple){
+        add("heal",125,"low health hard gate; gapple available");
+      }else if(c.myHp<=7){
+        add("escape",125,"low health hard gate; no gapple");
+      }else{
+        add("defend_dive",c.diving?100:0,"enemy diving from above");
+        add("escape",c.shouldEscape?108:0,"critical health with no safe heal");
+        if(low&&safeGap&&k.gapple)add("heal",105,"low health, safe gap");
+      }
       if(e.drawing&&c.dist>4&&c.shield)add("defend_ranged",90,"enemy drawing bow/crossbow");
 
       add("punish",c.punish?88:0,"enemy just landed from an aerial attack");
       if(e.blocking&&k.axe&&c.dist<=5)add("axe_break",84,"enemy shield is actually blocking");
       if(finishing)add("melee",78,"enemy is low; finish instead of overcommitting");
 
-      if(comboReady&&k.mace&&k.wind&&c.dist>=3.5&&c.dist<=18&&c.myHp>8){
+      if(comboReady&&k.mace&&k.wind&&c.dist>=3.5&&c.dist<=18&&c.myHp>9){
         let score=68;
         if(c.dist>8)score+=8;
         if(finishing)score-=28;
@@ -1579,7 +1605,7 @@ const H = {
         if(rangedThreat)score-=8;
         add("mace_wind",score,"mace+wind opportunity");
       }
-      if(comboReady&&k.mace&&k.elytra&&k.rocket&&c.dist>15&&c.dist<50&&skyClear()){
+      if(comboReady&&k.mace&&k.elytra&&k.rocket&&c.dist>15&&c.dist<50&&c.myHp>10&&skyClear()){
         let score=58;
         if(sawRanged())score-=35;
         if(finishing)score-=25;
@@ -1612,7 +1638,10 @@ const H = {
       const target=p.entity;
       if(target.isValid===false||(target.health!=null&&target.health<=0))return true;
 
-      const bot=ctx.bot,dist=combatDistance(bot,target),health=Number(bot.health||20),enemyHp=typeof target.health==="number"?Number(target.health):null,t=now();
+      const bot=ctx.bot,dist=combatDistance(bot,target),health=Number(bot.health||20),directEnemyHp=typeof target.health==="number"?Number(target.health):null,t=now();
+      activeTargetUuid=target.uuid||null;
+      if(directEnemyHp!=null) observedEnemyHealth=directEnemyHp;
+      const enemyHp=directEnemyHp!=null?directEnemyHp:observedEnemyHealth;
       rememberKit(target);
 
       const held=String(target.heldItem?.name||"").toLowerCase();
@@ -1639,7 +1668,7 @@ const H = {
       const shouldEscape=health<=6&&!k.gapple;
       const c={now:t,dist,enemy:{hp:enemyHp,held,blocking,drawing,gliding,vy,dy,onGround:!airborne},kit:k,
         myHp:health,shield:combatShield(bot),diving:(vy<-0.6&&dy>1.5&&dist<10)||(gliding&&dy>2&&dist<16),
-        shouldEscape,punish:t<punishUntil,lastAdvanced,enemyHp};
+        shouldEscape,punish:t<punishUntil,lastAdvanced,enemyHp,damageEvents:targetDamageEvents,lastTargetHurtAt:targetHurtAt};
 
       await combatPrepareTotem(ctx);
       if(health<=7&&k.gapple){await combatUseGapple(ctx);await combatRetreat(ctx,target);continue;}
@@ -1678,7 +1707,8 @@ const H = {
           active(ctx);
           bot.attack(target);
           await wait(ctx,320);
-          ctx.log?.("[PVP] shield-break axe hit | blockingAfterHit="+String(targetBlocking(target)));
+          ctx.log?.("[PVP] shield-break axe hit | blockingAfterHit="+String(targetBlocking(target))+
+            " | targetDamageEvents="+String(targetDamageEvents));
         }
         continue;
       }
@@ -1726,6 +1756,9 @@ const H = {
       active(ctx);bot.attack(target);
       await wait(ctx,enemyHp!=null&&enemyHp<=6?180:260);
     }
+  } finally {
+    activeTargetUuid=null;
+    bot.removeListener?.("entityHurt",onTargetHurt);
   },
   hit: async(ctx,a)=>{const p=player(ctx.bot,a);if(!p?.entity)throw new Error("Player not found.");return attack(ctx,p.entity,10000);},
   gather_resources: async(ctx,a)=>{
