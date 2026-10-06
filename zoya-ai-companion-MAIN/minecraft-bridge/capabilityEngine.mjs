@@ -384,6 +384,7 @@ async function combatWindMaceAttack(ctx, target) {
   const deadline = Date.now() + 1800;
   while (Date.now() < deadline) {
     active(ctx);
+    if (Number(bot.health || 20) <= 7) return false;
     const d = combatDistance(bot, target);
     const fall = Number(bot.entity?.fallDistance || 0);
     if (!bot.entity?.onGround && fall > 1.5 && d <= 4.2) {
@@ -422,6 +423,7 @@ async function combatElytraMaceAttack(ctx, target) {
     const climbDeadline = Date.now() + 3500;
     while (Date.now() < climbDeadline && bot.entity?.position?.y < target.position.y + 18) {
       active(ctx);
+      if (Number(bot.health || 20) <= 9) return false;
       await combatEquip(ctx, rocket, "hand");
       bot.activateItem();
       await wait(ctx, 650);
@@ -431,6 +433,7 @@ async function combatElytraMaceAttack(ctx, target) {
     const glideDeadline = Date.now() + 3500;
     while (Date.now() < glideDeadline) {
       active(ctx);
+      if (Number(bot.health || 20) <= 9) return false;
       const d = combatDistance(bot, target);
       await combatAim(ctx, target, 70);
       if (d <= 5) break;
@@ -444,6 +447,7 @@ async function combatElytraMaceAttack(ctx, target) {
     const smashDeadline = Date.now() + 1800;
     while (Date.now() < smashDeadline) {
       active(ctx);
+      if (Number(bot.health || 20) <= 7) return false;
       const fall = Number(bot.entity?.fallDistance || 0);
       const gliding = Boolean(bot.entity?.elytraFlying);
       const vy = Number(bot.entity?.velocity?.y || 0);
@@ -1506,7 +1510,7 @@ const H = {
     const username=required(a,"Player username is required.");
     const seen=new Map(), planEV=Object.create(null);
     let planCur=null,planSince=0,planStart=null,targetDamageSamples=0,targetDamageEvents=0;
-    let observedEnemyHealth=null,targetHurtAt=0,activeTargetUuid=null;
+    let observedEnemyHealth=null,targetHurtAt=0,activeTargetUuid=null,activeTargetId=null;
     let lastStrafe=0,lastBow=0,lastPearl=0,lastAdvanced=0,lastLearned=0,lastShieldBreak=0;
     let meleeWeaponKind="sword",meleeWeaponCommitUntil=0;
     let enemyWasAirborne=false,enemyAirStart=0,punishUntil=0,lastEnemyHealth=null;
@@ -1529,8 +1533,10 @@ const H = {
     // players. Use entityHurt as authoritative damage telemetry when health is
     // unavailable, and keep the listener scoped to this PvP task.
     const onTargetHurt=(entity)=>{
-      if(!activeTargetUuid||entity?.uuid!==activeTargetUuid)return;
-      targetDamageEvents++;
+      if(!activeTargetUuid&&!activeTargetId)return;
+      if((activeTargetUuid&&entity?.uuid===activeTargetUuid)||(activeTargetId!=null&&entity?.id===activeTargetId)){
+        targetDamageEvents++;
+      }else return;
       targetHurtAt=now();
       if(typeof entity.health==="number")observedEnemyHealth=Number(entity.health);
       if(targetDamageEvents<=12||targetDamageEvents%5===0){
@@ -1641,6 +1647,7 @@ const H = {
 
       const bot=ctx.bot,dist=combatDistance(bot,target),health=Number(bot.health||20),directEnemyHp=typeof target.health==="number"?Number(target.health):null,t=now();
       activeTargetUuid=target.uuid||null;
+      activeTargetId=target.id??null;
       if(directEnemyHp!=null) observedEnemyHealth=directEnemyHp;
       const enemyHp=directEnemyHp!=null?directEnemyHp:observedEnemyHealth;
       rememberKit(target);
@@ -1759,6 +1766,7 @@ const H = {
       }
     } finally {
       activeTargetUuid=null;
+      activeTargetId=null;
       bot.removeListener?.("entityHurt",onTargetHurt);
     }
   },
