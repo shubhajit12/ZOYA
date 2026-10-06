@@ -267,10 +267,17 @@ async function combatUseGapple(ctx) {
   try { await ctx.bot.consume(); return true; } catch { return false; }
 }
 async function combatPrepareTotem(ctx) {
-  if (Number(ctx.bot.health || 20) > 8) return false;
-  const item = inventoryItem(ctx.bot, "totem_of_undying");
-  if (!item) return false;
-  try { await combatEquip(ctx, item, "off-hand"); return true; } catch { return false; }
+  const bot = ctx.bot;
+  const totem = inventoryItem(bot, "totem_of_undying");
+  if (!totem) return false;
+  // Mace/crystal kits benefit from a totem in the off-hand even at full
+  // health. Sword/axe combat keeps the shield unless an emergency totem is
+  // required.
+  const maceKit = Boolean(combatWeapon(bot, "mace"));
+  const crystalKit = Boolean(combatItem(bot, n => n === "end_crystal"));
+  const emergency = Number(bot.health || 20) <= 8;
+  if (!maceKit && !crystalKit && !emergency) return false;
+  try { await combatEquip(ctx, totem, "off-hand"); return true; } catch { return false; }
 }
 async function combatPearlEscape(ctx, target) {
   const pearl = combatPearl(ctx.bot);
