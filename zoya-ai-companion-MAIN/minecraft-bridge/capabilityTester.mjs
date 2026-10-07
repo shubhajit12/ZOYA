@@ -78,6 +78,10 @@ export async function dispatchCapability({bot,runtime,id,arg="",log=console.log}
   };
   bot.__zoyaCapabilityRuntime = runtime;
   try{
+    // PvP is owned by minecraftRuntime so the dedicated Sword PvP controller
+    // is the only combat decision/equipment writer. Do not route PvP through
+    // capabilityEngine.mjs, whose legacy planner can overwrite the Sword kit.
+    if(mode==="pvp")return runtime.execute?.("pvp",{targetUsername:arg});
     if(RUNTIME_EXECUTED.has(mode))return executeCapability(mode,arg,context);
     return runtime.runManualCapability("clean:"+mode,async task=>{
       context.task=task;
