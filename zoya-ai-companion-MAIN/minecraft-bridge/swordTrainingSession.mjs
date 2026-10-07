@@ -98,6 +98,10 @@ for(let round=1;round<=rounds;round++){
   const opponent=startOpponent(opponentEnv);
   await waitForOpponentStart(opponent,round);
   console.log("[SWORD-SESSION] round="+round+" opponent connected. Dispatching Sword PvP.");
+  const beforeResponse=await fetch(bridge+"/task");
+  if(!beforeResponse.ok)throw new Error("Bridge /task returned HTTP "+beforeResponse.status+" before round "+round+".");
+  const beforeTask=await beforeResponse.json();
+  const baselineTaskId=Number(beforeTask?.lastTaskResult?.id||0);
   const result=await post("/capability",{mode:"pvp",args:target});
   console.log("[SWORD-SESSION] round="+round+" pvp dispatch="+JSON.stringify(result));
   if(!result?.ok||result?.accepted!==true){
@@ -106,17 +110,31 @@ for(let round=1;round<=rounds;round++){
   }
 
   const deadline=Date.now()+Math.max(15000,Number(process.env.ZOYA_TRAIN_ROUND_WAIT_MS||125000));
+  const startDeadline=Date.now()+Math.max(3000,Number(process.env.ZOYA_TRAIN_TASK_START_TIMEOUT_MS||10000));
+  let taskStarted=false;
   let completed=false;
   while(Date.now()<deadline){
-    await sleep(1000);
+    await sleep(500);
     const response=await fetch(bridge+"/task");
     if(!response.ok)throw new Error("Bridge /task returned HTTP "+response.status);
     const task=await response.json();
-    if(!task.activeTask){
+    const activeId=Number(task?.activeTask?.id||0);
+    const resultId=Number(task?.lastTaskResult?.id||0);
+    if(activeId>baselineTaskId){
+      taskStarted=true;
+    } else if(resultId>baselineTaskId){
+      taskStarted=true;
       const resultStatus=String(task.lastTaskResult?.status||"").toLowerCase();
-      if(resultStatus && resultStatus!=="completed"){
-        throw new Error("Round "+round+" PvP task ended with status="+resultStatus+".");
-      }
+      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+".");
+      completed=true;
+      break;
+    } else if(!taskStarted && Date.now()>=startDeadline){
+      throw new Error("Round "+round+" PvP task never started after dispatch.");
+    }
+    if(taskStarted && !task.activeTask){
+      const resultStatus=String(task.lastTaskResult?.status||"").toLowerCase();
+      if(resultId<=baselineTaskId)continue;
+      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+".");
       completed=true;
       break;
     }
