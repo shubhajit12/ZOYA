@@ -1431,7 +1431,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   }
 
   async function answerPlayer(username, message, channel = "public") {
-{
     const sender = String(username || "").trim();
     const text = String(message || "").trim();
     const rawMessage = String(message || "").trim();
