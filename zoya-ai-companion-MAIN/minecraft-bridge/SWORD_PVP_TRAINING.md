@@ -29,3 +29,28 @@ expert category is present and every deterministic offline test passes.
 
 This does not claim live Minecraft mastery. Live combat validation is a later
 stage after the user joins the test server.
+
+
+## Live Sword training run
+
+After the Sword controller verification is green and a fresh Minecraft Bridge build is available:
+
+1. Start the Minecraft server.
+2. Start the new `MinecraftBridge.exe` and connect ZOYA.
+3. From the bridge directory, run:
+   `node swordTrainingSession.mjs`
+   or the bundled runtime:
+   `.
+ode.exe swordTrainingSession.mjs`
+4. The session starts a separate Mineflayer opponent (`ZoyaTrainer`) and dispatches Sword PvP rounds against it.
+5. Telemetry is written to `minecraft-training/sword/live/sword-rounds.jsonl`.
+6. Run `node swordTrainingEvaluator.mjs` (or `npm run eval:sword`) to produce `minecraft-training/sword/live/sword-evaluation.json`.
+
+Useful environment controls:
+- `ZOYA_TRAIN_HOST`, `ZOYA_TRAIN_PORT`: training server
+- `ZOYA_TRAIN_OPPONENT`: opponent username (default `ZoyaTrainer`)
+- `ZOYA_TRAIN_TARGET`: ZOYA username
+- `ZOYA_TRAIN_OPPONENT_MODE`: `strafe`, `stationary`, or `retreat`
+- `ZOYA_TRAIN_ROUNDS`: number of rounds (default 5)
+
+The live loop is evaluation/training against a controlled opponent; it is not a claim of autonomous high-tier PvP mastery. The offline `TRAINING COMPLETED` gate remains separate from live combat performance.
