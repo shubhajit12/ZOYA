@@ -9,6 +9,7 @@ const target=process.env.ZOYA_TRAIN_OPPONENT||"ZoyaTrainer";
 const rounds=Math.max(1,Number(process.env.ZOYA_TRAIN_ROUNDS||5));
 const configPath=process.env.ZOYA_MINECRAFT_CONFIG||path.join(process.env.APPDATA||process.cwd(),"com.zoya.aicompanion","minecraft","config.json");
 const mode=process.env.ZOYA_TRAIN_OPPONENT_MODE||"strafe";
+const optimizer=path.join(path.dirname(new URL(import.meta.url).pathname), "swordTrainingOptimizer.mjs").replace(/^\/(\w):/, "$1:");
 const opponentStartTimeoutMs=Math.max(10000,Number(process.env.ZOYA_TRAIN_OPPONENT_START_TIMEOUT_MS||30000));
 
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
@@ -63,6 +64,13 @@ async function waitForOpponentStart(opponent,round){
   }
   try{opponent.child.kill();}catch{}
   throw new Error("Sword training opponent did not connect within "+opponentStartTimeoutMs+"ms for round "+round+".");
+}
+async function optimizeRound(round){
+  const child=spawn(process.execPath,[optimizer],{env:process.env,stdio:["ignore","pipe","inherit"]});
+  let output=""; child.stdout.setEncoding("utf8"); child.stdout.on("data",chunk=>{output+=chunk;process.stdout.write(chunk);});
+  const code=await new Promise(resolve=>child.once("exit",resolve));
+  if(code!==0)throw new Error("Adaptive trainer failed after round "+round+".");
+  return output;
 }
 async function stopOpponent(opponent){
   try{opponent.child.kill();}catch{}
@@ -142,6 +150,8 @@ for(let round=1;round<=rounds;round++){
   }
   await stopOpponent(opponent);
   if(!completed)throw new Error("Round "+round+" did not finish normally.");
+  await optimizeRound(round);
   await sleep(1000);
 }
-console.log("[SWORD-SESSION] rounds completed. Run npm run eval:sword to summarize telemetry.");
+console.log("[SWORD-SESSION] rounds completed. Adaptive Sword learning was applied after every round.");
+console.log("[SWORD-SESSION] Run npm run eval:sword for the final measured report.");
