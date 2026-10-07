@@ -1,19 +1,21 @@
 {
-  "name":"zoya-minecraft-bridge",
-  "private":true,
-  "version":"0.1.0",
-  "type":"module",
-  "scripts":{
-    "train:sword":"node swordVideoTrainer.mjs",
-    "train:sword:brain":"node swordPvpTrainer.mjs"
+  "name": "zoya-minecraft-bridge",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "train:sword": "node swordVideoTrainer.mjs",
+    "train:sword:brain": "node swordPvpTrainer.mjs",
+    "test:sword": "node swordPvpController.test.mjs",
+    "train:sword:opponent": "node swordTrainingOpponent.mjs"
   },
-  "dependencies":{
-    "mineflayer":"4.39.0",
-    "minecraft-data":"3.117.0",
-    "minecraft-protocol":"1.68.0",
-    "mineflayer-pathfinder":"2.4.5",
-    "mineflayer-tool":"1.2.0",
-    "mineflayer-collectblock":"1.6.0",
-    "mineflayer-crafting-util":"0.5.0"
+  "dependencies": {
+    "mineflayer": "4.39.0",
+    "minecraft-data": "3.117.0",
+    "minecraft-protocol": "1.68.0",
+    "mineflayer-pathfinder": "2.4.5",
+    "mineflayer-tool": "1.2.0",
+    "mineflayer-collectblock": "1.6.0",
+    "mineflayer-crafting-util": "0.5.0"
   }
 }
