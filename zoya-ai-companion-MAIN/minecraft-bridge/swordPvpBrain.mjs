@@ -27,3 +27,5 @@ export function createSwordPvpBrain(model={}){
   return{version:SWORD_BRAIN_VERSION,decide};
 }
 export default createSwordPvpBrain;
+
+// Training gate workflow: offline policy validation runs automatically on minecraft branch.
