@@ -37,7 +37,7 @@ function tests(model){
   const b=createSwordPvpBrain(model),cases=[
     ["no target",{targetValid:false},"idle"],
     ["outside range",{targetValid:true,distance:4,attackCooldown:1},"approach"],
-    ["valid attack",{targetValid:true,distance:2.8,attackCooldown:1},"attack"],
+    ["valid attack",{targetValid:true,distance:3.0,attackCooldown:1},"attack"],
     ["post hit reset",{targetValid:true,distance:2.9,attackCooldown:.4,recentHit:true},"sprint_reset"],
     ["combo pressure",{targetValid:true,distance:2.7,attackCooldown:.5,targetAirborne:true},"strafe_pressure"],
     ["gated crit",{targetValid:true,distance:2.5,attackCooldown:1,falling:true,onGround:false,targetConstrained:true},"falling_crit"],
