@@ -331,7 +331,7 @@ async function synthesize(observations) {
     content:
       "Build the final conservative Sword PvP skill library from these summaries. " +
       "Merge duplicates and preserve only skills supported by visual evidence. " +
-      "Return JSON: {skills:[{id,name,skill,description,when_to_use,avoid_when,confidence,evidence}]}. " +
+      "Return JSON: {skills:[{id,name,skill,description,when_to_use,avoid_when,confidence,evidence,implementation:{attackDistanceCeiling,preferredDistanceRange,holdMsRange,maxDistance,minDistance}}]}. " +
       "Allowed categories: " + SKILL_SCHEMA.join(", ") + "\n" +
       JSON.stringify(mergedInput)
   }], 1600);
