@@ -53,3 +53,5 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  return {state,run,release};
 }
 export default createSwordPvpController;
+
+// Verified build boundary: Sword Kit is the sole owner of Sword PvP main-hand execution.
