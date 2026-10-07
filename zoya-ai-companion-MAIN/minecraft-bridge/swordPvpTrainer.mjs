@@ -24,7 +24,7 @@ function loadVideoSkills(){try{const x=JSON.parse(fsSync.readFileSync(VIDEO_SKIL
   const videoBy=skill=>videoSkills.find(x=>String(x.skill||"").toLowerCase()===skill)||{};
   const vh=(skill,key,fallback)=>{const v=Number(videoBy(skill)?.implementation?.[key]);return Number.isFinite(v)?v:fallback;};
   const score={high:1,medium:.7,low:.4};
-  return {version:1,brain:"sword",brainVersion:"sword-brain-v1",source:d.source,trainedAt:new Date().toISOString(),trainingMode:"expert-demonstration-imitation",
+  return {version:1,brain:"sword",brainVersion:"sword-brain-v2",source:d.source,trainedAt:new Date().toISOString(),trainingMode:"expert-demonstration-imitation",
     policy:{spacing:{attackMax:Math.min(3.05,Math.max(2.7,vh("spacing","attackDistanceCeiling",Number(sp.attackDistanceCeiling||3.2)))),neutralMax:Number((sp.neutralDistanceRange||[3,3.8])[1]),pressureMax:Number((sp.preferredDistanceRange||[2.7,3.2])[1])},
       combat:{attackCooldown:.95,attackIntervalMs:650,comboMaxDistance:2.9,strafeDurationMs:Number((co.durationMsRange||[120,260])[0]),critMaxDistance:Math.min(3,Math.max(2.2,vh("crit_timing","maxDistance",Number(cr.maxDistance||2.8)))),critCooldown:.95},
       sprintReset:{durationMs:Math.round(mean(rs.holdMsRange||[60,140])),minMs:Math.max(40,Math.min(180,vh("sprint_reset","holdMsRange",Number((rs.holdMsRange||[60,140])[0])))),maxMs:Number((rs.holdMsRange||[60,140])[1])},
