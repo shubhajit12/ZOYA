@@ -26,6 +26,8 @@ jobs:
           node --check swordPvpController.mjs
           node --check swordPvpController.test.mjs
           node --check minecraftRuntime.mjs
+          node --check swordTrainingOptimizer.mjs
+          node --check swordTrainingSession.mjs
       - name: Offline controller tests
         run: npm run test:sword
       - name: Offline brain training gate
