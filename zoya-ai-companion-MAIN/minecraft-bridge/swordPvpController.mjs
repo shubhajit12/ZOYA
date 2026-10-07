@@ -17,6 +17,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
   const refreshModel=()=>{
     if(!modelPath)return currentModel;
     try{currentModel=JSON.parse(fs.readFileSync(modelPath,"utf8"));p=currentModel?.policy||{};attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950));resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);telemetryPath=String(currentModel?.telemetryPath||telemetryPath);}catch(error){log("[SWORD-KIT] model reload failed: "+(error?.message||String(error)));}
+    brain.setModel?.(currentModel);
     return currentModel;
   };
   const record=event=>{
@@ -34,6 +35,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  const heal=async()=>{const i=gapple(bot);if(!i)return false;await bot.equip(i,"hand");await bot.consume();log("[SWORD-KIT] owner=controller action=heal item="+i.name);await equipSword();return true;};
  async function run(targetUsername,task){
   refreshModel();
+  brain.setModel?.(currentModel);
   state.active=true;state.targetUsername=String(targetUsername||"");state.roundStartedAt=Date.now();log("[SWORD-KIT] owner=controller weapon=sword active target="+state.targetUsername);
   try{
    await equipSword();
