@@ -6,9 +6,14 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const num=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 export const SWORD_BRAIN_VERSION="sword-brain-v2";
 export function createSwordPvpBrain(model={}){
-  const p=model.policy||{},s=p.spacing||{},c=p.combat||{},r=p.sprintReset||{},h=p.healing||{},w=model.skillWeights||{};
-  const weight=(name,fallback=1)=>clamp(num(w[name],fallback),0.5,1.5);
+  let currentModel=model||{};
+  function policy(){
+    const p=currentModel.policy||{},s=p.spacing||{},c=p.combat||{},r=p.sprintReset||{},h=p.healing||{},w=currentModel.skillWeights||{};
+    const weight=(name,fallback=1)=>clamp(num(w[name],fallback),0.5,1.5);
+    return {p,s,c,r,h,weight};
+  }
   function decide(state={}){
+    const {s,c,r,h,weight}=policy();
     const d=num(state.distance,Infinity), hp=num(state.health,20), cd=clamp(num(state.attackCooldown,1),0,1);
     const valid=state.targetValid!==false, ground=state.onGround!==false, falling=state.falling===true;
     const recentHit=state.recentHit===true, damaged=state.recentlyDamaged===true;
@@ -25,7 +30,7 @@ export function createSwordPvpBrain(model={}){
     if(cd>=num(c.attackCooldown,0.95)&&d<=num(s.attackMax,3.2)*weight("attack_timing"))return{action:"attack",reason:"valid_attack_window"};
     return{action:"strafe",direction:state.strafeDirection||"left",durationMs:clamp(num(c.strafeDurationMs,120)/weight("movement"),80,260),sprint:true,reason:"maintain_spacing"};
   }
-  return{version:SWORD_BRAIN_VERSION,decide};
+  return{version:SWORD_BRAIN_VERSION,decide,setModel:modelNext=>{if(modelNext&&typeof modelNext==="object")currentModel=modelNext;}};
 }
 export default createSwordPvpBrain;
 
