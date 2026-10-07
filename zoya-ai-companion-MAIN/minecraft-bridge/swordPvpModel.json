@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "brain": "sword",
+  "brainVersion": "sword-brain-v3",
+  "kit": "sword",
+  "source": "static-expert-policy",
+  "trainingMode": "disabled",
+  "policy": {
+    "spacing": {
+      "attackMax": 3.05,
+      "neutralMax": 3.8,
+      "pressureMax": 3.2
+    },
+    "combat": {
+      "attackCooldown": 0.95,
+      "attackIntervalMs": 700,
+      "comboMaxDistance": 2.9,
+      "strafeDurationMs": 190,
+      "defensiveStrafeMs": 150,
+      "critMaxDistance": 2.8,
+      "critCooldown": 0.95
+    },
+    "sprintReset": {
+      "durationMs": 100,
+      "minMs": 60,
+      "maxMs": 140
+    },
+    "healing": {
+      "lowHealth": 8,
+      "emergencyHealth": 5,
+      "minimumDistance": 4.2
+    }
+  },
+  "skillWeights": {
+    "movement": 1.12,
+    "spacing": 1.1032,
+    "sprint_reset": 1,
+    "attack_timing": 1.0201,
+    "crit_timing": 1,
+    "combo_control": 1,
+    "target_tracking": 1.1275,
+    "repositioning": 1.0993,
+    "defense": 1,
+    "healing": 1,
+    "disengagement": 1,
+    "recovery": 1
+  },
+  "sourceNote": "Static Sword PvP policy retained after training system removal. It is not adaptive and does not write training telemetry."
+}
