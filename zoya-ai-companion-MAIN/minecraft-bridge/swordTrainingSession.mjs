@@ -125,7 +125,7 @@ for(let round=1;round<=rounds;round++){
     } else if(resultId>baselineTaskId){
       taskStarted=true;
       const resultStatus=String(task.lastTaskResult?.status||"").toLowerCase();
-      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+".");
+      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+" reason="+String(task.lastTaskResult?.reason||"unknown")+".");
       completed=true;
       break;
     } else if(!taskStarted && Date.now()>=startDeadline){
@@ -134,7 +134,7 @@ for(let round=1;round<=rounds;round++){
     if(taskStarted && !task.activeTask){
       const resultStatus=String(task.lastTaskResult?.status||"").toLowerCase();
       if(resultId<=baselineTaskId)continue;
-      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+".");
+      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+" reason="+String(task.lastTaskResult?.reason||"unknown")+".");
       completed=true;
       break;
     }
