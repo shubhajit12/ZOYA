@@ -11,10 +11,11 @@ const ROOT=path.resolve(process.env.ZOYA_PVP_TRAINING_DIR||"./minecraft-training
 const INPUT=path.join(ROOT,"sword","swordTrainingDemonstrations.json");
 const MODEL=path.join(ROOT,"sword","swordPvpModel.json");
 const REPORT=path.join(ROOT,"sword","swordTrainingReport.json");
+const VIDEO_SKILLS=path.join(ROOT,"sword","sword-skills.json");
 const required=["sprint_reset","spacing","combo_control","crit_timing","defense","healing"];
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:0;
 async function load(){const d=JSON.parse(await fs.readFile(INPUT,"utf8"));if(!Array.isArray(d.techniques)||!d.techniques.length)throw new Error("No Sword expert demonstrations found.");return d;}
-function compile(d){
+function loadVideoSkills(){try{const x=JSON.parse(require("node:fs").readFileSync(VIDEO_SKILLS,"utf8"));return Array.isArray(x.skills)?x.skills:[];}catch{return [];}}\nfunction compile(d,videoSkills=[]){
   const ts=d.techniques,missing=required.filter(c=>!ts.some(t=>t.category===c));
   if(missing.length)throw new Error("Missing required expert categories: "+missing.join(", "));
   const by=c=>ts.find(t=>t.category===c)?.implementation||{};
@@ -26,7 +27,7 @@ function compile(d){
       sprintReset:{durationMs:Math.round(mean(rs.holdMsRange||[60,140])),minMs:Number((rs.holdMsRange||[60,140])[0]),maxMs:Number((rs.holdMsRange||[60,140])[1])},
       healing:{lowHealth:8,emergencyHealth:5,minimumDistance:Number(he.minimumDistance||4)}},
     demonstrations:ts.map(t=>({id:t.id,category:t.category,confidence:t.confidence,observed:t.observed,inferred:t.inferred})),
-    coverage:{requiredCategories:required,categoriesPresent:required.filter(c=>ts.some(t=>t.category===c)),confidence:mean(ts.map(t=>score[t.confidence]||.5))}};
+    skillLibrary:videoSkills,skillWeights:Object.fromEntries(required.map(c=>[c,1])),trainingMode:"expert-demonstration-imitation",coverage:{requiredCategories:required,categoriesPresent:required.filter(c=>ts.some(t=>t.category===c)),confidence:mean(ts.map(t=>score[t.confidence]||.5))}};
 }
 function tests(model){
   const b=createSwordPvpBrain(model),cases=[
@@ -45,14 +46,14 @@ function tests(model){
 async function main(){
   console.log("=== ZOYA Sword PvP Brain Trainer ===");
   console.log("[SWORD-TRAIN] Minecraft server is NOT required.");
-  const data=await load(),model=compile(data),t=tests(model);
+  const data=await load(),videoSkills=loadVideoSkills(),model=compile(data,videoSkills),t=tests(model);
   if(t.passed!==t.total)throw new Error("Offline Sword brain tests failed: "+t.passed+"/"+t.total);
   await fs.mkdir(path.dirname(MODEL),{recursive:true});
   await fs.writeFile(MODEL,JSON.stringify(model,null,2));
-  const report={status:"TRAINING_COMPLETED",completedAt:new Date().toISOString(),source:data.source,trainingMode:"expert-demonstration-imitation",demonstrations:data.techniques.length,categories:model.coverage.categoriesPresent,confidence:model.coverage.confidence,offlineTests:t,minecraftRequired:false,note:"This gate confirms video-derived expert demonstrations were compiled into the Sword Brain and passed deterministic offline tests. Live Minecraft combat evaluation is a later stage."};
+  const report={status:"TRAINING_COMPLETED",completedAt:new Date().toISOString(),source:data.source,trainingMode:"expert-demonstration-imitation",demonstrations:data.techniques.length,videoSkills:videoSkills.length,categories:model.coverage.categoriesPresent,confidence:model.coverage.confidence,offlineTests:t,minecraftRequired:false,note:"This gate confirms video-derived expert demonstrations were compiled into the Sword Brain and passed deterministic offline tests. Live Minecraft combat evaluation is a later stage."};
   await fs.writeFile(REPORT,JSON.stringify(report,null,2));
   console.log("\n[SWORD-TRAIN] TRAINING COMPLETED");
-  console.log("[SWORD-TRAIN] Expert demonstrations: "+data.techniques.length);
+  console.log("[SWORD-TRAIN] Expert demonstrations: "+data.techniques.length);\n  console.log("[SWORD-TRAIN] Video skill library: "+videoSkills.length);
   console.log("[SWORD-TRAIN] Categories: "+model.coverage.categoriesPresent.join(", "));
   console.log("[SWORD-TRAIN] Offline tests: "+t.passed+"/"+t.total);
   console.log("[SWORD-TRAIN] Model: "+MODEL);
