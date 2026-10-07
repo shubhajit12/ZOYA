@@ -136,7 +136,11 @@ for(let round=1;round<=rounds;round++){
     } else if(resultId>baselineTaskId){
       taskStarted=true;
       const resultStatus=String(task.lastTaskResult?.status||"").toLowerCase();
-      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+" reason="+String(task.lastTaskResult?.reason||"unknown")+".");
+      if(resultStatus!=="completed"){
+        const reason=String(task.lastTaskResult?.reason||"unknown");
+        if(reason.startsWith("death")){console.log("[SWORD-SESSION] round="+round+" death recorded as training outcome.");completed=true;break;}
+        throw new Error("Round "+round+" PvP task ended with status="+resultStatus+" reason="+reason+".");
+      }
       completed=true;
       break;
     } else if(!taskStarted && Date.now()>=startDeadline){
@@ -145,7 +149,11 @@ for(let round=1;round<=rounds;round++){
     if(taskStarted && !task.activeTask){
       const resultStatus=String(task.lastTaskResult?.status||"").toLowerCase();
       if(resultId<=baselineTaskId)continue;
-      if(resultStatus!=="completed")throw new Error("Round "+round+" PvP task ended with status="+resultStatus+" reason="+String(task.lastTaskResult?.reason||"unknown")+".");
+      if(resultStatus!=="completed"){
+        const reason=String(task.lastTaskResult?.reason||"unknown");
+        if(reason.startsWith("death")){console.log("[SWORD-SESSION] round="+round+" death recorded as training outcome.");completed=true;break;}
+        throw new Error("Round "+round+" PvP task ended with status="+resultStatus+" reason="+reason+".");
+      }
       completed=true;
       break;
     }
