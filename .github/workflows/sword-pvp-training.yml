@@ -1,0 +1,25 @@
+name: Sword PvP Brain Training
+on:
+  push:
+    branches: [minecraft]
+    paths:
+      - "zoya-ai-companion-MAIN/minecraft-bridge/swordPvpBrain.mjs"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/swordPvpTrainer.mjs"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/minecraft-training/sword/swordTrainingDemonstrations.json"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/package.json"
+  workflow_dispatch:
+jobs:
+  train-sword-brain:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: zoya-ai-companion-MAIN/minecraft-bridge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Train Sword PvP Brain
+        run: npm run train:sword:brain
+      - name: Verify training report
+        run: node -e "const fs=require('fs'); const p='minecraft-training/sword/swordTrainingReport.json'; const r=JSON.parse(fs.readFileSync(p,'utf8')); if(r.status!=='TRAINING_COMPLETED') process.exit(1); console.log('[SWORD-TRAIN] VERIFIED TRAINING_COMPLETED');"
