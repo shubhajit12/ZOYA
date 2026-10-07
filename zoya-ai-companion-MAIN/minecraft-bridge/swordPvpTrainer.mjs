@@ -26,7 +26,7 @@ function loadVideoSkills(){try{const x=JSON.parse(fsSync.readFileSync(VIDEO_SKIL
   const score={high:1,medium:.7,low:.4};
   return {version:1,brain:"sword",brainVersion:"sword-brain-v1",source:d.source,trainedAt:new Date().toISOString(),trainingMode:"expert-demonstration-imitation",
     policy:{spacing:{attackMax:Math.min(3.05,Math.max(2.7,vh("spacing","attackDistanceCeiling",Number(sp.attackDistanceCeiling||3.2)))),neutralMax:Number((sp.neutralDistanceRange||[3,3.8])[1]),pressureMax:Number((sp.preferredDistanceRange||[2.7,3.2])[1])},
-      combat:{attackCooldown:.95,comboMaxDistance:2.9,strafeDurationMs:Number((co.durationMsRange||[120,260])[0]),critMaxDistance:Math.min(3,Math.max(2.2,vh("crit_timing","maxDistance",Number(cr.maxDistance||2.8)))),critCooldown:.95},
+      combat:{attackCooldown:.95,attackIntervalMs:650,comboMaxDistance:2.9,strafeDurationMs:Number((co.durationMsRange||[120,260])[0]),critMaxDistance:Math.min(3,Math.max(2.2,vh("crit_timing","maxDistance",Number(cr.maxDistance||2.8)))),critCooldown:.95},
       sprintReset:{durationMs:Math.round(mean(rs.holdMsRange||[60,140])),minMs:Math.max(40,Math.min(180,vh("sprint_reset","holdMsRange",Number((rs.holdMsRange||[60,140])[0])))),maxMs:Number((rs.holdMsRange||[60,140])[1])},
       healing:{lowHealth:8,emergencyHealth:5,minimumDistance:Math.max(3.5,Math.min(7,vh("healing","minDistance",Number(he.minimumDistance||4))) )}},
     demonstrations:ts.map(t=>({id:t.id,category:t.category,confidence:t.confidence,observed:t.observed,inferred:t.inferred})),
@@ -40,6 +40,7 @@ function tests(model){
     ["post hit reset",{targetValid:true,distance:2.9,attackCooldown:.4,recentHit:true},"sprint_reset"],
     ["combo pressure",{targetValid:true,distance:2.7,attackCooldown:.5,targetAirborne:true},"strafe_pressure"],
     ["gated crit",{targetValid:true,distance:2.5,attackCooldown:1,falling:true,onGround:false,targetConstrained:true},"falling_crit"],
+    ["jump crit",{targetValid:true,distance:2.5,attackCooldown:1,onGround:true,falling:false},"jump_crit"],
     ["damage recovery",{targetValid:true,distance:3.2,attackCooldown:.4,recentlyDamaged:true},"defensive_strafe"],
     ["heal",{targetValid:true,distance:4.5,health:6,hasGapple:true},"heal"]
   ];
