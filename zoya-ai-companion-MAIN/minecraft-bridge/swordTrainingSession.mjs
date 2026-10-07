@@ -9,7 +9,7 @@ const bridge=process.env.ZOYA_BRIDGE_URL||"http://127.0.0.1:32123";
 const target=process.env.ZOYA_TRAIN_OPPONENT||"ZoyaTrainer";
 const rounds=Math.max(1,Number(process.env.ZOYA_TRAIN_ROUNDS||5));
 const configPath=process.env.ZOYA_MINECRAFT_CONFIG||path.join(process.env.APPDATA||process.cwd(),"com.zoya.aicompanion","minecraft","config.json");
-const mode=process.env.ZOYA_TRAIN_OPPONENT_MODE||"strafe";
+const mode=process.env.ZOYA_TRAIN_OPPONENT_MODE||"curriculum";
 const optimizer=path.join(path.dirname(fileURLToPath(import.meta.url)), "swordTrainingOptimizer.mjs");
 const opponentStartTimeoutMs=Math.max(10000,Number(process.env.ZOYA_TRAIN_OPPONENT_START_TIMEOUT_MS||30000));
 const roundMs=Math.max(30000,Number(process.env.ZOYA_TRAIN_ROUND_MS||120000));
@@ -138,7 +138,12 @@ if(!(await canReachServer(host,port))){
 console.log("[SWORD-SESSION] Minecraft server reachable. Starting training rounds.");
 
 for(let round=1;round<=rounds;round++){
-  const opponent=startOpponent(opponentEnv);
+  const roundMode=mode==="curriculum"
+    ? ["stationary","strafe","retreat","strafe","retreat"][((round-1)%5)]
+    : mode;
+  const roundOpponentEnv={...opponentEnv,ZOYA_TRAIN_OPPONENT_MODE:roundMode};
+  console.log("[SWORD-SESSION] round="+round+" curriculum="+roundMode);
+  const opponent=startOpponent(roundOpponentEnv);
   await waitForOpponentStart(opponent,round);
   console.log("[SWORD-SESSION] round="+round+" opponent connected. Dispatching Sword PvP.");
   const beforeResponse=await fetch(bridge+"/task");
