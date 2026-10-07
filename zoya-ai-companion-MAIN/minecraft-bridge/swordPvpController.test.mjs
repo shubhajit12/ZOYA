@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import pathfinderPackage from "mineflayer-pathfinder";
+const {goals}=pathfinderPackage;
 import {createSwordPvpBrain} from "./swordPvpBrain.mjs";
 import {createSwordPvpController} from "./swordPvpController.mjs";
 const inv=[{name:"netherite_sword",type:1,count:1},{name:"golden_apple",type:2,count:2}];
@@ -7,7 +9,7 @@ const brain=createSwordPvpBrain({policy:{spacing:{attackMax:3.2}}});
 assert.equal(brain.decide({targetValid:false}).action,"idle");
 assert.equal(brain.decide({targetValid:true,distance:4,attackCooldown:1}).action,"approach");
 assert.equal(brain.decide({targetValid:true,distance:2.8,attackCooldown:1}).action,"attack");
-let ticks=0;const c=createSwordPvpController({bot,brain,taskIsActive:()=>ticks<1,wait:async()=>{ticks++;},log:()=>{}});
+let ticks=0;const c=createSwordPvpController({bot,brain,taskIsActive:()=>ticks<1,wait:async()=>{ticks++;},goals,log:()=>{}});
 await c.run("Enemy",{terminationReason:null});
 assert.equal(c.state.active,false);assert.equal(bot.heldItem.name,"netherite_sword");
 console.log("[SWORD-TEST] brain decisions: PASS");
