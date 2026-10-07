@@ -9,6 +9,7 @@ const target=process.env.ZOYA_TRAIN_OPPONENT||"ZoyaTrainer";
 const rounds=Math.max(1,Number(process.env.ZOYA_TRAIN_ROUNDS||5));
 const configPath=process.env.ZOYA_MINECRAFT_CONFIG||path.join(process.env.APPDATA||process.cwd(),"com.zoya.aicompanion","minecraft","config.json");
 const mode=process.env.ZOYA_TRAIN_OPPONENT_MODE||"strafe";
+const opponentStartTimeoutMs=Math.max(10000,Number(process.env.ZOYA_TRAIN_OPPONENT_START_TIMEOUT_MS||30000));
 
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 function readConfig(){
@@ -38,6 +39,36 @@ function canReachServer(host,port){
     socket.connect(port,host);
   });
 }
+function startOpponent(env){
+  const child=spawn(process.execPath,["swordTrainingOpponent.mjs"],{env,stdio:["ignore","pipe","inherit"]});
+  let connected=false;
+  let exited=false;
+  let output="";
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data",chunk=>{
+    const text=String(chunk);
+    output+=text;
+    process.stdout.write(text);
+    if(text.includes("[SWORD-OPPONENT] connected "))connected=true;
+  });
+  child.once("exit",()=>{exited=true;});
+  return {child,get connected(){return connected;},get exited(){return exited;},get output(){return output;}};
+}
+async function waitForOpponentStart(opponent,round){
+  const deadline=Date.now()+opponentStartTimeoutMs;
+  while(Date.now()<deadline){
+    if(opponent.connected)return;
+    if(opponent.exited)throw new Error("Sword training opponent exited before round "+round+" started.");
+    await sleep(250);
+  }
+  try{opponent.child.kill();}catch{}
+  throw new Error("Sword training opponent did not connect within "+opponentStartTimeoutMs+"ms for round "+round+".");
+}
+async function stopOpponent(opponent){
+  try{opponent.child.kill();}catch{}
+  const deadline=Date.now()+5000;
+  while(!opponent.exited&&Date.now()<deadline)await sleep(100);
+}
 
 console.log("=== ZOYA Sword PvP Training Session ===");
 const config=readConfig();
@@ -64,18 +95,13 @@ if(!(await canReachServer(host,port))){
 console.log("[SWORD-SESSION] Minecraft server reachable. Starting training rounds.");
 
 for(let round=1;round<=rounds;round++){
-  const child=spawn(process.execPath,["swordTrainingOpponent.mjs"],{env:opponentEnv,stdio:["ignore","inherit","inherit"]});
-  let opponentExited=false;
-  child.once("exit",()=>{opponentExited=true;});
-  await sleep(2500);
-  if(opponentExited){
-    throw new Error("Sword training opponent exited before round "+round+" started.");
-  }
-
+  const opponent=startOpponent(opponentEnv);
+  await waitForOpponentStart(opponent,round);
+  console.log("[SWORD-SESSION] round="+round+" opponent connected. Dispatching Sword PvP.");
   const result=await post("/capability",{mode:"pvp",args:target});
   console.log("[SWORD-SESSION] round="+round+" pvp dispatch="+JSON.stringify(result));
   if(!result?.ok||result?.accepted!==true){
-    try{child.kill();}catch{}
+    await stopOpponent(opponent);
     throw new Error("PvP capability was not accepted for round "+round+".");
   }
 
@@ -87,9 +113,9 @@ for(let round=1;round<=rounds;round++){
     if(!response.ok)throw new Error("Bridge /task returned HTTP "+response.status);
     const task=await response.json();
     if(!task.activeTask){completed=true;break;}
-    if(opponentExited)break;
+    if(opponent.exited)break;
   }
-  try{child.kill();}catch{}
+  await stopOpponent(opponent);
   if(!completed)throw new Error("Round "+round+" did not finish normally.");
   await sleep(1000);
 }
