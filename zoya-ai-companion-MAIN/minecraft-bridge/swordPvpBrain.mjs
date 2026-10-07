@@ -14,7 +14,7 @@ export function createSwordPvpBrain(model={}){
   }
   function decide(state={}){
     const {s,c,r,h,weight}=policy();
-    const d=num(state.distance,Infinity), hp=num(state.health,20), cd=clamp(num(state.attackCooldown,1),0,1);
+    const d=num(state.distance,Infinity), hp=num(state.health,20), cd=clamp(num(state.attackCooldown,1),0,1);\n    // Sword reach is a hard physical boundary. Learned weights may change how\n    // strongly spacing is preferred, but they can never authorize an attack\n    // beyond the configured legitimate sword reach.\n    const hardReach=clamp(num(s.attackMax,3.05),2.70,3.05);\n    const attackWindow=Math.min(hardReach,d);
     const valid=state.targetValid!==false, ground=state.onGround!==false, falling=state.falling===true;
     const recentHit=state.recentHit===true, damaged=state.recentlyDamaged===true;
     const airborne=state.targetAirborne===true, constrained=state.targetConstrained===true;
@@ -27,8 +27,8 @@ export function createSwordPvpBrain(model={}){
     if(!falling&&ground&&d<=num(c.critMaxDistance,2.8)*weight("crit_timing")&&cd>=num(c.critCooldown,0.95)&&!airborne)return{action:"jump_crit",reason:"prepare_falling_crit"};
     if(falling&&!ground&&d<=num(c.critMaxDistance,2.8)*weight("crit_timing")&&cd>=num(c.critCooldown,0.95)&&(airborne||constrained))return{action:"falling_crit",reason:"gated_crit_window"};
     if(damaged&&d<=num(s.neutralMax,3.8)*weight("defense"))return{action:"defensive_strafe",direction:state.strafeDirection==="left"?"right":"left",durationMs:160,sprint:true,reason:"damage_recovery"};
-    if(d>num(s.attackMax,3.2)*weight("spacing"))return{action:"approach",direction:state.strafeDirection||"left",sprint:true,reason:"outside_attack_window"};
-    if(cd>=num(c.attackCooldown,0.95)&&d<=num(s.attackMax,3.2)*weight("attack_timing"))return{action:"attack",reason:"valid_attack_window"};
+    if(d>Math.min(hardReach, num(s.attackMax,3.05)*weight("spacing")))return{action:"approach",direction:state.strafeDirection||"left",sprint:true,reason:"outside_attack_window"};
+    if(cd>=num(c.attackCooldown,0.95)&&d<=hardReach)return{action:"attack",reason:"valid_attack_window"};
     return{action:"strafe",direction:state.strafeDirection||"left",durationMs:clamp(num(c.strafeDurationMs,120)/weight("movement"),80,260),sprint:true,reason:"maintain_spacing"};
   }
   return{version:SWORD_BRAIN_VERSION,decide,setModel:modelNext=>{if(modelNext&&typeof modelNext==="object")currentModel=modelNext;}};
