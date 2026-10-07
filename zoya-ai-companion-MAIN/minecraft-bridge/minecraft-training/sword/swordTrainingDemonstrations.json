@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "kit": "sword",
+  "source": "Gemini video analysis supplied from Sword PvP montage review",
+  "evidencePolicy": {
+    "observed": "Directly visible behavior from the supplied video analysis.",
+    "inferred": "Technique interpretation that must be validated in Minecraft.",
+    "implementation": "Observable outcome to reproduce; never assume hidden key presses."
+  },
+  "techniques": [
+    {"id":"post_hit_reset","name":"Post-hit sprint reset","category":"sprint_reset","confidence":"high","observed":"Post-hit braking/reset movement is repeatedly visible.","inferred":"The movement is consistent with an S-tap or equivalent sprint reset.","implementation":{"action":"post_hit_reset","holdMsRange":[60,140],"resumeSprint":true},"avoid":["long-range chase","target already lost"]},
+    {"id":"reach_micro_spacing","name":"Reach-threshold micro-spacing","category":"spacing","confidence":"high","observed":"The player repeatedly hovers around close combat distance before committing.","inferred":"The player waits for a favorable approach/recovery window rather than swinging continuously.","implementation":{"preferredDistanceRange":[2.7,3.2],"neutralDistanceRange":[3.0,3.8],"attackDistanceCeiling":3.2},"avoid":["cornered state","invalid target","emergency retreat"]},
+    {"id":"combo_ellipse","name":"Combo-control lateral pressure","category":"combo_control","confidence":"high","observed":"After a successful hit, lateral movement and target-facing pressure continue through the knockback window.","inferred":"Elliptical strafing is being used to maintain favorable alignment.","implementation":{"action":"strafe_pressure","durationMsRange":[120,260],"directions":["left","right"],"switchAfterTicksRange":[6,10]}},
+    {"id":"crit_gate","name":"Controlled falling crit","category":"crit_timing","confidence":"high","observed":"Jump attacks are used selectively when the target is vulnerable or constrained.","inferred":"Crits are deliberately gated instead of being used during neutral movement.","implementation":{"action":"falling_crit","maxDistance":2.8,"requireFalling":true,"neutralJump":false}},
+    {"id":"defensive_recovery","name":"Defensive forward-facing recovery","category":"defense","confidence":"high","observed":"The player keeps target-facing pressure while moving after taking a hit.","inferred":"Forward sprint plus lateral movement is used to recover control.","implementation":{"action":"defensive_strafe","durationMsRange":[100,220],"directions":["left","right"]}},
+    {"id":"gapple_disengage","name":"Tactical disengagement and gapple","category":"healing","confidence":"high","observed":"The player creates distance before healing and then returns to combat.","inferred":"Healing is deliberately separated from immediate melee pressure.","implementation":{"action":"disengage_heal","minimumDistance":4.0,"preferredDistance":4.5,"reengageAfterHeal":true}}
+  ]
+}
