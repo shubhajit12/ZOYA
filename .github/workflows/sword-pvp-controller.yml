@@ -1,0 +1,34 @@
+name: Sword PvP Controller Verification
+on:
+  push:
+    branches: [minecraft]
+    paths:
+      - "zoya-ai-companion-MAIN/minecraft-bridge/swordPvpBrain.mjs"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/swordPvpController.mjs"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/swordPvpController.test.mjs"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/package.json"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/minecraftRuntime.mjs"
+  workflow_dispatch:
+jobs:
+  verify-sword-controller:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: zoya-ai-companion-MAIN/minecraft-bridge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax check
+        run: |
+          node --check swordPvpBrain.mjs
+          node --check swordPvpController.mjs
+          node --check swordPvpController.test.mjs
+          node --check minecraftRuntime.mjs
+      - name: Offline controller tests
+        run: npm run test:sword
+      - name: Offline brain training gate
+        run: npm run train:sword:brain
+      - name: Verify training completion
+        run: node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('minecraft-training/sword/swordTrainingReport.json','utf8')); if(r.status!=='TRAINING_COMPLETED') process.exit(1); console.log('[SWORD-VERIFY] TRAINING_COMPLETED');"
