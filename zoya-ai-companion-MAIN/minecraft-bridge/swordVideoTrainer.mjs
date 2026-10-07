@@ -25,7 +25,7 @@ const OBS_FILE = path.join(OUT_DIR, "observations.json");
 const SKILLS_FILE = path.join(OUT_DIR, "sword-skills.json");
 const MODEL = process.env.ZOYA_VISION_MODEL || "qwen/qwen3.8-27b";
 const API_KEY = process.env.GROQ_API_KEY;
-const FPS = Math.max(0.1, Number(process.env.ZOYA_TRAIN_FPS || 0.5));
+const FPS = Math.max(0.05, Number(process.env.ZOYA_TRAIN_FPS || 0.125));
 const MAX_BYTES = 19 * 1024 * 1024;
 const VISION_INPUT_ESTIMATE = 2300;
 const RETRIES = 5;
@@ -358,7 +358,7 @@ async function main() {
     );
 
     for (let i = 0; i < sampled.files.length; i++) {
-      const key = name + "::" + i;
+      const key = name + "::fps=" + FPS + "::" + i;
       if (completed.has(key)) {
         continue;
       }
@@ -368,7 +368,7 @@ async function main() {
       );
 
       const result = await vision(sampled.files[i], name, i);
-      observations.push({ video: name, frameStart: i, result });
+      observations.push({ video: name, fps: FPS, frameStart: i, result });
       completed.add(key);
 
       // Resume-safe checkpoint after every successful API call.
