@@ -24,6 +24,7 @@ const MODEL=path.join(ROOT,"sword","swordPvpModel.json");
 const EXPERIENCE=path.join(LIVE,"sword-experience.jsonl");
 const ROUNDS=path.join(LIVE,"sword-rounds.jsonl");
 const HISTORY=path.join(LIVE,"sword-learning-history.jsonl");
+const CANDIDATE_BASELINE=path.join(LIVE,"sword-candidate-baseline.json");
 
 const bridge=process.env.ZOYA_BRIDGE_URL||"http://127.0.0.1:32123";
 const target=process.env.ZOYA_TRAIN_OPPONENT||"ZoyaTrainer";
@@ -268,30 +269,62 @@ async function main(){
 
     const before=await evaluate();
     const beforeGate=gate(before);
-    const baselineModel=snapshotModel();
-    const baselineScore=beforeGate.score;
-    const experienceBefore=experienceCount();
+    const hadPending=Boolean(c.pendingCandidate);
+    let candidateAccepted=null;
 
-    await optimizeCandidate();
-    const candidateModel=snapshotModel();
-    const candidate=readJson(MODEL,null);
-    const bounded=Number(candidate?.policy?.spacing?.attackMax||3.05)<=3.05 &&
-      Number(candidate?.policy?.spacing?.attackMax||3.05)>=2.70;
-
-    // The optimizer is allowed to generate a candidate, but the round that
-    // generated it is never used to validate it. Validation happens on the
-    // next round after the candidate has actually controlled ZOYA.
-    if(!bounded){
-      restoreModel(baselineModel);
-      c.rejectedCandidates++;
-      appendHistory({type:"candidate_rejected_bounds",round,phase:roundMode,baselineScore,experienceBefore});
+    // Validate a candidate only on a fresh live round with the same curriculum
+    // mode that produced it. The candidate is never judged on its own training
+    // telemetry.
+    if(hadPending){
+      const baselineScore=Number(c.pendingCandidate.baselineScore||0);
+      const candidateScore=beforeGate.score;
+      const candidatePass=beforeGate.pass;
+      const improved=candidateScore>=baselineScore+0.5;
+      if(candidatePass&&improved){
+        candidateAccepted=true;
+        c.acceptedCandidates++;
+        c.bestScore=Math.max(Number(c.bestScore||0),candidateScore);
+        appendHistory({type:"candidate_accepted",round,phase:roundMode,baselineScore,candidateScore,improvement:candidateScore-baselineScore});
+        console.log("[SWORD-SESSION] candidate=ACCEPTED baseline="+baselineScore.toFixed(2)+" validation="+candidateScore.toFixed(2));
+      }else{
+        candidateAccepted=false;
+        const base=readJson(CANDIDATE_BASELINE,null);
+        if(base)writeJson(MODEL,base);
+        c.rejectedCandidates++;
+        appendHistory({type:"candidate_rejected",round,phase:roundMode,baselineScore,candidateScore,improvement:candidateScore-baselineScore,gate:beforeGate});
+        console.log("[SWORD-SESSION] candidate=REJECTED baseline="+baselineScore.toFixed(2)+" validation="+candidateScore.toFixed(2));
+      }
+      c.pendingCandidate=null;
+      fs.rmSync(CANDIDATE_BASELINE,{force:true});
+      saveCheckpoint(c);
     }else{
-      appendHistory({type:"candidate_pending_live_validation",round,phase:roundMode,baselineScore,experienceBefore,candidateVersion:candidate?.trainedAt||null});
+      c.bestScore=c.bestScore==null?beforeGate.score:Math.max(c.bestScore,beforeGate.score);
     }
 
     const finalReport=await evaluate();
     const finalGate=gate(finalReport);
     if(finalGate.pass)c.consecutiveMasteryRounds++;else c.consecutiveMasteryRounds=0;
+
+    // Mastery is evaluated on the model actually validated in this round.
+    // Only after that measurement do we generate the next candidate.
+    if(c.consecutiveMasteryRounds<masteryRounds && c.completedRounds+1<c.totalRounds){
+      const baseline=readJson(MODEL,null);
+      if(baseline)writeJson(CANDIDATE_BASELINE,baseline);
+      await optimizeCandidate();
+      const generated=readJson(MODEL,null);
+      const bounded=Number(generated?.policy?.spacing?.attackMax||3.05)<=3.05 &&
+        Number(generated?.policy?.spacing?.attackMax||3.05)>=2.70;
+      if(bounded){
+        c.pendingCandidate={phaseIndex,phase:roundMode,baselineScore:finalGate.score,createdRound:round,candidateVersion:generated?.trainedAt||null};
+        appendHistory({type:"candidate_generated",round,phase:roundMode,baselineScore:finalGate.score,candidateVersion:generated?.trainedAt||null});
+      }else{
+        if(baseline)writeJson(MODEL,baseline);
+        fs.rmSync(CANDIDATE_BASELINE,{force:true});
+        c.rejectedCandidates++;
+        appendHistory({type:"candidate_rejected_bounds",round,phase:roundMode,baselineScore:finalGate.score});
+      }
+    }
+
 
     c.lastScore=finalGate.score;
 n    writeRoundResult(round,roundMode,finalReport,finalGate,candidateAccepted);
