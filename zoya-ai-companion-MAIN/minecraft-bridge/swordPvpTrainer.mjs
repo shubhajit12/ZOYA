@@ -5,6 +5,7 @@
  * It never connects to Minecraft.
  */
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 import {createSwordPvpBrain} from "./swordPvpBrain.mjs";
 const ROOT=path.resolve(process.env.ZOYA_PVP_TRAINING_DIR||"./minecraft-training");
@@ -15,7 +16,7 @@ const VIDEO_SKILLS=path.join(ROOT,"sword","sword-skills.json");
 const required=["sprint_reset","spacing","combo_control","crit_timing","defense","healing"];
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:0;
 async function load(){const d=JSON.parse(await fs.readFile(INPUT,"utf8"));if(!Array.isArray(d.techniques)||!d.techniques.length)throw new Error("No Sword expert demonstrations found.");return d;}
-function loadVideoSkills(){try{const x=JSON.parse(require("node:fs").readFileSync(VIDEO_SKILLS,"utf8"));return Array.isArray(x.skills)?x.skills:[];}catch{return [];}}\nfunction compile(d,videoSkills=[]){
+function loadVideoSkills(){try{const x=JSON.parse(fsSync.readFileSync(VIDEO_SKILLS,"utf8"));return Array.isArray(x.skills)?x.skills:[];}catch{return [];}}\nfunction compile(d,videoSkills=[]){
   const ts=d.techniques,missing=required.filter(c=>!ts.some(t=>t.category===c));
   if(missing.length)throw new Error("Missing required expert categories: "+missing.join(", "));
   const by=c=>ts.find(t=>t.category===c)?.implementation||{};
