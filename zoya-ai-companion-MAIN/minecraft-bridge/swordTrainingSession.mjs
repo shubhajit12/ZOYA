@@ -152,8 +152,18 @@ for(let round=1;round<=rounds;round++){
     if(opponent.exited)break;
   }
   await stopOpponent(opponent);
-  if(!completed)throw new Error("Round "+round+" did not finish normally.");
-  await optimizeRound(round);
+  if(!completed){
+    const check=await (await fetch(bridge+"/task")).json();
+    const reason=String(check?.lastTaskResult?.reason||"unknown");
+    if(reason.startsWith("death")){
+      console.log("[SWORD-SESSION] round="+round+" ended in death; recording failure and continuing training.");
+      await optimizeRound(round);
+    } else {
+      throw new Error("Round "+round+" did not finish normally. reason="+reason+".");
+    }
+  } else {
+    await optimizeRound(round);
+  }
   await sleep(1000);
 }
 console.log("[SWORD-SESSION] rounds completed. Adaptive Sword learning was applied after every round.");
