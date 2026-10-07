@@ -3,7 +3,10 @@
   "private":true,
   "version":"0.1.0",
   "type":"module",
-  "scripts":{"train:sword":"node swordVideoTrainer.mjs"},
+  "scripts":{
+    "train:sword":"node swordVideoTrainer.mjs",
+    "train:sword:brain":"node swordPvpTrainer.mjs"
+  },
   "dependencies":{
     "mineflayer":"4.39.0",
     "minecraft-data":"3.117.0",
