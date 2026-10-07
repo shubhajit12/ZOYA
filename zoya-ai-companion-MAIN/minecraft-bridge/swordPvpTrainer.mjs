@@ -21,12 +21,14 @@ function loadVideoSkills(){try{const x=JSON.parse(fsSync.readFileSync(VIDEO_SKIL
   if(missing.length)throw new Error("Missing required expert categories: "+missing.join(", "));
   const by=c=>ts.find(t=>t.category===c)?.implementation||{};
   const sp=by("spacing"),rs=by("sprint_reset"),co=by("combo_control"),cr=by("crit_timing"),he=by("healing");
+  const videoBy=skill=>videoSkills.find(x=>String(x.skill||"").toLowerCase()===skill)||{};
+  const vh=(skill,key,fallback)=>{const v=Number(videoBy(skill)?.implementation?.[key]);return Number.isFinite(v)?v:fallback;};
   const score={high:1,medium:.7,low:.4};
   return {version:1,brain:"sword",brainVersion:"sword-brain-v1",source:d.source,trainedAt:new Date().toISOString(),trainingMode:"expert-demonstration-imitation",
-    policy:{spacing:{attackMax:Number(sp.attackDistanceCeiling||3.2),neutralMax:Number((sp.neutralDistanceRange||[3,3.8])[1]),pressureMax:Number((sp.preferredDistanceRange||[2.7,3.2])[1])},
-      combat:{attackCooldown:.95,comboMaxDistance:2.9,strafeDurationMs:Number((co.durationMsRange||[120,260])[0]),critMaxDistance:Number(cr.maxDistance||2.8),critCooldown:.95},
-      sprintReset:{durationMs:Math.round(mean(rs.holdMsRange||[60,140])),minMs:Number((rs.holdMsRange||[60,140])[0]),maxMs:Number((rs.holdMsRange||[60,140])[1])},
-      healing:{lowHealth:8,emergencyHealth:5,minimumDistance:Number(he.minimumDistance||4)}},
+    policy:{spacing:{attackMax:Math.min(3.05,Math.max(2.7,vh("spacing","attackDistanceCeiling",Number(sp.attackDistanceCeiling||3.2)))),neutralMax:Number((sp.neutralDistanceRange||[3,3.8])[1]),pressureMax:Number((sp.preferredDistanceRange||[2.7,3.2])[1])},
+      combat:{attackCooldown:.95,comboMaxDistance:2.9,strafeDurationMs:Number((co.durationMsRange||[120,260])[0]),critMaxDistance:Math.min(3,Math.max(2.2,vh("crit_timing","maxDistance",Number(cr.maxDistance||2.8)))),critCooldown:.95},
+      sprintReset:{durationMs:Math.round(mean(rs.holdMsRange||[60,140])),,minMs:Math.max(40,Math.min(180,vh("sprint_reset","holdMsRange",Number((rs.holdMsRange||[60,140])[0])))),maxMs:Number((rs.holdMsRange||[60,140])[1])},
+      healing:{lowHealth:8,emergencyHealth:5,minimumDistance:Math.max(3.5,Math.min(7,vh("healing","minDistance",Number(he.minimumDistance||4))) )}},
     demonstrations:ts.map(t=>({id:t.id,category:t.category,confidence:t.confidence,observed:t.observed,inferred:t.inferred})),
     skillLibrary:videoSkills,skillWeights:Object.fromEntries(required.map(c=>[c,1])),trainingMode:"expert-demonstration-imitation",coverage:{requiredCategories:required,categoriesPresent:required.filter(c=>ts.some(t=>t.category===c)),confidence:mean(ts.map(t=>score[t.confidence]||.5))}};
 }
