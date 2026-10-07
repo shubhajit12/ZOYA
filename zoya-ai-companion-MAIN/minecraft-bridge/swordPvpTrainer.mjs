@@ -27,7 +27,7 @@ function loadVideoSkills(){try{const x=JSON.parse(fsSync.readFileSync(VIDEO_SKIL
   return {version:1,brain:"sword",brainVersion:"sword-brain-v1",source:d.source,trainedAt:new Date().toISOString(),trainingMode:"expert-demonstration-imitation",
     policy:{spacing:{attackMax:Math.min(3.05,Math.max(2.7,vh("spacing","attackDistanceCeiling",Number(sp.attackDistanceCeiling||3.2)))),neutralMax:Number((sp.neutralDistanceRange||[3,3.8])[1]),pressureMax:Number((sp.preferredDistanceRange||[2.7,3.2])[1])},
       combat:{attackCooldown:.95,comboMaxDistance:2.9,strafeDurationMs:Number((co.durationMsRange||[120,260])[0]),critMaxDistance:Math.min(3,Math.max(2.2,vh("crit_timing","maxDistance",Number(cr.maxDistance||2.8)))),critCooldown:.95},
-      sprintReset:{durationMs:Math.round(mean(rs.holdMsRange||[60,140])),,minMs:Math.max(40,Math.min(180,vh("sprint_reset","holdMsRange",Number((rs.holdMsRange||[60,140])[0])))),maxMs:Number((rs.holdMsRange||[60,140])[1])},
+      sprintReset:{durationMs:Math.round(mean(rs.holdMsRange||[60,140])),minMs:Math.max(40,Math.min(180,vh("sprint_reset","holdMsRange",Number((rs.holdMsRange||[60,140])[0])))),maxMs:Number((rs.holdMsRange||[60,140])[1])},
       healing:{lowHealth:8,emergencyHealth:5,minimumDistance:Math.max(3.5,Math.min(7,vh("healing","minDistance",Number(he.minimumDistance||4))) )}},
     demonstrations:ts.map(t=>({id:t.id,category:t.category,confidence:t.confidence,observed:t.observed,inferred:t.inferred})),
     skillLibrary:videoSkills,skillWeights:Object.fromEntries(required.map(c=>[c,1])),trainingMode:"expert-demonstration-imitation",coverage:{requiredCategories:required,categoriesPresent:required.filter(c=>ts.some(t=>t.category===c)),confidence:mean(ts.map(t=>score[t.confidence]||.5))}};
@@ -56,7 +56,8 @@ async function main(){
   const report={status:"TRAINING_COMPLETED",completedAt:new Date().toISOString(),source:data.source,trainingMode:"expert-demonstration-imitation",demonstrations:data.techniques.length,videoSkills:videoSkills.length,categories:model.coverage.categoriesPresent,confidence:model.coverage.confidence,offlineTests:t,minecraftRequired:false,note:"This gate confirms video-derived expert demonstrations were compiled into the Sword Brain and passed deterministic offline tests. Live Minecraft combat evaluation is a later stage."};
   await fs.writeFile(REPORT,JSON.stringify(report,null,2));
   console.log("\n[SWORD-TRAIN] TRAINING COMPLETED");
-  console.log("[SWORD-TRAIN] Expert demonstrations: "+data.techniques.length);\n  console.log("[SWORD-TRAIN] Video skill library: "+videoSkills.length);
+  console.log("[SWORD-TRAIN] Expert demonstrations: "+data.techniques.length);
+  console.log("[SWORD-TRAIN] Video skill library: "+videoSkills.length);
   console.log("[SWORD-TRAIN] Categories: "+model.coverage.categoriesPresent.join(", "));
   console.log("[SWORD-TRAIN] Offline tests: "+t.passed+"/"+t.total);
   console.log("[SWORD-TRAIN] Model: "+MODEL);
