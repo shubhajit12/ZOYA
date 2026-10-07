@@ -36,20 +36,14 @@ jobs:
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           if (Test-Path $bridgeDist) { Remove-Item $bridgeDist -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $bridgeDist | Out-Null
-          Push-Location $bridgeRoot
-          try {
-            npm run train:sword:brain
-            if ($LASTEXITCODE -ne 0) { throw 'Sword PvP offline training failed during bridge packaging.' }
-          } finally { Pop-Location }
           Copy-Item -Path (Join-Path $bridgeRoot '*.mjs') -Destination $bridgeDist -Force
-          Copy-Item -Path (Join-Path $bridgeRoot 'minecraft-training') -Destination $bridgeDist -Recurse -Force
           Copy-Item -Path (Join-Path $bridgeRoot 'package.json') -Destination (Join-Path $bridgeDist 'package.json') -Force
           Push-Location $bridgeDist
           try { npm install --omit=dev --ignore-scripts } finally { Pop-Location }
           foreach ($dependency in @('mineflayer','mineflayer-pathfinder','mineflayer-tool','mineflayer-collectblock','mineflayer-crafting-util')) {
             if (-not (Test-Path (Join-Path $bridgeDist "node_modules/$dependency"))) { throw "Minecraft dependency was not installed: $dependency" }
           }
-          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs','capabilityModes.mjs','minecraft-training/sword/swordPvpModel.json')) {
+          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs','capabilityModes.mjs')) {
             if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Minecraft bridge runtime file is missing: $required" }
           }
 
@@ -59,7 +53,7 @@ jobs:
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           Push-Location $bridgeDist
           try {
-            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','trainingRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpTrainer.mjs','swordTrainingOpponent.mjs','swordTrainingEvaluator.mjs','swordTrainingSession.mjs','swordTrainingOptimizer.mjs','swordPvpController.test.mjs')) {
+            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs')) {
               node --check $file
               if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
             }
@@ -120,33 +114,13 @@ jobs:
             Write-Host "Clean bridge static guards passed: $registeredCapabilities definitions / $logicalHandlerCount handlers + Groq owner-permission controller."
           } finally { Pop-Location }
 
-      - name: Verify executable training integration
-        shell: pwsh
-        run: |
-          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
-          Push-Location $bridgeDist
-          try {
-            foreach ($required in @(
-              'createTrainingRuntime',
-              'executeTechnique',
-              'findApplicable',
-              'minecraft-training.json',
-              'Training mode enabled for',
-              'this is part of this mode',
-              'const training=ctx.runtime?.training;','training?.findApplicable?.','training.executeTechnique'
-            )) {
-              $found = Select-String -Path trainingRuntime.mjs,minecraftRuntime.mjs,capabilityEngine.mjs -Pattern $required -SimpleMatch -Quiet
-              if (-not $found) { throw "Training integration guard failed: $required" }
-            }
-          } finally { Pop-Location }
-
       - name: Verify Mineflayer plugin imports
         shell: pwsh
         run: |
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           Push-Location $bridgeDist
           try {
-            node --input-type=module -e "await import('mineflayer'); await import('mineflayer-pathfinder'); await import('mineflayer-tool'); await import('mineflayer-collectblock'); await import('mineflayer-crafting-util'); await import('./minecraftRuntime.mjs'); await import('./trainingRuntime.mjs'); await import('./zoyaBrain.mjs'); await import('./capabilityModes.mjs'); await import('./capabilityEngine.mjs'); await import('./capabilityTester.mjs'); console.log('Minecraft bridge ESM/plugin smoke test passed.')"
+            node --input-type=module -e "await import('mineflayer'); await import('mineflayer-pathfinder'); await import('mineflayer-tool'); await import('mineflayer-collectblock'); await import('mineflayer-crafting-util'); await import('./minecraftRuntime.mjs'); await import('./zoyaBrain.mjs'); await import('./capabilityModes.mjs'); await import('./capabilityEngine.mjs'); await import('./capabilityTester.mjs'); console.log('Minecraft bridge ESM/plugin smoke test passed.')"
             if ($LASTEXITCODE -ne 0) { throw 'Minecraft bridge ESM/plugin smoke test failed.' }
           } finally { Pop-Location }
 
@@ -182,7 +156,7 @@ jobs:
         shell: pwsh
         run: |
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
-          foreach ($required in @('MinecraftBridge.exe','node.exe','index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','trainingRuntime.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpTrainer.mjs','swordTrainingOpponent.mjs','swordTrainingEvaluator.mjs','swordTrainingSession.mjs','swordTrainingOptimizer.mjs','swordPvpController.test.mjs','minecraft-training/sword/swordPvpModel.json','package.json')) {
+          foreach ($required in @('MinecraftBridge.exe','node.exe','index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','package.json')) {
             if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Final bridge bundle is missing: $required" }
           }
           if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency is missing from final bridge bundle.' }
