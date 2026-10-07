@@ -3,14 +3,16 @@ import {spawn} from "node:child_process";
 import net from "node:net";
 import fs from "node:fs";
 import path from "node:path";
+import {fileURLToPath} from "node:url";
 
 const bridge=process.env.ZOYA_BRIDGE_URL||"http://127.0.0.1:32123";
 const target=process.env.ZOYA_TRAIN_OPPONENT||"ZoyaTrainer";
 const rounds=Math.max(1,Number(process.env.ZOYA_TRAIN_ROUNDS||5));
 const configPath=process.env.ZOYA_MINECRAFT_CONFIG||path.join(process.env.APPDATA||process.cwd(),"com.zoya.aicompanion","minecraft","config.json");
 const mode=process.env.ZOYA_TRAIN_OPPONENT_MODE||"strafe";
-const optimizer=path.join(path.dirname(new URL(import.meta.url).pathname), "swordTrainingOptimizer.mjs").replace(/^\/(\w):/, "$1:");
+const optimizer=path.join(path.dirname(fileURLToPath(import.meta.url)), "swordTrainingOptimizer.mjs");
 const opponentStartTimeoutMs=Math.max(10000,Number(process.env.ZOYA_TRAIN_OPPONENT_START_TIMEOUT_MS||30000));
+const roundMs=Math.max(30000,Number(process.env.ZOYA_TRAIN_ROUND_MS||120000));
 
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 function readConfig(){
@@ -88,7 +90,8 @@ const opponentEnv={
   ZOYA_TRAIN_PORT:String(port),
   ZOYA_TRAIN_OPPONENT:target,
   ZOYA_TRAIN_TARGET:process.env.ZOYA_TRAIN_TARGET||"ZOYA",
-  ZOYA_TRAIN_OPPONENT_MODE:mode
+  ZOYA_TRAIN_OPPONENT_MODE:mode,
+  ZOYA_TRAIN_ROUND_MS:String(roundMs)
 };
 console.log("[SWORD-SESSION] Server="+host+":"+port+" opponent="+target+" mode="+mode+" rounds="+rounds);
 
