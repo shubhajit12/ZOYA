@@ -87,3 +87,4 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
 export default createSwordPvpController;
 
 // Verified build boundary: Sword Kit is the sole owner of Sword PvP main-hand execution.
+// Live trainer feedback is persisted as experience and hot-reloaded between rounds.
