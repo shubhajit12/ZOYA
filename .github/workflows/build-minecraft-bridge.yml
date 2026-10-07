@@ -37,6 +37,7 @@ jobs:
           if (Test-Path $bridgeDist) { Remove-Item $bridgeDist -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $bridgeDist | Out-Null
           Copy-Item -Path (Join-Path $bridgeRoot '*.mjs') -Destination $bridgeDist -Force
+          Copy-Item -Path (Join-Path $bridgeRoot 'swordPvpModel.json') -Destination $bridgeDist -Force
           Copy-Item -Path (Join-Path $bridgeRoot 'package.json') -Destination (Join-Path $bridgeDist 'package.json') -Force
           Push-Location $bridgeDist
           try { npm install --omit=dev --ignore-scripts } finally { Pop-Location }
@@ -156,7 +157,7 @@ jobs:
         shell: pwsh
         run: |
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
-          foreach ($required in @('MinecraftBridge.exe','node.exe','index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','package.json')) {
+          foreach ($required in @('MinecraftBridge.exe','node.exe','index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','swordPvpModel.json','package.json')) {
             if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Final bridge bundle is missing: $required" }
           }
           if (-not (Test-Path (Join-Path $bridgeDist 'node_modules/mineflayer'))) { throw 'Mineflayer dependency is missing from final bridge bundle.' }
