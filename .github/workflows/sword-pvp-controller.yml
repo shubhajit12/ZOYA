@@ -8,6 +8,8 @@ on:
       - "zoya-ai-companion-MAIN/minecraft-bridge/swordPvpController.test.mjs"
       - "zoya-ai-companion-MAIN/minecraft-bridge/package.json"
       - "zoya-ai-companion-MAIN/minecraft-bridge/minecraftRuntime.mjs"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/swordTrainingOptimizer.mjs"
+      - "zoya-ai-companion-MAIN/minecraft-bridge/swordTrainingSession.mjs"
   workflow_dispatch:
 jobs:
   verify-sword-controller:
