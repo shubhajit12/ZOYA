@@ -84,6 +84,28 @@ async function evaluateTraining(){
   const report=JSON.parse(fs.readFileSync("minecraft-training/sword/live/sword-evaluation.json","utf8"));
   return report;
 }
+async function cancelZoyaTask(reason="training round ended"){
+  try{
+    const response=await fetch(bridge+"/cancel",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reason})});
+    if(!response.ok) return false;
+    return true;
+  }catch{return false;}
+}
+async function waitForTaskResultAfterCancel(baselineTaskId,timeoutMs=10000){
+  const deadline=Date.now()+timeoutMs;
+  while(Date.now()<deadline){
+    try{
+      const response=await fetch(bridge+"/task");
+      if(response.ok){
+        const task=await response.json();
+        const resultId=Number(task?.lastTaskResult?.id||0);
+        if(resultId>baselineTaskId && !task?.activeTask) return task.lastTaskResult;
+      }
+    }catch{}
+    await sleep(250);
+  }
+  return null;
+}
 async function stopOpponent(opponent){
   try{opponent.child.kill();}catch{}
   const deadline=Date.now()+5000;
@@ -167,10 +189,18 @@ for(let round=1;round<=rounds;round++){
       completed=true;
       break;
     }
-    if(opponent.exited)break;
+    if(opponent.exited){
+      if(taskStarted){
+        console.log("[SWORD-SESSION] round="+round+" opponent ended; cancelling ZOYA task for a clean round boundary.");
+        await cancelZoyaTask("training opponent ended");
+        await waitForTaskResultAfterCancel(baselineTaskId);
+      }
+      break;
+    }
   }
   await stopOpponent(opponent);
   if(!completed){
+    await cancelZoyaTask("training round timeout");
     const check=await (await fetch(bridge+"/task")).json();
     const reason=String(check?.lastTaskResult?.reason||"unknown");
     if(reason.startsWith("death")){
