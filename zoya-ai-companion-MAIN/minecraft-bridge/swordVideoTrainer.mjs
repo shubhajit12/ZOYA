@@ -4,13 +4,12 @@
  * Local video -> sampled frames -> Groq vision observations -> structured Sword skills.
  * It never connects to Minecraft and never controls the bot.
  *
- * Rate-limit design:
+ * Vision-rate-limit design:
  * - Qwen 3.8 27B charges 2048 input tokens per image.
- * - Free/on-demand organizations may have a much smaller ITPM than the
- *   published model ceiling, so vision requests are one image at a time.
- * - Groq rate-limit headers are used to wait before the next request.
- * - Observations are persisted after every successful frame so a 429 or
- *   interrupted run can resume instead of losing prior work.
+ * - Analyze several sampled frames in one contact-sheet image so the trainer
+ *   uses one image charge per batch instead of one API request per frame.
+ * - Each panel is mapped back to its original frame index and checkpointed.
+ * - Existing observations remain resumable after 429s or interruption.
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -21,14 +20,17 @@ const ROOT = path.resolve(process.env.ZOYA_PVP_TRAINING_DIR || "./minecraft-trai
 const VIDEO_DIR = path.resolve(process.argv[2] || path.join(ROOT, "videos"));
 const OUT_DIR = path.join(ROOT, "sword");
 const FRAMES_DIR = path.join(OUT_DIR, "frames");
+const CONTACT_DIR = path.join(OUT_DIR, "contact-sheets");
 const OBS_FILE = path.join(OUT_DIR, "observations.json");
 const SKILLS_FILE = path.join(OUT_DIR, "sword-skills.json");
 const MODEL = process.env.ZOYA_VISION_MODEL || "qwen/qwen3.8-27b";
 const API_KEY = process.env.GROQ_API_KEY;
 const FPS = Math.max(0.05, Number(process.env.ZOYA_TRAIN_FPS || 0.125));
 const MAX_BYTES = 19 * 1024 * 1024;
-const VISION_INPUT_ESTIMATE = 2300;
+const VISION_INPUT_ESTIMATE = 2048;
 const RETRIES = 5;
+const SHEET_FRAMES = Math.max(2, Math.min(6, Number(process.env.ZOYA_TRAIN_SHEET_FRAMES || 6)));
+const MAX_RETRY_WAIT_MS = 65000;
 const SKILL_SCHEMA = [
   "movement","spacing","sprint_reset","attack_timing","crit_timing",
   "combo_control","target_tracking","repositioning","defense",
@@ -136,6 +138,31 @@ async function sampleVideo(video) {
   };
 }
 
+async function makeContactSheet(items, videoName) {
+  const id = createHash("sha1")
+    .update(videoName + "::" + items.map(x => x.frameIndex).join(","))
+    .digest("hex").slice(0, 12);
+  const listFile = path.join(CONTACT_DIR, id + ".txt");
+  const output = path.join(CONTACT_DIR, id + ".jpg");
+  await fs.mkdir(CONTACT_DIR, { recursive: true });
+  await fs.writeFile(listFile, items.map(x => "file '" + x.file.replace(/'/g, "'\\''") + "'").join("\n"));
+  const cols = Math.min(3, items.length);
+  const rows = Math.ceil(items.length / cols);
+  try {
+    await run("ffmpeg", [
+      "-hide_banner", "-loglevel", "error",
+      "-f", "concat", "-safe", "0", "-i", listFile,
+      "-vf", "tile=" + cols + "x" + rows + ":padding=8:margin=8",
+      "-frames:v", "1", "-q:v", "4", "-y", output
+    ]);
+  } finally {
+    await fs.rm(listFile, { force: true });
+  }
+  const stat = await fs.stat(output);
+  if (stat.size > MAX_BYTES) throw new Error("Contact sheet exceeds API image limit: " + output);
+  return output;
+}
+
 async function imageDataUrl(file) {
   const data = await fs.readFile(file);
   if (data.length > MAX_BYTES) {
@@ -223,10 +250,12 @@ async function groqJson(messages, maxTokens) {
     }
 
     const retryHeader = parseDurationMs(res.headers.get("retry-after"));
-    const retryMs = retryHeader || Math.max(2000, resetAtMs - Date.now() + 750);
+    const requestedWait = retryHeader || Math.max(2000, resetAtMs - Date.now() + 750);
+    const retryMs = Math.min(requestedWait, MAX_RETRY_WAIT_MS);
     console.log(
       "\n[SWORD-TRAIN] Groq 429; retrying in " +
-      Math.ceil(retryMs / 1000) + "s (" + attempt + "/" + RETRIES + ")..."
+      Math.ceil(retryMs / 1000) + "s (" + attempt + "/" + RETRIES + ")" +
+      (requestedWait > retryMs ? " (server delay capped)" : "") + "..."
     );
     await sleep(retryMs);
     remainingInputTokens = null;
@@ -236,22 +265,22 @@ async function groqJson(messages, maxTokens) {
   throw new Error("Groq request failed after retries.");
 }
 
-async function vision(file, videoName, frameIndex) {
+async function visionSheet(file, videoName, items) {
+  const mapping = items.map((x, i) => "panel " + (i + 1) + " = frame " + x.frameIndex).join(", ");
   const content = [{
     type: "text",
     text:
-      "Analyze this single Minecraft Java Sword PvP montage frame. " +
-      "Only report reusable combat behavior that is visually supported. " +
-      "Do not invent key presses or hidden game state. Return JSON: " +
-      "{observations:[{skill,confidence,evidence,likely_goal,timing_notes}]}. " +
-      "skill must be one of: " + SKILL_SCHEMA.join(", ") + ". " +
-      "Prefer concise evidence. Video=" + videoName + ", frame=" + frameIndex
+      "Analyze this Minecraft Java Sword PvP contact sheet. Panels are in reading order. " +
+      mapping + ". Compare adjacent panels where possible. Report only visually supported reusable combat behavior. " +
+      "Do not invent key presses or hidden game state. Return JSON exactly: " +
+      "{frames:[{frameStart,observations:[{skill,confidence,evidence,likely_goal,timing_notes}]}]}. " +
+      "Include one frames entry per panel, even if observations is empty. " +
+      "skill must be one of: " + SKILL_SCHEMA.join(", ") + ". Video=" + videoName
   }, {
     type: "image_url",
     image_url: { url: await imageDataUrl(file) }
   }];
-
-  return groqJson([{ role: "user", content }], 700);
+  return groqJson([{ role: "user", content }], 1200);
 }
 
 async function loadObservations() {
@@ -343,6 +372,7 @@ async function main() {
 
   await requireFfmpeg();
   await fs.mkdir(FRAMES_DIR, { recursive: true });
+  await fs.mkdir(CONTACT_DIR, { recursive: true });
   await fs.mkdir(OUT_DIR, { recursive: true });
 
   const names = (await fs.readdir(VIDEO_DIR))
@@ -361,24 +391,34 @@ async function main() {
       sampled.files.length + " frames"
     );
 
+    const pending = [];
     for (let i = 0; i < sampled.files.length; i++) {
       const key = name + "::fps=" + FPS + "::" + i;
-      if (completed.has(key)) {
-        continue;
-      }
-
-      process.stdout.write(
-        "  analyzing frame " + (i + 1) + "/" + sampled.files.length + "\r"
-      );
-
-      const result = await vision(sampled.files[i], name, i);
-      observations.push({ video: name, fps: FPS, frameStart: i, result });
-      completed.add(key);
-
-      // Resume-safe checkpoint after every successful API call.
-      await saveObservations(observations);
+      if (!completed.has(key)) pending.push({ file: sampled.files[i], frameIndex: i });
     }
 
+    for (let offset = 0, batch = 0; offset < pending.length; offset += SHEET_FRAMES, batch++) {
+      const items = pending.slice(offset, offset + SHEET_FRAMES);
+      const sheet = await makeContactSheet(items, name);
+      process.stdout.write(
+        "  analyzing frames " + items[0].frameIndex + "-" +
+        items[items.length - 1].frameIndex + " (" + items.length + " panels)\r"
+      );
+      const result = await visionSheet(sheet, name, items);
+      const byFrame = new Map(
+        (Array.isArray(result?.frames) ? result.frames : []).map(x => [Number(x.frameStart), x])
+      );
+      for (const item of items) {
+        const fr = byFrame.get(item.frameIndex) || { observations: [] };
+        observations.push({
+          video: name, fps: FPS, frameStart: item.frameIndex,
+          result: { observations: Array.isArray(fr.observations) ? fr.observations : [] },
+          source: "contact_sheet"
+        });
+        completed.add(name + "::fps=" + FPS + "::" + item.frameIndex);
+      }
+      await saveObservations(observations);
+    }
     process.stdout.write("\n");
   }
 
