@@ -3,9 +3,6 @@
  * Single owner of Sword-kit combat decisions and main-hand equipment.
  */
 import fs from "node:fs";
-import pathfinderPackage from "mineflayer-pathfinder";
-
-const { goals } = pathfinderPackage;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function findPlayer(bot,name){const k=String(name||"").trim().toLowerCase();return k?Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===k)?.entity||null:null;}
 function sword(bot){for(const n of ["netherite_sword","diamond_sword","iron_sword","stone_sword","golden_sword","wooden_sword"]){const i=bot.inventory?.items?.().find(x=>String(x?.name||"").toLowerCase()===n);if(i)return i;}return null;}
@@ -24,7 +21,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  const stop=()=>{try{bot.clearControlStates?.();}catch{}};
  const strafe=async(t,dir,ms)=>{await aim(t);bot.setControlState?.("forward",true);bot.setControlState?.("left",dir<0);bot.setControlState?.("right",dir>0);bot.setControlState?.("sprint",true);await wait(clamp(ms||140,80,260));stop();};
  const reset=async()=>{bot.setControlState?.("sprint",false);await wait(resetMs);bot.setControlState?.("sprint",true);};
- const approach=async t=>{if(typeof goals?.GoalFollow!=="function")throw new Error("mineflayer-pathfinder GoalFollow is unavailable.");try{bot.pathfinder.setGoal(new goals.GoalFollow(t,2.7),true);await wait(180);}finally{try{bot.pathfinder.setGoal(null);}catch{}}};
+ const approach=async t=>{if(typeof goals?.GoalFollow!=="function")throw new Error("Sword controller requires runtime-provided mineflayer-pathfinder GoalFollow.");try{bot.pathfinder.setGoal(new goals.GoalFollow(t,2.7),true);await wait(180);}finally{try{bot.pathfinder.setGoal(null);}catch{}}};
  const heal=async()=>{const i=gapple(bot);if(!i)return false;await bot.equip(i,"hand");await bot.consume();log("[SWORD-KIT] owner=controller action=heal item="+i.name);await equipSword();return true;};
  async function run(targetUsername,task){
   state.active=true;state.targetUsername=String(targetUsername||"");state.roundStartedAt=Date.now();log("[SWORD-KIT] owner=controller weapon=sword active target="+state.targetUsername);
