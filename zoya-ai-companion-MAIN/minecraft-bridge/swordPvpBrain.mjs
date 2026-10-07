@@ -14,7 +14,12 @@ export function createSwordPvpBrain(model={}){
   }
   function decide(state={}){
     const {s,c,r,h,weight}=policy();
-    const d=num(state.distance,Infinity), hp=num(state.health,20), cd=clamp(num(state.attackCooldown,1),0,1);\n    // Sword reach is a hard physical boundary. Learned weights may change how\n    // strongly spacing is preferred, but they can never authorize an attack\n    // beyond the configured legitimate sword reach.\n    const hardReach=clamp(num(s.attackMax,3.05),2.70,3.05);\n    const attackWindow=Math.min(hardReach,d);
+    const d=num(state.distance,Infinity), hp=num(state.health,20), cd=clamp(num(state.attackCooldown,1),0,1);
+    // Sword reach is a hard physical boundary. Learned weights may change how
+    // strongly spacing is preferred, but they can never authorize an attack
+    // beyond the configured legitimate sword reach.
+    const hardReach=clamp(num(s.attackMax,3.05),2.70,3.05);
+    const attackWindow=Math.min(hardReach,d);
     const valid=state.targetValid!==false, ground=state.onGround!==false, falling=state.falling===true;
     const recentHit=state.recentHit===true, damaged=state.recentlyDamaged===true;
     const airborne=state.targetAirborne===true, constrained=state.targetConstrained===true;
