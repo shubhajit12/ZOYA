@@ -157,6 +157,7 @@ function gate(report){
   return {accuracy,score,ratio,pass:accuracy>=minAccuracy&&score>=minScore&&ratio>=minDamageRatio};
 }
 function snapshotModel(){return fs.existsSync(MODEL)?fs.readFileSync(MODEL,"utf8"):null;}\nfunction experienceCount(){return fs.existsSync(EXPERIENCE)?fs.readFileSync(EXPERIENCE,"utf8").split(/\\r?\\n/).filter(Boolean).length:0;}\nfunction writeRoundResult(round,phase,report,gateResult,accepted){ensureDirs();fs.appendFileSync(ROUNDS,JSON.stringify({round,phase,report,gate:gateResult,candidateAccepted:accepted,at:new Date().toISOString()})+"\\n");}
+function markExperienceConsumed(){const m=readJson(MODEL,null);if(!m)return;m.trainingState={...(m.trainingState||{}),experienceLines:experienceCount()};writeJson(MODEL,m);}
 function restoreModel(snapshot){
   if(snapshot==null)fs.rmSync(MODEL,{force:true});else fs.writeFileSync(MODEL,snapshot,"utf8");
 }
@@ -290,6 +291,7 @@ async function main(){
         candidateAccepted=false;
         const base=readJson(CANDIDATE_BASELINE,null);
         if(base)writeJson(MODEL,base);
+        markExperienceConsumed();
         c.rejectedCandidates++;
         appendHistory({type:"candidate_rejected",round,phase:roundMode,baselineScore,candidateScore,improvement:candidateScore-baselineScore,gate:beforeGate});
         console.log("[SWORD-SESSION] candidate=REJECTED baseline="+baselineScore.toFixed(2)+" validation="+candidateScore.toFixed(2));
