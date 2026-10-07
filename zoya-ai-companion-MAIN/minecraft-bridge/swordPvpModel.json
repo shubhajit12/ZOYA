@@ -4,7 +4,6 @@
   "brainVersion": "sword-brain-v3",
   "kit": "sword",
   "source": "static-expert-policy",
-  "trainingMode": "disabled",
   "policy": {
     "spacing": {
       "attackMax": 3.05,
