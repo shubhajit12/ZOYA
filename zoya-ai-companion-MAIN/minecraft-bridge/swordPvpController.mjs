@@ -13,18 +13,15 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  if(!bot||!brain?.decide)throw new Error("Sword controller requires bot and Sword Brain.");
  const state={active:false,targetUuid:null,targetUsername:null,weapon:"sword",strategy:null,since:0,lastAttackAt:0,lastTargetHealth:null,lastSelfHealth:null,lastDamageAt:0,lastTakenAt:0,strafeSign:1,roundStartedAt:0,hits:0,attacks:0,damageDealt:0,damageTaken:0};
  let currentModel=model||{};
-  let p=currentModel?.policy||{}, attackIntervalMs=Math.max(600,Number(p.attackIntervalMs||650)), resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160), telemetryPath=String(currentModel?.telemetryPath||"minecraft-training/sword/live/sword-rounds.jsonl"), experiencePath="minecraft-training/sword/live/sword-experience.jsonl";
+  let p=currentModel?.policy||{}, attackIntervalMs=Math.max(600,Number(p.attackIntervalMs||650)), resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);
   const refreshModel=()=>{
     if(!modelPath)return currentModel;
-    try{currentModel=JSON.parse(fs.readFileSync(modelPath,"utf8"));p=currentModel?.policy||{};attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950));resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);telemetryPath=String(currentModel?.telemetryPath||telemetryPath);}catch(error){log("[SWORD-KIT] model reload failed: "+(error?.message||String(error)));}
+    try{currentModel=JSON.parse(fs.readFileSync(modelPath,"utf8"));p=currentModel?.policy||{};attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950));resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);}catch(error){log("[SWORD-KIT] model reload failed: "+(error?.message||String(error)));}
     brain.setModel?.(currentModel);
     return currentModel;
   };
-  const record=event=>{
-    try{fs.mkdirSync("minecraft-training/sword/live",{recursive:true});fs.appendFileSync(experiencePath,JSON.stringify({...event,roundStartedAt:state.roundStartedAt,targetUsername:state.targetUsername,modelVersion:currentModel?.trainedAt||"unknown",at:new Date().toISOString()})+"\n");}catch{}
-  };
  const alive=()=>bot.health==null||Number(bot.health)>0, active=()=>state.active&&(!taskIsActive||taskIsActive());
- const release=reason=>{if(state.active){log("[SWORD-KIT] owner=controller release reason="+reason);if(telemetryPath){try{fs.mkdirSync("minecraft-training/sword/live",{recursive:true});fs.appendFileSync(telemetryPath,JSON.stringify({...state,endedAt:new Date().toISOString(),releaseReason:reason})+"\n");}catch{}}}state.active=false;state.targetUuid=null;state.targetUsername=null;state.strategy=null;try{bot.pathfinder?.setGoal?.(null);}catch{}try{bot.clearControlStates?.();}catch{}};
+ const release=reason=>{if(state.active){log("[SWORD-KIT] owner=controller release reason="+reason);}state.active=false;state.targetUuid=null;state.targetUsername=null;state.strategy=null;try{bot.pathfinder?.setGoal?.(null);}catch{}try{bot.clearControlStates?.();}catch{}};
  const acquire=target=>{const uuid=String(target?.uuid||target?.id||"");if(state.targetUuid!==uuid){state.targetUuid=uuid;state.targetUsername=String(target?.username||target?.name||"");state.since=Date.now();state.strategy="sword_pressure";log("[SWORD-KIT] owner=controller weapon=sword target="+(state.targetUsername||uuid)+" acquired");}};
  const equipSword=async()=>{const i=sword(bot);if(!i)throw new Error("No usable sword in inventory.");if(String(bot.heldItem?.name||"").toLowerCase()!==i.name.toLowerCase()){await bot.equip(i,"hand");log("[SWORD-KIT] owner=controller weapon=sword equipped="+i.name);}return true;};
  const aim=async t=>{if(t?.position)await bot.lookAt(t.position.offset(0,Math.max(.9,Number(t.height||1.2)*.65),0),true);};
@@ -54,12 +51,11 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
     if(!t){release("target_lost");if(task)task.terminationReason="target_lost";return false;}
     if(t.health!=null&&Number(t.health)<=0){release("target_defeated");if(task)task.terminationReason="target_defeated";return true;}
     acquire(t);const d=distance(bot.entity,t),hp=Number(bot.health??20),prev=state.lastTargetHealth,prevSelf=state.lastSelfHealth;
-    if(prev!=null&&Number(t.health)<prev){state.lastDamageAt=Date.now();state.hits++;state.damageDealt+=Math.max(0,prev-Number(t.health));record({event:"hit",damage:Math.max(0,prev-Number(t.health)),distance:d});}
-    if(prevSelf!=null&&hp<prevSelf){state.lastTakenAt=Date.now();state.damageTaken+=Math.max(0,prevSelf-hp);record({event:"taken",damage:Math.max(0,prevSelf-hp),distance:d});} state.lastSelfHealth=hp; state.lastTargetHealth=Number(t.health??prev??20);
+    if(prev!=null&&Number(t.health)<prev){state.lastDamageAt=Date.now();state.hits++;state.damageDealt+=Math.max(0,prev-Number(t.health));}
+    if(prevSelf!=null&&hp<prevSelf){state.lastTakenAt=Date.now();state.damageTaken+=Math.max(0,prevSelf-hp);} state.lastSelfHealth=hp; state.lastTargetHealth=Number(t.health??prev??20);
     const now=Date.now(),cd=clamp((now-state.lastAttackAt)/attackIntervalMs,0,1);
     const decision=brain.decide({targetValid:true,distance:d,health:hp,targetHealth:Number(t.health??20),attackCooldown:cd,recentHit:now-state.lastDamageAt<220,recentlyDamaged:now-state.lastTakenAt<500&&state.lastTakenAt>0,targetAirborne:t.onGround===false,targetConstrained:t.onGround===false,onGround:bot.entity?.onGround!==false,falling:Number(bot.entity?.velocity?.y||0)<-0.08,fallDistance:Number(bot.entity?.fallDistance||0),hasGapple:Boolean(gapple(bot)),emergency:hp<=5,strafeDirection:state.strafeSign>0?"right":"left"});
     log("[SWORD-KIT] owner=controller weapon=sword action="+decision.action+" dist="+d.toFixed(2)+" hp="+hp.toFixed(1));
-    record({event:"decision",action:decision.action,reason:decision.reason,distance:d,health:hp,targetHealth:Number(t.health??0),attackCooldown:cd,recentHit:now-state.lastDamageAt<220,recentlyDamaged:now-state.lastTakenAt<500});
     if(decision.action==="idle")return false;
     if(decision.action==="heal"){await heal();continue;}
     if(decision.action==="approach"){await approach(t);continue;}
@@ -98,7 +94,6 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
       bot.attack(t);
       state.lastAttackAt=Date.now();
       state.attacks++;
-      record({event:"attack",kind:"jump_crit",distance:critDistance,health:hp,targetHealth:Number(t.health??0),fallDistance:critFall});
       await wait(120);
       bot.clearControlStates?.();
       continue;
@@ -111,16 +106,14 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
         continue;
       }
       const attackDistance=distance(bot.entity,t);
-      if(attackDistance>3.05){record({event:"attack_blocked",kind:decision.action,distance:attackDistance,reason:"hard_reach"});continue;}
+      if(attackDistance>3.05){continue;}
       if(decision.action==="falling_crit"&&(bot.entity?.onGround||Number(bot.entity?.velocity?.y||0)>=-0.05||Number(bot.entity?.fallDistance||0)<0.45)){
-        record({event:"crit_blocked",reason:"falling_gate"});
         continue;
       }
       await aim(t);
       bot.attack(t);
       state.lastAttackAt=Date.now();
       state.attacks++;
-      record({event:"attack",kind:decision.action,distance:attackDistance,health:hp,targetHealth:Number(t.health??0),fallDistance:Number(bot.entity?.fallDistance||0)});
       await wait(90);
       continue;
     }
@@ -140,8 +133,3 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  return {state,run,release,setModel:next=>{if(next&&typeof next==="object"){currentModel=next;p=currentModel.policy||{};attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950));resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);}},reloadModel:refreshModel};
 }
 export default createSwordPvpController;
-
-// Verified build boundary: Sword Kit is the sole owner of Sword PvP main-hand execution.
-// Live trainer feedback is persisted as experience and hot-reloaded between rounds.
-// Offline model compilation is verified before bridge packaging.
-// Brain training tests include the learned jump-crit branch.
