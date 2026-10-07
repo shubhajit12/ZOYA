@@ -331,7 +331,7 @@ async function main(){
 
 
     c.lastScore=finalGate.score;
-n    writeRoundResult(round,roundMode,finalReport,finalGate,candidateAccepted);
+    writeRoundResult(round,roundMode,finalReport,finalGate,candidateAccepted);
     c.completedRounds++;
     c.lastCompletedAt=new Date().toISOString();
 
