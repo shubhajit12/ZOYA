@@ -1,44 +1,107 @@
 /**
  * ZOYA Sword PvP Brain
  * Pure decision layer. It never calls Mineflayer directly.
+ *
+ * This is a bounded, state-driven Sword policy. Video observations provide
+ * priors for movement/spacing/tracking; live combat telemetry is the authority
+ * for later adaptation. No video observation can bypass the physical reach cap.
  */
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const num=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
-export const SWORD_BRAIN_VERSION="sword-brain-v2";
+export const SWORD_BRAIN_VERSION="sword-brain-v3";
+
 export function createSwordPvpBrain(model={}){
   let currentModel=model||{};
+
   function policy(){
     const p=currentModel.policy||{},s=p.spacing||{},c=p.combat||{},r=p.sprintReset||{},h=p.healing||{},w=currentModel.skillWeights||{};
     const weight=(name,fallback=1)=>clamp(num(w[name],fallback),0.5,1.5);
     return {p,s,c,r,h,weight};
   }
+
   function decide(state={}){
     const {s,c,r,h,weight}=policy();
-    const d=num(state.distance,Infinity), hp=num(state.health,20), cd=clamp(num(state.attackCooldown,1),0,1);
-    // Sword reach is a hard physical boundary. Learned weights may change how
-    // strongly spacing is preferred, but they can never authorize an attack
-    // beyond the configured legitimate sword reach.
-    const hardReach=clamp(num(s.attackMax,3.05),2.70,3.05);
-    const attackWindow=Math.min(hardReach,d);
-    const valid=state.targetValid!==false, ground=state.onGround!==false, falling=state.falling===true;
-    const recentHit=state.recentHit===true, damaged=state.recentlyDamaged===true;
-    const airborne=state.targetAirborne===true, constrained=state.targetConstrained===true;
+    const d=num(state.distance,Infinity);
+    const hp=num(state.health,20);
+    const cd=clamp(num(state.attackCooldown,1),0,1);
+    const targetHealth=num(state.targetHealth,20);
+    const targetValid=state.targetValid!==false;
+    const ground=state.onGround!==false;
+    const falling=state.falling===true;
+    const airborne=state.targetAirborne===true;
+    const recentHit=state.recentHit===true;
+    const damaged=state.recentlyDamaged===true;
     const gapple=state.hasGapple===true;
-    if(!valid)return{action:"idle",reason:"no_valid_target"};
-    if((state.emergency===true||hp<=num(h.emergencyHealth,5))&&gapple&&d>=num(h.minimumDistance,4.2))return{action:"heal",item:"golden_apple",reason:"emergency_heal_window"};
-    if(hp<=num(h.lowHealth,8)&&gapple&&d>=num(h.minimumDistance,4))return{action:"heal",item:"golden_apple",reason:"low_health_disengagement"};
-    if(recentHit&&cd<0.8&&d<=num(s.pressureMax,3.2)*weight("sprint_reset"))return{action:"sprint_reset",durationMs:clamp(num(r.durationMs,100),num(r.minMs,60),num(r.maxMs,140)),resumeSprint:true,reason:"post_hit_reset"};
-    if(airborne&&d<=num(c.comboMaxDistance,2.9)*weight("combo_control"))return{action:"strafe_pressure",direction:state.strafeDirection==="left"?"right":"left",durationMs:num(c.strafeDurationMs,180),sprint:true,reason:"combo_pressure"};
-    if(!falling&&ground&&d<=num(c.critMaxDistance,2.8)*weight("crit_timing")&&cd>=num(c.critCooldown,0.95)&&!airborne)return{action:"jump_crit",reason:"prepare_falling_crit"};
-    if(falling&&!ground&&d<=num(c.critMaxDistance,2.8)*weight("crit_timing")&&cd>=num(c.critCooldown,0.95)&&(airborne||constrained))return{action:"falling_crit",reason:"gated_crit_window"};
-    if(damaged&&d<=num(s.neutralMax,3.8)*weight("defense"))return{action:"defensive_strafe",direction:state.strafeDirection==="left"?"right":"left",durationMs:160,sprint:true,reason:"damage_recovery"};
-    if(d>Math.min(hardReach, num(s.attackMax,3.05)*weight("spacing")))return{action:"approach",direction:state.strafeDirection||"left",sprint:true,reason:"outside_attack_window"};
-    if(cd>=num(c.attackCooldown,0.95)&&d<=hardReach)return{action:"attack",reason:"valid_attack_window"};
-    return{action:"strafe",direction:state.strafeDirection||"left",durationMs:clamp(num(c.strafeDurationMs,120)/weight("movement"),80,260),sprint:true,reason:"maintain_spacing"};
+    const lineOfSight=state.lineOfSight!==false;
+    const fallDistance=num(state.fallDistance,0);
+
+    if(!targetValid)return{action:"idle",reason:"no_valid_target"};
+
+    // Video evidence strongly supports continuous target tracking. The
+    // controller performs lookAt before every movement/attack action.
+    // Keep the decision layer conservative if the target is not visible.
+    if(!lineOfSight)return{action:"strafe",direction:state.strafeDirection||"left",durationMs:110,sprint:true,reason:"restore_target_tracking"};
+
+    const hardReach=clamp(num(s.attackMax,3.05),2.70,3.05);
+    const pressureMax=clamp(num(s.pressureMax,3.0),2.60,hardReach);
+    const neutralMax=clamp(num(s.neutralMax,3.35),2.90,4.20);
+    const critMax=clamp(num(c.critMaxDistance,2.8),2.30,hardReach);
+    const attackReady=cd>=num(c.attackCooldown,0.95);
+
+    // Survival always outranks pressure. Healing is only allowed after
+    // creating a real gap so ZOYA does not eat while standing in melee range.
+    if((state.emergency===true||hp<=num(h.emergencyHealth,5))&&gapple&&d>=num(h.minimumDistance,4.2))
+      return{action:"heal",item:"golden_apple",reason:"emergency_heal_window"};
+    if(hp<=num(h.lowHealth,8)&&gapple&&d>=num(h.minimumDistance,4))
+      return{action:"heal",item:"golden_apple",reason:"low_health_disengagement"};
+
+    // A fresh hit is a combo-control event: briefly reset sprint, then
+    // re-enter while the opponent is still in the tracked engagement.
+    if(recentHit&&d<=pressureMax*weight("sprint_reset")&&cd<0.82)
+      return{action:"sprint_reset",durationMs:clamp(num(r.durationMs,100),num(r.minMs,60),num(r.maxMs,140)),resumeSprint:true,reason:"post_hit_reset"};
+
+    // Damage received triggers defensive lateral pressure before another
+    // blind swing. This is the recovery behavior seen in the demonstrations.
+    if(damaged&&d<=neutralMax*weight("defense"))
+      return{action:"defensive_strafe",direction:state.strafeDirection==="left"?"right":"left",durationMs:clamp(num(c.defensiveStrafeMs,150),100,240),sprint:true,reason:"damage_recovery"};
+
+    // Falling crits are only attempted when the actual player is descending
+    // and the attack is sufficiently charged. Java crits require falling and
+    // a charged attack; the controller performs the final re-check immediately
+    // before swinging.
+    if(falling&&!ground&&fallDistance>=0.45&&attackReady&&d<=critMax*weight("crit_timing")&&(airborne||state.targetConstrained===true))
+      return{action:"falling_crit",reason:"gated_falling_crit"};
+
+    // Start a jump-crit only when there is a genuine close-range opportunity.
+    // Do not jump merely because the cooldown is ready.
+    if(!falling&&ground&&!airborne&&attackReady&&d<=critMax*weight("crit_timing")&&state.targetVerticalDelta===undefined)
+      return{action:"jump_crit",reason:"prepare_falling_crit"};
+
+    // If the target is airborne, lateral pressure is preferable to charging
+    // directly through it. This uses the video-derived repositioning prior.
+    if(airborne&&d<=pressureMax*weight("combo_control"))
+      return{action:"strafe_pressure",direction:state.strafeDirection==="left"?"right":"left",durationMs:clamp(num(c.strafeDurationMs,150),90,260),sprint:true,reason:"airborne_combo_pressure"};
+
+    // Reach/spacing is a hard constraint. Never authorize a swing beyond
+    // legitimate Sword reach, regardless of learned weights.
+    if(d>hardReach)
+      return{action:"approach",direction:state.strafeDirection||"left",sprint:true,reason:"outside_sword_reach"};
+
+    // At valid range, fully charged attacks take priority. This is the core
+    // damage loop; aim is handled by the controller immediately before attack.
+    if(attackReady&&d<=hardReach)
+      return{action:"attack",reason:"full_charge_attack_window"};
+
+    // When waiting for cooldown, keep the opponent centered and continuously
+    // vary lateral pressure rather than standing still.
+    const duration=clamp(num(c.strafeDurationMs,140)/weight("movement"),80,260);
+    return{action:"strafe",direction:state.strafeDirection||"left",durationMs:duration,sprint:true,reason:"maintain_spacing_and_tracking"};
   }
-  return{version:SWORD_BRAIN_VERSION,decide,setModel:modelNext=>{if(modelNext&&typeof modelNext==="object")currentModel=modelNext;}};
+
+  return{
+    version:SWORD_BRAIN_VERSION,
+    decide,
+    setModel:modelNext=>{if(modelNext&&typeof modelNext==="object")currentModel=modelNext;}
+  };
 }
 export default createSwordPvpBrain;
-
-// Training gate workflow: offline policy validation runs automatically on minecraft branch.
-// Adaptive live rounds hot-reload the learned policy between rounds.
