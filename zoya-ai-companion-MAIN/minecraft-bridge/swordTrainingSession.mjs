@@ -345,10 +345,10 @@ async function main(){
 
     // A pending candidate needs a same-mode validation round next.
     // Once it has been validated, advance to the next curriculum phase.
-    if(c.pendingCandidate){
-      c.phaseIndex=phaseIndex;
+    if(hadPending){
+      c.phaseIndex=(phaseIndex+1)%curriculum.length;
     }else{
-      c.phaseIndex=(c.phaseIndex+1)%curriculum.length;
+      c.phaseIndex=phaseIndex;
     }
     c.round++;
     c.status="paused";
