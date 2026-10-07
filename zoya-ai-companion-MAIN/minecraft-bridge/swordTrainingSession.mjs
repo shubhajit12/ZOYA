@@ -156,7 +156,9 @@ function gate(report){
   const accuracy=Number(report?.attackAccuracy||0),score=Number(report?.score||0),ratio=damageRatio(report);
   return {accuracy,score,ratio,pass:accuracy>=minAccuracy&&score>=minScore&&ratio>=minDamageRatio};
 }
-function snapshotModel(){return fs.existsSync(MODEL)?fs.readFileSync(MODEL,"utf8"):null;}\nfunction experienceCount(){return fs.existsSync(EXPERIENCE)?fs.readFileSync(EXPERIENCE,"utf8").split(/\r?\n/).filter(Boolean).length:0;}\nfunction writeRoundResult(round,phase,report,gateResult,accepted){ensureDirs();fs.appendFileSync(ROUNDS,JSON.stringify({round,phase,report,gate:gateResult,candidateAccepted:accepted,at:new Date().toISOString()})+"\n");}
+function snapshotModel(){return fs.existsSync(MODEL)?fs.readFileSync(MODEL,"utf8"):null;}
+function experienceCount(){return fs.existsSync(EXPERIENCE)?fs.readFileSync(EXPERIENCE,"utf8").split(/\r?\n/).filter(Boolean).length:0;}
+function writeRoundResult(round,phase,report,gateResult,accepted){ensureDirs();fs.appendFileSync(ROUNDS,JSON.stringify({round,phase,report,gate:gateResult,candidateAccepted:accepted,at:new Date().toISOString()})+"\n");}
 function markExperienceConsumed(){const m=readJson(MODEL,null);if(!m)return;m.trainingState={...(m.trainingState||{}),experienceLines:experienceCount()};writeJson(MODEL,m);}
 function restoreModel(snapshot){
   if(snapshot==null)fs.rmSync(MODEL,{force:true});else fs.writeFileSync(MODEL,snapshot,"utf8");
