@@ -68,6 +68,7 @@ jobs:
             $engineSource = Get-Content (Join-Path $bridgeDist 'capabilityEngine.mjs') -Raw
             $modesSource = Get-Content (Join-Path $bridgeDist 'capabilityModes.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
+            $swordControllerSource = Get-Content (Join-Path $bridgeDist 'swordPvpController.mjs') -Raw
             $brainSource = Get-Content (Join-Path $bridgeDist 'zoyaBrain.mjs') -Raw
             $capabilityMarker = [regex]::Match($indexSource, 'manual-capability-v\d+-clean-168-mode-engine-complete-player-actions-\d{4}-\d{2}-\d{2}')
             if (-not $capabilityMarker.Success) { throw 'Capability build marker is missing or invalid.' }
@@ -113,6 +114,9 @@ jobs:
               if ($testerSource -notmatch [regex]::Escape($requiredTesterText)) { throw "Verification guard is missing: $requiredTesterText" }
             }
             if ($runtimeSource -notmatch 'Damage observed; preserving active task ownership.') { throw 'Damage must not globally cancel active Minecraft tasks.' }
+            if ($swordControllerSource -match 'mineflayer-pathfinder') { throw 'Sword controller must not import mineflayer-pathfinder independently; runtime owns the verified plugin exports.' }
+            if ($swordControllerSource -notmatch 'goals\?\.GoalFollow') { throw 'Sword controller is missing runtime-provided GoalFollow validation.' }
+            if ($runtimeSource -notmatch 'createSwordPvpController\(\{[\s\S]*goals,') { throw 'Minecraft runtime is not passing verified pathfinder goals into the Sword controller.' }
             Write-Host "Clean bridge static guards passed: $registeredCapabilities definitions / $logicalHandlerCount handlers + Groq owner-permission controller."
           } finally { Pop-Location }
 
