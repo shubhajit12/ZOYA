@@ -8,7 +8,7 @@ const bot={health:20,inventory:{items:()=>inv},heldItem:null,entity:{id:1,uuid:"
 const brain=createSwordPvpBrain({policy:{spacing:{attackMax:3.2}}});
 assert.equal(brain.decide({targetValid:false}).action,"idle");
 assert.equal(brain.decide({targetValid:true,distance:4,attackCooldown:1}).action,"approach");
-assert.equal(brain.decide({targetValid:true,distance:2.8,attackCooldown:1}).action,"attack");
+assert.equal(brain.decide({targetValid:true,distance:3.0,attackCooldown:1}).action,"attack");
 assert.equal(brain.decide({targetValid:true,distance:2.5,attackCooldown:1,onGround:true,falling:false}).action,"jump_crit");
 let ticks=0;const c=createSwordPvpController({bot,brain,taskIsActive:()=>ticks<1,wait:async()=>{ticks++;},goals,log:()=>{}});
 await c.run("Enemy",{terminationReason:null});
