@@ -312,58 +312,81 @@ function observationKey(item) {
 }
 
 async function synthesize(observations) {
-  // Keep each synthesis input small enough for low ITPM organizations.
-  const compact = observations.map(o => ({
-    video: o.video,
-    frameStart: o.frameStart,
-    observations: o.result?.observations || []
-  }));
+  // Vision analysis is the expensive Groq stage. Do not make a second chain of
+  // LLM calls for synthesis: on free-tier TPM this can immediately 429 after
+  // the video pass. Build a conservative, evidence-preserving skill library
+  // locally from the already-analyzed observations.
+  const grouped = new Map();
 
-  const chunks = [];
-  const maxChars = 12000;
-  let current = [];
+  for (const item of observations) {
+    for (const obs of (item.result?.observations || [])) {
+      const skill = String(obs.skill || "").trim();
+      if (!SKILL_SCHEMA.includes(skill)) continue;
 
-  for (const item of compact) {
-    const candidate = JSON.stringify([...current, item]);
-    if (current.length && candidate.length > maxChars) {
-      chunks.push(current);
-      current = [item];
-    } else {
-      current.push(item);
+      const confidence = Number(obs.confidence);
+      const entry = {
+        skill,
+        confidence: Number.isFinite(confidence) ? confidence : 0.5,
+        evidence: String(obs.evidence || "").trim(),
+        likely_goal: String(obs.likely_goal || "").trim(),
+        timing_notes: String(obs.timing_notes || "").trim(),
+        video: item.video,
+        frameStart: item.frameStart
+      };
+
+      if (!grouped.has(skill)) grouped.set(skill, []);
+      grouped.get(skill).push(entry);
     }
   }
-  if (current.length) chunks.push(current);
 
-  const summaries = [];
-  for (let i = 0; i < chunks.length; i++) {
-    console.log(
-      "[SWORD-TRAIN] synthesizing observation chunk " +
-      (i + 1) + "/" + chunks.length
-    );
-    const result = await groqJson([{
-      role: "user",
-      content:
-        "Summarize these visual Sword PvP observations into reusable, conservative skills. " +
-        "Merge duplicates. Do not invent unsupported mechanics. Return JSON: " +
-        "{skills:[{skill,description,when_to_use,avoid_when,confidence,evidence}]}. " +
-        "Allowed categories: " + SKILL_SCHEMA.join(", ") + "\n" +
-        JSON.stringify(chunks[i])
-    }], 1000);
-    summaries.push(result.skills || []);
+  const skills = [];
+  for (const skill of SKILL_SCHEMA) {
+    const entries = grouped.get(skill);
+    if (!entries?.length) continue;
+
+    entries.sort((x, y) => y.confidence - x.confidence);
+    const top = entries.slice(0, 8);
+    const confidence = top.reduce((sum, x) => sum + x.confidence, 0) / top.length;
+
+    const evidence = [...new Set(
+      top.map(x => x.evidence).filter(Boolean)
+    )].slice(0, 5);
+
+    const goals = [...new Set(
+      top.map(x => x.likely_goal).filter(Boolean)
+    )].slice(0, 3);
+
+    const timing = [...new Set(
+      top.map(x => x.timing_notes).filter(Boolean)
+    )].slice(0, 4);
+
+    skills.push({
+      id: "video-" + skill,
+      name: skill.replace(/_/g, " "),
+      skill,
+      description:
+        "Visually observed Sword PvP behavior for " + skill.replace(/_/g, " ") +
+        "; apply conservatively only when the combat state supports it.",
+      when_to_use: goals.join("; ") || "when the observed combat situation matches this behavior",
+      avoid_when: "when spacing, target state, or timing is not visually supported",
+      confidence: Number(confidence.toFixed(3)),
+      evidence,
+      implementation: {
+        attackDistanceCeiling: 3.05,
+        preferredDistanceRange: null,
+        holdMsRange: null,
+        maxDistance: 3.05,
+        minDistance: null
+      },
+      sourceFrames: top.map(x => ({
+        video: x.video,
+        frameStart: x.frameStart
+      })),
+      timing_notes: timing
+    });
   }
 
-  const mergedInput = summaries.flat();
-  if (!mergedInput.length) return { skills: [] };
-
-  return groqJson([{
-    role: "user",
-    content:
-      "Build the final conservative Sword PvP skill library from these summaries. " +
-      "Merge duplicates and preserve only skills supported by visual evidence. " +
-      "Return JSON: {skills:[{id,name,skill,description,when_to_use,avoid_when,confidence,evidence,implementation:{attackDistanceCeiling,preferredDistanceRange,holdMsRange,maxDistance,minDistance}}]}. " +
-      "Allowed categories: " + SKILL_SCHEMA.join(", ") + "\n" +
-      JSON.stringify(mergedInput)
-  }], 1600);
+  return { skills };
 }
 
 async function main() {
