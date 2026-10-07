@@ -9,7 +9,7 @@ function sword(bot){for(const n of ["netherite_sword","diamond_sword","iron_swor
 function gapple(bot){return bot.inventory?.items?.().find(i=>["enchanted_golden_apple","golden_apple"].includes(String(i?.name||"").toLowerCase()))||null;}
 function distance(a,b){return a?.position&&b?.position?a.position.distanceTo(b.position):Infinity;}
 export function loadSwordModel(modelPath){try{return JSON.parse(fs.readFileSync(modelPath,"utf8"));}catch{return null;}}
-export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{},model=null,modelPath=null}={}){
+export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{},model=null,modelPath=null,goals=null}={}){
  if(!bot||!brain?.decide)throw new Error("Sword controller requires bot and Sword Brain.");
  const state={active:false,targetUuid:null,targetUsername:null,weapon:"sword",strategy:null,since:0,lastAttackAt:0,lastTargetHealth:null,lastSelfHealth:null,lastDamageAt:0,lastTakenAt:0,strafeSign:1,roundStartedAt:0,hits:0,attacks:0,damageDealt:0,damageTaken:0};
  let currentModel=model||{};
@@ -65,8 +65,31 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
     if(decision.action==="approach"){await approach(t);continue;}
     if(decision.action==="sprint_reset"){await reset();continue;}
     if(decision.action==="jump_crit"){
-      await aim(t);bot.setControlState?.("jump",true);bot.setControlState?.("forward",true);await wait(90);bot.setControlState?.("jump",false);await wait(90);
-      await equipSword();await aim(t);bot.attack(t);state.lastAttackAt=Date.now();state.attacks++;record({event:"attack",kind:"jump_crit",distance:d,health:hp,targetHealth:Number(t.health??0)});await wait(90);continue;
+      await equipSword();
+      await aim(t);
+      bot.setControlState?.("forward",true);
+      bot.setControlState?.("sprint",true);
+      bot.setControlState?.("jump",true);
+      await wait(80);
+      bot.setControlState?.("jump",false);
+      // Do not swing merely because the jump key was pressed. Wait for the
+      // real descending phase so this is an actual falling-crit attempt.
+      const critDeadline=Date.now()+700;
+      while(active() && Date.now()<critDeadline){
+        const vy=Number(bot.entity?.velocity?.y||0);
+        const fall=Number(bot.entity?.fallDistance||0);
+        if(!bot.entity?.onGround && vy< -0.05 && fall>=0.55)break;
+        await wait(25);
+      }
+      if(!active())break;
+      await aim(t);
+      bot.attack(t);
+      state.lastAttackAt=Date.now();
+      state.attacks++;
+      record({event:"attack",kind:"jump_crit",distance:d,health:hp,targetHealth:Number(t.health??0),fallDistance:Number(bot.entity?.fallDistance||0)});
+      await wait(120);
+      bot.clearControlStates?.();
+      continue;
     }
     if(decision.action==="attack"||decision.action==="falling_crit"){await equipSword();await aim(t);bot.attack(t);state.lastAttackAt=Date.now();state.attacks++;record({event:"attack",kind:decision.action,distance:d,health:hp,targetHealth:Number(t.health??0)});await wait(90);continue;}
     if(["strafe_pressure","defensive_strafe","strafe"].includes(decision.action)){state.strafeSign*=-1;await strafe(t,state.strafeSign,decision.durationMs||140);continue;}
