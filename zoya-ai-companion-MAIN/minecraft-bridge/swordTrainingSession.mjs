@@ -112,7 +112,14 @@ for(let round=1;round<=rounds;round++){
     const response=await fetch(bridge+"/task");
     if(!response.ok)throw new Error("Bridge /task returned HTTP "+response.status);
     const task=await response.json();
-    if(!task.activeTask){completed=true;break;}
+    if(!task.activeTask){
+      const resultStatus=String(task.lastTaskResult?.status||"").toLowerCase();
+      if(resultStatus && resultStatus!=="completed"){
+        throw new Error("Round "+round+" PvP task ended with status="+resultStatus+".");
+      }
+      completed=true;
+      break;
+    }
     if(opponent.exited)break;
   }
   await stopOpponent(opponent);
