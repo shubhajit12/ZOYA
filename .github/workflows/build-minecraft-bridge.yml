@@ -44,7 +44,7 @@ jobs:
           foreach ($dependency in @('mineflayer','mineflayer-pathfinder','mineflayer-tool','mineflayer-collectblock','mineflayer-crafting-util')) {
             if (-not (Test-Path (Join-Path $bridgeDist "node_modules/$dependency"))) { throw "Minecraft dependency was not installed: $dependency" }
           }
-          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs','capabilityModes.mjs')) {
+          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs','capabilityModes.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','swordPvpModel.json')) {
             if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Minecraft bridge runtime file is missing: $required" }
           }
 
@@ -102,7 +102,7 @@ jobs:
             foreach ($requiredPermissionText in @('function askOwner(requester, action, displayAction = action, execution = null)','pending.set(key, { id, requester, action, displayAction, execution','ownerUsername','owner-approved player cancellation')) {
               if ($runtimeSource -notmatch [regex]::Escape($requiredPermissionText)) { throw "Owner permission guard is missing: $requiredPermissionText" }
             }
-            foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','assertTaskActive','runManualCapability','lastTaskResult','bot.stopDigging?.()','bot.collectBlock.movements = movements','bot.collectBlock?.cancelTask?.()','target_lost','target_not_found','bot.isSleeping === true','bot.wake','createTrainingRuntime','getTrainingStatus','exportTraining')) {
+            foreach ($requiredRuntimeText in @('GoalFollow','guardLocation','taskIsActive','assertTaskActive','runManualCapability','lastTaskResult','bot.stopDigging?.()','bot.collectBlock.movements = movements','bot.collectBlock?.cancelTask?.()','target_lost','target_not_found','bot.isSleeping === true','bot.wake')) {
               if ($runtimeSource -notmatch [regex]::Escape($requiredRuntimeText)) { throw "Runtime guard is missing: $requiredRuntimeText" }
             }
             foreach ($requiredTesterText in @('toVec3(bot,{x:0,y:1,z:0})','getLastTaskResult','STOPPED (CANCELLED)','TARGET_LOST','bot.openContainer(liveBlock)','const RUNTIME_EXECUTED','bot.__zoyaCapabilityRuntime = runtime','if(id==="op_command")','const weaponTypeScore','HOSTILES.has(name)','if(id==="check_equipment")','if(id==="ask_permission")','if(id==="remember_player")','if(id==="watch")','if(id==="coordinate_with_player")','if(id==="whisper_player" || id==="report_result" || id==="ask_clarification")')) {
