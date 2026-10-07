@@ -28,8 +28,17 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
   try{
    await equipSword();
    while(active()){
-    if(!alive()){release("death");return false;}
-    const t=findPlayer(bot,state.targetUsername);
+    if(!alive()){release("death");if(task)task.terminationReason="death";return false;}
+    let t=findPlayer(bot,state.targetUsername);
+    if(!t){
+      const targetDeadline=Date.now()+Math.max(3000,Number(model?.targetAcquireTimeoutMs||10000));
+      log("[SWORD-KIT] waiting for target visibility: "+state.targetUsername);
+      while(active() && Date.now()<targetDeadline){
+        await wait(250);
+        t=findPlayer(bot,state.targetUsername);
+        if(t)break;
+      }
+    }
     if(!t){release("target_lost");if(task)task.terminationReason="target_lost";return false;}
     if(t.health!=null&&Number(t.health)<=0){release("target_defeated");if(task)task.terminationReason="target_defeated";return true;}
     acquire(t);const d=distance(bot.entity,t),hp=Number(bot.health??20),prev=state.lastTargetHealth,prevSelf=state.lastSelfHealth;
@@ -47,7 +56,13 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
     await wait(100);
    }
    return false;
-  }catch(e){if(taskIsActive&&!taskIsActive())return false;if(task)task.terminationReason="controller_error";log("[SWORD-KIT] ERROR: "+(e?.message||String(e)));return false;}
+  }catch(e){
+    if(taskIsActive&&!taskIsActive())return false;
+    const message=String(e?.message||e||"unknown controller error").slice(0,240);
+    if(task)task.terminationReason="controller_error: "+message;
+    log("[SWORD-KIT] ERROR: "+message);
+    return false;
+  }
   finally{release("task_end");}
  }
  return {state,run,release};
