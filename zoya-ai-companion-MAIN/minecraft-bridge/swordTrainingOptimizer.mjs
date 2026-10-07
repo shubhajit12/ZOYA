@@ -28,6 +28,7 @@ const takenDamage=taken.reduce((s,r)=>s+num(r.damage),0);
 const attackRows=rows.filter(r=>r.event==="decision" && r.action==="attack");
 const farAttacks=attackRows.filter(r=>num(r.distance)>3.05).length;
 const closeAttacks=attackRows.filter(r=>num(r.distance)<=2.6).length;
+const totalAttackDecisions=attackRows.length;
 const resetDecisions=decisions.filter(r=>r.action==="sprint_reset").length;
 const critDecisions=decisions.filter(r=>r.action==="falling_crit").length;
 model.skillWeights=model.skillWeights||{};
@@ -36,16 +37,35 @@ for(const k of ["movement","spacing","sprint_reset","attack_timing","crit_timing
 // Each update is bounded so a bad round cannot radically change behavior.
 const reward=accuracy>=0.65?0.035:accuracy>=0.45?0.015:-0.02;
 model.skillWeights.spacing=clamp(model.skillWeights.spacing+(farAttacks? -0.04:reward),0.5,1.5);
+if(model.policy?.spacing && totalAttackDecisions){
+  // Learn the attack-distance ceiling from observed outcomes, but keep the
+  // policy inside legitimate sword reach so a single noisy round cannot
+  // create impossible attacks.
+  const farRate=farAttacks/totalAttackDecisions;
+  const currentCeiling=num(model.policy.spacing.attackMax,3.05);
+  model.policy.spacing.attackMax=clamp(currentCeiling-(farRate*0.08)+(accuracy>=0.65?0.01:0),2.70,3.05);
+}
 model.skillWeights.attack_timing=clamp(model.skillWeights.attack_timing+(accuracy>=0.6?0.03:-0.025),0.5,1.5);
 model.skillWeights.sprint_reset=clamp(model.skillWeights.sprint_reset+(hits.length>=2?0.025:-0.015),0.5,1.5);
+if(model.policy?.sprintReset){
+  const oldReset=num(model.policy.sprintReset.durationMs,100);
+  model.policy.sprintReset.durationMs=clamp(oldReset+(hits.length>=2?3:-4),60,160);
+}
 model.skillWeights.combo_control=clamp(model.skillWeights.combo_control+(hits.length>=3?0.025:-0.01),0.5,1.5);
+if(model.policy?.combat){
+  const oldStrafe=num(model.policy.combat.strafeDurationMs,160);
+  model.policy.combat.strafeDurationMs=clamp(oldStrafe+(hits.length>=3?5:-3),80,260);
+}
 model.skillWeights.crit_timing=clamp(model.skillWeights.crit_timing+(critDecisions&&accuracy>=0.55?0.02:-0.005),0.5,1.5);
 model.skillWeights.defense=clamp(model.skillWeights.defense+(takenDamage>hitDamage&&takenDamage>4?0.035:-0.005),0.5,1.5);
+if(model.policy?.healing && takenDamage>hitDamage&&takenDamage>4){
+  model.policy.healing.minimumDistance=clamp(num(model.policy.healing.minimumDistance,4)+0.2,3.5,7);
+}
 model.skillWeights.movement=clamp(model.skillWeights.movement+(closeAttacks>farAttacks?0.02:-0.015),0.5,1.5);
 model.trainingState={roundsCompleted:num(model.trainingState?.roundsCompleted,0)+1,experienceLines:allRows.length,lastAccuracy:accuracy,lastDamageDealt:hitDamage,lastDamageTaken:takenDamage,lastUpdatedAt:new Date().toISOString()};
 model.trainingMode="adaptive-online-policy";
 model.trainedAt=new Date().toISOString();
-model.learning={accuracy,damageDealt:hitDamage,damageTaken:takenDamage,attacks,hits:hits.length,decisions:decisions.length,farAttacks,resetDecisions,critDecisions};
+model.learning={accuracy,damageDealt:hitDamage,damageTaken:takenDamage,attacks,hits:hits.length,decisions:decisions.length,farAttacks,farAttackRate:totalAttackDecisions?farAttacks/totalAttackDecisions:0,resetDecisions,critDecisions,policyAdaptation:"bounded"};
 fs.writeFileSync(MODEL,JSON.stringify(model,null,2));
 fs.mkdirSync(path.dirname(HISTORY),{recursive:true});
 fs.appendFileSync(HISTORY,JSON.stringify({at:new Date().toISOString(),trainingState:model.trainingState,learning:model.learning,skillWeights:model.skillWeights})+"\n");
