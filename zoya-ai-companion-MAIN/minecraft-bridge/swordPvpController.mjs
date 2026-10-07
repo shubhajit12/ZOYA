@@ -9,10 +9,19 @@ function sword(bot){for(const n of ["netherite_sword","diamond_sword","iron_swor
 function gapple(bot){return bot.inventory?.items?.().find(i=>["enchanted_golden_apple","golden_apple"].includes(String(i?.name||"").toLowerCase()))||null;}
 function distance(a,b){return a?.position&&b?.position?a.position.distanceTo(b.position):Infinity;}
 export function loadSwordModel(modelPath){try{return JSON.parse(fs.readFileSync(modelPath,"utf8"));}catch{return null;}}
-export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{},model=null}={}){
+export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{},model=null,modelPath=null}={}){
  if(!bot||!brain?.decide)throw new Error("Sword controller requires bot and Sword Brain.");
  const state={active:false,targetUuid:null,targetUsername:null,weapon:"sword",strategy:null,since:0,lastAttackAt:0,lastTargetHealth:null,lastSelfHealth:null,lastDamageAt:0,lastTakenAt:0,strafeSign:1,roundStartedAt:0,hits:0,attacks:0,damageDealt:0,damageTaken:0};
- const p=model?.policy||{}, attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950)), resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160), telemetryPath=String(model?.telemetryPath||"minecraft-training/sword/live/sword-rounds.jsonl");
+ let currentModel=model||{};
+  let p=currentModel?.policy||{}, attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950)), resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160), telemetryPath=String(currentModel?.telemetryPath||"minecraft-training/sword/live/sword-rounds.jsonl"), experiencePath="minecraft-training/sword/live/sword-experience.jsonl";
+  const refreshModel=()=>{
+    if(!modelPath)return currentModel;
+    try{currentModel=JSON.parse(fs.readFileSync(modelPath,"utf8"));p=currentModel?.policy||{};attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950));resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);telemetryPath=String(currentModel?.telemetryPath||telemetryPath);}catch(error){log("[SWORD-KIT] model reload failed: "+(error?.message||String(error)));}
+    return currentModel;
+  };
+  const record=event=>{
+    try{fs.mkdirSync("minecraft-training/sword/live",{recursive:true});fs.appendFileSync(experiencePath,JSON.stringify({...event,roundStartedAt:state.roundStartedAt,targetUsername:state.targetUsername,modelVersion:currentModel?.trainedAt||"unknown",at:new Date().toISOString()})+"\n");}catch{}
+  };
  const alive=()=>bot.health==null||Number(bot.health)>0, active=()=>state.active&&(!taskIsActive||taskIsActive());
  const release=reason=>{if(state.active){log("[SWORD-KIT] owner=controller release reason="+reason);if(telemetryPath){try{fs.mkdirSync("minecraft-training/sword/live",{recursive:true});fs.appendFileSync(telemetryPath,JSON.stringify({...state,endedAt:new Date().toISOString(),releaseReason:reason})+"\\n");}catch{}}}state.active=false;state.targetUuid=null;state.targetUsername=null;state.strategy=null;try{bot.pathfinder?.setGoal?.(null);}catch{}try{bot.clearControlStates?.();}catch{}};
  const acquire=target=>{const uuid=String(target?.uuid||target?.id||"");if(state.targetUuid!==uuid){state.targetUuid=uuid;state.targetUsername=String(target?.username||target?.name||"");state.since=Date.now();state.strategy="sword_pressure";log("[SWORD-KIT] owner=controller weapon=sword target="+(state.targetUsername||uuid)+" acquired");}};
@@ -24,6 +33,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  const approach=async t=>{if(typeof goals?.GoalFollow!=="function")throw new Error("Sword controller requires runtime-provided mineflayer-pathfinder GoalFollow.");try{bot.pathfinder.setGoal(new goals.GoalFollow(t,2.7),true);await wait(180);}finally{try{bot.pathfinder.setGoal(null);}catch{}}};
  const heal=async()=>{const i=gapple(bot);if(!i)return false;await bot.equip(i,"hand");await bot.consume();log("[SWORD-KIT] owner=controller action=heal item="+i.name);await equipSword();return true;};
  async function run(targetUsername,task){
+  refreshModel();
   state.active=true;state.targetUsername=String(targetUsername||"");state.roundStartedAt=Date.now();log("[SWORD-KIT] owner=controller weapon=sword active target="+state.targetUsername);
   try{
    await equipSword();
@@ -31,7 +41,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
     if(!alive()){release("death");if(task)task.terminationReason="death";return false;}
     let t=findPlayer(bot,state.targetUsername);
     if(!t){
-      const targetDeadline=Date.now()+Math.max(3000,Number(model?.targetAcquireTimeoutMs||10000));
+      const targetDeadline=Date.now()+Math.max(3000,Number(currentModel?.targetAcquireTimeoutMs||10000));
       log("[SWORD-KIT] waiting for target visibility: "+state.targetUsername);
       while(active() && Date.now()<targetDeadline){
         await wait(250);
@@ -42,16 +52,17 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
     if(!t){release("target_lost");if(task)task.terminationReason="target_lost";return false;}
     if(t.health!=null&&Number(t.health)<=0){release("target_defeated");if(task)task.terminationReason="target_defeated";return true;}
     acquire(t);const d=distance(bot.entity,t),hp=Number(bot.health??20),prev=state.lastTargetHealth,prevSelf=state.lastSelfHealth;
-    if(prev!=null&&Number(t.health)<prev){state.lastDamageAt=Date.now();state.hits++;state.damageDealt+=Math.max(0,prev-Number(t.health));}
-    if(prevSelf!=null&&hp<prevSelf){state.lastTakenAt=Date.now();state.damageTaken+=Math.max(0,prevSelf-hp);} state.lastSelfHealth=hp; state.lastTargetHealth=Number(t.health??prev??20);
+    if(prev!=null&&Number(t.health)<prev){state.lastDamageAt=Date.now();state.hits++;state.damageDealt+=Math.max(0,prev-Number(t.health));record({event:"hit",damage:Math.max(0,prev-Number(t.health)),distance:d});}
+    if(prevSelf!=null&&hp<prevSelf){state.lastTakenAt=Date.now();state.damageTaken+=Math.max(0,prevSelf-hp);record({event:"taken",damage:Math.max(0,prevSelf-hp),distance:d});} state.lastSelfHealth=hp; state.lastTargetHealth=Number(t.health??prev??20);
     const now=Date.now(),cd=clamp((now-state.lastAttackAt)/attackIntervalMs,0,1);
     const decision=brain.decide({targetValid:true,distance:d,health:hp,attackCooldown:cd,recentHit:now-state.lastDamageAt<220,recentlyDamaged:now-state.lastTakenAt<500&&state.lastTakenAt>0,targetAirborne:t.onGround===false,targetConstrained:t.onGround===false,onGround:bot.entity?.onGround!==false,falling:Number(bot.entity?.velocity?.y||0)<-0.08,hasGapple:Boolean(gapple(bot)),emergency:hp<=5,strafeDirection:state.strafeSign>0?"right":"left"});
     log("[SWORD-KIT] owner=controller weapon=sword action="+decision.action+" dist="+d.toFixed(2)+" hp="+hp.toFixed(1));
+    record({event:"decision",action:decision.action,reason:decision.reason,distance:d,health:hp,targetHealth:Number(t.health??0),attackCooldown:cd,recentHit:now-state.lastDamageAt<220,recentlyDamaged:now-state.lastTakenAt<500});
     if(decision.action==="idle")return false;
     if(decision.action==="heal"){await heal();continue;}
     if(decision.action==="approach"){await approach(t);continue;}
     if(decision.action==="sprint_reset"){await reset();continue;}
-    if(decision.action==="attack"||decision.action==="falling_crit"){await equipSword();await aim(t);bot.attack(t);state.lastAttackAt=Date.now();state.attacks++;await wait(90);continue;}
+    if(decision.action==="attack"||decision.action==="falling_crit"){await equipSword();await aim(t);bot.attack(t);state.lastAttackAt=Date.now();state.attacks++;record({event:"attack",hitCandidate:true,distance:d,health:hp,targetHealth:Number(t.health??0)});await wait(90);continue;}
     if(["strafe_pressure","defensive_strafe","strafe"].includes(decision.action)){state.strafeSign*=-1;await strafe(t,state.strafeSign,decision.durationMs||140);continue;}
     await wait(100);
    }
@@ -65,7 +76,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
   }
   finally{release("task_end");}
  }
- return {state,run,release};
+ return {state,run,release,setModel:next=>{if(next&&typeof next==="object"){currentModel=next;p=currentModel.policy||{};attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950));resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);}},reloadModel:refreshModel};
 }
 export default createSwordPvpController;
 
