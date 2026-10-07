@@ -107,11 +107,14 @@ async function durationSeconds(video) {
 async function sampleVideo(video) {
   const id = createHash("sha1").update(video).digest("hex").slice(0, 10);
   const dir = path.join(FRAMES_DIR, id);
+  // Frame directories are generated artifacts. Clear stale samples first so
+  // changing FPS cannot leave old JPEGs mixed with the new sample set.
+  await fs.rm(dir, { recursive: true, force: true });
   await fs.mkdir(dir, { recursive: true });
   const duration = await durationSeconds(video);
   const pattern = path.join(dir, "frame-%06d.jpg");
 
-  // Keep the original default sampling density, but make frames modest in size.
+  // Use the configured sampling density and keep frames modest in size.
   // Groq charges a fixed 2048 input tokens per image for Qwen 3.8 27B, so
   // shrinking the JPEG does not remove the image-token charge.
   await run("ffmpeg", [
@@ -275,7 +278,8 @@ async function saveObservations(observations) {
 }
 
 function observationKey(item) {
-  return String(item.video) + "::" + String(item.frameStart);
+  const fps = item.fps == null ? "legacy" : String(item.fps);
+  return String(item.video) + "::fps=" + fps + "::" + String(item.frameStart);
 }
 
 async function synthesize(observations) {
