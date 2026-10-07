@@ -5,6 +5,9 @@ import toolPackage from "mineflayer-tool";
 import collectBlockPackage from "mineflayer-collectblock";
 import craftingUtilPackage from "mineflayer-crafting-util";
 import { createTrainingRuntime } from "./trainingRuntime.mjs";
+import { createSwordPvpBrain } from "./swordPvpBrain.mjs";
+import { createSwordPvpController, loadSwordModel } from "./swordPvpController.mjs";
+import { fileURLToPath } from "node:url";
 
 const { pathfinder, Movements, goals } = pathfinderPackage;
 const { plugin: toolPlugin } = toolPackage;
@@ -1212,74 +1215,29 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     try { bot.pathfinder.setGoal(null); } catch {}
   }
 
+  let swordPvpController = null;
+  function getSwordPvpController() {
+    if (swordPvpController) return swordPvpController;
+    const bridgeDir = path.dirname(fileURLToPath(import.meta.url));
+    const modelPath = path.join(bridgeDir, "minecraft-training", "sword", "swordPvpModel.json");
+    const model = loadSwordModel(modelPath) || {};
+    const brain = createSwordPvpBrain(model);
+    swordPvpController = createSwordPvpController({
+      bot,
+      brain,
+      model,
+      taskIsActive: () => taskIsActive(activeTask),
+      wait: ms => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0))),
+      log
+    });
+    return swordPvpController;
+  }
+
   async function pvp(targetUsername, task) {
     if (!targetUsername) return false;
-    let hadTarget = false;
-
-    while (taskIsActive(task)) {
-      const target = findPlayerByUsername(targetUsername)?.entity;
-      if (!target) {
-        if (hadTarget && taskIsActive(task)) {
-          task.terminationReason = "target_lost";
-          log("[TASK] pvp target lost: " + String(targetUsername || "unknown"));
-        } else if (taskIsActive(task)) {
-          task.terminationReason = "target_not_found";
-        }
-        return false;
-      }
-      if (target.health != null && target.health <= 0) {
-        task.terminationReason = "target_defeated";
-        return hadTarget;
-      }
-      hadTarget = true;
-
-      let distance = target.position.distanceTo(bot.entity.position);
-      if (distance > 3.1) {
-        // A moving player is a dynamic target. GoalFollow avoids chasing stale
-        // coordinate snapshots and lets Pathfinder continuously track them.
-        bot.pathfinder.setGoal(new goals.GoalFollow(target, 2.7), true);
-        const deadline = Date.now() + 5000;
-        while (taskIsActive(task) && Date.now() < deadline) {
-          const liveTarget = findPlayerByUsername(targetUsername)?.entity;
-          if (!liveTarget) break;
-          distance = liveTarget.position.distanceTo(bot.entity.position);
-          if (distance <= 3.1) break;
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        try { bot.pathfinder.setGoal(null); } catch {}
-        if (!taskIsActive(task)) return false;
-      }
-
-      const liveTarget = findPlayerByUsername(targetUsername)?.entity;
-      if (!liveTarget) {
-        if (hadTarget && taskIsActive(task)) task.terminationReason = "target_lost";
-        return false;
-      }
-      try {
-        await bot.lookAt(
-          liveTarget.position.offset(0, liveTarget.height ? liveTarget.height * 0.75 : 1.4, 0),
-          true
-        );
-        bot.attack(liveTarget);
-      } catch (error) {
-        log("[PVP] Attack failed: " + (error instanceof Error ? error.message : String(error)));
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-      if (!taskIsActive(task)) return false;
-      const postTarget = findPlayerByUsername(targetUsername)?.entity;
-      if (postTarget?.health != null && postTarget.health <= 0) {
-        task.terminationReason = "target_defeated";
-        return true;
-      }
-      if ((bot.health ?? 20) <= 0) {
-        task.terminationReason = "zoya_died";
-        return false;
-      }
-    }
-
-    try { bot.pathfinder.setGoal(null); } catch {}
-    return false;
+    const controller = getSwordPvpController();
+    const result = await controller.run(targetUsername, task);
+    return result === true;
   }
 
   async function runManualCapability(action, operation) {
