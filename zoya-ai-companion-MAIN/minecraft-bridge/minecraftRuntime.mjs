@@ -4,7 +4,6 @@ import pathfinderPackage from "mineflayer-pathfinder";
 import toolPackage from "mineflayer-tool";
 import collectBlockPackage from "mineflayer-collectblock";
 import craftingUtilPackage from "mineflayer-crafting-util";
-import { createTrainingRuntime } from "./trainingRuntime.mjs";
 import { createSwordPvpBrain } from "./swordPvpBrain.mjs";
 import { createSwordPvpController, loadSwordModel } from "./swordPvpController.mjs";
 import { fileURLToPath } from "node:url";
@@ -61,12 +60,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   bot.pathfinder.setMovements(movements);
   if (bot.collectBlock) bot.collectBlock.movements = movements;
 
-  const training = createTrainingRuntime({
-    bot,
-    stateDir,
-    ownerUsername: config?.ownerUsername || "",
-    log
-  });
 
   const memoryPath = path.join(stateDir, MEMORY_FILE);
   const memory = readJson(memoryPath, DEFAULT_MEMORY);
@@ -1219,7 +1212,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   function getSwordPvpController() {
     if (swordPvpController) return swordPvpController;
     const bridgeDir = path.dirname(fileURLToPath(import.meta.url));
-    const modelPath = path.join(bridgeDir, "minecraft-training", "sword", "swordPvpModel.json");
+    const modelPath = path.join(bridgeDir, "swordPvpModel.json");
     const model = loadSwordModel(modelPath) || {};
     const brain = createSwordPvpBrain(model);
     swordPvpController = createSwordPvpController({
@@ -1441,82 +1434,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 {
     const sender = String(username || "").trim();
     const text = String(message || "").trim();
-    if (sender && text && sender.toLowerCase() === ownerKey) {
-      if (/^(?:let's|lets)\s+train(?:\s+(.+))?$/i.test(text)) {
-        const match = text.match(/^(?:let's|lets)\s+train(?:\s+(.+))?$/i);
-        const mode = String(match?.[1] || "pvp").trim().toLowerCase();
-        const result = training.start(sender, mode);
-        if (result.ok) {
-          try { bot.whisper(sender, "[ZOYA] Training mode enabled for " + result.mode + ". Teach me a move, then say \"this is part of this mode\" to save it."); } catch {}
-        } else {
-          try { bot.whisper(sender, "[ZOYA] " + result.error); } catch {}
-        }
-        return true;
-      }
-      if (/^(?:show|list)\s+(?:my\s+)?training(?:\s+techniques)?$/i.test(text)) {
-        const techniques = training.getTechniques?.("pvp") || [];
-        const names = techniques.map(t => t.name).join(", ") || "none yet";
-        try { bot.whisper(sender, "[ZOYA] Learned PvP techniques: " + names); } catch {}
-        return true;
-      }
-      if (/^(?:now\s+)?test(?:\s+the)?\s+(?:training\s+)?mode(?:\s+on\s+me)?$|^now\s+test\s+on\s+me$/i.test(text)) {
-        if (typeof dispatchCapability !== "function") {
-          try { bot.whisper(sender, "[ZOYA] My capability executor is unavailable."); } catch {}
-          return true;
-        }
-        try {
-          const result = await dispatchCapability({
-            bot,
-            runtime: { getActiveTask: () => activeTask },
-            id: "pvp",
-            arg: sender,
-            log
-          });
-          try { bot.whisper(sender, result === true
-            ? "[ZOYA] Testing the PvP mode on you now."
-            : "[ZOYA] I could not start the PvP mode test."); } catch {}
-        } catch (error) {
-          log("[TRAINING] Mode test failed: " + (error instanceof Error ? error.message : String(error)));
-          try { bot.whisper(sender, "[ZOYA] Mode test failed: " + (error instanceof Error ? error.message : String(error))); } catch {}
-        }
-        return true;
-      }
-      if (/^(?:test|try|replay)\s+(?:training|technique)\s+(.+)$/i.test(text)) {
-        const name = text.match(/^(?:test|try|replay)\s+(?:training|technique)\s+(.+)$/i)?.[1]?.trim();
-        const result = await training.executeTechnique(name, { ctx: { bot, assertActive: () => {
-          const task = getActiveTask?.();
-          if (!task || task.cancelled) throw new Error("Training test cancelled.");
-        }} });
-        try { bot.whisper(sender, result.ok ? "[ZOYA] Training technique executed: " + result.technique : "[ZOYA] " + result.error); } catch {}
-        return true;
-      }
-      if (/^(?:stop|end)\s+training$/i.test(text)) {
-        training.stop();
-        try { bot.whisper(sender, "[ZOYA] Training mode stopped."); } catch {}
-        return true;
-      }
-      if (/^(?:this is|save this|add this)\s+(?:a\s+)?(?:part of|to)\s+(?:this|the)\s+mode(?:\s+as\s+(.+))?$/i.test(text) ||
-          /^(?:this is)(?:\s+a)?\s+part of this mode(?:\s+as\s+(.+))?$/i.test(text)) {
-        const match = text.match(/^(?:this is|save this|add this)\s+(?:a\s+)?(?:part of|to)\s+(?:this|the)\s+mode(?:\s+as\s+(.+))?$/i) ||
-          text.match(/^(?:this is)(?:\s+a)?\s+part of this mode(?:\s+as\s+(.+))?$/i);
-        const name = String(match?.[1] || "").trim();
-        const result = training.saveSegment(sender, name);
-        try { bot.whisper(sender, result.ok ? "[ZOYA] Saved learned technique: " + result.technique.name : "[ZOYA] " + result.error); } catch {}
-        return true;
-      }
-      if (/^(?:zoya[, ]*)?(?:when|if)\s+.+\s+copy me(?:\.|!)?$/i.test(text)) {
-        const result = training.setInstruction(sender, text);
-        if (result.ok) {
-          try { bot.whisper(sender, "[ZOYA] Got it. Demonstrate the move now. Say \"this is part of this mode\" when you're finished."); } catch {}
-        } else {
-          try { bot.whisper(sender, "[ZOYA] " + result.error); } catch {}
-        }
-        return true;
-      }
-    }
-  }
-
-
     const rawMessage = String(message || "").trim();
     if (!rawMessage) return false;
 
@@ -1748,14 +1665,6 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
 
   return {
     memory,
-    training,
-    startTraining: training.start,
-    stopTraining: training.stop,
-    setTrainingInstruction: training.setInstruction,
-    saveTrainingSegment: training.saveSegment,
-    getTrainingStatus: training.status,
-    exportTraining: training.exportLibrary,
-    importTraining: training.importLibrary,
     rememberPlayer,
     rememberHome,
     forgetHome,
