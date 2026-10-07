@@ -1228,6 +1228,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       model,
       taskIsActive: () => taskIsActive(activeTask),
       wait: ms => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0))),
+      goals,
       log
     });
     return swordPvpController;
