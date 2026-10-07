@@ -40,7 +40,7 @@ function compile(d,videoSkills=[]){
   const ts=[...(Array.isArray(d.techniques)?d.techniques:[]),...videoTechniques];
   const missing=required.filter(c=>!ts.some(t=>t.category===c));
   if(missing.length)throw new Error("Missing required expert categories: "+missing.join(", "));
-  const by=c=>ts.find(t=>t.category===c)?.implementation||{};
+  const by=c=>videoTechniques.find(t=>t.category===c)?.implementation||ts.find(t=>t.category===c)?.implementation||{};
   const sp=by("spacing"),rs=by("sprint_reset"),co=by("combo_control"),cr=by("crit_timing"),he=by("healing");
   const videoBy=skill=>videoSkills.find(x=>String(x.skill||"").toLowerCase()===skill)||{};
   const vh=(skill,key,fallback)=>{const v=Number(videoBy(skill)?.implementation?.[key]);return Number.isFinite(v)?v:fallback;};
