@@ -1,13 +1,31 @@
 #!/usr/bin/env node
 import fs from "node:fs";
-const file=process.env.ZOYA_SWORD_TELEMETRY||"minecraft-training/sword/live/sword-rounds.jsonl";
-if(!fs.existsSync(file)){console.log("[SWORD-EVAL] No live rounds yet.");process.exit(0);}
-const rows=fs.readFileSync(file,"utf8").split(/\r?\n/).filter(Boolean).map(x=>JSON.parse(x));
-const n=rows.length,attacks=rows.reduce((s,r)=>s+Number(r.attacks||0),0),hits=rows.reduce((s,r)=>s+Number(r.hits||0),0),dealt=rows.reduce((s,r)=>s+Number(r.damageDealt||0),0),taken=rows.reduce((s,r)=>s+Number(r.damageTaken||0),0);
-const accuracy=attacks?hits/attacks:0;
-const score=Math.max(0,Math.min(100,accuracy*45+Math.min(1,dealt/Math.max(1,taken+1))*35+Math.min(1,n/10)*20));
-let model=null;
-try{model=JSON.parse(fs.readFileSync("minecraft-training/sword/swordPvpModel.json","utf8"));}catch{}
-const report={generatedAt:new Date().toISOString(),rounds:n,attacks,hits,attackAccuracy:accuracy,damageDealt:dealt,damageTaken:taken,score:Number(score.toFixed(2)),trainingMode:model?.trainingMode||"unknown",trainingState:model?.trainingState||null,skillWeights:model?.skillWeights||null};
-fs.mkdirSync("minecraft-training/sword/live",{recursive:true});fs.writeFileSync("minecraft-training/sword/live/sword-evaluation.json",JSON.stringify(report,null,2));
-console.log("[SWORD-EVAL] rounds="+n+" attacks="+attacks+" hits="+hits+" accuracy="+(accuracy*100).toFixed(1)+"% damage="+dealt.toFixed(2)+"/"+taken.toFixed(2)+" score="+report.score);
+const live="minecraft-training/sword/live";
+const exp=process.env.ZOYA_SWORD_EXPERIENCE||live+"/sword-experience.jsonl";
+const rounds=live+"/sword-rounds.jsonl";
+const modelFile="minecraft-training/sword/swordPvpModel.json";
+const parse=p=>fs.existsSync(p)?fs.readFileSync(p,"utf8").split(/\r?\n/).filter(Boolean).map(x=>JSON.parse(x)):[];
+const events=parse(exp);
+const roundRows=parse(rounds);
+const keys=[...new Set(events.map(e=>String(e.roundStartedAt||"unknown")))];
+function calc(rows){
+ const attacks=rows.filter(e=>e.event==="attack"),hits=rows.filter(e=>e.event==="hit"),taken=rows.filter(e=>e.event==="taken"),decisions=rows.filter(e=>e.event==="decision");
+ const dealt=hits.reduce((s,e)=>s+Number(e.damage||0),0),damageTaken=taken.reduce((s,e)=>s+Number(e.damage||0),0);
+ const accuracy=attacks.length?hits.length/attacks.length:0;
+ const valid=attacks.filter(e=>Number(e.distance)<=3.05).length;
+ const far=attacks.length-valid;
+ const spacing=attacks.length?valid/attacks.length:1;
+ const damageRatio=damageTaken>0?dealt/damageTaken:dealt>0?2:0;
+ const resets=decisions.filter(e=>e.action==="sprint_reset").length;
+ const crits=attacks.filter(e=>e.kind==="falling_crit"||e.kind==="jump_crit").length;
+ const score=Math.max(0,Math.min(100,accuracy*30+Math.min(1,damageRatio/1.5)*30+spacing*15+Math.min(1,resets/3)*10+Math.min(1,crits/2)*5+(damageTaken<=dealt?10:0)));
+ return {attacks:attacks.length,hits:hits.length,attackAccuracy:accuracy,damageDealt:dealt,damageTaken,damageRatio,spacingQuality:spacing,farAttacks:far,decisions:decisions.length,sprintResets:resets,critAttempts:crits,score:Number(score.toFixed(2))};
+}
+const latestKey=keys.at(-1);
+const latest=latestKey?calc(events.filter(e=>String(e.roundStartedAt||"unknown")===latestKey)):calc([]);
+const cumulative=calc(events);
+let model=null;try{model=JSON.parse(fs.readFileSync(modelFile,"utf8"));}catch{}
+const pass=latest.attackAccuracy>=Number(process.env.ZOYA_TRAIN_MIN_ACCURACY||.55)&&latest.score>=Number(process.env.ZOYA_TRAIN_MIN_SCORE||55)&&latest.damageRatio>=Number(process.env.ZOYA_TRAIN_MIN_DAMAGE_RATIO||1.05);
+const report={generatedAt:new Date().toISOString(),rounds:roundRows.length,latestRoundStartedAt:latestKey||null,latestRound:latest,cumulative,masteryRoundPassed:pass,trainingMode:model?.trainingMode||"unknown",trainingState:model?.trainingState||null,skillWeights:model?.skillWeights||null};
+fs.mkdirSync(live,{recursive:true});fs.writeFileSync(live+"/sword-evaluation.json",JSON.stringify(report,null,2));
+console.log("[SWORD-EVAL] round="+(roundRows.length||"?")+" attacks="+latest.attacks+" hits="+latest.hits+" accuracy="+(latest.attackAccuracy*100).toFixed(1)+"% dealt="+latest.damageDealt.toFixed(2)+" taken="+latest.damageTaken.toFixed(2)+" score="+latest.score+" ratio="+(Number.isFinite(latest.damageRatio)?latest.damageRatio.toFixed(2):"INF")+" masteryRound="+pass);
