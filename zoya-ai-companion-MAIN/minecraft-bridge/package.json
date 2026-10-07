@@ -7,7 +7,9 @@
     "train:sword": "node swordVideoTrainer.mjs",
     "train:sword:brain": "node swordPvpTrainer.mjs",
     "test:sword": "node swordPvpController.test.mjs",
-    "train:sword:opponent": "node swordTrainingOpponent.mjs"
+    "train:sword:opponent": "node swordTrainingOpponent.mjs",
+    "eval:sword": "node swordTrainingEvaluator.mjs",
+    "train:sword:live": "node swordTrainingSession.mjs"
   },
   "dependencies": {
     "mineflayer": "4.39.0",
