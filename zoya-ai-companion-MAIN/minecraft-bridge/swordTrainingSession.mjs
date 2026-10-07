@@ -268,38 +268,33 @@ async function main(){
 
     const before=await evaluate();
     const beforeGate=gate(before);
-    const baselineScore=c.bestScore==null?beforeGate.score:Number(c.bestScore);
-    const preLearnModel=snapshotModel();
-    // Learn only from this completed round. The optimizer consumes the model's
-    // experience offset, so the same telemetry is never applied twice.
+    const baselineModel=snapshotModel();
+    const baselineScore=beforeGate.score;
+    const experienceBefore=experienceCount();
+
     await optimizeCandidate();
     const candidateModel=snapshotModel();
-    const learned=readJson(MODEL,null);
-    const candidateLearning=learned?.learning||{};
-    const candidateScore=Number(beforeGate.score);
-    // A model change is a candidate, not a victory. It is only eligible for
-    // acceptance if it is bounded and does not regress the measured round.
-    const bounded=Number(learned?.policy?.spacing?.attackMax||3.05)<=3.05 &&
-      Number(learned?.policy?.spacing?.attackMax||3.05)>=2.70;
-    const candidateAccepted=bounded && candidateScore>=baselineScore;
-    if(!candidateAccepted){
-      restoreModel(snapshot);
-      advanceExperienceOffset();
+    const candidate=readJson(MODEL,null);
+    const bounded=Number(candidate?.policy?.spacing?.attackMax||3.05)<=3.05 &&
+      Number(candidate?.policy?.spacing?.attackMax||3.05)>=2.70;
+
+    // The optimizer is allowed to generate a candidate, but the round that
+    // generated it is never used to validate it. Validation happens on the
+    // next round after the candidate has actually controlled ZOYA.
+    if(!bounded){
+      restoreModel(baselineModel);
       c.rejectedCandidates++;
-      console.log("[SWORD-SESSION] candidate=REJECTED score="+afterGate.score.toFixed(2)+" best="+best.toFixed(2));
-      appendHistory({type:"candidate_rejected",round,phase:roundMode,score:afterGate.score,bestScore:best,gate:afterGate});
+      appendHistory({type:"candidate_rejected_bounds",round,phase:roundMode,baselineScore,experienceBefore});
     }else{
-      c.acceptedCandidates++;
-      c.bestScore=Math.max(best,afterGate.score);
-      console.log("[SWORD-SESSION] candidate=ACCEPTED score="+afterGate.score.toFixed(2)+" best="+c.bestScore.toFixed(2));
-      appendHistory({type:"candidate_accepted",round,phase:roundMode,score:afterGate.score,bestScore:c.bestScore,gate:afterGate});
+      appendHistory({type:"candidate_pending_live_validation",round,phase:roundMode,baselineScore,experienceBefore,candidateVersion:candidate?.trainedAt||null});
     }
 
     const finalReport=await evaluate();
     const finalGate=gate(finalReport);
     if(finalGate.pass)c.consecutiveMasteryRounds++;else c.consecutiveMasteryRounds=0;
 
-    c.lastScore=finalGate.score;\n    writeRoundResult(round,roundMode,finalReport,finalGate,candidateAccepted);
+    c.lastScore=finalGate.score;
+n    writeRoundResult(round,roundMode,finalReport,finalGate,candidateAccepted);
     c.completedRounds++;
     c.lastCompletedAt=new Date().toISOString();
 
