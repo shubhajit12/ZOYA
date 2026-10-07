@@ -4,16 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "train:sword": "node swordVideoTrainer.mjs",
-    "train:sword:brain": "node swordPvpTrainer.mjs",
-    "train:sword:all": "node swordVideoTrainer.mjs && node swordPvpTrainer.mjs",
-    "test:sword": "node swordPvpController.test.mjs",
-    "train:sword:opponent": "node swordTrainingOpponent.mjs",
-    "eval:sword": "node swordTrainingEvaluator.mjs",
-    "learn:sword": "node swordTrainingOptimizer.mjs",
-    "train:sword:live": "node swordTrainingSession.mjs",
-    "train:sword:video": "node swordVideoTrainer.mjs",
-    "train:sword:prepare": "node swordVideoTrainer.mjs && node swordPvpTrainer.mjs"
+    "test:sword": "node swordPvpController.test.mjs"
   },
   "dependencies": {
     "mineflayer": "4.39.0",
