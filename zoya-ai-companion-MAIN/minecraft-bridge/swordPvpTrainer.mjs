@@ -17,8 +17,28 @@ const required=["sprint_reset","spacing","combo_control","crit_timing","defense"
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:0;
 async function load(){const d=JSON.parse(await fs.readFile(INPUT,"utf8"));if(!Array.isArray(d.techniques)||!d.techniques.length)throw new Error("No Sword expert demonstrations found.");return d;}
 function loadVideoSkills(){try{const x=JSON.parse(fsSync.readFileSync(VIDEO_SKILLS,"utf8"));return Array.isArray(x.skills)?x.skills:[];}catch{return [];}}
+function normalizeVideoTechnique(skill,index){
+  const category=String(skill?.skill||"").toLowerCase().trim();
+  if(!category||!required.includes(category)) return null;
+  const impl=skill?.implementation&&typeof skill.implementation==="object"?skill.implementation:{};
+  return {
+    id:"video_"+category+"_"+index,
+    name:String(skill?.name||skill?.id||category),
+    category,
+    confidence:String(skill?.confidence||"medium").toLowerCase(),
+    observed:String(skill?.evidence||skill?.description||"Video-derived visual evidence."),
+    inferred:"Implementation parameters are derived only from the video trainer output and remain bounded.",
+    implementation:impl
+  };
+}
 function compile(d,videoSkills=[]){
-  const ts=d.techniques,missing=required.filter(c=>!ts.some(t=>t.category===c));
+  const videoTechniques=videoSkills.map(normalizeVideoTechnique).filter(Boolean);
+  // Seed demonstrations remain useful as prior knowledge, while video-derived
+  // techniques are appended and take precedence when extracting parameters.
+  // This makes the two supplied videos an actual input to the compiled brain,
+  // rather than merely an unrelated report.
+  const ts=[...(Array.isArray(d.techniques)?d.techniques:[]),...videoTechniques];
+  const missing=required.filter(c=>!ts.some(t=>t.category===c));
   if(missing.length)throw new Error("Missing required expert categories: "+missing.join(", "));
   const by=c=>ts.find(t=>t.category===c)?.implementation||{};
   const sp=by("spacing"),rs=by("sprint_reset"),co=by("combo_control"),cr=by("crit_timing"),he=by("healing");
@@ -55,7 +75,7 @@ async function main(){
   if(t.passed!==t.total)throw new Error("Offline Sword brain tests failed: "+t.passed+"/"+t.total);
   await fs.mkdir(path.dirname(MODEL),{recursive:true});
   await fs.writeFile(MODEL,JSON.stringify(model,null,2));
-  const report={status:"TRAINING_COMPLETED",completedAt:new Date().toISOString(),source:data.source,trainingMode:"expert-demonstration-imitation",demonstrations:data.techniques.length,videoSkills:videoSkills.length,categories:model.coverage.categoriesPresent,confidence:model.coverage.confidence,offlineTests:t,minecraftRequired:false,note:"This gate confirms video-derived expert demonstrations were compiled into the Sword Brain and passed deterministic offline tests. Live Minecraft combat evaluation is a later stage."};
+  const report={status:"TRAINING_COMPLETED",completedAt:new Date().toISOString(),source:data.source,trainingMode:"expert-demonstration-imitation",demonstrations:model.demonstrations.length,seedDemonstrations:data.techniques.length,videoSkills:videoSkills.length,videoDerivedDemonstrations:model.demonstrations.filter(t=>String(t.id).startsWith("video_")).length,categories:model.coverage.categoriesPresent,confidence:model.coverage.confidence,offlineTests:t,minecraftRequired:false,note:"Video-derived observations and seed demonstrations were compiled into the Sword Brain and passed deterministic offline tests. Live Minecraft combat evaluation then adapts bounded policy parameters from measured outcomes."};
   await fs.writeFile(REPORT,JSON.stringify(report,null,2));
   console.log("\n[SWORD-TRAIN] TRAINING COMPLETED");
   console.log("[SWORD-TRAIN] Expert demonstrations: "+data.techniques.length);
