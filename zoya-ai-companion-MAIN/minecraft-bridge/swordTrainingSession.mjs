@@ -13,6 +13,8 @@ const mode=process.env.ZOYA_TRAIN_OPPONENT_MODE||"strafe";
 const optimizer=path.join(path.dirname(fileURLToPath(import.meta.url)), "swordTrainingOptimizer.mjs");
 const opponentStartTimeoutMs=Math.max(10000,Number(process.env.ZOYA_TRAIN_OPPONENT_START_TIMEOUT_MS||30000));
 const roundMs=Math.max(30000,Number(process.env.ZOYA_TRAIN_ROUND_MS||120000));
+const completionAccuracy=Number(process.env.ZOYA_TRAIN_MIN_ACCURACY||0.55);
+const completionScore=Number(process.env.ZOYA_TRAIN_MIN_SCORE||55);
 
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 function readConfig(){
@@ -73,6 +75,14 @@ async function optimizeRound(round){
   const code=await new Promise(resolve=>child.once("exit",resolve));
   if(code!==0)throw new Error("Adaptive trainer failed after round "+round+".");
   return output;
+}
+async function evaluateTraining(){
+  const child=spawn(process.execPath,["swordTrainingEvaluator.mjs"],{env:process.env,stdio:["ignore","pipe","inherit"]});
+  child.stdout.setEncoding("utf8"); child.stdout.on("data",chunk=>process.stdout.write(chunk));
+  const code=await new Promise(resolve=>child.once("exit",resolve));
+  if(code!==0)throw new Error("Sword evaluator failed.");
+  const report=JSON.parse(fs.readFileSync("minecraft-training/sword/live/sword-evaluation.json","utf8"));
+  return report;
 }
 async function stopOpponent(opponent){
   try{opponent.child.kill();}catch{}
@@ -174,5 +184,14 @@ for(let round=1;round<=rounds;round++){
   }
   await sleep(1000);
 }
+const report=await evaluateTraining();
+const ratio=Number(report.damageTaken)>0?Number(report.damageDealt)/Number(report.damageTaken):Number(report.damageDealt)>0?Infinity:0;
 console.log("[SWORD-SESSION] rounds completed. Adaptive Sword learning was applied after every round.");
-console.log("[SWORD-SESSION] Run npm run eval:sword for the final measured report.");
+if(Number(report.attackAccuracy)>=completionAccuracy&&Number(report.score)>=completionScore&&ratio>=1.05){
+  console.log("[SWORD-SESSION] TRAINING COMPLETED");
+  console.log("[SWORD-SESSION] accuracy="+(Number(report.attackAccuracy)*100).toFixed(1)+"% score="+Number(report.score).toFixed(1)+" damageRatio="+(Number.isFinite(ratio)?ratio.toFixed(2):"INF"));
+} else {
+  console.log("[SWORD-SESSION] TRAINING NOT COMPLETE");
+  console.log("[SWORD-SESSION] Need accuracy>="+(completionAccuracy*100).toFixed(1)+"% score>="+completionScore+" damageRatio>=1.05.");
+  process.exitCode=2;
+}
