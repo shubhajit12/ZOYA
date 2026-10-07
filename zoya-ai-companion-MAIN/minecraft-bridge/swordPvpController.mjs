@@ -54,18 +54,21 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
     if(!t){release("target_lost");if(task)task.terminationReason="target_lost";return false;}
     if(t.health!=null&&Number(t.health)<=0){release("target_defeated");if(task)task.terminationReason="target_defeated";return true;}
     acquire(t);const d=distance(bot.entity,t),hp=Number(bot.health??20),prev=state.lastTargetHealth,prevSelf=state.lastSelfHealth;
-    if(prev!=null&&Number(t.health)<prev){state.lastDamageAt=Date.now();state.hits++;state.damageDealt+=Math.max(0,prev-Number(t.health));record({event:"hit",damage:Math.max(0,prev-Number(t.health)),distance:d});record({event:"hit",damage:Math.max(0,prev-Number(t.health)),distance:d});}
-    if(prevSelf!=null&&hp<prevSelf){state.lastTakenAt=Date.now();state.damageTaken+=Math.max(0,prevSelf-hp);record({event:"taken",damage:Math.max(0,prevSelf-hp),distance:d});record({event:"taken",damage:Math.max(0,prevSelf-hp),distance:d});} state.lastSelfHealth=hp; state.lastTargetHealth=Number(t.health??prev??20);
+    if(prev!=null&&Number(t.health)<prev){state.lastDamageAt=Date.now();state.hits++;state.damageDealt+=Math.max(0,prev-Number(t.health));record({event:"hit",damage:Math.max(0,prev-Number(t.health)),distance:d});}
+    if(prevSelf!=null&&hp<prevSelf){state.lastTakenAt=Date.now();state.damageTaken+=Math.max(0,prevSelf-hp);record({event:"taken",damage:Math.max(0,prevSelf-hp),distance:d});} state.lastSelfHealth=hp; state.lastTargetHealth=Number(t.health??prev??20);
     const now=Date.now(),cd=clamp((now-state.lastAttackAt)/attackIntervalMs,0,1);
     const decision=brain.decide({targetValid:true,distance:d,health:hp,attackCooldown:cd,recentHit:now-state.lastDamageAt<220,recentlyDamaged:now-state.lastTakenAt<500&&state.lastTakenAt>0,targetAirborne:t.onGround===false,targetConstrained:t.onGround===false,onGround:bot.entity?.onGround!==false,falling:Number(bot.entity?.velocity?.y||0)<-0.08,hasGapple:Boolean(gapple(bot)),emergency:hp<=5,strafeDirection:state.strafeSign>0?"right":"left"});
     log("[SWORD-KIT] owner=controller weapon=sword action="+decision.action+" dist="+d.toFixed(2)+" hp="+hp.toFixed(1));
-    record({event:"decision",action:decision.action,reason:decision.reason,distance:d,health:hp,targetHealth:Number(t.health??0),attackCooldown:cd});
     record({event:"decision",action:decision.action,reason:decision.reason,distance:d,health:hp,targetHealth:Number(t.health??0),attackCooldown:cd,recentHit:now-state.lastDamageAt<220,recentlyDamaged:now-state.lastTakenAt<500});
     if(decision.action==="idle")return false;
     if(decision.action==="heal"){await heal();continue;}
     if(decision.action==="approach"){await approach(t);continue;}
     if(decision.action==="sprint_reset"){await reset();continue;}
-    if(decision.action==="attack"||decision.action==="falling_crit"){await equipSword();await aim(t);bot.attack(t);state.lastAttackAt=Date.now();state.attacks++;record({event:"attack",hitCandidate:true,distance:d,health:hp,targetHealth:Number(t.health??0)});await wait(90);continue;}
+    if(decision.action==="jump_crit"){
+      await aim(t);bot.setControlState?.("jump",true);bot.setControlState?.("forward",true);await wait(90);bot.setControlState?.("jump",false);await wait(90);
+      await equipSword();await aim(t);bot.attack(t);state.lastAttackAt=Date.now();state.attacks++;record({event:"attack",kind:"jump_crit",distance:d,health:hp,targetHealth:Number(t.health??0)});await wait(90);continue;
+    }
+    if(decision.action==="attack"||decision.action==="falling_crit"){await equipSword();await aim(t);bot.attack(t);state.lastAttackAt=Date.now();state.attacks++;record({event:"attack",kind:decision.action,distance:d,health:hp,targetHealth:Number(t.health??0)});await wait(90);continue;}
     if(["strafe_pressure","defensive_strafe","strafe"].includes(decision.action)){state.strafeSign*=-1;await strafe(t,state.strafeSign,decision.durationMs||140);continue;}
     await wait(100);
    }
