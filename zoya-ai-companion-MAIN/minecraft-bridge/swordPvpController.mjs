@@ -13,7 +13,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  if(!bot||!brain?.decide)throw new Error("Sword controller requires bot and Sword Brain.");
  const state={active:false,targetUuid:null,targetUsername:null,weapon:"sword",strategy:null,since:0,lastAttackAt:0,lastTargetHealth:null,lastSelfHealth:null,lastDamageAt:0,lastTakenAt:0,strafeSign:1,roundStartedAt:0,hits:0,attacks:0,damageDealt:0,damageTaken:0};
  let currentModel=model||{};
-  let p=currentModel?.policy||{}, attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950)), resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160), telemetryPath=String(currentModel?.telemetryPath||"minecraft-training/sword/live/sword-rounds.jsonl"), experiencePath="minecraft-training/sword/live/sword-experience.jsonl";
+  let p=currentModel?.policy||{}, attackIntervalMs=Math.max(600,Number(p.attackIntervalMs||650)), resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160), telemetryPath=String(currentModel?.telemetryPath||"minecraft-training/sword/live/sword-rounds.jsonl"), experiencePath="minecraft-training/sword/live/sword-experience.jsonl";
   const refreshModel=()=>{
     if(!modelPath)return currentModel;
     try{currentModel=JSON.parse(fs.readFileSync(modelPath,"utf8"));p=currentModel?.policy||{};attackIntervalMs=Math.max(700,Number(p.attackIntervalMs||950));resetMs=clamp(Number(p.sprintReset?.durationMs||100),60,160);telemetryPath=String(currentModel?.telemetryPath||telemetryPath);}catch(error){log("[SWORD-KIT] model reload failed: "+(error?.message||String(error)));}
@@ -36,7 +36,7 @@ export function createSwordPvpController({bot,brain,taskIsActive,wait,log=()=>{}
  async function run(targetUsername,task){
   refreshModel();
   brain.setModel?.(currentModel);
-  state.active=true;state.targetUsername=String(targetUsername||"");state.roundStartedAt=Date.now();log("[SWORD-KIT] owner=controller weapon=sword active target="+state.targetUsername);
+  state.active=true;state.targetUsername=String(targetUsername||"");state.roundStartedAt=Date.now();state.targetUuid=null;state.strategy=null;state.lastAttackAt=0;state.lastTargetHealth=null;state.lastSelfHealth=null;state.lastDamageAt=0;state.lastTakenAt=0;state.strafeSign=1;state.hits=0;state.attacks=0;state.damageDealt=0;state.damageTaken=0;log("[SWORD-KIT] owner=controller weapon=sword active target="+state.targetUsername);
   try{
    await equipSword();
    while(active()){
