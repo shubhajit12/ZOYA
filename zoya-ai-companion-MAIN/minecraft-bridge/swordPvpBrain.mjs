@@ -36,3 +36,4 @@ export function createSwordPvpBrain(model={}){
 export default createSwordPvpBrain;
 
 // Training gate workflow: offline policy validation runs automatically on minecraft branch.
+// Adaptive live rounds hot-reload the learned policy between rounds.
