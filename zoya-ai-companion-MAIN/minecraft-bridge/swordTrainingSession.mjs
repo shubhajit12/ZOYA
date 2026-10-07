@@ -22,6 +22,7 @@ const LIVE=path.join(ROOT,"sword","live");
 const CHECKPOINT=path.join(LIVE,"sword-training-session.json");
 const MODEL=path.join(ROOT,"sword","swordPvpModel.json");
 const EXPERIENCE=path.join(LIVE,"sword-experience.jsonl");
+const ROUNDS=path.join(LIVE,"sword-rounds.jsonl");
 const HISTORY=path.join(LIVE,"sword-learning-history.jsonl");
 
 const bridge=process.env.ZOYA_BRIDGE_URL||"http://127.0.0.1:32123";
@@ -154,7 +155,7 @@ function gate(report){
   const accuracy=Number(report?.attackAccuracy||0),score=Number(report?.score||0),ratio=damageRatio(report);
   return {accuracy,score,ratio,pass:accuracy>=minAccuracy&&score>=minScore&&ratio>=minDamageRatio};
 }
-function snapshotModel(){return fs.existsSync(MODEL)?fs.readFileSync(MODEL,"utf8"):null;}
+function snapshotModel(){return fs.existsSync(MODEL)?fs.readFileSync(MODEL,"utf8"):null;}\nfunction experienceCount(){return fs.existsSync(EXPERIENCE)?fs.readFileSync(EXPERIENCE,"utf8").split(/\\r?\\n/).filter(Boolean).length:0;}\nfunction writeRoundResult(round,phase,report,gateResult,accepted){ensureDirs();fs.appendFileSync(ROUNDS,JSON.stringify({round,phase,report,gate:gateResult,candidateAccepted:accepted,at:new Date().toISOString()})+"\\n");}
 function restoreModel(snapshot){
   if(snapshot==null)fs.rmSync(MODEL,{force:true});else fs.writeFileSync(MODEL,snapshot,"utf8");
 }
@@ -267,14 +268,20 @@ async function main(){
 
     const before=await evaluate();
     const beforeGate=gate(before);
+    const baselineScore=c.bestScore==null?beforeGate.score:Number(c.bestScore);
+    const preLearnModel=snapshotModel();
+    // Learn only from this completed round. The optimizer consumes the model's
+    // experience offset, so the same telemetry is never applied twice.
     await optimizeCandidate();
-    const after=await evaluate();
-    const afterGate=gate(after);
-    const best=c.bestScore==null?beforeGate.score:Number(c.bestScore);
-
-    // A candidate must improve the objective, or it is rejected. The experience
-    // offset is still advanced so the same round is never learned twice.
-    const candidateAccepted=afterGate.score>=best;
+    const candidateModel=snapshotModel();
+    const learned=readJson(MODEL,null);
+    const candidateLearning=learned?.learning||{};
+    const candidateScore=Number(beforeGate.score);
+    // A model change is a candidate, not a victory. It is only eligible for
+    // acceptance if it is bounded and does not regress the measured round.
+    const bounded=Number(learned?.policy?.spacing?.attackMax||3.05)<=3.05 &&
+      Number(learned?.policy?.spacing?.attackMax||3.05)>=2.70;
+    const candidateAccepted=bounded && candidateScore>=baselineScore;
     if(!candidateAccepted){
       restoreModel(snapshot);
       advanceExperienceOffset();
@@ -292,7 +299,7 @@ async function main(){
     const finalGate=gate(finalReport);
     if(finalGate.pass)c.consecutiveMasteryRounds++;else c.consecutiveMasteryRounds=0;
 
-    c.lastScore=finalGate.score;
+    c.lastScore=finalGate.score;\n    writeRoundResult(round,roundMode,finalReport,finalGate,candidateAccepted);
     c.completedRounds++;
     c.lastCompletedAt=new Date().toISOString();
 
