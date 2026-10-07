@@ -57,8 +57,7 @@ async function main(){
   await fs.writeFile(MODEL,JSON.stringify(model,null,2));
   const report={status:"TRAINING_COMPLETED",completedAt:new Date().toISOString(),source:data.source,trainingMode:"expert-demonstration-imitation",demonstrations:data.techniques.length,videoSkills:videoSkills.length,categories:model.coverage.categoriesPresent,confidence:model.coverage.confidence,offlineTests:t,minecraftRequired:false,note:"This gate confirms video-derived expert demonstrations were compiled into the Sword Brain and passed deterministic offline tests. Live Minecraft combat evaluation is a later stage."};
   await fs.writeFile(REPORT,JSON.stringify(report,null,2));
-  console.log("
-[SWORD-TRAIN] TRAINING COMPLETED");
+  console.log("\n[SWORD-TRAIN] TRAINING COMPLETED");
   console.log("[SWORD-TRAIN] Expert demonstrations: "+data.techniques.length);
   console.log("[SWORD-TRAIN] Video skill library: "+videoSkills.length);
   console.log("[SWORD-TRAIN] Categories: "+model.coverage.categoriesPresent.join(", "));
