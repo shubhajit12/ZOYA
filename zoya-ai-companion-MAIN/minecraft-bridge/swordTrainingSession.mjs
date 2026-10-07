@@ -339,8 +339,13 @@ n    writeRoundResult(round,roundMode,finalReport,finalGate,candidateAccepted);
       return;
     }
 
-    // Move to the next curriculum phase only after completing a round.
-    c.phaseIndex=(c.phaseIndex+1)%curriculum.length;
+    // A pending candidate needs a same-mode validation round next.
+    // Once it has been validated, advance to the next curriculum phase.
+    if(c.pendingCandidate){
+      c.phaseIndex=phaseIndex;
+    }else{
+      c.phaseIndex=(c.phaseIndex+1)%curriculum.length;
+    }
     c.round++;
     c.status="paused";
     saveCheckpoint(c);
