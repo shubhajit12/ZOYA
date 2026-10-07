@@ -59,7 +59,7 @@ jobs:
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           Push-Location $bridgeDist
           try {
-            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','trainingRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpTrainer.mjs','swordTrainingOpponent.mjs','swordTrainingEvaluator.mjs','swordTrainingSession.mjs','swordPvpController.test.mjs')) {
+            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','trainingRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpTrainer.mjs','swordTrainingOpponent.mjs','swordTrainingEvaluator.mjs','swordTrainingSession.mjs','swordTrainingOptimizer.mjs','swordPvpController.test.mjs')) {
               node --check $file
               if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
             }
