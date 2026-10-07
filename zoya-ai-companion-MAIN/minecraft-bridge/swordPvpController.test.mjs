@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import {createSwordPvpBrain} from "./swordPvpBrain.mjs";
+import {createSwordPvpController} from "./swordPvpController.mjs";
+const inv=[{name:"netherite_sword",type:1,count:1},{name:"golden_apple",type:2,count:2}];
+const bot={health:20,inventory:{items:()=>inv},heldItem:null,entity:{id:1,uuid:"z",position:{distanceTo:()=>2.8},onGround:true,velocity:{y:0}},players:{Enemy:{username:"Enemy",entity:{id:2,uuid:"e",username:"Enemy",position:{distanceTo:()=>2.8},onGround:true,health:20,height:1.8}}},equip:async i=>{bot.heldItem=i;},lookAt:async()=>{},attack:()=>{},setControlState:()=>{},clearControlStates:()=>{},pathfinder:{setGoal:()=>{}},consume:async()=>{}};
+const brain=createSwordPvpBrain({policy:{spacing:{attackMax:3.2}}});
+assert.equal(brain.decide({targetValid:false}).action,"idle");
+assert.equal(brain.decide({targetValid:true,distance:4,attackCooldown:1}).action,"approach");
+assert.equal(brain.decide({targetValid:true,distance:2.8,attackCooldown:1}).action,"attack");
+let ticks=0;const c=createSwordPvpController({bot,brain,taskIsActive:()=>ticks<1,wait:async()=>{ticks++;},log:()=>{}});
+await c.run("Enemy",{terminationReason:null});
+assert.equal(c.state.active,false);assert.equal(bot.heldItem.name,"netherite_sword");
+console.log("[SWORD-TEST] brain decisions: PASS");
+console.log("[SWORD-TEST] single-owner sword equipment: PASS");
+console.log("[SWORD-TEST] offline controller tests: 2/2");
