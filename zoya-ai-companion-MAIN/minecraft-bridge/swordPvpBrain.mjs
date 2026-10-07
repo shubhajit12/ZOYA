@@ -24,6 +24,7 @@ export function createSwordPvpBrain(model={}){
     if(hp<=num(h.lowHealth,8)&&gapple&&d>=num(h.minimumDistance,4))return{action:"heal",item:"golden_apple",reason:"low_health_disengagement"};
     if(recentHit&&cd<0.8&&d<=num(s.pressureMax,3.2)*weight("sprint_reset"))return{action:"sprint_reset",durationMs:clamp(num(r.durationMs,100),num(r.minMs,60),num(r.maxMs,140)),resumeSprint:true,reason:"post_hit_reset"};
     if(airborne&&d<=num(c.comboMaxDistance,2.9)*weight("combo_control"))return{action:"strafe_pressure",direction:state.strafeDirection==="left"?"right":"left",durationMs:num(c.strafeDurationMs,180),sprint:true,reason:"combo_pressure"};
+    if(!falling&&ground&&d<=num(c.critMaxDistance,2.8)*weight("crit_timing")&&cd>=num(c.critCooldown,0.95)&&!airborne)return{action:"jump_crit",reason:"prepare_falling_crit"};
     if(falling&&!ground&&d<=num(c.critMaxDistance,2.8)*weight("crit_timing")&&cd>=num(c.critCooldown,0.95)&&(airborne||constrained))return{action:"falling_crit",reason:"gated_crit_window"};
     if(damaged&&d<=num(s.neutralMax,3.8)*weight("defense"))return{action:"defensive_strafe",direction:state.strafeDirection==="left"?"right":"left",durationMs:160,sprint:true,reason:"damage_recovery"};
     if(d>num(s.attackMax,3.2)*weight("spacing"))return{action:"approach",direction:state.strafeDirection||"left",sprint:true,reason:"outside_attack_window"};
