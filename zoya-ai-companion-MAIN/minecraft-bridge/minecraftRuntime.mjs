@@ -1229,6 +1229,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
       taskIsActive: () => taskIsActive(activeTask),
       wait: ms => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0))),
       goals,
+      modelPath,
       log
     });
     return swordPvpController;
@@ -1237,6 +1238,7 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   async function pvp(targetUsername, task) {
     if (!targetUsername) return false;
     const controller = getSwordPvpController();
+    controller.reloadModel?.();
     const result = await controller.run(targetUsername, task);
     return result === true;
   }
