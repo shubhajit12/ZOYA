@@ -2,6 +2,11 @@ name: Build Minecraft Bridge Only
 
 on:
   workflow_dispatch:
+  push:
+    branches: [minecraft]
+    paths:
+      - "zoya-ai-companion-MAIN/minecraft-bridge/**"
+      - ".github/workflows/build-minecraft-bridge.yml"
 
 jobs:
   build-minecraft-bridge:
