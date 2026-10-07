@@ -2,9 +2,8 @@
  * ZOYA Sword PvP Brain
  * Pure decision layer. It never calls Mineflayer directly.
  *
- * This is a bounded, state-driven Sword policy. Video observations provide
- * priors for movement/spacing/tracking; live combat telemetry is the authority
- * for later adaptation. No video observation can bypass the physical reach cap.
+ * This is a bounded, state-driven Sword policy. It uses fixed expert-derived
+ * priorities and never bypasses the physical Sword reach cap.
  */
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const num=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
@@ -37,8 +36,7 @@ export function createSwordPvpBrain(model={}){
 
     if(!targetValid)return{action:"idle",reason:"no_valid_target"};
 
-    // Video evidence strongly supports continuous target tracking. The
-    // controller performs lookAt before every movement/attack action.
+    // The controller performs lookAt before every movement/attack action.
     // Keep the decision layer conservative if the target is not visible.
     if(!lineOfSight)return{action:"strafe",direction:state.strafeDirection||"left",durationMs:110,sprint:true,reason:"restore_target_tracking"};
 
@@ -78,12 +76,12 @@ export function createSwordPvpBrain(model={}){
       return{action:"jump_crit",reason:"prepare_falling_crit"};
 
     // If the target is airborne, lateral pressure is preferable to charging
-    // directly through it. This uses the video-derived repositioning prior.
+    // directly through it.
     if(airborne&&d<=pressureMax*weight("combo_control"))
       return{action:"strafe_pressure",direction:state.strafeDirection==="left"?"right":"left",durationMs:clamp(num(c.strafeDurationMs,150),90,260),sprint:true,reason:"airborne_combo_pressure"};
 
     // Reach/spacing is a hard constraint. Never authorize a swing beyond
-    // legitimate Sword reach, regardless of learned weights.
+    // legitimate Sword reach, regardless of policy weights.
     if(d>hardReach)
       return{action:"approach",direction:state.strafeDirection||"left",sprint:true,reason:"outside_sword_reach"};
 
