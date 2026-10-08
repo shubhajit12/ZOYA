@@ -53,7 +53,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     enemyTotemWasEquipped:false,enemyTotemPopUntil:0,
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
-    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,
+    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0
   };
 
@@ -129,6 +129,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     await sleep(520);
     stop();
     state.strafe*=-1;
+    state.emergencyRetreatUntil=Date.now()+2600;
+    return true;
+  };
+
+  const spacingRetreat=async t=>{
+    if(!t)return false;
+    await lookAtTarget(t,.04);
+    bot.setControlState("back",true);
+    bot.setControlState("sprint",true);
+    await sleep(230);
+    stop();
     return true;
   };
 
@@ -523,7 +534,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const d=dist(bot.entity,live);
         const vy=num(bot.entity?.velocity?.y);
         const fallDistance=num(bot.entity?.fallDistance);
+        if(isAirborne(bot.entity)){
+          await lookAtTarget(live,.04);
+          // During descent, close the horizontal gap instead of waiting
+          // stationary for the target to wander into the smash radius.
+          bot.setControlState("forward",true);
+          bot.setControlState("sprint",true);
+        }
         if(isAirborne(bot.entity)&&vy<-.08&&fallDistance>1.5&&d>=2.35&&d<=3.1){
+          stop();
           return await maceSmash(live);
         }
         await sleep(25);
@@ -668,6 +687,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const onElytra=e=>{if(e===bot.entity)state.elytraFlying=true};
     state.pearlCooldownUntil=0;
     state.maceEscapeCooldownUntil=0;
+    state.emergencyRetreatUntil=0;
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
@@ -762,6 +782,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           pearlAmbushReady:pearlReady("ambush",t),
           maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
+          emergencyRetreatUntil:state.emergencyRetreatUntil,
 
           badPosition:Boolean(hazard()||d>14||!lineOfSight),
           totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
@@ -804,6 +825,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             break;
           }
           case "emergency_disengage": ok=await emergencyDisengage(t);break;
+          case "spacing_retreat": ok=await spacingRetreat(t);break;
           case "pearl_escape":
             ok=await throwPearl(t,"escape");
             if(ok) state.maceEscapeCooldownUntil=Date.now()+2600;
