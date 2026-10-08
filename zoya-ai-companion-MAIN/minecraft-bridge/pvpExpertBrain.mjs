@@ -72,6 +72,7 @@ export function createPvpExpertBrain(){
       if(has(c,"pearl")&&d>=4.2)
         return {action:"pearl_escape",style:"utility",priority:9700,reason:"emergency_escape"};
     }
+    if(c.enemyBurstThreat&&has(c,"totem")&&!c.totemEquipped) return {action:"totem",style:"utility",priority:9850,reason:"burst_threat_totem"};
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
@@ -82,7 +83,7 @@ export function createPvpExpertBrain(){
     if(e.shield&&has(c,"axe")&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
     if(e.usingItem&&e.shield&&has(c,"axe")&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
     if(e.totemPopped&&d<=5&&has(c,"burst")) return {action:"finish",style:styleMemory,priority:9300,reason:"totem_pop_finish"};
-    if(e.totemPopped&&d>5&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
+    if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
 
     // Genuine Elytra + mace sequence. It outranks ordinary mace only when the
@@ -90,7 +91,7 @@ export function createPvpExpertBrain(){
     if(c.windMaceReady&&invHas(c,"wind_charge")&&invHas(c,"mace")&&d<=7&&!e.airborne)
       return {action:"wind_mace_launch",style:"mace",priority:9050,reason:"wind_charge_mace_setup"};
 
-    if(has(c,"elytraMace")&&c.elytraMaceReady&&invHas(c,"mace")){
+    if(has(c,"elytraMace")&&c.elytraMaceReady&&c.elytraLaunchReady&&invHas(c,"mace")){
       if(d>=7||c.heightAdvantage) return {action:"elytra_mace",style:"elytra",priority:9100,reason:"elytra_mace_setup"};
     }
 
@@ -106,7 +107,7 @@ export function createPvpExpertBrain(){
 
     if((styleMemory==="bow"||styleMemory==="crossbow")&&d>=7&&c.lineOfSight)
       return {action:"ranged_attack",style:styleMemory,priority:7600,reason:"ranged_spacing"};
-    if(d>=8&&e.retreating&&has(c,"pearl")&&has(c,"burst"))
+    if(d>=6&&d<=12&&e.retreating&&has(c,"pearl")&&has(c,"burst"))
       return {action:"pearl_ambush",style:"utility",priority:7500,reason:"close_retreat"};
 
     if(styleMemory==="spear"&&has(c,"spear")&&d>=3&&d<=4.75&&attackReady)
