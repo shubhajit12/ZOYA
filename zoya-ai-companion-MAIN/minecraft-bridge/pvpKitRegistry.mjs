@@ -4,8 +4,7 @@
  * A kit is a complete PvP discipline. The active kit owns combat decisions
  * and, once wired into the runtime, the main-hand/equipment action domain.
  *
- * This file intentionally contains no live combat behavior yet. It is the
- * stable contract that video-derived skills will plug into.
+ * This file is the stable discipline registry for the live unified PvP Expert executor.\n * Combat behavior is implemented by pvpExpertBrain.mjs and pvpExpertController.mjs.
  */
 export const PVP_KITS = Object.freeze({
   sword:Object.freeze({id:"sword",displayName:"Sword PvP",status:"active",skillGroups:Object.freeze(["spacing","sprint_reset","crit_timing","combo_control","tracking","repositioning","defense","healing","recovery"])}),
@@ -17,7 +16,7 @@ export const PVP_KITS = Object.freeze({
   bow:Object.freeze({id:"bow",displayName:"Bow PvP",status:"active",skillGroups:Object.freeze(["trajectory","prediction","spacing","pressure"])}),
   crossbow:Object.freeze({id:"crossbow",displayName:"Crossbow PvP",status:"active",skillGroups:Object.freeze(["trajectory","prediction","burst","spacing"])}),
   shield:Object.freeze({id:"shield",displayName:"Shield Combat",status:"active",skillGroups:Object.freeze(["projectile_defense","melee_defense","timing"])}),
-  elytra:Object.freeze({id:"elytra",displayName:"Elytra Combat",status:"planned-gated",skillGroups:Object.freeze(["flight","mace","rocket","trajectory","recovery"])}),
+  elytra:Object.freeze({id:"elytra",displayName:"Elytra Combat",status:"active",skillGroups:Object.freeze(["flight","mace","rocket","trajectory","recovery"])}),
   utility:Object.freeze({id:"utility",displayName:"PvP Utility",status:"active",skillGroups:Object.freeze(["healing","pearls","totem","water","debuff","environment","recovery"])})
 });
 export function normalizePvpKit(value) {
