@@ -4,8 +4,7 @@ import pathfinderPackage from "mineflayer-pathfinder";
 import toolPackage from "mineflayer-tool";
 import collectBlockPackage from "mineflayer-collectblock";
 import craftingUtilPackage from "mineflayer-crafting-util";
-import { createSwordPvpBrain } from "./swordPvpBrain.mjs";
-import { createSwordPvpController, loadSwordModel } from "./swordPvpController.mjs";
+import { createPvpExpertController } from "./pvpExpertController.mjs";
 import { fileURLToPath } from "node:url";
 
 const { pathfinder, Movements, goals } = pathfinderPackage;
@@ -1208,30 +1207,22 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     try { bot.pathfinder.setGoal(null); } catch {}
   }
 
-  let swordPvpController = null;
-  function getSwordPvpController() {
-    if (swordPvpController) return swordPvpController;
-    const bridgeDir = path.dirname(fileURLToPath(import.meta.url));
-    const modelPath = path.join(bridgeDir, "swordPvpModel.json");
-    const model = loadSwordModel(modelPath) || {};
-    const brain = createSwordPvpBrain(model);
-    swordPvpController = createSwordPvpController({
+  let pvpExpertController = null;
+  function getPvpExpertController() {
+    if (pvpExpertController) return pvpExpertController;
+    pvpExpertController = createPvpExpertController({
       bot,
-      brain,
-      model,
-      taskIsActive: () => taskIsActive(activeTask),
-      wait: ms => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0))),
       goals,
-      modelPath,
+      taskIsActive: () => taskIsActive(activeTask),
+      waitFn: ms => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0))),
       log
     });
-    return swordPvpController;
+    return pvpExpertController;
   }
 
   async function pvp(targetUsername, task) {
     if (!targetUsername) return false;
-    const controller = getSwordPvpController();
-    controller.reloadModel?.();
+    const controller = getPvpExpertController();
     const result = await controller.run(targetUsername, task);
     return result === true;
   }
