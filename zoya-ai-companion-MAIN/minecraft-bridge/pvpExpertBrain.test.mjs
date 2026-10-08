@@ -84,3 +84,36 @@ console.log("PvP Expert expanded deterministic tests passed.");
 }
 
 console.log("PvP Expert burst/pearl/Elytra gating tests passed.");
+
+
+{
+  const d=makeBrain().decide({...base,distance:4.5,enemyMaceThreat:true,pearlEscapeReady:true});
+  assert.equal(d.action,"pearl_escape","an active mace threat should trigger a defensive pearl when a safe pearl is available");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:3.2,enemyMaceThreat:true,pearlEscapeReady:false,totemEquipped:false});
+  assert.equal(d.action,"totem","without a safe pearl, burst defense must pre-arm the totem");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:2.8,selfMaceSmashReady:true,attackReadyAt:0});
+  assert.equal(d.action,"mace_dive","a real falling mace window must select the smash executor");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:5,windMaceSmashReady:true,attackReadyAt:0});
+  assert.equal(d.action,"wind_mace_launch","wind charge + mace should be a chained smash action, not a standalone wind throw");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:8,recoveryPearlReady:true,pearlEscapeReady:true,knockbacked:true});
+  assert.equal(d.action,"pearl_recover","recovery pearl should be available for severe displacement");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:8,enemy:{...base.enemy,retreating:true},pearlAmbushReady:false,capabilities:{...base.capabilities,pearl:true,burst:true}});
+  assert.notEqual(d.action,"pearl_ambush","offensive pearl must be blocked when the controller has not validated a safe landing");
+}
+
+console.log("PvP Expert tactical pearl/mace regression tests passed.");
