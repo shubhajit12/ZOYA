@@ -1,0 +1,39 @@
+/**
+ * ZOYA PvP difficulty profiles.
+ *
+ * TheobaldTheBot is a closed implementation, so these are behavioral targets
+ * based on its publicly observable practice-bot settings/mechanics rather than
+ * copied source. No randomness or adaptive learning is used.
+ */
+export const PVP_DIFFICULTIES=Object.freeze({
+  easy:Object.freeze({
+    id:"easy",styleLockMs:1800,strafeMs:190,sprintResetMs:100,
+    wTap:true,sTap:false,jumpReset:false,predictLead:.08,
+    attackRange:3.05,critMinRange:2.45,aggression:1
+  }),
+  normal:Object.freeze({
+    id:"normal",styleLockMs:1300,strafeMs:165,sprintResetMs:95,
+    wTap:true,sTap:true,jumpReset:true,predictLead:.1,
+    attackRange:3.05,critMinRange:2.45,aggression:1.05
+  }),
+  hard:Object.freeze({
+    id:"hard",styleLockMs:850,strafeMs:145,sprintResetMs:90,
+    wTap:true,sTap:true,jumpReset:true,predictLead:.12,
+    attackRange:3.05,critMinRange:2.45,aggression:1.1
+  }),
+  impossible:Object.freeze({
+    id:"impossible",styleLockMs:450,strafeMs:120,sprintResetMs:82,
+    wTap:true,sTap:true,jumpReset:true,predictLead:.14,
+    attackRange:3.05,critMinRange:2.45,aggression:1.18
+  })
+});
+
+export const THEO_PVP_DIFFICULTY=Object.freeze({
+  ...PVP_DIFFICULTIES.impossible,
+  id:"theobald-impossible"
+});
+
+export function resolvePvpDifficulty(value){
+  const key=String(value||"impossible").toLowerCase();
+  return PVP_DIFFICULTIES[key]||THEO_PVP_DIFFICULTY;
+}
