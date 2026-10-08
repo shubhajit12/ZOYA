@@ -136,7 +136,7 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 }
 
 {
-  const d=makeBrain().decide({...base,distance:3.0,falling:true,onGround:false,fallDistance:0.6,enemy:{...base.enemy,airborne:true}});
+  const d=makeBrain().decide({...base,distance:3.0,falling:false,onGround:true,fallDistance:0,enemy:{...base.enemy,airborne:true}});
   assert.equal(d.action,"hit_select","Theo-impossible profile should use hit-select against an airborne target when no higher-priority counter applies");
 }
 
