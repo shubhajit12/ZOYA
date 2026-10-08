@@ -4,6 +4,7 @@
  * Mineflayer 4.39.x / Minecraft 1.21.x baseline.
  */
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
+import { Vec3 } from "vec3";
 
 const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,Number(ms)||0)));
 const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
@@ -17,7 +18,7 @@ const ITEMS=Object.freeze({
   bow:["bow"], crossbow:["crossbow"], shield:["shield"], pearl:["ender_pearl"],
   totem:["totem_of_undying"], heal:["enchanted_golden_apple","golden_apple"],
   water:["water_bucket"], lava:["lava_bucket"], crystal:["end_crystal"], anchor:["respawn_anchor"],
-  glowstone:["glowstone"], obsidian:["obsidian"], web:["cobweb"], wind:["wind_charge"],
+  glowstone:["glowstone"], obsidian:["obsidian"], web:["cobweb"], shears:["shears"], wind:["wind_charge"],
   rod:["fishing_rod"], firework:["firework_rocket"], elytra:["elytra"],
   potion:["splash_potion","lingering_potion"]
 });
@@ -317,7 +318,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(selfDamage!=null&&enemyDamage!=null&&selfDamage>Math.max(6,enemyDamage*.8))return false;
     await equip("crystal");
     try{
-      await bot.placeEntity(base,new (await import("vec3")).Vec3(0,1,0));
+      await bot.placeEntity(base,new Vec3(0,1,0));
       await sleep(180);
       const crystals=Object.values(bot.entities||{}).filter(e=>String(e.name||"").toLowerCase()==="end_crystal"&&e.position.distanceTo(crystalPos)<1.4);
       const c=crystals.sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
