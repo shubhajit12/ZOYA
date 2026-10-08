@@ -1,74 +1,493 @@
 /**
- * ZOYA Unified PvP Expert Controller.
- * Single physical combat authority; no training/learning.
+ * ZOYA Unified PvP Expert Controller v2.
+ * Single physical combat authority. No training or adaptive learning.
+ * Mineflayer 4.39.x / Minecraft 1.21.x baseline.
  */
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
+
 const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,Number(ms)||0)));
 const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
-const name=i=>String(i?.name||"").toLowerCase();
+const lname=v=>String(v?.name||v?.displayName||"").toLowerCase();
+
 const ITEMS=Object.freeze({
- sword:["netherite_sword","diamond_sword","iron_sword","stone_sword","golden_sword","wooden_sword"],
- axe:["netherite_axe","diamond_axe","iron_axe","stone_axe","golden_axe","wooden_axe"],
- mace:["mace"], spear:["netherite_spear","diamond_spear","iron_spear","stone_spear","golden_spear","wooden_spear","spear"],
- bow:["bow"],crossbow:["crossbow"],shield:["shield"],pearl:["ender_pearl"],totem:["totem_of_undying"],
- heal:["enchanted_golden_apple","golden_apple"],water:["water_bucket"],crystal:["end_crystal"],anchor:["respawn_anchor"],
- glowstone:["glowstone"],obsidian:["obsidian"],web:["cobweb"],wind:["wind_charge"]
+  sword:["netherite_sword","diamond_sword","iron_sword","stone_sword","golden_sword","wooden_sword"],
+  axe:["netherite_axe","diamond_axe","iron_axe","stone_axe","golden_axe","wooden_axe"],
+  mace:["mace"],
+  spear:["netherite_spear","diamond_spear","iron_spear","stone_spear","golden_spear","wooden_spear","spear"],
+  bow:["bow"], crossbow:["crossbow"], shield:["shield"], pearl:["ender_pearl"],
+  totem:["totem_of_undying"], heal:["enchanted_golden_apple","golden_apple"],
+  water:["water_bucket"], lava:["lava_bucket"], crystal:["end_crystal"], anchor:["respawn_anchor"],
+  glowstone:["glowstone"], obsidian:["obsidian"], web:["cobweb"], wind:["wind_charge"],
+  rod:["fishing_rod"], firework:["firework_rocket"], elytra:["elytra"],
+  potion:["splash_potion","lingering_potion"]
 });
-function item(bot,type){return bot.inventory?.items?.().find(i=>ITEMS[type]?.includes(name(i)))||null}
-function count(bot,type){return bot.inventory?.items?.().filter(i=>ITEMS[type]?.includes(name(i))).reduce((s,i)=>s+num(i.count),0)||0}
+
+function inv(bot){return bot.inventory?.items?.()||[]}
+function item(bot,type){return inv(bot).find(i=>ITEMS[type]?.includes(lname(i)))||null}
+function count(bot,type){return inv(bot).filter(i=>ITEMS[type]?.includes(lname(i))).reduce((n,i)=>n+num(i.count),0)}
 function has(bot,type){return Boolean(item(bot,type))}
-function targetOf(bot,u){const w=String(u||"").toLowerCase();return Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===w)?.entity||null}
-function dist(bot,t){return bot.entity?.position&&t?.position?bot.entity.position.distanceTo(t.position):Infinity}
+function dist(a,b){return a?.position&&b?.position?a.position.distanceTo(b.position):Infinity}
+function targetOf(bot,u){
+  const w=String(u||"").toLowerCase();
+  return Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===w)?.entity||null;
+}
+function speed(e){return Math.hypot(num(e?.velocity?.x),num(e?.velocity?.z))}
+function isAirborne(e){return e?.onGround===false}
+function isElytraItem(i){return lname(i)==="elytra"}
 
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{}}={}){
- if(!bot)throw new Error("PvP Expert Controller requires bot");
- const brain=createPvpExpertBrain();
- const state={active:false,targetUsername:null,style:null,action:null,lastAttackAt:0,lastHealth:20,lastTargetHealth:null,strafe:1,attackCount:0,hits:0,damageDealt:0,damageTaken:0,terminationReason:null,lastDecisionLogAt:0,lastLoggedStyle:null,lastLoggedAction:null};
- const stop=()=>{try{bot.pathfinder?.setGoal?.(null)}catch{} try{bot.clearControlStates?.()}catch{}};
- const equip=async type=>{const i=item(bot,type);if(!i)return false;if(name(bot.heldItem)!==name(i))await bot.equip(i,"hand");return true};
- const look=async t=>{if(t?.position)await bot.lookAt(t.position.offset(0,Math.max(.9,num(t.height,1.8)*.62),0),true)};
- const approach=async t=>{if(!goals?.GoalFollow)return false;try{bot.pathfinder.setGoal(new goals.GoalFollow(t,2.7),true);await sleep(170);return true}finally{try{bot.pathfinder.setGoal(null)}catch{}}};
- const strafe=async(t,sign,ms=150)=>{await look(t);bot.setControlState("forward",true);bot.setControlState(sign<0?"left":"right",true);bot.setControlState("sprint",true);await sleep(ms);stop()};
- const melee=async(t,type)=>{if(!await equip(type))return false;const max=type==="spear"?4.8:type==="mace"?3.1:3.15;if(dist(bot,t)>max)return false;await look(t);bot.attack(t);state.lastAttackAt=Date.now();state.attackCount++;await sleep(90);return true};
- const heal=async()=>{const i=item(bot,"heal");if(!i)return false;stop();await bot.equip(i,"hand");await bot.consume();const w=has(bot,"sword")?"sword":has(bot,"axe")?"axe":has(bot,"mace")?"mace":has(bot,"spear")?"spear":null;if(w)await equip(w);return true};
- const shield=async()=>{if(!await equip("shield"))return false;bot.activateItem();await sleep(220);bot.deactivateItem();return true};
- const ranged=async(t,type)=>{if(!await equip(type))return false;await look(t);bot.activateItem();await sleep(type==="bow"?1100:100);bot.deactivateItem();return true};
- const crit=async t=>{if(!await equip("sword"))return false;bot.setControlState("forward",true);bot.setControlState("sprint",true);bot.setControlState("jump",true);await sleep(70);bot.setControlState("jump",false);const end=Date.now()+650;while(state.active&&Date.now()<end){if(bot.entity?.onGround===false&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45)break;await sleep(25)}if(bot.entity?.onGround!==false||num(bot.entity.velocity?.y)>=-.05||num(bot.entity.fallDistance)<.45||dist(bot,t)>3.05){stop();return false}await look(t);bot.attack(t);state.lastAttackAt=Date.now();state.attackCount++;stop();return true};
- const run=async(username,task)=>{
-  state.active=true;state.targetUsername=String(username||"");state.lastHealth=num(bot.health,20);state.lastTargetHealth=null;state.strafe=1;state.terminationReason=null;state.lastDecisionLogAt=0;state.lastLoggedStyle=null;state.lastLoggedAction=null;
-  log("[PVP-EXPERT] active target="+state.targetUsername);
-  try{
-   while(state.active&&taskIsActive(task)){
-    if(num(bot.health)<=0){task.terminationReason="death";return false}
-    const t=targetOf(bot,state.targetUsername);if(!t){await sleep(150);continue}
-    if(t.health!=null&&num(t.health)<=0){task.terminationReason="target_defeated";return true}
-    const hp=num(bot.health,20),th=num(t.health,20),d=dist(bot,t);
-    if(state.lastHealth>hp){state.damageTaken+=state.lastHealth-hp} if(state.lastTargetHealth!=null&&state.lastTargetHealth>th){state.hits++;state.damageDealt+=state.lastTargetHealth-th}
-    state.lastHealth=hp;state.lastTargetHealth=th;
-    const enemy={health:th,shield:false,airborne:t.onGround===false,falling:num(t.velocity?.y)<-.08,velocityY:num(t.velocity?.y),retreating:num(t.velocity?.x)**2+num(t.velocity?.z)**2>.18,totemPopped:false};
-    const ctx={distance:d,health:hp,maxHealth:num(bot.maxHealth,20),food:num(bot.food,20),onGround:bot.entity?.onGround!==false,falling:num(bot.entity?.velocity?.y)<-.08,fallDistance:num(bot.entity?.fallDistance),heightAdvantage:num(bot.entity?.position?.y)>num(t.position?.y)+1.5,knockbacked:num(bot.entity?.velocity?.x)**2+num(bot.entity?.velocity?.z)**2>.7,lineOfSight:true,enemy,hasSword:has(bot,"sword"),hasAxe:has(bot,"axe"),hasMace:has(bot,"mace"),hasSpear:has(bot,"spear"),hasMelee:has(bot,"sword")||has(bot,"axe")||has(bot,"mace")||has(bot,"spear"),hasShield:has(bot,"shield"),hasPearl:has(bot,"pearl"),hasTotem:has(bot,"totem"),hasHeal:has(bot,"heal"),hasWaterBucket:has(bot,"water"),hasBurst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),hasDebuff:false,attackReadyAt:Math.max(0,state.lastAttackAt+700-Date.now()),healDistanceMin:4.2,projectileThreat:false,hazard:false,inventory:{sword:count(bot,"sword"),axe:count(bot,"axe"),mace:count(bot,"mace"),spear:count(bot,"spear"),bow:count(bot,"bow"),crossbow:count(bot,"crossbow"),crystal:count(bot,"crystal"),obsidian:count(bot,"obsidian"),respawn_anchor:count(bot,"anchor"),glowstone:count(bot,"glowstone")},strafeDirection:state.strafe>0?"right":"left"};
-    const decision=brain.decide(ctx);state.style=decision.style||state.style;state.action=decision.action;
-    log("[PVP-EXPERT] style="+state.style+" action="+state.action+" reason="+decision.reason+" dist="+d.toFixed(2));
-    if(decision.action==="stop")return false;
-    if(decision.action==="heal"){await heal();continue}
-    if(decision.action==="shield"){await shield();continue}
-    if(decision.action==="pearl_escape"){if(await equip("pearl")){await look(t);bot.activateItem();await sleep(100);bot.deactivateItem()}continue}
-    if(decision.action==="totem"){await equip("totem");continue}
-    if(decision.action==="shield_break"){await melee(t,"axe");continue}
-    if(decision.action==="falling_crit"){await crit(t);continue}
-    if(decision.action==="melee_attack"||decision.action==="finish"){await melee(t,decision.style||"sword");continue}
-    if(decision.action==="mace_drop"||decision.action==="mace_dive"){await melee(t,"mace");continue}
-    if(decision.action==="spear_pressure"){await melee(t,"spear");continue}
-    if(decision.action==="ranged_attack"){await ranged(t,decision.style==="crossbow"?"crossbow":"bow");continue}
-    if(decision.action==="approach"||decision.action==="mace_approach"){await approach(t);continue}
-    if(decision.action==="strafe_pressure"||decision.action==="defensive_strafe"||decision.action==="reposition"||decision.action==="reacquire"||decision.action==="unstuck"){state.strafe*=-1;await strafe(t,state.strafe,decision.action==="defensive_strafe"?190:145);continue}
-    if(decision.action==="jump_reset"){bot.setControlState("jump",true);await sleep(60);bot.setControlState("jump",false);continue}
-    await sleep(80)
-   }
-   return false
-  }catch(e){task.terminationReason="controller_error: "+String(e?.message||e);log("[PVP-EXPERT] ERROR "+task.terminationReason);return false}
-  finally{state.active=false;stop()}
- };
- return {state,run,release:reason=>{state.active=false;state.terminationReason=reason;stop()},brain};
+  if(!bot) throw new Error("PvP Expert Controller requires bot");
+  if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
+
+  const brain=createPvpExpertBrain();
+  const state={
+    active:false,targetUsername:null,style:null,action:null,
+    lastAttackAt:0,lastHealth:20,lastTargetHealth:null,lastTargetPos:null,
+    strafe:1,attackCount:0,hits:0,damageDealt:0,damageTaken:0,
+    terminationReason:null,lastDecisionLogAt:0,lastLoggedStyle:null,lastLoggedAction:null,
+    failedAction:null,failedActionAt:0,elytraFlying:false,lastFireworkAt:0,
+    lastProgressAt:0
+  };
+
+  const stop=()=>{
+    try{bot.pathfinder?.setGoal?.(null)}catch{}
+    try{bot.clearControlStates?.()}catch{}
+    try{bot.deactivateItem?.()}catch{}
+  };
+
+  const equip=async(type,destination="hand")=>{
+    const i=item(bot,type);
+    if(!i) return false;
+    try{
+      await bot.equip(i,destination);
+      return true;
+    }catch(error){
+      log("[PVP-EXPERT] equip "+type+" failed: "+(error?.message||String(error)));
+      return false;
+    }
+  };
+
+  const equipBestMelee=async()=>{
+    const order=["mace","spear","axe","sword"];
+    for(const type of order) if(has(bot,type)&&await equip(type)) return type;
+    return null;
+  };
+
+  const lookAtTarget=async(t,lead=0)=>{
+    if(!t?.position) return false;
+    const v=t.velocity||{x:0,y:0,z:0};
+    const p=t.position.offset(num(v.x)*lead,num(v.y)*lead, num(v.z)*lead);
+    try{await bot.lookAt(p.offset(0,Math.max(.9,num(t.height,1.8)*.62),0),true);return true}catch{return false}
+  };
+
+  const approach=async(t,range=2.8)=>{
+    if(!t||!goals?.GoalFollow) return false;
+    if(dist(bot.entity,t)<=range) return true;
+    try{
+      bot.pathfinder.setGoal(new goals.GoalFollow(t,range),true);
+      const until=Date.now()+650;
+      while(state.active&&taskIsActive()&&Date.now()<until){
+        if(dist(bot.entity,t)<=range) return true;
+        await sleep(75);
+      }
+      return dist(bot.entity,t)<=range;
+    }finally{
+      try{bot.pathfinder.setGoal(null)}catch{}
+    }
+  };
+
+  const strafe=async(t,sign,ms=145)=>{
+    await lookAtTarget(t,.08);
+    bot.setControlState("forward",true);
+    bot.setControlState(sign<0?"left":"right",true);
+    bot.setControlState("sprint",true);
+    await sleep(ms);
+    stop();
+    return true;
+  };
+
+  const attack=async(t,type,maxReach)=>{
+    if(!t||!await equip(type)) return false;
+    const d=dist(bot.entity,t);
+    if(d>maxReach){state.failedAction="attack_out_of_range";state.failedActionAt=Date.now();return false}
+    await lookAtTarget(t,.05);
+    bot.attack(t);
+    state.lastAttackAt=Date.now();
+    state.attackCount++;
+    await sleep(95);
+    return true;
+  };
+
+  const fallingCrit=async t=>{
+    if(!await equip("sword")) return false;
+    if(dist(bot.entity,t)>3.05) return false;
+    bot.setControlState("forward",true);
+    bot.setControlState("sprint",true);
+    bot.setControlState("jump",true);
+    await sleep(75);
+    bot.setControlState("jump",false);
+    const until=Date.now()+700;
+    while(state.active&&taskIsActive()&&Date.now()<until){
+      if(isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45) break;
+      await sleep(20);
+    }
+    const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45&&dist(bot.entity,t)<=3.05;
+    if(!valid){stop();return false}
+    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.attackCount++;stop();return true;
+  };
+
+  const hitSelect=async t=>{
+    if(!await equip("sword")) return false;
+    bot.setControlState("sprint",true);
+    bot.setControlState("forward",true);
+    await sleep(45);
+    if(dist(bot.entity,t)<=3.05){await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.attackCount++}
+    bot.setControlState("sprint",false);
+    return true;
+  };
+
+  const heal=async()=>{
+    const i=item(bot,"heal"); if(!i)return false;
+    stop();
+    try{await bot.equip(i,"hand");await bot.consume();await equipBestMelee();return true}catch{return false}
+  };
+
+  const shield=async()=>{
+    if(!await equip("shield")) return false;
+    try{bot.activateItem();await sleep(300);bot.deactivateItem();return true}catch{try{bot.deactivateItem()}catch{};return false}
+  };
+
+  const ranged=async(t,type)=>{
+    if(!await equip(type)) return false;
+    await lookAtTarget(t,.15);
+    try{
+      bot.activateItem();
+      if(type==="bow") await sleep(1050); else await sleep(160);
+      bot.deactivateItem();
+      await sleep(90);
+      return true;
+    }catch{try{bot.deactivateItem()}catch{};return false}
+  };
+
+  const throwPearl=async(t)=>{
+    if(!await equip("pearl"))return false;
+    await lookAtTarget(t,.2);
+    bot.activateItem();await sleep(100);bot.deactivateItem();await sleep(180);return true;
+  };
+
+  const useWaterClutch=async()=>{
+    if(!await equip("water"))return false;
+    const p=bot.entity?.position;if(!p)return false;
+    try{
+      const below=bot.blockAt(p.offset(0,-1,0));
+      if(below&&!/air|water|lava/.test(String(below.name))) await bot.look(0,Math.PI/2,true);
+      bot.activateItem();await sleep(100);bot.deactivateItem();
+      return true;
+    }catch{return false}
+  };
+
+  const detectEquipment=t=>{
+    const eq=Array.isArray(t?.equipment)?t.equipment:[];
+    const names=eq.map(lname);
+    const held=eq[0]||null, off=eq[1]||null;
+    return {
+      shield:names.includes("shield")||lname(held)==="shield"||lname(off)==="shield",
+      totem:names.includes("totem_of_undying")||lname(held)==="totem_of_undying"||lname(off)==="totem_of_undying",
+      elytra:names.includes("elytra"),
+      held:lname(held),offhand:lname(off)
+    };
+  };
+
+  const projectileThreat=()=>{
+    const p=bot.entity?.position;if(!p)return false;
+    return Object.values(bot.entities||{}).some(e=>{
+      if(!e?.position||e===bot.entity)return false;
+      const n=String(e.name||"").toLowerCase();
+      if(!/arrow|spectral_arrow|trident|fireball|small_fireball|wind_charge|snowball|egg/.test(n))return false;
+      return e.position.distanceTo(p)<8;
+    });
+  };
+
+  const hazard=()=>{
+    const p=bot.entity?.position;if(!p)return false;
+    const b=bot.blockAt(p), below=bot.blockAt(p.offset(0,-1,0));
+    return /lava|fire|magma/.test(String(b?.name||""))||/lava|fire|magma/.test(String(below?.name||""));
+  };
+
+  const crystalBase=t=>{
+    const tp=t?.position;if(!tp)return null;
+    const ids=["obsidian","bedrock"].map(n=>bot.registry?.blocksByName?.[n]?.id).filter(Number.isInteger);
+    if(!ids.length||typeof bot.findBlocks!=="function")return null;
+    const positions=bot.findBlocks({matching:ids,maxDistance:6,count:40});
+    let best=null,bestD=Infinity;
+    for(const p of positions){
+      const b=bot.blockAt(p);if(!b)continue;
+      const d=p.distanceTo(tp);
+      if(d<bestD&&p.y>=tp.y-2){best=b;bestD=d}
+    }
+    return best;
+  };
+
+  const crystalCycle=async t=>{
+    if(!has(bot,"crystal")||!has(bot,"obsidian"))return false;
+    const base=crystalBase(t);
+    if(!base||dist(bot.entity,{position:base.position})>4.5)return false;
+    const selfPos=bot.entity.position;
+    const crystalPos=base.position.offset(.5,1,.5);
+    const enemyDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(t,crystalPos,6,false):null;
+    const selfDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(bot.entity,crystalPos,6,false):null;
+    if(selfDamage!=null&&enemyDamage!=null&&selfDamage>Math.max(6,enemyDamage*.8))return false;
+    await equip("crystal");
+    try{
+      await bot.activateBlock(base);
+      await sleep(180);
+      const crystals=Object.values(bot.entities||{}).filter(e=>String(e.name||"").toLowerCase()==="end_crystal"&&e.position.distanceTo(crystalPos)<1.4);
+      const c=crystals.sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
+      if(c){await equipBestMelee();await lookAtTarget(c,.0);bot.attack(c);await sleep(120);return true}
+    }catch(error){log("[PVP-EXPERT] crystal cycle failed: "+(error?.message||String(error)));}
+    return false;
+  };
+
+  const anchorCycle=async t=>{
+    if(!bot.game||bot.game.dimension!=="the_nether"||!has(bot,"anchor")||!has(bot,"glowstone"))return false;
+    const p=t?.position;if(!p)return false;
+    const id=bot.registry?.blocksByName?.respawn_anchor?.id;
+    if(!Number.isInteger(id)||typeof bot.findBlocks!=="function")return false;
+    const positions=bot.findBlocks({matching:id,maxDistance:7,count:20});
+    let anchor=null,best=Infinity;
+    for(const pos of positions){const d=pos.distanceTo(p);if(d<best){anchor=bot.blockAt(pos);best=d}}
+    if(!anchor||dist(bot.entity,{position:anchor.position})>5)return false;
+    const blast=anchor.position.offset(.5,.5,.5);
+    const enemyDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(t,blast,5,false):null;
+    const selfDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(bot.entity,blast,5,false):null;
+    if(selfDamage!=null&&selfDamage>5)return false;
+    if(enemyDamage!=null&&enemyDamage<4)return false;
+    try{
+      await equip("glowstone");await bot.activateBlock(anchor);await sleep(100);
+      const refreshed=bot.blockAt(anchor.position);
+      if(refreshed?.name==="respawn_anchor"){await equip("glowstone");await bot.activateBlock(refreshed)}
+      await sleep(180);return true;
+    }catch{return false}
+  };
+
+  const wind=async()=>{
+    if(!await equip("wind"))return false;
+    try{bot.activateItem();await sleep(90);bot.deactivateItem();return true}catch{return false}
+  };
+
+  const dodge=async t=>{
+    state.strafe*=-1;
+    return strafe(t,state.strafe,190);
+  };
+
+  const waterRecover=async()=>useWaterClutch();
+
+  const fireworkBoost=async()=>{
+    if(!has(bot,"firework"))return false;
+    if(!await equip("firework","off-hand"))return false;
+    try{bot.activateItem(true);await sleep(90);return true}catch{return false}
+  };
+
+  const elytraMace=async t=>{
+    if(!has(bot,"elytra")||!has(bot,"mace"))return false;
+    if(!await equip("elytra","torso"))return false;
+    if(!await equip("mace","hand"))return false;
+
+    // Mineflayer exposes elytraFly() in the current API. We use the API rather
+    // than writing raw physics packets. Firework rockets are optional but give
+    // the flight controller a real boost when available.
+    try{
+      stop();
+      await lookAtTarget(t,.35);
+      bot.setControlState("jump",true);
+      await sleep(120);
+      bot.setControlState("jump",false);
+      const until=Date.now()+900;
+      while(state.active&&taskIsActive()&&Date.now()<until){
+        if(bot.entity?.elytraFlying||state.elytraFlying)break;
+        await sleep(25);
+      }
+      if(!(bot.entity?.elytraFlying||state.elytraFlying)){
+        try{await bot.elytraFly()}catch{}
+      }
+      if(!(bot.entity?.elytraFlying||state.elytraFlying)){
+        state.failedAction="elytra_flight_not_started";state.failedActionAt=Date.now();return false;
+      }
+
+      const flightUntil=Date.now()+1800;
+      let boosted=false;
+      while(state.active&&taskIsActive()&&Date.now()<flightUntil){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(!live)break;
+        const d=dist(bot.entity,live);
+        const lead=Math.min(.8,Math.max(.15,d/18));
+        await lookAtTarget(live,lead);
+        bot.setControlState("forward",true);
+        bot.setControlState("sprint",true);
+        if(!boosted&&has(bot,"firework")&&Date.now()-state.lastFireworkAt>900){
+          if(await fireworkBoost()){state.lastFireworkAt=Date.now();boosted=true}
+        }
+        const vy=num(bot.entity?.velocity?.y);
+        // Attack only inside verified melee range while descending. This is the
+        // actual impact gate; it prevents repeated impossible mace swings.
+        if(d<=3.0&&vy<-.15){
+          await lookAtTarget(live,.0);
+          bot.attack(live);
+          state.lastAttackAt=Date.now();
+          state.attackCount++;
+          stop();
+          await sleep(260);
+          return true;
+        }
+        await sleep(45);
+      }
+      stop();
+      state.failedAction="elytra_dive_no_impact";state.failedActionAt=Date.now();
+      return false;
+    }catch(error){
+      stop();state.failedAction="elytra_mace_error";state.failedActionAt=Date.now();
+      log("[PVP-EXPERT] elytra-mace failed: "+(error?.message||String(error)));
+      return false;
+    }
+  };
+
+  const noteFailure=(action,reason)=>{
+    state.failedAction=action+":"+reason;state.failedActionAt=Date.now();
+  };
+
+  const run=async(username,task)=>{
+    state.active=true;state.targetUsername=String(username||"");
+    state.lastHealth=num(bot.health,20);state.lastTargetHealth=null;state.lastTargetPos=null;
+    state.strafe=1;state.terminationReason=null;state.failedAction=null;state.elytraFlying=false;
+    state.lastDecisionLogAt=0;state.lastLoggedStyle=null;state.lastLoggedAction=null;
+    const onElytra=e=>{if(e===bot.entity)state.elytraFlying=true};
+    try{bot.on?.("entityElytraFlew",onElytra)}catch{}
+    log("[PVP-EXPERT] active target="+state.targetUsername);
+
+    try{
+      while(state.active&&taskIsActive(task)){
+        if(num(bot.health)<=0){task.terminationReason="death";return false}
+        const t=targetOf(bot,state.targetUsername);
+        if(!t){await sleep(120);continue}
+        if(t.health!=null&&num(t.health)<=0){task.terminationReason="target_defeated";return true}
+
+        const hp=num(bot.health,20),th=num(t.health,20),d=dist(bot.entity,t);
+        if(state.lastHealth>hp)state.damageTaken+=state.lastHealth-hp;
+        if(state.lastTargetHealth!=null&&state.lastTargetHealth>th){
+          state.hits++;state.damageDealt+=state.lastTargetHealth-th;
+        }
+        state.lastHealth=hp;state.lastTargetHealth=th;
+        const eq=detectEquipment(t);
+        const lineOfSight=typeof bot.canSeeEntity==="function"?bot.canSeeEntity(t):true;
+        const ownElytra=item(bot,"elytra");
+        const elytraEquipped=Boolean(ownElytra)||Boolean(bot.entity?.equipment?.some?.(i=>isElytraItem(i)));
+        const dPos=state.lastTargetPos?t.position.distanceTo(state.lastTargetPos):0;
+        const targetVelocity=t.velocity||{x:0,y:0,z:0};
+        const enemy={
+          health:th,shield:eq.shield,usingItem:Boolean(t.isUsingItem||t.metadata?.isUsingItem),
+          airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
+          retreating:speed(t)>.18,totemPopped:false,healing:false,meleeThreat:d<5,
+          elytra:eq.elytra,held:eq.held,offhand:eq.offhand
+        };
+        const ctx={
+          distance:d,health:hp,maxHealth:num(bot.maxHealth,20),food:num(bot.food,20),
+          onGround:bot.entity?.onGround!==false,falling:num(bot.entity?.velocity?.y)<-.08,
+          fallDistance:num(bot.entity?.fallDistance),heightAdvantage:num(bot.entity?.position?.y)>num(t.position?.y)+1.5,
+          knockbacked:speed(bot.entity)>.84,lineOfSight,enemy,
+          projectileThreat:projectileThreat(),hazard:hazard(),stuck:state.failedAction==="approach:stuck",
+          hasSword:has(bot,"sword"),hasAxe:has(bot,"axe"),hasMace:has(bot,"mace"),hasSpear:has(bot,"spear"),
+          hasMelee:has(bot,"sword")||has(bot,"axe")||has(bot,"mace")||has(bot,"spear"),
+          hasShield:has(bot,"shield"),hasPearl:has(bot,"pearl"),hasTotem:has(bot,"totem"),hasHeal:has(bot,"heal"),
+          hasWaterBucket:has(bot,"water"),hasBurst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
+          hasDebuff:has(bot,"potion"),hasRod:has(bot,"rod"),
+          attackReadyAt:Math.max(0,state.lastAttackAt+700-Date.now()),healDistanceMin:4.2,
+          inventory:{
+            sword:count(bot,"sword"),axe:count(bot,"axe"),mace:count(bot,"mace"),spear:count(bot,"spear"),
+            bow:count(bot,"bow"),crossbow:count(bot,"crossbow"),crystal:count(bot,"crystal"),
+            obsidian:count(bot,"obsidian"),respawn_anchor:count(bot,"anchor"),glowstone:count(bot,"glowstone")
+          },
+          capabilities:{
+            melee:has(bot,"sword")||has(bot,"axe")||has(bot,"mace")||has(bot,"spear"),
+            totem:has(bot,"totem"),pearl:has(bot,"pearl"),heal:has(bot,"heal"),water:has(bot,"water"),
+            shield:has(bot,"shield"),burst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
+            spear:has(bot,"spear"),mace:has(bot,"mace"),axe:has(bot,"axe"),sword:has(bot,"sword"),
+            crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
+            anchorCycleSafe:bot.game?.dimension==="the_nether"&&has(bot,"anchor")&&has(bot,"glowstone"),
+            projectileDodge:projectileThreat(),
+            debuff:has(bot,"potion"),
+            elytraMace:Boolean(elytraEquipped&&has(bot,"mace"))
+          },
+          elytraEquipped,elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6),
+          crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
+          hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),strafeDirection:state.strafe>0?"right":"left"
+        };
+
+        const decision=brain.decide(ctx);
+        state.style=decision.style||state.style;state.action=decision.action;
+        brain.noteAction(decision.action);
+
+        const now=Date.now(),changed=state.style!==state.lastLoggedStyle||state.action!==state.lastLoggedAction;
+        if(changed||now-state.lastDecisionLogAt>=750){
+          log("[PVP-EXPERT] style="+state.style+" action="+state.action+" reason="+decision.reason+" dist="+d.toFixed(2));
+          state.lastDecisionLogAt=now;state.lastLoggedStyle=state.style;state.lastLoggedAction=state.action;
+        }
+
+        let ok=true;
+        switch(decision.action){
+          case "stop": return false;
+          case "heal": ok=await heal();break;
+          case "shield": ok=await shield();break;
+          case "totem": ok=await equip("totem","off-hand");break;
+          case "pearl_escape": ok=await throwPearl(t);break;
+          case "pearl_ambush": ok=await throwPearl(t);break;
+          case "water_clutch": ok=await waterRecover();break;
+          case "shield_break": ok=await attack(t,"axe",3.2);break;
+          case "falling_crit": ok=await fallingCrit(t);break;
+          case "hit_select": ok=await hitSelect(t);break;
+          case "melee_attack": ok=await attack(t,decision.style==="axe"?"axe":decision.style==="mace"?"mace":decision.style==="spear"?"spear":"sword",decision.style==="spear"?5.0:decision.style==="mace"?3.1:3.05);break;
+          case "finish": ok=await attack(t,has(bot,"mace")?"mace":has(bot,"axe")?"axe":"sword",3.1);break;
+          case "mace_drop": ok=await attack(t,"mace",3.1);break;
+          case "mace_dive": ok=await attack(t,"mace",3.1);break;
+          case "mace_approach": ok=await approach(t,3.0);break;
+          case "spear_pressure": ok=await attack(t,"spear",5.0);break;
+          case "ranged_attack": ok=await ranged(t,decision.style==="crossbow"?"crossbow":"bow");break;
+          case "crystal_cycle": ok=await crystalCycle(t);break;
+          case "anchor_cycle": ok=await anchorCycle(t);break;
+          case "elytra_mace": ok=await elytraMace(t);break;
+          case "dodge_projectile": ok=await dodge(t);break;
+          case "approach": ok=await approach(t,2.8);break;
+          case "strafe_pressure": ok=await strafe(t,state.strafe,145);state.strafe*=-1;break;
+          case "defensive_strafe": ok=await strafe(t,state.strafe,190);state.strafe*=-1;break;
+          case "reposition": ok=await strafe(t,state.strafe,175);state.strafe*=-1;break;
+          case "reacquire": ok=await approach(t,3.2);break;
+          case "unstuck": stop();await sleep(160);state.strafe*=-1;ok=await strafe(t,state.strafe,180);break;
+          case "debuff": ok=await ranged(t,"potion");break;
+          default: await sleep(80); break;
+        }
+
+        if(!ok){
+          noteFailure(decision.action,"execution_failed");
+          await sleep(35);
+        }else{
+          state.failedAction=null;
+        }
+        state.lastTargetPos=t.position?.clone?.()||t.position||null;
+      }
+      return false;
+    }catch(error){
+      task.terminationReason="controller_error: "+String(error?.message||error);
+      log("[PVP-EXPERT] ERROR "+task.terminationReason);
+      return false;
+    }finally{
+      state.active=false;stop();
+      try{bot.removeListener?.("entityElytraFlew",onElytra)}catch{}
+    }
+  };
+
+  return {
+    state,run,
+    release:reason=>{state.active=false;state.terminationReason=reason;stop()},
+    brain
+  };
 }
 export default createPvpExpertController;
