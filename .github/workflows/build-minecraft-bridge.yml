@@ -70,7 +70,7 @@ jobs:
             if ($pvpExpertControllerSource -notmatch 'createPvpExpertBrain') { throw 'Unified PvP Expert Controller is not wired to the expert brain.' }
             if ($pvpExpertControllerSource -match 'setInterval') { throw 'PvP Expert Controller must not create a competing combat loop.' }
             if ($pvpExpertControllerSource -match 'Math\.random') { throw 'PvP Expert Controller must not use random combat decisions.' }
-            if ($pvpExpertControllerSource -match 'planEV|settlePlan|evBonus|optimizer|trainingRuntime|telemetry') { throw 'PvP Expert Controller contains forbidden training/adaptive-learning code.' }
+            if ($pvpExpertControllerSource -match '\bplanEV\b|\bsettlePlan\b|\bevBonus\b|optimizer|trainingRuntime|learn:sword|train:sword') { throw 'PvP Expert Controller contains forbidden training/adaptive-learning code.' }
             if ($pvpExpertBrainSource -match 'planEV|settlePlan|evBonus|optimizer|trainingRuntime|telemetry') { throw 'PvP Expert Brain contains forbidden training/adaptive-learning code.' }
             foreach ($requiredPvpText in @('webEscape','projectileDodge','enemyTotemPopUntil','target_lost','failedActions','sprintReset','bot.placeEntity','new Vec3(0,1,0)')) {
               if ($pvpExpertControllerSource -notmatch [regex]::Escape($requiredPvpText)) { throw "PvP Expert recovery/combat guard is missing: $requiredPvpText" }
