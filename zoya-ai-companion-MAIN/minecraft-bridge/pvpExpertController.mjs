@@ -726,6 +726,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
           hardCounter:Boolean(eq.shield||eq.elytra||enemy.totemPopped),
           enemyBurstThreat,enemyMaceThreat,
+          enemyMaceHeldClose:Boolean(enemyMaceHeld&&d<=5),
           strafeDirection:state.strafe>0?"right":"left"
         };
 
