@@ -148,6 +148,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     return true;
   };
 
+  const rod=async t=>{
+    if(!has(bot,"fishing_rod"))return false;
+    if(!await equip("fishing_rod","hand"))return false;
+    await lookAtTarget(t,.1);
+    try{bot.activateItem();await sleep(180);bot.deactivateItem();return true}catch{return false}
+  };
+
   const heal=async()=>{
     const i=item(bot,"heal"); if(!i)return false;
     stop();
