@@ -60,6 +60,7 @@ export function createPvpExpertBrain(){
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
     if(c.projectileThreat&&has(c,"shield")&&d>3) return {action:"shield",style:"shield",priority:9500,reason:"projectile_defense"};
+    if(e.retreating&&d>=4&&d<=9&&has(c,"rod")) return {action:"rod_control",style:"utility",priority:7550,reason:"rod_control"};
 
     if(e.shield&&has(c,"axe")&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
     if(e.usingItem&&e.shield&&has(c,"axe")&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
