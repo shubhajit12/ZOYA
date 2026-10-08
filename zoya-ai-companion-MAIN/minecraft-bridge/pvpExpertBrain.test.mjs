@@ -38,3 +38,26 @@ const base={
 }
 
 console.log("PvP Expert Brain deterministic tests passed.");
+
+
+{
+  const d=brain.decide({...base,webbed:true});
+  assert.equal(d.action,"web_escape");
+}
+
+{
+  const d=brain.decide({...base,projectileThreat:true,projectileDodge:true,distance:6});
+  assert.equal(d.action,"dodge_projectile");
+}
+
+{
+  const d=brain.decide({...base,distance:4,enemy:{...base.enemy,totemPopped:true},capabilities:{...base.capabilities,burst:true}});
+  assert.equal(d.action,"finish");
+}
+
+{
+  const d=brain.decide({...base,health:5,distance:3.2,totemEquipped:true,capabilities:{...base.capabilities,totem:true}});
+  assert.equal(d.action,"emergency_disengage");
+}
+
+console.log("PvP Expert expanded deterministic tests passed.");
