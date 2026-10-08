@@ -46,7 +46,7 @@ console.log("PvP Expert Brain deterministic tests passed.");
 }
 
 {
-  const d=makeBrain().decide({...base,projectileThreat:true,projectileDodge:true,distance:6});
+  const d=makeBrain().decide({...base,projectileThreat:true,projectileDodge:true,distance:6,capabilities:{...base.capabilities,shield:false}});
   assert.equal(d.action,"dodge_projectile");
 }
 
