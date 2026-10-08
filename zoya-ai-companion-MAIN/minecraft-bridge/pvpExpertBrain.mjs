@@ -72,12 +72,20 @@ export function createPvpExpertBrain(options={}){
         return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
       if(c.recoveryPearlReady&&c.pearlEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9880,reason:"emergency_pearl_recovery"};
-      if(d<4.2)
-        return {action:"emergency_disengage",style:"utility",priority:9800,reason:"emergency_create_distance"};
-      if(has(c,"heal"))
+      // Once critically low, never re-engage simply because the opponent
+      // crossed back inside the combat radius. Stay in survival mode until
+      // healing or a meaningful recovery window exists.
+      if(c.emergencyRetreatUntil&&now<c.emergencyRetreatUntil)
+        return {action:"emergency_disengage",style:"utility",priority:9890,reason:"emergency_retreat_lock"};
+      if(has(c,"heal")&&d>=4.2)
         return {action:"heal",style:"utility",priority:9750,reason:"emergency_heal"};
+      if(has(c,"heal")&&d<4.2)
+        return {action:"emergency_disengage",style:"utility",priority:9800,reason:"emergency_heal_distance"};
       if(has(c,"pearl")&&c.pearlEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9700,reason:"emergency_escape"};
+      // No heal available: retreat rather than repeatedly walking back into
+      // melee at ~5 HP.
+      return {action:"emergency_disengage",style:"utility",priority:9650,reason:"emergency_no_heal"};
     }
     if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
       return {action:"pearl_escape",style:"utility",priority:9870,reason:"mace_attack_escape"};
@@ -100,7 +108,7 @@ export function createPvpExpertBrain(options={}){
     // Close-range spacing is a hard tactical constraint. Special smash/finish
     // windows above may override it; ordinary melee must never start inside
     // the collision-heavy 2.15m zone.
-    if(d<2.15) return {action:"defensive_strafe",style:styleMemory,priority:8000,reason:"too_close_spacing"};
+    if(d<2.15) return {action:"spacing_retreat",style:"utility",priority:8000,reason:"too_close_spacing"};
     if(e.totemPopped&&d<=5&&has(c,"burst")) return {action:"finish",style:styleMemory,priority:9300,reason:"totem_pop_finish"};
     if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
