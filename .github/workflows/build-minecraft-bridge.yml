@@ -54,7 +54,7 @@ jobs:
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           Push-Location $bridgeDist
           try {
-            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','pvpExpertBrain.mjs','pvpExpertController.mjs')) {
+            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','pvpExpertBrain.mjs','pvpExpertController.mjs','pvpExpertBrain.test.mjs')) {
               node --check $file
               if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
             }
@@ -115,6 +115,16 @@ jobs:
             }
             if ($runtimeSource -notmatch 'Damage observed; preserving active task ownership.') { throw 'Damage must not globally cancel active Minecraft tasks.' }
             Write-Host "Clean bridge static guards passed: $registeredCapabilities definitions / $logicalHandlerCount handlers + Groq owner-permission controller."
+          } finally { Pop-Location }
+
+      - name: Run deterministic PvP expert tests
+        shell: pwsh
+        run: |
+          $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
+          Push-Location $bridgeDist
+          try {
+            node pvpExpertBrain.test.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'PvP Expert deterministic tests failed.' }
           } finally { Pop-Location }
 
       - name: Verify Mineflayer plugin imports
