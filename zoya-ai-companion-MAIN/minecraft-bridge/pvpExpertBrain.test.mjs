@@ -61,3 +61,26 @@ console.log("PvP Expert Brain deterministic tests passed.");
 }
 
 console.log("PvP Expert expanded deterministic tests passed.");
+
+
+{
+  const d=makeBrain().decide({...base,distance:25,enemy:{...base.enemy,retreating:true},capabilities:{...base.capabilities,pearl:true,burst:true}});
+  assert.notEqual(d.action,"pearl_ambush");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:8,enemy:{...base.enemy,retreating:true},capabilities:{...base.capabilities,pearl:true,burst:true}});
+  assert.equal(d.action,"pearl_ambush");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:5,enemyBurstThreat:true,totemEquipped:false,capabilities:{...base.capabilities,totem:true}});
+  assert.equal(d.action,"totem");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:9,elytraMaceReady:true,elytraLaunchReady:false,capabilities:{...base.capabilities,mace:true,elytraMace:true}});
+  assert.notEqual(d.action,"elytra_mace");
+}
+
+console.log("PvP Expert burst/pearl/Elytra gating tests passed.");
