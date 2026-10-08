@@ -272,6 +272,44 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }catch{return false}
   };
 
+  const spearCharge=async t=>{
+    if(!await equip("spear"))return false;
+    const d=dist(bot.entity,t);
+    if(d<2.0||d>4.75)return false;
+    await lookAtTarget(t,.12);
+    try{
+      bot.activateItem();
+      const until=Date.now()+950;
+      let hit=false;
+      while(state.active&&taskIsActive()&&Date.now()<until){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(!live)break;
+        await lookAtTarget(live,.08);
+        const nd=dist(bot.entity,live);
+        bot.setControlState("forward",true);
+        bot.setControlState("sprint",true);
+        if(nd<=4.75&&nd>=2.0){
+          // The 1.21.11 spear charge deals contact damage while held; keep
+          // the charge active while moving through the valid range.
+          hit=true;
+        }
+        await sleep(35);
+        if(hit&&nd<2.0)break;
+      }
+      bot.deactivateItem();
+      stop();
+      if(hit){
+        state.lastAttackAt=Date.now();
+        state.nextAttackAt=state.lastAttackAt+1150;
+      }
+      return hit;
+    }catch(error){
+      try{bot.deactivateItem()}catch{}
+      stop();
+      return false;
+    }
+  };
+
   const wind=async()=>{
     if(!await equip("wind"))return false;
     try{bot.activateItem();await sleep(90);bot.deactivateItem();return true}catch{return false}
@@ -292,20 +330,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const elytraMace=async t=>{
     if(!has(bot,"elytra")||!has(bot,"mace"))return false;
-    if(!await equip("elytra","torso"))return false;
-    if(!await equip("mace","hand"))return false;
-
-    // Mineflayer exposes elytraFly() in the current API. We use the API rather
-    // than writing raw physics packets. Firework rockets are optional but give
-    // the flight controller a real boost when available.
+    // Vanilla does not allow gliding down onto a target with an Elytra.
+    // Use the Elytra only to gain altitude, then remove it before the smash.
     try{
       stop();
-      await lookAtTarget(t,.35);
+      if(!await equip("elytra","torso"))return false;
+      await lookAtTarget(t,.25);
       bot.setControlState("jump",true);
-      await sleep(120);
+      await sleep(140);
       bot.setControlState("jump",false);
-      const until=Date.now()+900;
-      while(state.active&&taskIsActive()&&Date.now()<until){
+      const flyUntil=Date.now()+1200;
+      while(state.active&&taskIsActive()&&Date.now()<flyUntil){
         if(bot.entity?.elytraFlying||state.elytraFlying)break;
         await sleep(25);
       }
@@ -313,41 +348,62 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         try{await bot.elytraFly()}catch{}
       }
       if(!(bot.entity?.elytraFlying||state.elytraFlying)){
-        state.failedAction="elytra_flight_not_started";state.failedActionAt=Date.now();return false;
+        noteFailure?.("elytra_mace","flight_not_started");
+        return false;
       }
 
-      const flightUntil=Date.now()+1800;
-      let boosted=false;
-      while(state.active&&taskIsActive()&&Date.now()<flightUntil){
+      const targetY=num(t.position?.y);
+      const climbUntil=Date.now()+2500;
+      while(state.active&&taskIsActive()&&Date.now()<climbUntil){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(!live)break;
+        await lookAtTarget(live,.4);
+        bot.setControlState("forward",true);
+        bot.setControlState("sprint",true);
+        const y=num(bot.entity?.position?.y);
+        if(y>=targetY+7)break;
+        if(has(bot,"firework")&&Date.now()-state.lastFireworkAt>900){
+          if(await fireworkBoost())state.lastFireworkAt=Date.now();
+        }
+        await sleep(60);
+      }
+      stop();
+
+      // Remove Elytra before the smash; this is required by vanilla mace rules.
+      if(!await equipBestMelee())return false;
+      // equipBestMelee may select mace/another weapon; force mace for the smash.
+      if(!await equip("mace","hand"))return false;
+
+      const diveUntil=Date.now()+1800;
+      while(state.active&&taskIsActive()&&Date.now()<diveUntil){
         const live=targetOf(bot,state.targetUsername)||t;
         if(!live)break;
         const d=dist(bot.entity,live);
-        const lead=Math.min(.8,Math.max(.15,d/18));
-        await lookAtTarget(live,lead);
-        bot.setControlState("forward",true);
-        bot.setControlState("sprint",true);
-        if(!boosted&&has(bot,"firework")&&Date.now()-state.lastFireworkAt>900){
-          if(await fireworkBoost()){state.lastFireworkAt=Date.now();boosted=true}
-        }
         const vy=num(bot.entity?.velocity?.y);
-        // Attack only inside verified melee range while descending. This is the
-        // actual impact gate; it prevents repeated impossible mace swings.
-        if(d<=3.0&&vy<-.15){
-          await lookAtTarget(live,.0);
+        const y=num(bot.entity?.position?.y);
+        await lookAtTarget(live,.0);
+        // Keep moving toward the target while descending. Do not attack until
+        // the target is within real mace hit range and the bot is falling.
+        bot.setControlState("forward",true);
+        if(d<=3.05&&vy<-.12&&y>num(live.position?.y)+.3){
           bot.attack(live);
           state.lastAttackAt=Date.now();
+          state.nextAttackAt=state.lastAttackAt+950;
           state.attackCount++;
           stop();
-          await sleep(260);
+          await sleep(300);
           return true;
         }
-        await sleep(45);
+        await sleep(30);
       }
       stop();
-      state.failedAction="elytra_dive_no_impact";state.failedActionAt=Date.now();
+      state.failedAction="elytra_mace_no_smash";
+      state.failedActionAt=Date.now();
       return false;
     }catch(error){
-      stop();state.failedAction="elytra_mace_error";state.failedActionAt=Date.now();
+      stop();
+      state.failedAction="elytra_mace_error";
+      state.failedActionAt=Date.now();
       log("[PVP-EXPERT] elytra-mace failed: "+(error?.message||String(error)));
       return false;
     }
@@ -451,7 +507,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "mace_drop": ok=await attack(t,"mace",3.1);break;
           case "mace_dive": ok=await attack(t,"mace",3.1);break;
           case "mace_approach": ok=await approach(t,3.0);break;
-          case "spear_pressure": ok=await attack(t,"spear",4.75);break;
+          case "spear_pressure": ok=await spearCharge(t);break;
           case "ranged_attack": ok=await ranged(t,decision.style==="crossbow"?"crossbow":"bow");break;
           case "crystal_cycle": ok=await crystalCycle(t);break;
           case "anchor_cycle": ok=await anchorCycle(t);break;
