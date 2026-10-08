@@ -23,7 +23,7 @@ function dist(bot,t){return bot.entity?.position&&t?.position?bot.entity.positio
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{}}={}){
  if(!bot)throw new Error("PvP Expert Controller requires bot");
  const brain=createPvpExpertBrain();
- const state={active:false,targetUsername:null,style:null,action:null,lastAttackAt:0,lastHealth:20,lastTargetHealth:null,strafe:1,attackCount:0,hits:0,damageDealt:0,damageTaken:0,terminationReason:null};
+ const state={active:false,targetUsername:null,style:null,action:null,lastAttackAt:0,lastHealth:20,lastTargetHealth:null,strafe:1,attackCount:0,hits:0,damageDealt:0,damageTaken:0,terminationReason:null,lastDecisionLogAt:0,lastLoggedStyle:null,lastLoggedAction:null};
  const stop=()=>{try{bot.pathfinder?.setGoal?.(null)}catch{} try{bot.clearControlStates?.()}catch{}};
  const equip=async type=>{const i=item(bot,type);if(!i)return false;if(name(bot.heldItem)!==name(i))await bot.equip(i,"hand");return true};
  const look=async t=>{if(t?.position)await bot.lookAt(t.position.offset(0,Math.max(.9,num(t.height,1.8)*.62),0),true)};
@@ -35,7 +35,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
  const ranged=async(t,type)=>{if(!await equip(type))return false;await look(t);bot.activateItem();await sleep(type==="bow"?1100:100);bot.deactivateItem();return true};
  const crit=async t=>{if(!await equip("sword"))return false;bot.setControlState("forward",true);bot.setControlState("sprint",true);bot.setControlState("jump",true);await sleep(70);bot.setControlState("jump",false);const end=Date.now()+650;while(state.active&&Date.now()<end){if(bot.entity?.onGround===false&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45)break;await sleep(25)}if(bot.entity?.onGround!==false||num(bot.entity.velocity?.y)>=-.05||num(bot.entity.fallDistance)<.45||dist(bot,t)>3.05){stop();return false}await look(t);bot.attack(t);state.lastAttackAt=Date.now();state.attackCount++;stop();return true};
  const run=async(username,task)=>{
-  state.active=true;state.targetUsername=String(username||"");state.lastHealth=num(bot.health,20);state.lastTargetHealth=null;state.strafe=1;state.terminationReason=null;
+  state.active=true;state.targetUsername=String(username||"");state.lastHealth=num(bot.health,20);state.lastTargetHealth=null;state.strafe=1;state.terminationReason=null;state.lastDecisionLogAt=0;state.lastLoggedStyle=null;state.lastLoggedAction=null;
   log("[PVP-EXPERT] active target="+state.targetUsername);
   try{
    while(state.active&&taskIsActive(task)){
