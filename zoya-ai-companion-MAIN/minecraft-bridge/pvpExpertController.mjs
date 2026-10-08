@@ -4,7 +4,8 @@
  * Mineflayer 4.39.x / Minecraft 1.21.x baseline.
  */
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { Vec3 } from "vec3";\nimport { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";
+import { Vec3 } from "vec3";
+import { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";
 
 const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,Number(ms)||0)));
 const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
@@ -40,7 +41,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
 
-  const combatDifficulty=Object.freeze({...THEO_PVP_DIFFICULTY,...(difficulty||{})});\n  const brain=createPvpExpertBrain({difficulty:combatDifficulty});
+  const combatDifficulty=Object.freeze({...THEO_PVP_DIFFICULTY,...(difficulty||{})});
+  const brain=createPvpExpertBrain({difficulty:combatDifficulty});
   const state={
     active:false,targetUsername:null,style:null,action:null,
     lastAttackAt:0,nextAttackAt:0,lastHealth:20,lastTargetHealth:null,lastTargetPos:null,
