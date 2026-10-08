@@ -4,6 +4,7 @@ import pathfinderPackage from "mineflayer-pathfinder";
 import toolPackage from "mineflayer-tool";
 import collectBlockPackage from "mineflayer-collectblock";
 import craftingUtilPackage from "mineflayer-crafting-util";
+import armorManagerPackage from "mineflayer-armor-manager";
 import { createPvpExpertController } from "./pvpExpertController.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -11,6 +12,7 @@ const { pathfinder, Movements, goals } = pathfinderPackage;
 const { plugin: toolPlugin } = toolPackage;
 const { plugin: collectBlockPlugin } = collectBlockPackage;
 const craftingUtilPlugin = craftingUtilPackage.plugin || craftingUtilPackage.default;
+const armorManagerPlugin = armorManagerPackage.plugin || armorManagerPackage.default || armorManagerPackage;
 
 const MEMORY_FILE = "player-memory.json";
 const DEFAULT_MEMORY = { players: {}, events: [], updatedAt: null };
@@ -34,11 +36,13 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
   if (typeof toolPlugin !== "function") throw new Error("mineflayer-tool plugin export is unavailable.");
   if (typeof collectBlockPlugin !== "function") throw new Error("mineflayer-collectblock plugin export is unavailable.");
   if (typeof craftingUtilPlugin !== "function") throw new Error("mineflayer-crafting-util plugin export is unavailable.");
+  if (typeof armorManagerPlugin !== "function") throw new Error("mineflayer-armor-manager plugin export is unavailable.");
 
   bot.loadPlugin(pathfinder);
   bot.loadPlugin(toolPlugin);
   bot.loadPlugin(collectBlockPlugin);
   bot.loadPlugin(craftingUtilPlugin());
+  bot.loadPlugin(armorManagerPlugin);
 
   // One movement configuration is shared by every movement-capable plugin.
   // collectblock otherwise creates/uses its own Movements instance, which can
