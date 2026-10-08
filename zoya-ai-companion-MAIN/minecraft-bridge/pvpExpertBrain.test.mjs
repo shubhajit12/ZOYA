@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 
-const brain=createPvpExpertBrain();
+const makeBrain=()=>createPvpExpertBrain();
 
 const base={
   health:20,maxHealth:20,food:20,distance:4,onGround:true,falling:false,fallDistance:0,
@@ -15,25 +15,25 @@ const base={
 };
 
 {
-  const d=brain.decide({...base,distance:5.5});
+  const d=makeBrain().decide({...base,distance:5.5});
   assert.notEqual(d.action,"spear_pressure","spear pressure must never be selected beyond the executor's 5.0m contract");
 }
 
 {
-  const d=brain.decide({...base,distance:8,elytraEquipped:true,elytraMaceReady:true,
+  const d=makeBrain().decide({...base,distance:8,elytraEquipped:true,elytraMaceReady:true,
     capabilities:{...base.capabilities,elytraMace:true}});
   assert.equal(d.action,"elytra_mace");
   assert.equal(d.style,"elytra");
 }
 
 {
-  const d=brain.decide({...base,distance:4,inventory:{...base.inventory,crystal:4,obsidian:16},
+  const d=makeBrain().decide({...base,distance:4,inventory:{...base.inventory,crystal:4,obsidian:16},
     crystalArena:true,crystalCycleSafe:true,capabilities:{...base.capabilities,burst:true,crystalCycleSafe:true}});
   assert.equal(d.action,"crystal_cycle");
 }
 
 {
-  const d=brain.decide({...base,health:5,hasTotem:true});
+  const d=makeBrain().decide({...base,health:5,hasTotem:true});
   assert.equal(d.action,"totem");
 }
 
@@ -41,22 +41,22 @@ console.log("PvP Expert Brain deterministic tests passed.");
 
 
 {
-  const d=brain.decide({...base,webbed:true});
+  const d=makeBrain().decide({...base,webbed:true});
   assert.equal(d.action,"web_escape");
 }
 
 {
-  const d=brain.decide({...base,projectileThreat:true,projectileDodge:true,distance:6});
+  const d=makeBrain().decide({...base,projectileThreat:true,projectileDodge:true,distance:6});
   assert.equal(d.action,"dodge_projectile");
 }
 
 {
-  const d=brain.decide({...base,distance:4,enemy:{...base.enemy,totemPopped:true},capabilities:{...base.capabilities,burst:true}});
+  const d=makeBrain().decide({...base,distance:4,enemy:{...base.enemy,totemPopped:true},capabilities:{...base.capabilities,burst:true}});
   assert.equal(d.action,"finish");
 }
 
 {
-  const d=brain.decide({...base,health:5,distance:3.2,totemEquipped:true,capabilities:{...base.capabilities,totem:true}});
+  const d=makeBrain().decide({...base,health:5,distance:3.2,totemEquipped:true,capabilities:{...base.capabilities,totem:true}});
   assert.equal(d.action,"emergency_disengage");
 }
 
