@@ -142,7 +142,17 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 
 {
   const d=makeBrain().decide({...base,distance:0.8});
-  assert.equal(d.action,"defensive_strafe","ordinary melee must never attack from point-blank collision range");
+  assert.equal(d.action,"spacing_retreat","point-blank combat should create actual separation, not strafe in place");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:1.7});
+  assert.equal(d.action,"spacing_retreat","close combat should back away into a usable melee window");
+}
+
+{
+  const d=makeBrain().decide({...base,health:5,distance:8,capabilities:{...base.capabilities,heal:false},emergencyRetreatUntil:0});
+  assert.equal(d.action,"emergency_disengage","critical health without healing must not re-engage");
 }
 
 {
