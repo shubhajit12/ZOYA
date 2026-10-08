@@ -87,7 +87,7 @@ export function createPvpExpertBrain(){
     if(d>=8&&e.retreating&&has(c,"pearl")&&has(c,"burst"))
       return {action:"pearl_ambush",style:"utility",priority:7500,reason:"close_retreat"};
 
-    if(styleMemory==="spear"&&has(c,"spear")&&d>=3&&d<=5.0&&attackReady)
+    if(styleMemory==="spear"&&has(c,"spear")&&d>=3&&d<=4.75&&attackReady)
       return {action:"spear_pressure",style:"spear",priority:7400,reason:"spear_range"};
     if(styleMemory==="axe"&&has(c,"axe")&&d<=3.2&&attackReady)
       return {action:"melee_attack",style:"axe",priority:7300,reason:"axe_attack"};
