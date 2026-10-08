@@ -151,8 +151,8 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 }
 
 {
-  const d=makeBrain().decide({...base,health:5,distance:8,capabilities:{...base.capabilities,heal:false},emergencyRetreatUntil:0});
-  assert.equal(d.action,"emergency_disengage","critical health without healing must not re-engage");
+  const d=makeBrain().decide({...base,health:5,distance:8,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:0});
+  assert.equal(d.action,"emergency_disengage","critical health without healing or totem must not re-engage");
 }
 
 {
