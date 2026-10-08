@@ -51,7 +51,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     enemyTotemWasEquipped:false,enemyTotemPopUntil:0,
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
-    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,
+    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0
   };
 
@@ -92,11 +92,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{
       bot.pathfinder.setGoal(new goals.GoalFollow(t,range),true);
       const until=Date.now()+650;
+      const start=dist(bot.entity,t);
       while(state.active&&taskIsActive()&&Date.now()<until){
         if(dist(bot.entity,t)<=range) return true;
         await sleep(75);
       }
-      return dist(bot.entity,t)<=range;
+      const remaining=dist(bot.entity,t);
+      // Starting a valid path and making progress is a successful navigation
+      // action; do not mark it failed merely because 650 ms was not enough to
+      // reach a moving player.
+      return remaining<=start-0.35 || remaining<=range+0.5;
     }finally{
       try{bot.pathfinder.setGoal(null)}catch{}
     }
@@ -475,13 +480,31 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const wind=async t=>{
     if(!t||!await equip("wind"))return false;
+    if(dist(bot.entity,t)<3.5||dist(bot.entity,t)>6.5)return false;
     try{
+      // Wind Charge is a setup tool, not a point-blank attack. Fire once,
+      // then wait for the launch to produce upward momentum before switching
+      // to the mace.
       await lookAtTarget(t,.05);
       bot.activateItem();
       await sleep(90);
       bot.deactivateItem();
-      state.maceLaunchUntil=Date.now()+2200;
-      await sleep(70);
+      state.maceLaunchUntil=Date.now()+2600;
+      const launchUntil=Date.now()+950;
+      let launched=false;
+      while(state.active&&taskIsActive()&&Date.now()<launchUntil){
+        const vy=num(bot.entity?.velocity?.y);
+        if(isAirborne(bot.entity)&&vy>.08){
+          launched=true;
+          break;
+        }
+        await sleep(30);
+      }
+      if(!launched){
+        stop();
+        return false;
+      }
+      await sleep(90);
       return await maceSmash(t);
     }catch{
       try{bot.deactivateItem()}catch{}
@@ -603,6 +626,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.failedActions=Object.create(null);state.failedActionUntil=0;
     const onElytra=e=>{if(e===bot.entity)state.elytraFlying=true};
     state.pearlCooldownUntil=0;
+    state.maceEscapeCooldownUntil=0;
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
@@ -636,6 +660,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const equippedChest=bot.entity?.equipment?.[4]||null;
         const elytraEquipped=isElytraItem(equippedChest);
         const dPos=state.lastTargetPos?t.position.distanceTo(state.lastTargetPos):0;
+        const targetVerticalDelta=state.lastTargetPos?num(t.position?.y)-num(state.lastTargetPos?.y):0;
         const targetVelocity=t.velocity||{x:0,y:0,z:0};
         const enemyHeld=lname(t.equipment?.[0]||t.heldItem||"");
         const enemyMaceHeld=/mace/.test(enemyHeld);
@@ -643,7 +668,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const enemyMaceThreat=enemyMaceHeld&&(
           (isAirborne(t)&&(num(targetVelocity.y)<-.08||num(t.position?.y)>num(bot.entity?.position?.y)+.6))||
           num(t.fallDistance)>1.5||
-          (d<=3.8&&num(targetVelocity.y)<-.03)
+          targetVerticalDelta<-.18||
+          (d<=3.2&&num(targetVelocity.y)<-.03)
         );
         const enemyBurstThreat=(enemyMaceThreat||enemyWindHeld&&(isAirborne(t)||d<=4.0));
         const enemy={
@@ -690,10 +716,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),
           selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&num(bot.entity?.fallDistance)>1.5),
-          windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)),
+          windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7),
           pearlEscapeReady:pearlReady("escape",t),
           pearlAmbushReady:pearlReady("ambush",t),
+          maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
+
           badPosition:Boolean(hazard()||d>14||!lineOfSight),
           totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
           hardCounter:Boolean(eq.shield||eq.elytra||enemy.totemPopped),
@@ -734,7 +762,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             break;
           }
           case "emergency_disengage": ok=await emergencyDisengage(t);break;
-          case "pearl_escape": ok=await throwPearl(t,"escape");break;
+          case "pearl_escape":
+            ok=await throwPearl(t,"escape");
+            if(ok) state.maceEscapeCooldownUntil=Date.now()+2600;
+            break;
           case "pearl_ambush": ok=await throwPearl(t,"ambush");break;
           case "pearl_recover": ok=await throwPearl(t,"escape");break;
           case "water_clutch": ok=await waterRecover();break;
