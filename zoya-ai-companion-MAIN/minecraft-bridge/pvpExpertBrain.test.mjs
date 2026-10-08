@@ -128,3 +128,16 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
   const d=makeBrain().decide({...base,distance:4.5,enemyMaceThreat:true,pearlEscapeReady:true,maceEscapeReady:false});
   assert.notEqual(d.action,"pearl_escape","defensive pearl must respect the controller's anti-spam/real-threat gate");
 }
+
+
+{
+  const d=makeBrain().decide({...base,distance:3.0,falling:true,onGround:false,fallDistance:0.6});
+  assert.equal(d.action,"falling_crit","Theo-impossible profile should preserve a real falling crit window");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:3.0,falling:true,onGround:false,fallDistance:0.6,enemy:{...base.enemy,airborne:true}});
+  assert.equal(d.action,"hit_select","Theo-impossible profile should use hit-select against an airborne target when no higher-priority counter applies");
+}
+
+console.log("Theobald-impossible difficulty regression tests passed.");
