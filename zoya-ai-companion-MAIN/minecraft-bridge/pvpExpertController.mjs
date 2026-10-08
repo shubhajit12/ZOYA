@@ -42,7 +42,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const brain=createPvpExpertBrain();
   const state={
     active:false,targetUsername:null,style:null,action:null,
-    lastAttackAt:0,lastHealth:20,lastTargetHealth:null,lastTargetPos:null,
+    lastAttackAt:0,nextAttackAt:0,lastHealth:20,lastTargetHealth:null,lastTargetPos:null,
     strafe:1,attackCount:0,hits:0,damageDealt:0,damageTaken:0,
     terminationReason:null,lastDecisionLogAt:0,lastLoggedStyle:null,lastLoggedAction:null,
     failedAction:null,failedActionAt:0,elytraFlying:false,lastFireworkAt:0,
@@ -112,7 +112,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(d>maxReach){state.failedAction="attack_out_of_range";state.failedActionAt=Date.now();return false}
     await lookAtTarget(t,.05);
     bot.attack(t);
+    const cooldown=type==="spear"?1150:type==="mace"?950:700;
     state.lastAttackAt=Date.now();
+    state.nextAttackAt=state.lastAttackAt+cooldown;
     state.attackCount++;
     await sleep(95);
     return true;
@@ -133,7 +135,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
     const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45&&dist(bot.entity,t)<=3.05;
     if(!valid){stop();return false}
-    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.attackCount++;stop();return true;
+    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.nextAttackAt=state.lastAttackAt+700;state.attackCount++;stop();return true;
   };
 
   const hitSelect=async t=>{
@@ -141,7 +143,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     bot.setControlState("sprint",true);
     bot.setControlState("forward",true);
     await sleep(45);
-    if(dist(bot.entity,t)<=3.05){await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.attackCount++}
+    if(dist(bot.entity,t)<=3.05){await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.nextAttackAt=state.lastAttackAt+700;state.attackCount++}
     bot.setControlState("sprint",false);
     return true;
   };
@@ -357,7 +359,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const run=async(username,task)=>{
     state.active=true;state.targetUsername=String(username||"");
-    state.lastHealth=num(bot.health,20);state.lastTargetHealth=null;state.lastTargetPos=null;
+    state.lastHealth=num(bot.health,20);state.lastTargetHealth=null;state.nextAttackAt=0;state.lastTargetPos=null;
     state.strafe=1;state.terminationReason=null;state.failedAction=null;state.elytraFlying=false;
     state.lastDecisionLogAt=0;state.lastLoggedStyle=null;state.lastLoggedAction=null;
     const onElytra=e=>{if(e===bot.entity)state.elytraFlying=true};
@@ -400,7 +402,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           hasShield:has(bot,"shield"),hasPearl:has(bot,"pearl"),hasTotem:has(bot,"totem"),hasHeal:has(bot,"heal"),
           hasWaterBucket:has(bot,"water"),hasBurst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
           hasDebuff:has(bot,"potion"),hasRod:has(bot,"rod"),
-          attackReadyAt:Math.max(0,state.lastAttackAt+700-Date.now()),healDistanceMin:4.2,
+          attackReadyAt:Math.max(0,state.nextAttackAt-Date.now()),healDistanceMin:4.2,
           inventory:{
             sword:count(bot,"sword"),axe:count(bot,"axe"),mace:count(bot,"mace"),spear:count(bot,"spear"),
             bow:count(bot,"bow"),crossbow:count(bot,"crossbow"),crystal:count(bot,"crystal"),
@@ -449,7 +451,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "mace_drop": ok=await attack(t,"mace",3.1);break;
           case "mace_dive": ok=await attack(t,"mace",3.1);break;
           case "mace_approach": ok=await approach(t,3.0);break;
-          case "spear_pressure": ok=await attack(t,"spear",5.0);break;
+          case "spear_pressure": ok=await attack(t,"spear",4.75);break;
           case "ranged_attack": ok=await ranged(t,decision.style==="crossbow"?"crossbow":"bow");break;
           case "crystal_cycle": ok=await crystalCycle(t);break;
           case "anchor_cycle": ok=await anchorCycle(t);break;
