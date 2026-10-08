@@ -4,7 +4,7 @@
  * Mineflayer 4.39.x / Minecraft 1.21.x baseline.
  */
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { Vec3 } from "vec3";
+import { Vec3 } from "vec3";\nimport { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";
 
 const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,Number(ms)||0)));
 const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
@@ -36,11 +36,11 @@ function speed(e){return Math.hypot(num(e?.velocity?.x),num(e?.velocity?.z))}
 function isAirborne(e){return e?.onGround===false}
 function isElytraItem(i){return lname(i)==="elytra"}
 
-export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{}}={}){
+export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
 
-  const brain=createPvpExpertBrain();
+  const combatDifficulty=Object.freeze({...THEO_PVP_DIFFICULTY,...(difficulty||{})});\n  const brain=createPvpExpertBrain({difficulty:combatDifficulty});
   const state={
     active:false,targetUsername:null,style:null,action:null,
     lastAttackAt:0,nextAttackAt:0,lastHealth:20,lastTargetHealth:null,lastTargetPos:null,
@@ -91,7 +91,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(dist(bot.entity,t)<=range) return true;
     try{
       bot.pathfinder.setGoal(new goals.GoalFollow(t,range),true);
-      const until=Date.now()+650;
+      const until=Date.now()+900;
       const start=dist(bot.entity,t);
       while(state.active&&taskIsActive()&&Date.now()<until){
         if(dist(bot.entity,t)<=range) return true;
@@ -107,7 +107,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
-  const strafe=async(t,sign,ms=145)=>{
+  const strafe=async(t,sign,ms=Number(combatDifficulty.strafeMs||120))=>{
     await lookAtTarget(t,.08);
     bot.setControlState("forward",true);
     bot.setControlState(sign<0?"left":"right",true);
@@ -139,7 +139,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.lastAttackAt=Date.now();
     state.nextAttackAt=state.lastAttackAt+cooldown;
     state.attackCount++;
-    await sprintReset();
+    await sprintReset(type);
     await sleep(55);
     return true;
   };
@@ -159,7 +159,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
     const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45&&dist(bot.entity,t)<=3.05;
     if(!valid){stop();return false}
-    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.nextAttackAt=state.lastAttackAt+700;state.attackCount++;await sprintReset();stop();return true;
+    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.nextAttackAt=state.lastAttackAt+700;state.attackCount++;await sprintReset("sword");stop();return true;
   };
 
   const hitSelect=async t=>{
@@ -459,7 +459,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const falling=isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08;
       const fallDistance=num(bot.entity?.fallDistance);
       await lookAtTarget(live,.02);
-      if(falling&&fallDistance>1.5&&d<=3.1){
+      if(falling&&fallDistance>1.5&&d>=2.35&&d<=3.1){
         bot.attack(live);
         state.lastAttackAt=Date.now();
         state.nextAttackAt=state.lastAttackAt+950;
@@ -526,8 +526,25 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{bot.activateItem(true);await sleep(90);return true}catch{return false}
   };
 
-  const sprintReset=async()=>{
-    try{bot.setControlState("sprint",false);await sleep(90);bot.setControlState("sprint",true)}catch{}
+  const sprintReset=async(type="auto")=>{
+    try{
+      // Theobald-style combo rhythm: alternate deterministic W/S sprint resets
+      // instead of random timing. This preserves one movement authority.
+      const useSTap=combatDifficulty.sTap&&(
+        type==="sword" ||
+        state.attackCount%2===0 ||
+        (state.lastTargetHealth!=null&&state.lastTargetHealth<Math.max(1,state.lastHealth))
+      );
+      bot.setControlState("sprint",false);
+      if(useSTap){
+        bot.setControlState("back",true);
+        await sleep(Math.max(55,Number(combatDifficulty.sprintResetMs||82)-10));
+        bot.setControlState("back",false);
+      }else{
+        await sleep(Number(combatDifficulty.sprintResetMs||82));
+      }
+      bot.setControlState("sprint",true);
+    }catch{}
   };
 
   const elytraMace=async t=>{
@@ -738,7 +755,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             : {action:"approach",style:state.style||"sword",priority:5000,reason:"failed_action_backoff"};
         }
         state.style=decision.style||state.style;state.action=decision.action;
-        if(decision.style&&decision.style!=="utility"&&decision.style!==state.committedStyle){state.committedStyle=decision.style;state.styleCommitUntil=Date.now()+1800;}
+        if(decision.style&&decision.style!=="utility"&&decision.style!==state.committedStyle){state.committedStyle=decision.style;state.styleCommitUntil=Date.now()+Number(combatDifficulty.styleLockMs||450);}
         brain.noteAction(decision.action);
 
         const now=Date.now(),changed=state.style!==state.lastLoggedStyle||state.action!==state.lastLoggedAction;
@@ -787,9 +804,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "wind_mace_launch": ok=await wind(t);break;
           case "dodge_projectile": ok=await projectileDodge(t);break;
           case "approach": ok=await approach(t,2.8);break;
-          case "strafe_pressure": ok=await strafe(t,state.strafe,145);state.strafe*=-1;break;
-          case "defensive_strafe": ok=await strafe(t,state.strafe,190);state.strafe*=-1;break;
-          case "reposition": ok=await strafe(t,state.strafe,175);state.strafe*=-1;break;
+          case "strafe_pressure": ok=await strafe(t,state.strafe,Number(combatDifficulty.strafeMs||120));state.strafe*=-1;break;
+          case "defensive_strafe": ok=await strafe(t,state.strafe,Number(combatDifficulty.strafeMs||120)+55);state.strafe*=-1;break;
+          case "reposition": ok=await strafe(t,state.strafe,Number(combatDifficulty.strafeMs||120)+40);state.strafe*=-1;break;
           case "reacquire": ok=await approach(t,3.2);break;
           case "unstuck": stop();await sleep(160);state.strafe*=-1;ok=await strafe(t,state.strafe,180);break;
           case "debuff": ok=await ranged(t,"potion");break;
