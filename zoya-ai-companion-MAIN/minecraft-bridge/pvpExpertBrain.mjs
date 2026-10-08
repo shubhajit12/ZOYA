@@ -63,7 +63,7 @@ export function createPvpExpertBrain(){
     // Emergency survival is a sequence, not a repeated single action:
     // equip the totem once, immediately create distance, then heal/re-engage.
     if(emergency){
-      if(c.enemyMaceThreat&&c.pearlEscapeReady)
+      if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9950,reason:"emergency_mace_escape"};
       if(has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
