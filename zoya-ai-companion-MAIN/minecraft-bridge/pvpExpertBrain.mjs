@@ -97,7 +97,7 @@ export function createPvpExpertBrain(){
 
     // Genuine Elytra + mace sequence. It outranks ordinary mace only when the
     // controller confirms the flight prerequisites.
-    if(c.windMaceSmashReady&&invHas(c,"wind_charge")&&invHas(c,"mace")&&d<=7)
+    if(c.windMaceSmashReady&&has(c,"mace")&&d<=7)
       return {action:"wind_mace_launch",style:"mace",priority:9080,reason:"wind_charge_mace_setup"};
 
     if(has(c,"elytraMace")&&c.elytraMaceReady&&c.elytraLaunchReady&&invHas(c,"mace")){
