@@ -55,8 +55,16 @@ export function createPvpExpertBrain(){
     if(!styleMemory||scores[preferred]>scores[styleMemory]+8) styleMemory=preferred;
 
     if(c.dead) return {action:"stop",style:styleMemory,priority:10000,reason:"dead"};
-    if(emergency&&has(c,"totem")) return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
-    if(emergency&&has(c,"pearl")&&d>=4) return {action:"pearl_escape",style:"utility",priority:9800,reason:"emergency_escape"};
+    // Emergency survival is a sequence, not a repeated single action:
+    // equip the totem once, immediately create distance, then heal/re-engage.
+    if(emergency){
+      if(has(c,"totem")&&!c.totemEquipped)
+        return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
+      if(has(c,"pearl")&&d>=2.5)
+        return {action:"pearl_escape",style:"utility",priority:9850,reason:"emergency_escape"};
+      if(d<4.2)
+        return {action:"emergency_disengage",style:"utility",priority:9800,reason:"emergency_create_distance"};
+    }
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
     if(c.projectileThreat&&has(c,"shield")&&d>3) return {action:"shield",style:"shield",priority:9500,reason:"projectile_defense"};
