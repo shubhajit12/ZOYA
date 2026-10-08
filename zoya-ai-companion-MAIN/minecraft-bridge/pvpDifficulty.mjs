@@ -7,22 +7,22 @@
  */
 export const PVP_DIFFICULTIES=Object.freeze({
   easy:Object.freeze({
-    id:"easy",styleLockMs:1800,strafeMs:190,sprintResetMs:100,
+    id:"easy",styleLockMs:1800,styleSwitchMargin:12,strafeMs:190,sprintResetMs:100,
     wTap:true,sTap:false,jumpReset:false,predictLead:.08,
     attackRange:3.05,critMinRange:2.45,aggression:1
   }),
   normal:Object.freeze({
-    id:"normal",styleLockMs:1300,strafeMs:165,sprintResetMs:95,
+    id:"normal",styleLockMs:1300,styleSwitchMargin:14,strafeMs:165,sprintResetMs:95,
     wTap:true,sTap:true,jumpReset:true,predictLead:.1,
     attackRange:3.05,critMinRange:2.45,aggression:1.05
   }),
   hard:Object.freeze({
-    id:"hard",styleLockMs:850,strafeMs:145,sprintResetMs:90,
+    id:"hard",styleLockMs:850,styleSwitchMargin:16,strafeMs:145,sprintResetMs:90,
     wTap:true,sTap:true,jumpReset:true,predictLead:.12,
     attackRange:3.05,critMinRange:2.45,aggression:1.1
   }),
   impossible:Object.freeze({
-    id:"impossible",styleLockMs:450,strafeMs:120,sprintResetMs:82,
+    id:"impossible",styleLockMs:950,styleSwitchMargin:18,strafeMs:120,sprintResetMs:82,
     wTap:true,sTap:true,jumpReset:true,predictLead:.14,
     attackRange:3.05,critMinRange:2.45,aggression:1.18
   })
