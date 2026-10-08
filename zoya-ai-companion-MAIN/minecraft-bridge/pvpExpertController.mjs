@@ -122,25 +122,48 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const emergencyDisengage=async t=>{
     if(!t)return false;
-    await lookAtTarget(t,.05);
-    bot.setControlState("back",true);
-    bot.setControlState("sprint",true);
-    bot.setControlState(state.strafe<0?"left":"right",true);
-    await sleep(520);
-    stop();
+    const start=dist(bot.entity,t);
+    const deadline=Date.now()+850;
+    try{
+      bot.setControlState("back",true);
+      bot.setControlState("sprint",true);
+      bot.setControlState(state.strafe<0?"left":"right",true);
+      while(state.active&&taskIsActive()&&Date.now()<deadline){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(live) await lookAtTarget(live,.05);
+        const d=dist(bot.entity,live||t);
+        if(d>=4.25||d>=start+1.0) break;
+        await sleep(35);
+      }
+    }finally{
+      stop();
+    }
     state.strafe*=-1;
-    state.emergencyRetreatUntil=Date.now()+2600;
+    // Keep the emergency lock long enough to heal/escape; never let the next
+    // brain tick immediately turn a retreat into a re-engagement.
+    state.emergencyRetreatUntil=Date.now()+3200;
     return true;
   };
 
   const spacingRetreat=async t=>{
     if(!t)return false;
-    await lookAtTarget(t,.04);
-    bot.setControlState("back",true);
-    bot.setControlState("sprint",true);
-    await sleep(230);
-    stop();
-    return true;
+    const start=dist(bot.entity,t);
+    const deadline=Date.now()+700;
+    try{
+      bot.setControlState("back",true);
+      bot.setControlState("sprint",true);
+      while(state.active&&taskIsActive()&&Date.now()<deadline){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(live) await lookAtTarget(live,.04);
+        const d=dist(bot.entity,live||t);
+        // Exit the collision zone with a real geometric success condition.
+        if(d>=2.35||d>=start+0.65) return true;
+        await sleep(35);
+      }
+      return dist(bot.entity,t)>=2.35;
+    }finally{
+      stop();
+    }
   };
 
   const attack=async(t,type,maxReach)=>{
