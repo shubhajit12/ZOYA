@@ -46,7 +46,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     strafe:1,attackCount:0,hits:0,damageDealt:0,damageTaken:0,
     terminationReason:null,lastDecisionLogAt:0,lastLoggedStyle:null,lastLoggedAction:null,
     failedAction:null,failedActionAt:0,elytraFlying:false,lastFireworkAt:0,
-    lastProgressAt:0
+    lastProgressAt:0,
+    committedStyle:null,styleCommitUntil:0,totemEquipped:false
   };
 
   const stop=()=>{
@@ -439,6 +440,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.active=true;state.targetUsername=String(username||"");
     state.lastHealth=num(bot.health,20);state.lastTargetHealth=null;state.nextAttackAt=0;state.lastTargetPos=null;
     state.strafe=1;state.terminationReason=null;state.failedAction=null;state.elytraFlying=false;
+    state.committedStyle=null;state.styleCommitUntil=0;state.totemEquipped=lname(bot.entity?.equipment?.[1])==="totem_of_undying";
     state.lastDecisionLogAt=0;state.lastLoggedStyle=null;state.lastLoggedAction=null;
     const onElytra=e=>{if(e===bot.entity)state.elytraFlying=true};
     try{bot.on?.("entityElytraFlew",onElytra)}catch{}
@@ -459,8 +461,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         state.lastHealth=hp;state.lastTargetHealth=th;
         const eq=detectEquipment(t);
         const lineOfSight=typeof bot.canSeeEntity==="function"?bot.canSeeEntity(t):true;
-        const ownElytra=item(bot,"elytra");
-        const elytraEquipped=Boolean(ownElytra)||Boolean(bot.entity?.equipment?.some?.(i=>isElytraItem(i)));
+        const equippedChest=bot.entity?.equipment?.[4]||null;
+        const elytraEquipped=isElytraItem(equippedChest);
         const dPos=state.lastTargetPos?t.position.distanceTo(state.lastTargetPos):0;
         const targetVelocity=t.velocity||{x:0,y:0,z:0};
         const enemy={
@@ -480,7 +482,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           hasShield:has(bot,"shield"),hasPearl:has(bot,"pearl"),hasTotem:has(bot,"totem"),hasHeal:has(bot,"heal"),
           hasWaterBucket:has(bot,"water"),hasBurst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
           hasDebuff:has(bot,"potion"),hasRod:has(bot,"rod"),
-          attackReadyAt:Math.max(0,state.nextAttackAt-Date.now()),healDistanceMin:4.2,
+          attackReadyAt:state.nextAttackAt,healDistanceMin:4.2,
           inventory:{
             sword:count(bot,"sword"),axe:count(bot,"axe"),mace:count(bot,"mace"),spear:count(bot,"spear"),
             bow:count(bot,"bow"),crossbow:count(bot,"crossbow"),crystal:count(bot,"crystal"),
@@ -502,12 +504,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),
-          totemEquipped:lname(bot.inventory?.slots?.[bot.getEquipmentDestSlot?.("off-hand")])==="totem_of_undying",
+          totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
+          hardCounter:Boolean(eq.shield||eq.elytra||enemy.totemPopped),
           strafeDirection:state.strafe>0?"right":"left"
         };
 
         const decision=brain.decide(ctx);
         state.style=decision.style||state.style;state.action=decision.action;
+        if(decision.style&&decision.style!=="utility"&&decision.style!==state.committedStyle){state.committedStyle=decision.style;state.styleCommitUntil=Date.now()+1800;}
         brain.noteAction(decision.action);
 
         const now=Date.now(),changed=state.style!==state.lastLoggedStyle||state.action!==state.lastLoggedAction;
@@ -524,6 +528,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "totem": {
             const equipped=await equip("totem","off-hand");
             if(equipped){
+              state.totemEquipped=true;
               await emergencyDisengage(t);
               state.failedAction=null;
             }
