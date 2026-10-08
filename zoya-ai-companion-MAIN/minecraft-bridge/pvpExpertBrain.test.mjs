@@ -131,7 +131,7 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 
 
 {
-  const d=makeBrain().decide({...base,distance:3.0,falling:true,onGround:false,fallDistance:0.6});
+  const d=makeBrain().decide({...base,distance:3.0,falling:true,onGround:false,fallDistance:0.6,hasSpear:false,capabilities:{...base.capabilities,spear:false},inventory:{...base.inventory,spear:0}});
   assert.equal(d.action,"falling_crit","Theo-impossible profile should preserve a real falling crit window");
 }
 
