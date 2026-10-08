@@ -539,6 +539,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const elytraEquipped=isElytraItem(equippedChest);
         const dPos=state.lastTargetPos?t.position.distanceTo(state.lastTargetPos):0;
         const targetVelocity=t.velocity||{x:0,y:0,z:0};
+        const enemyHeld=lname(t.equipment?.[0]||t.heldItem||"");
+        const enemyBurstThreat=/mace|wind_charge/.test(enemyHeld)&&(isAirborne(t)||num(targetVelocity.y)<-.08||num(bot.entity?.position?.y)>num(t.position?.y)+1.5||d<=4.0);
         const enemy={
           health:th,shield:eq.shield,usingItem:Boolean(t.isUsingItem||t.metadata?.isUsingItem),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
@@ -577,12 +579,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             debuff:has(bot,"potion"),
             elytraMace:Boolean(elytraEquipped&&has(bot,"mace")),
           },
-          elytraEquipped,elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6&&lineOfSight),
+          elytraEquipped,elytraLaunchReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&(bot.entity?.elytraFlying===true||(bot.entity?.onGround===false&&num(bot.entity?.velocity?.y)<-.05)||Boolean(bot.entity?.position?.y>t.position?.y+2))),
+          elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6&&lineOfSight),
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),
           totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
           hardCounter:Boolean(eq.shield||eq.elytra||enemy.totemPopped),
+          enemyBurstThreat,
           strafeDirection:state.strafe>0?"right":"left"
         };
 
