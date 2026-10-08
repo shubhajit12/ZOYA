@@ -87,7 +87,7 @@ console.log("PvP Expert burst/pearl/Elytra gating tests passed.");
 
 
 {
-  const d=makeBrain().decide({...base,distance:4.5,enemyMaceThreat:true,pearlEscapeReady:true});
+  const d=makeBrain().decide({...base,distance:4.5,enemyMaceThreat:true,pearlEscapeReady:true,maceEscapeReady:true});
   assert.equal(d.action,"pearl_escape","an active mace threat should trigger a defensive pearl when a safe pearl is available");
 }
 
@@ -117,3 +117,14 @@ console.log("PvP Expert burst/pearl/Elytra gating tests passed.");
 }
 
 console.log("PvP Expert tactical pearl/mace regression tests passed.");
+
+
+{
+  const d=makeBrain().decide({...base,distance:2.5,windMaceSmashReady:true});
+  assert.notEqual(d.action,"wind_mace_launch","wind-charge mace setup must not fire point-blank");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:4.5,enemyMaceThreat:true,pearlEscapeReady:true,maceEscapeReady:false});
+  assert.notEqual(d.action,"pearl_escape","defensive pearl must respect the controller's anti-spam/real-threat gate");
+}
