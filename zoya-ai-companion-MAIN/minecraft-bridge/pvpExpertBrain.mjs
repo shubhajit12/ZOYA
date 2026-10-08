@@ -63,16 +63,23 @@ export function createPvpExpertBrain(){
     // Emergency survival is a sequence, not a repeated single action:
     // equip the totem once, immediately create distance, then heal/re-engage.
     if(emergency){
+      if(c.enemyMaceThreat&&c.pearlEscapeReady)
+        return {action:"pearl_escape",style:"utility",priority:9950,reason:"emergency_mace_escape"};
       if(has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
+      if(c.recoveryPearlReady&&c.pearlEscapeReady)
+        return {action:"pearl_escape",style:"utility",priority:9880,reason:"emergency_pearl_recovery"};
       if(d<4.2)
         return {action:"emergency_disengage",style:"utility",priority:9800,reason:"emergency_create_distance"};
       if(has(c,"heal"))
         return {action:"heal",style:"utility",priority:9750,reason:"emergency_heal"};
-      if(has(c,"pearl")&&d>=4.2)
+      if(has(c,"pearl")&&c.pearlEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9700,reason:"emergency_escape"};
     }
-    if(c.enemyBurstThreat&&has(c,"totem")&&!c.totemEquipped) return {action:"totem",style:"utility",priority:9850,reason:"burst_threat_totem"};
+    if(c.enemyMaceThreat&&c.pearlEscapeReady)
+      return {action:"pearl_escape",style:"utility",priority:9870,reason:"mace_attack_escape"};
+    if(c.enemyBurstThreat&&has(c,"totem")&&!c.totemEquipped)
+      return {action:"totem",style:"utility",priority:9850,reason:"burst_threat_totem"};
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
@@ -88,15 +95,17 @@ export function createPvpExpertBrain(){
 
     // Genuine Elytra + mace sequence. It outranks ordinary mace only when the
     // controller confirms the flight prerequisites.
-    if(c.windMaceReady&&invHas(c,"wind_charge")&&invHas(c,"mace")&&d<=7&&!e.airborne)
-      return {action:"wind_mace_launch",style:"mace",priority:9050,reason:"wind_charge_mace_setup"};
+    if(c.windMaceSmashReady&&invHas(c,"wind_charge")&&invHas(c,"mace")&&d<=7)
+      return {action:"wind_mace_launch",style:"mace",priority:9080,reason:"wind_charge_mace_setup"};
 
     if(has(c,"elytraMace")&&c.elytraMaceReady&&c.elytraLaunchReady&&invHas(c,"mace")){
       if(d>=7||c.heightAdvantage) return {action:"elytra_mace",style:"elytra",priority:9100,reason:"elytra_mace_setup"};
     }
 
+    if(c.selfMaceSmashReady&&has(c,"mace")&&d<=3.1&&attackReady)
+      return {action:"mace_dive",style:"mace",priority:9050,reason:"self_mace_smash_window"};
     if(e.airborne&&e.falling&&has(c,"mace")&&d<=6.2&&attackReady)
-      return {action:"mace_dive",style:"mace",priority:9000,reason:"airborne_mace_window"};
+      return {action:"mace_approach",style:"mace",priority:7000,reason:"enemy_airborne_mace_geometry"};
     if(styleMemory==="mace"&&has(c,"mace")&&d>3.1&&d<=7)
       return {action:"mace_approach",style:"mace",priority:7000,reason:"mace_geometry"};
 
@@ -107,7 +116,11 @@ export function createPvpExpertBrain(){
 
     if((styleMemory==="bow"||styleMemory==="crossbow")&&d>=7&&c.lineOfSight)
       return {action:"ranged_attack",style:styleMemory,priority:7600,reason:"ranged_spacing"};
-    if(d>=6&&d<=12&&e.retreating&&has(c,"pearl")&&has(c,"burst"))
+    if(c.recoveryPearlReady&&c.pearlEscapeReady&&(
+      c.knockbacked||c.stuck||c.hazard||c.badPosition
+    ))
+      return {action:"pearl_recover",style:"utility",priority:7350,reason:"tactical_recovery"};
+    if(d>=6&&d<=12&&e.retreating&&has(c,"pearl")&&has(c,"burst")&&c.pearlAmbushReady)
       return {action:"pearl_ambush",style:"utility",priority:7500,reason:"close_retreat"};
 
     if(styleMemory==="spear"&&has(c,"spear")&&d>=3&&d<=4.75&&attackReady)
