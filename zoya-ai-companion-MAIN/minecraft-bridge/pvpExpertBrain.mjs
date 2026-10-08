@@ -78,8 +78,10 @@ export function createPvpExpertBrain(){
     }
     if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
       return {action:"pearl_escape",style:"utility",priority:9870,reason:"mace_attack_escape"};
-    if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
+    if((c.enemyMaceThreat||c.enemyMaceHeldClose)&&has(c,"totem")&&!c.totemEquipped&&c.health<=10)
       return {action:"totem",style:"utility",priority:9850,reason:"mace_burst_totem"};
+    if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
+      return {action:"totem",style:"utility",priority:9845,reason:"mace_burst_totem"};
     if(c.enemyBurstThreat&&has(c,"totem")&&!c.totemEquipped)
       return {action:"totem",style:"utility",priority:9840,reason:"burst_threat_totem"};
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
