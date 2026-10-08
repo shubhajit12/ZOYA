@@ -20,7 +20,7 @@ const base={
 }
 
 {
-  const d=makeBrain().decide({...base,distance:8,elytraEquipped:true,elytraMaceReady:true,
+  const d=makeBrain().decide({...base,distance:8,elytraEquipped:true,elytraMaceReady:true,elytraLaunchReady:true,
     capabilities:{...base.capabilities,elytraMace:true}});
   assert.equal(d.action,"elytra_mace");
   assert.equal(d.style,"elytra");
