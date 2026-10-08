@@ -44,7 +44,7 @@ jobs:
           foreach ($dependency in @('mineflayer','mineflayer-pathfinder','mineflayer-tool','mineflayer-collectblock','mineflayer-crafting-util','mineflayer-armor-manager','@nxg-org/mineflayer-tracker','@nxg-org/mineflayer-trajectories')) {
             if (-not (Test-Path (Join-Path $bridgeDist "node_modules/$dependency"))) { throw "Minecraft dependency was not installed: $dependency" }
           }
-          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs','capabilityModes.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','swordPvpModel.json')) {
+          foreach ($required in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityTester.mjs','capabilityEngine.mjs','capabilityModes.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','pvpDifficulty.mjs','swordPvpModel.json')) {
             if (-not (Test-Path (Join-Path $bridgeDist $required))) { throw "Minecraft bridge runtime file is missing: $required" }
           }
 
@@ -54,7 +54,7 @@ jobs:
           $bridgeDist = Join-Path $env:RUNNER_TEMP 'MinecraftBridge'
           Push-Location $bridgeDist
           try {
-            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','pvpExpertBrain.mjs','pvpExpertController.mjs','pvpExpertBrain.test.mjs')) {
+            foreach ($file in @('index.mjs','zoyaBrain.mjs','minecraftRuntime.mjs','capabilityModes.mjs','capabilityEngine.mjs','capabilityTester.mjs','swordPvpBrain.mjs','swordPvpController.mjs','swordPvpController.test.mjs','pvpDifficulty.mjs','pvpExpertBrain.mjs','pvpExpertController.mjs','pvpExpertBrain.test.mjs')) {
               node --check $file
               if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
             }
