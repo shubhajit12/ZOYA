@@ -5,12 +5,12 @@
  * Contract: every returned action has a feasibility gate represented by ctx.
  * The controller is the sole physical executor.
  */
-const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
+import { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";\n\nconst num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const has=(c,k)=>c?.capabilities?.[k]===true;
 const invHas=(c,k)=>num(c?.inventory?.[k])>0;
 
-export const PVP_EXPERT_BRAIN_VERSION="pvp-expert-brain-v2";
+export const PVP_EXPERT_BRAIN_VERSION="pvp-expert-brain-v3-theo-impossible";
 
 const STYLES=Object.freeze([
   "sword","axe","mace","spear","crystal","anchor","bow","crossbow",
@@ -40,7 +40,7 @@ function bestStyle(c){
   return Object.keys(s).reduce((a,b)=>s[b]>s[a]?b:a,"utility");
 }
 
-export function createPvpExpertBrain(){
+export function createPvpExpertBrain(options={}){\n  const difficulty=options.difficulty||THEO_PVP_DIFFICULTY;
   let styleMemory=null;
   let styleLockUntil=0;
   let lastAction=null;
@@ -56,7 +56,7 @@ export function createPvpExpertBrain(){
     const scores=styleScores(c), preferred=bestStyle(c);
     if(!styleMemory||(!c.hardCounter&&now>=styleLockUntil&&scores[preferred]>scores[styleMemory]+12)){
       styleMemory=preferred;
-      styleLockUntil=now+1800;
+      styleLockUntil=now+Number(difficulty.styleLockMs||450);
     }
 
     if(c.dead) return {action:"stop",style:styleMemory,priority:10000,reason:"dead"};
@@ -132,8 +132,8 @@ export function createPvpExpertBrain(){
     if(styleMemory==="axe"&&has(c,"axe")&&d<=3.2&&attackReady)
       return {action:"melee_attack",style:"axe",priority:7300,reason:"axe_attack"};
     if(styleMemory==="sword"&&has(c,"sword")&&d<=3.05&&attackReady){
-      if(falling&&!onGround&&num(c.fallDistance)>=.45) return {action:"falling_crit",style:"sword",priority:7800,reason:"falling_crit"};
-      if(e.airborne&&c.hitSelectReady) return {action:"hit_select",style:"sword",priority:7350,reason:"hit_select"};
+      if(falling&&!onGround&&num(c.fallDistance)>=.45&&d>=Number(difficulty.critMinRange||2.45)) return {action:"falling_crit",style:"sword",priority:7800,reason:"falling_crit"};
+      if(e.airborne&&c.hitSelectReady&&d>=2.35) return {action:"hit_select",style:"sword",priority:7350,reason:"hit_select"};
       return {action:"melee_attack",style:"sword",priority:7200,reason:"sword_attack"};
     }
 
@@ -141,8 +141,8 @@ export function createPvpExpertBrain(){
     if(c.stuck) return {action:"unstuck",style:"utility",priority:6000,reason:"movement_recovery"};
     if(!c.lineOfSight) return {action:"reacquire",style:styleMemory,priority:5900,reason:"lost_los"};
 
-    if(d<2.0) return {action:"defensive_strafe",style:styleMemory,priority:5700,reason:"too_close"};
-    if(d>3.2&&d<7&&has(c,"melee")) return {action:"approach",style:styleMemory,priority:5600,reason:"close_distance"};
+    if(d<2.15) return {action:"defensive_strafe",style:styleMemory,priority:5700,reason:"too_close"};
+    if(d>Number(difficulty.attackRange||3.05)&&d<7&&has(c,"melee")) return {action:"approach",style:styleMemory,priority:5600,reason:"close_distance"};
     if(d<=4.5) return {action:"strafe_pressure",style:styleMemory,priority:5400,reason:"maintain_pressure"};
     if(has(c,"projectileDodge")&&c.projectileThreat) return {action:"dodge_projectile",style:"utility",priority:5300,reason:"projectile_dodge"};
 
