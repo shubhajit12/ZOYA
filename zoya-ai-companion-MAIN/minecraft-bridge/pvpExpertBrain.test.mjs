@@ -157,7 +157,7 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 
 {
   const d=makeBrain().decide({...base,distance:2.0,enemy:{...base.enemy,shield:true}});
-  assert.equal(d.action,"defensive_strafe","shield counter must also respect the minimum spacing gate");
+  assert.equal(d.action,"spacing_retreat","shield counter must also respect the minimum spacing gate");
 }
 
 {
