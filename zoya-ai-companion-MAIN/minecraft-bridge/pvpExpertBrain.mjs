@@ -73,13 +73,16 @@ export function createPvpExpertBrain(){
         return {action:"pearl_escape",style:"utility",priority:9700,reason:"emergency_escape"};
     }
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
+    if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
     if(c.projectileThreat&&has(c,"shield")&&d>3) return {action:"shield",style:"shield",priority:9500,reason:"projectile_defense"};
+    if(c.projectileThreat&&c.projectileDodge) return {action:"dodge_projectile",style:"utility",priority:9490,reason:"projectile_dodge"};
     if(e.retreating&&d>=4&&d<=9&&has(c,"rod")) return {action:"rod_control",style:"utility",priority:7550,reason:"rod_control"};
 
     if(e.shield&&has(c,"axe")&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
     if(e.usingItem&&e.shield&&has(c,"axe")&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
     if(e.totemPopped&&d<=5&&has(c,"burst")) return {action:"finish",style:styleMemory,priority:9300,reason:"totem_pop_finish"};
+    if(e.totemPopped&&d>5&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
 
     // Genuine Elytra + mace sequence. It outranks ordinary mace only when the
