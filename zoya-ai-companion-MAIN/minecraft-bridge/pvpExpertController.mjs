@@ -50,7 +50,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     lastProgressAt:0,lastProgressPos:null,lastTargetSeenAt:0,
     enemyTotemWasEquipped:false,enemyTotemPopUntil:0,
     failedActions:Object.create(null),failedActionUntil:0,
-    committedStyle:null,styleCommitUntil:0,totemEquipped:false
+    committedStyle:null,styleCommitUntil:0,totemEquipped:false,
+    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,
+    maceLaunchUntil:0,lastMaceSmashAt:0
   };
 
   const stop=()=>{
@@ -71,9 +73,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
-  const equipBestMelee=async()=>{
-    const order=["mace","spear","axe","sword"];
-    for(const type of order) if(has(bot,type)&&await equip(type)) return type;
+  const equipBestMelee=async(preferred=null)=>{
+    const order=preferred?[preferred,"sword","axe","spear","mace"]:["sword","axe","spear","mace"];
+    for(const type of [...new Set(order)]) if(has(bot,type)&&await equip(type)) return type;
     return null;
   };
 
@@ -196,23 +198,68 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }catch{try{bot.deactivateItem()}catch{};return false}
   };
 
-  const throwPearl=async(t,escape=false)=>{
-    if(!await equip("pearl"))return false;
-    if(!t?.position||!bot.entity?.position)return false;
-    try{
-      if(escape){
-        const dx=bot.entity.position.x-t.position.x;
-        const dz=bot.entity.position.z-t.position.z;
-        const len=Math.hypot(dx,dz)||1;
-        const p=bot.entity.position.offset((dx/len)*7,1.4,(dz/len)*7);
-        await bot.lookAt(p,true);
-      }else{
-        await lookAtTarget(t,.22);
+  const pearlBlockSafe=(block)=>{
+    if(!block)return false;
+    const n=String(block.name||"").toLowerCase();
+    if(/lava|fire|campfire|magma|cactus|powder_snow/.test(n))return false;
+    return block.boundingBox==="empty"||/air|water|grass|flower|snow|vine|torch|button|rail/.test(n);
+  };
+
+  const pearlDestination=(t,mode="escape")=>{
+    const p=bot.entity?.position;
+    if(!p)return null;
+    const tp=t?.position||p;
+    const dx=p.x-tp.x,dz=p.z-tp.z;
+    const len=Math.hypot(dx,dz)||1;
+    const awayX=dx/len,awayZ=dz/len;
+    const sideX=-awayZ,sideZ=awayX;
+    const candidates=[];
+    const push=(x,z)=>candidates.push(new Vec3(x,p.y,z));
+    if(mode==="ambush"){
+      const tx=(tp.x-p.x)/len,tz=(tp.z-p.z)/len;
+      for(const r of [5.5,7,8.5]) push(p.x+tx*r,p.z+tz*r);
+    }else{
+      for(const r of [5.5,7,8.5,10]){
+        push(p.x+awayX*r,p.z+awayZ*r);
+        push(p.x+awayX*r+sideX*2.5,p.z+awayZ*r+sideZ*2.5);
+        push(p.x+awayX*r-sideX*2.5,p.z+awayZ*r-sideZ*2.5);
       }
+    }
+    for(const c of candidates){
+      const feet=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(c.y),Math.floor(c.z)));
+      const head=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(c.y+1),Math.floor(c.z)));
+      const below=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(c.y-1),Math.floor(c.z)));
+      if(!pearlBlockSafe(feet)||!pearlBlockSafe(head))continue;
+      if(!below||below.boundingBox!=="block")continue;
+      if(/lava|fire|magma|cactus|powder_snow/.test(String(below.name||"").toLowerCase()))continue;
+      const d=c.distanceTo(tp);
+      if(mode==="escape"&&d<3.5)continue;
+      return c.offset(.5,.35,.5);
+    }
+    return null;
+  };
+
+  const pearlReady=(mode,t)=>{
+    if(!has(bot,"pearl"))return false;
+    if(Date.now()<state.pearlCooldownUntil)return false;
+    return Boolean(pearlDestination(t,mode));
+  };
+
+  const throwPearl=async(t,mode="escape")=>{
+    if(!t?.position||!bot.entity?.position)return false;
+    if(Date.now()<state.pearlCooldownUntil)return false;
+    const destination=pearlDestination(t,mode);
+    if(!destination)return false;
+    if(!await equip("pearl"))return false;
+    try{
+      await bot.lookAt(destination,true);
       bot.activateItem();
-      await sleep(110);
+      await sleep(85);
       bot.deactivateItem();
-      await sleep(220);
+      state.lastPearlAt=Date.now();
+      state.pearlCooldownUntil=state.lastPearlAt+1000;
+      state.lastPearlType=mode;
+      await sleep(260);
       return true;
     }catch{
       try{bot.deactivateItem()}catch{}
@@ -388,9 +435,52 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
-  const wind=async()=>{
-    if(!await equip("wind"))return false;
-    try{bot.activateItem();await sleep(90);bot.deactivateItem();return true}catch{return false}
+  const maceSmash=async(t)=>{
+    if(!t||!has(bot,"mace"))return false;
+    if(!await equip("mace"))return false;
+    const until=Date.now()+900;
+    let attempted=false;
+    while(state.active&&taskIsActive()&&Date.now()<until){
+      const live=targetOf(bot,state.targetUsername)||t;
+      if(!live)break;
+      const d=dist(bot.entity,live);
+      const falling=isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08;
+      const fallDistance=num(bot.entity?.fallDistance);
+      await lookAtTarget(live,.02);
+      if(falling&&fallDistance>1.5&&d<=3.1){
+        bot.attack(live);
+        state.lastAttackAt=Date.now();
+        state.nextAttackAt=state.lastAttackAt+950;
+        state.lastMaceSmashAt=Date.now();
+        state.attackCount++;
+        attempted=true;
+        stop();
+        await sleep(180);
+        return true;
+      }
+      bot.setControlState("forward",true);
+      bot.setControlState("sprint",true);
+      await sleep(25);
+    }
+    stop();
+    return attempted;
+  };
+
+  const wind=async t=>{
+    if(!t||!await equip("wind"))return false;
+    try{
+      await lookAtTarget(t,.05);
+      bot.activateItem();
+      await sleep(90);
+      bot.deactivateItem();
+      state.maceLaunchUntil=Date.now()+2200;
+      await sleep(70);
+      return await maceSmash(t);
+    }catch{
+      try{bot.deactivateItem()}catch{}
+      stop();
+      return false;
+    }
   };
 
   const dodge=async t=>{
@@ -505,6 +595,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.lastTargetSeenAt=Date.now();state.enemyTotemWasEquipped=false;state.enemyTotemPopUntil=0;
     state.failedActions=Object.create(null);state.failedActionUntil=0;
     const onElytra=e=>{if(e===bot.entity)state.elytraFlying=true};
+    state.pearlCooldownUntil=0;
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
@@ -540,7 +631,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const dPos=state.lastTargetPos?t.position.distanceTo(state.lastTargetPos):0;
         const targetVelocity=t.velocity||{x:0,y:0,z:0};
         const enemyHeld=lname(t.equipment?.[0]||t.heldItem||"");
-        const enemyBurstThreat=/mace|wind_charge/.test(enemyHeld)&&(isAirborne(t)||num(targetVelocity.y)<-.08||num(bot.entity?.position?.y)>num(t.position?.y)+1.5||d<=4.0);
+        const enemyMaceHeld=/mace/.test(enemyHeld);
+        const enemyWindHeld=/wind_charge/.test(enemyHeld);
+        const enemyMaceThreat=enemyMaceHeld&&(
+          (isAirborne(t)&&(num(targetVelocity.y)<-.08||num(t.position?.y)>num(bot.entity?.position?.y)+.6))||
+          num(t.fallDistance)>1.5||
+          (d<=3.8&&num(targetVelocity.y)<-.03)
+        );
+        const enemyBurstThreat=(enemyMaceThreat||enemyWindHeld&&(isAirborne(t)||d<=4.0));
         const enemy={
           health:th,shield:eq.shield,usingItem:Boolean(t.isUsingItem||t.metadata?.isUsingItem),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
@@ -584,9 +682,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),
+          selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&num(bot.entity?.fallDistance)>1.5),
+          windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)),
+          pearlEscapeReady:pearlReady("escape",t),
+          pearlAmbushReady:pearlReady("ambush",t),
+          recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
+          badPosition:Boolean(hazard()||d>14||!lineOfSight),
           totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
           hardCounter:Boolean(eq.shield||eq.elytra||enemy.totemPopped),
-          enemyBurstThreat,
+          enemyBurstThreat,enemyMaceThreat,
           strafeDirection:state.strafe>0?"right":"left"
         };
 
@@ -623,8 +727,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             break;
           }
           case "emergency_disengage": ok=await emergencyDisengage(t);break;
-          case "pearl_escape": ok=await throwPearl(t,true);break;
-          case "pearl_ambush": ok=await throwPearl(t,false);break;
+          case "pearl_escape": ok=await throwPearl(t,"escape");break;
+          case "pearl_ambush": ok=await throwPearl(t,"ambush");break;
+          case "pearl_recover": ok=await throwPearl(t,"escape");break;
           case "water_clutch": ok=await waterRecover();break;
           case "web_escape": ok=await webEscape();break;
           case "shield_break": ok=await attack(t,"axe",3.2);break;
@@ -633,14 +738,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "melee_attack": ok=await attack(t,decision.style==="axe"?"axe":decision.style==="mace"?"mace":decision.style==="spear"?"spear":"sword",decision.style==="spear"?5.0:decision.style==="mace"?3.1:3.05);break;
           case "finish": ok=await attack(t,has(bot,"mace")?"mace":has(bot,"axe")?"axe":"sword",3.1);break;
           case "mace_drop": ok=await attack(t,"mace",3.1);break;
-          case "mace_dive": ok=await attack(t,"mace",3.1);break;
+          case "mace_dive": ok=await maceSmash(t);break;
           case "mace_approach": ok=await approach(t,3.0);break;
           case "spear_pressure": ok=await spearCharge(t);break;
           case "ranged_attack": ok=await ranged(t,decision.style==="crossbow"?"crossbow":"bow");break;
           case "crystal_cycle": ok=await crystalCycle(t);break;
           case "anchor_cycle": ok=await anchorCycle(t);break;
           case "elytra_mace": ok=await elytraMace(t);break;
-          case "wind_mace_launch": ok=await wind();break;
+          case "wind_mace_launch": ok=await wind(t);break;
           case "dodge_projectile": ok=await projectileDodge(t);break;
           case "approach": ok=await approach(t,2.8);break;
           case "strafe_pressure": ok=await strafe(t,state.strafe,145);state.strafe*=-1;break;
@@ -654,8 +759,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
         if(!ok){
           noteFailure(decision.action,"execution_failed");
-          state.failedActions[decision.action]=Date.now()+850;
-          state.failedActionUntil=Date.now()+850;
+          state.failedActions[decision.action]=Date.now()+1600;
+          state.failedActionUntil=Date.now()+1600;
           await sleep(90);
         }else{
           state.failedAction=null;
@@ -668,7 +773,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             state.lastProgressAt=Date.now();
             state.lastProgressPos=progressPos.clone();
           }else if(Date.now()-state.lastProgressAt>1800&&["approach","mace_approach","reacquire","strafe_pressure"].includes(decision.action)){
-            state.failedActions[decision.action]=Date.now()+1100;
+            state.failedActions[decision.action]=Date.now()+1800;
             state.lastProgressAt=Date.now();
             state.lastProgressPos=progressPos.clone();
             stop();
