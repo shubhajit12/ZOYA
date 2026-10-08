@@ -106,6 +106,18 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     return true;
   };
 
+  const emergencyDisengage=async t=>{
+    if(!t)return false;
+    await lookAtTarget(t,.05);
+    bot.setControlState("back",true);
+    bot.setControlState("sprint",true);
+    bot.setControlState(state.strafe<0?"left":"right",true);
+    await sleep(520);
+    stop();
+    state.strafe*=-1;
+    return true;
+  };
+
   const attack=async(t,type,maxReach)=>{
     if(!t||!await equip(type)) return false;
     const d=dist(bot.entity,t);
@@ -489,7 +501,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           elytraEquipped,elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6),
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
-          hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),strafeDirection:state.strafe>0?"right":"left"
+          hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),
+          totemEquipped:lname(bot.inventory?.slots?.[bot.getEquipmentDestSlot?.("off-hand")])==="totem_of_undying",
+          strafeDirection:state.strafe>0?"right":"left"
         };
 
         const decision=brain.decide(ctx);
@@ -507,7 +521,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "stop": return false;
           case "heal": ok=await heal();break;
           case "shield": ok=await shield();break;
-          case "totem": ok=await equip("totem","off-hand");break;
+          case "totem": {
+            const equipped=await equip("totem","off-hand");
+            if(equipped){
+              await emergencyDisengage(t);
+              state.failedAction=null;
+            }
+            ok=equipped;
+            break;
+          }
+          case "emergency_disengage": ok=await emergencyDisengage(t);break;
           case "pearl_escape": ok=await throwPearl(t);break;
           case "pearl_ambush": ok=await throwPearl(t);break;
           case "water_clutch": ok=await waterRecover();break;
