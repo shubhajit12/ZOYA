@@ -5,7 +5,9 @@
  * Contract: every returned action has a feasibility gate represented by ctx.
  * The controller is the sole physical executor.
  */
-import { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";\n\nconst num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
+import { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";
+
+const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const has=(c,k)=>c?.capabilities?.[k]===true;
 const invHas=(c,k)=>num(c?.inventory?.[k])>0;
@@ -40,7 +42,8 @@ function bestStyle(c){
   return Object.keys(s).reduce((a,b)=>s[b]>s[a]?b:a,"utility");
 }
 
-export function createPvpExpertBrain(options={}){\n  const difficulty=options.difficulty||THEO_PVP_DIFFICULTY;
+export function createPvpExpertBrain(options={}){
+  const difficulty=options.difficulty||THEO_PVP_DIFFICULTY;
   let styleMemory=null;
   let styleLockUntil=0;
   let lastAction=null;
