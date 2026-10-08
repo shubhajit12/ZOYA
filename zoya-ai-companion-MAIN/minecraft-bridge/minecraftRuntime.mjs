@@ -5,6 +5,7 @@ import toolPackage from "mineflayer-tool";
 import collectBlockPackage from "mineflayer-collectblock";
 import craftingUtilPackage from "mineflayer-crafting-util";
 import armorManagerPackage from "mineflayer-armor-manager";
+import trackerPackage from "@nxg-org/mineflayer-tracker";
 import { createPvpExpertController } from "./pvpExpertController.mjs";
 import { fileURLToPath } from "node:url";
 
