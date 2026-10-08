@@ -140,4 +140,19 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
   assert.equal(d.action,"hit_select","Theo-impossible profile should use hit-select against an airborne target when no higher-priority counter applies");
 }
 
+{
+  const d=makeBrain().decide({...base,distance:0.8});
+  assert.equal(d.action,"defensive_strafe","ordinary melee must never attack from point-blank collision range");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:2.0,enemy:{...base.enemy,shield:true}});
+  assert.equal(d.action,"defensive_strafe","shield counter must also respect the minimum spacing gate");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:2.6,enemy:{...base.enemy,shield:true}});
+  assert.equal(d.action,"shield_break","shield break remains available at valid melee spacing");
+}
+
 console.log("Theobald-impossible difficulty regression tests passed.");
