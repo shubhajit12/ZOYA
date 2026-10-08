@@ -1,0 +1,40 @@
+import assert from "node:assert/strict";
+import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
+
+const brain=createPvpExpertBrain();
+
+const base={
+  health:20,maxHealth:20,food:20,distance:4,onGround:true,falling:false,fallDistance:0,
+  heightAdvantage:false,lineOfSight:true,projectileThreat:false,hazard:false,
+  hasMelee:true,hasSword:true,hasAxe:true,hasMace:true,hasSpear:true,hasShield:true,
+  hasPearl:true,hasTotem:true,hasHeal:true,hasWaterBucket:true,hasBurst:true,
+  attackReadyAt:0,healDistanceMin:4.2,
+  capabilities:{melee:true,sword:true,axe:true,mace:true,spear:true,shield:true,pearl:true,totem:true,heal:true,water:true,burst:true},
+  inventory:{sword:1,axe:1,mace:1,spear:1,obsidian:0,crystal:0,respawn_anchor:0,glowstone:0},
+  enemy:{health:20,shield:false,airborne:false,falling:false,velocityY:0,retreating:false,totemPopped:false,meleeThreat:true}
+};
+
+{
+  const d=brain.decide({...base,distance:5.5});
+  assert.notEqual(d.action,"spear_pressure","spear pressure must never be selected beyond the executor's 5.0m contract");
+}
+
+{
+  const d=brain.decide({...base,distance:8,elytraEquipped:true,elytraMaceReady:true,
+    capabilities:{...base.capabilities,elytraMace:true}});
+  assert.equal(d.action,"elytra_mace");
+  assert.equal(d.style,"elytra");
+}
+
+{
+  const d=brain.decide({...base,distance:4,inventory:{...base.inventory,crystal:4,obsidian:16},
+    crystalArena:true,crystalCycleSafe:true,capabilities:{...base.capabilities,burst:true,crystalCycleSafe:true}});
+  assert.equal(d.action,"crystal_cycle");
+}
+
+{
+  const d=brain.decide({...base,health:5,hasTotem:true});
+  assert.equal(d.action,"totem");
+}
+
+console.log("PvP Expert Brain deterministic tests passed.");
