@@ -76,7 +76,7 @@ export function createPvpExpertBrain(){
       if(has(c,"pearl")&&c.pearlEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9700,reason:"emergency_escape"};
     }
-    if(c.enemyMaceThreat&&c.pearlEscapeReady)
+    if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
       return {action:"pearl_escape",style:"utility",priority:9870,reason:"mace_attack_escape"};
     if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
       return {action:"totem",style:"utility",priority:9850,reason:"mace_burst_totem"};
@@ -97,7 +97,7 @@ export function createPvpExpertBrain(){
 
     // Genuine Elytra + mace sequence. It outranks ordinary mace only when the
     // controller confirms the flight prerequisites.
-    if(c.windMaceSmashReady&&has(c,"mace")&&d<=7)
+    if(c.windMaceSmashReady&&has(c,"mace")&&d>=3.5&&d<=6.5&&c.lineOfSight&&c.health>7)
       return {action:"wind_mace_launch",style:"mace",priority:9080,reason:"wind_charge_mace_setup"};
 
     if(has(c,"elytraMace")&&c.elytraMaceReady&&c.elytraLaunchReady&&invHas(c,"mace")){
@@ -118,7 +118,7 @@ export function createPvpExpertBrain(){
 
     if((styleMemory==="bow"||styleMemory==="crossbow")&&d>=7&&c.lineOfSight)
       return {action:"ranged_attack",style:styleMemory,priority:7600,reason:"ranged_spacing"};
-    if(c.recoveryPearlReady&&c.pearlEscapeReady&&(
+    if(c.recoveryPearlReady&&c.pearlEscapeReady&&c.recoveryPearlReady&&(
       c.knockbacked||c.stuck||c.hazard||c.badPosition
     ))
       return {action:"pearl_recover",style:"utility",priority:7350,reason:"tactical_recovery"};
