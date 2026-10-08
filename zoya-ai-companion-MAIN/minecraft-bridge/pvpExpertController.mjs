@@ -93,7 +93,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(dist(bot.entity,t)<=range) return true;
     try{
       bot.pathfinder.setGoal(new goals.GoalFollow(t,range),true);
-      const until=Date.now()+900;
+      const targetSpeed=speed(t);
+      const until=Date.now()+(targetSpeed>.35?1400:1100);
       const start=dist(bot.entity,t);
       while(state.active&&taskIsActive()&&Date.now()<until){
         if(dist(bot.entity,t)<=range) return true;
@@ -482,32 +483,53 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const wind=async t=>{
     if(!t||!await equip("wind"))return false;
-    if(dist(bot.entity,t)<3.5||dist(bot.entity,t)>6.5)return false;
+    const initialDistance=dist(bot.entity,t);
+    if(initialDistance<3.5||initialDistance>6.5)return false;
     try{
-      // Wind Charge is a setup tool, not a point-blank attack. Fire once,
-      // then wait for the launch to produce upward momentum before switching
-      // to the mace.
-      await lookAtTarget(t,.05);
+      // Wind Charge has two distinct tactical jobs. This action is ONLY the
+      // self-launch half of the mace combo: never aim it at the opponent.
+      const startY=num(bot.entity?.position?.y);
+      const startFall=num(bot.entity?.fallDistance);
+      const launchDeadline=Date.now()+1050;
+      await bot.lookAt(bot.entity.position.offset(0,-1.35,0),true);
       bot.activateItem();
-      await sleep(90);
+      await sleep(70);
       bot.deactivateItem();
-      state.maceLaunchUntil=Date.now()+2600;
-      const launchUntil=Date.now()+950;
+
+      // Verify an actual self-launch, not merely a tiny velocity change.
       let launched=false;
-      while(state.active&&taskIsActive()&&Date.now()<launchUntil){
+      while(state.active&&taskIsActive()&&Date.now()<launchDeadline){
+        const liveY=num(bot.entity?.position?.y);
         const vy=num(bot.entity?.velocity?.y);
-        if(isAirborne(bot.entity)&&vy>.08){
+        if(liveY-startY>=0.28&&vy>0.22){
           launched=true;
           break;
         }
-        await sleep(30);
+        await sleep(25);
       }
       if(!launched){
         stop();
         return false;
       }
-      await sleep(90);
-      return await maceSmash(t);
+
+      state.maceLaunchUntil=Date.now()+2800;
+
+      // Do not equip/swing the mace during ascent. Wait for a real smash
+      // window: descending, >1.5 blocks of fall, and valid melee geometry.
+      const smashDeadline=state.maceLaunchUntil;
+      while(state.active&&taskIsActive()&&Date.now()<smashDeadline){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(!live)break;
+        const d=dist(bot.entity,live);
+        const vy=num(bot.entity?.velocity?.y);
+        const fallDistance=num(bot.entity?.fallDistance);
+        if(isAirborne(bot.entity)&&vy<-.08&&fallDistance>1.5&&d>=2.35&&d<=3.1){
+          return await maceSmash(live);
+        }
+        await sleep(25);
+      }
+      stop();
+      return false;
     }catch{
       try{bot.deactivateItem()}catch{}
       stop();
