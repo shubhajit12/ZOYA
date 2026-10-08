@@ -472,10 +472,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
             anchorCycleSafe:bot.game?.dimension==="the_nether"&&has(bot,"anchor")&&has(bot,"glowstone"),
             projectileDodge:projectileThreat(),
+            windMace:Boolean(has(bot,"wind")&&has(bot,"mace")),
             debuff:has(bot,"potion"),
-            elytraMace:Boolean(elytraEquipped&&has(bot,"mace"))
+            elytraMace:Boolean(elytraEquipped&&has(bot,"mace")),
           },
           elytraEquipped,elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6),
+          windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),strafeDirection:state.strafe>0?"right":"left"
         };
@@ -512,6 +514,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "crystal_cycle": ok=await crystalCycle(t);break;
           case "anchor_cycle": ok=await anchorCycle(t);break;
           case "elytra_mace": ok=await elytraMace(t);break;
+          case "wind_mace_launch": ok=await wind();break;
           case "dodge_projectile": ok=await dodge(t);break;
           case "approach": ok=await approach(t,2.8);break;
           case "strafe_pressure": ok=await strafe(t,state.strafe,145);state.strafe*=-1;break;
