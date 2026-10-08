@@ -42,17 +42,22 @@ function bestStyle(c){
 
 export function createPvpExpertBrain(){
   let styleMemory=null;
+  let styleLockUntil=0;
   let lastAction=null;
   let lastActionAt=0;
 
   function decide(ctx={}){
     const c=ctx||{}, e=c.enemy||{}, d=num(c.distance,Infinity);
+    const now=Date.now();
     const hp=num(c.health,20), maxHp=Math.max(1,num(c.maxHealth,20));
     const low=hp<=Math.min(10,maxHp*.5), emergency=hp<=Math.min(6,maxHp*.3);
     const falling=Boolean(c.falling), onGround=c.onGround!==false;
     const attackReady=num(c.attackReadyAt,0)<=Date.now();
     const scores=styleScores(c), preferred=bestStyle(c);
-    if(!styleMemory||scores[preferred]>scores[styleMemory]+8) styleMemory=preferred;
+    if(!styleMemory||(!c.hardCounter&&now>=styleLockUntil&&scores[preferred]>scores[styleMemory]+12)){
+      styleMemory=preferred;
+      styleLockUntil=now+1800;
+    }
 
     if(c.dead) return {action:"stop",style:styleMemory,priority:10000,reason:"dead"};
     // Emergency survival is a sequence, not a repeated single action:
@@ -60,10 +65,12 @@ export function createPvpExpertBrain(){
     if(emergency){
       if(has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
-      if(has(c,"pearl")&&d>=2.5)
-        return {action:"pearl_escape",style:"utility",priority:9850,reason:"emergency_escape"};
       if(d<4.2)
         return {action:"emergency_disengage",style:"utility",priority:9800,reason:"emergency_create_distance"};
+      if(has(c,"heal"))
+        return {action:"heal",style:"utility",priority:9750,reason:"emergency_heal"};
+      if(has(c,"pearl")&&d>=4.2)
+        return {action:"pearl_escape",style:"utility",priority:9700,reason:"emergency_escape"};
     }
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
