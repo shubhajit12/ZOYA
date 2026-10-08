@@ -226,15 +226,22 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
     }
     for(const c of candidates){
-      const feet=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(c.y),Math.floor(c.z)));
-      const head=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(c.y+1),Math.floor(c.z)));
-      const below=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(c.y-1),Math.floor(c.z)));
-      if(!pearlBlockSafe(feet)||!pearlBlockSafe(head))continue;
-      if(!below||below.boundingBox!=="block")continue;
-      if(/lava|fire|magma|cactus|powder_snow/.test(String(below.name||"").toLowerCase()))continue;
-      const d=c.distanceTo(tp);
-      if(mode==="escape"&&d<3.5)continue;
-      return c.offset(.5,.35,.5);
+      // The bot may be airborne/falling when it needs the pearl. Search a
+      // bounded vertical band for a real two-block landing space with solid
+      // support instead of requiring the current Y coordinate to be usable.
+      for(const dy of [0,-1,-2,-3,-4,-5,1,2]){
+        const y=c.y+dy;
+        const feet=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(y),Math.floor(c.z)));
+        const head=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(y+1),Math.floor(c.z)));
+        const below=bot.blockAt(new Vec3(Math.floor(c.x),Math.floor(y-1),Math.floor(c.z)));
+        if(!pearlBlockSafe(feet)||!pearlBlockSafe(head))continue;
+        if(!below||below.boundingBox!=="block")continue;
+        if(/lava|fire|magma|cactus|powder_snow/.test(String(below.name||"").toLowerCase()))continue;
+        const landing=new Vec3(c.x,y,c.z);
+        const d=landing.distanceTo(tp);
+        if(mode==="escape"&&d<3.5)continue;
+        return landing.offset(.5,.35,.5);
+      }
     }
     return null;
   };
