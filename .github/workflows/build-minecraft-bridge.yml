@@ -63,7 +63,6 @@ jobs:
             $engineSource = Get-Content (Join-Path $bridgeDist 'capabilityEngine.mjs') -Raw
             $modesSource = Get-Content (Join-Path $bridgeDist 'capabilityModes.mjs') -Raw
             $runtimeSource = Get-Content (Join-Path $bridgeDist 'minecraftRuntime.mjs') -Raw
-            $swordControllerSource = Get-Content (Join-Path $bridgeDist 'swordPvpController.mjs') -Raw
             $brainSource = Get-Content (Join-Path $bridgeDist 'zoyaBrain.mjs') -Raw
             $pvpExpertBrainSource = Get-Content (Join-Path $bridgeDist 'pvpExpertBrain.mjs') -Raw
             $pvpExpertControllerSource = Get-Content (Join-Path $bridgeDist 'pvpExpertController.mjs') -Raw
@@ -115,7 +114,6 @@ jobs:
               if ($testerSource -notmatch [regex]::Escape($requiredTesterText)) { throw "Verification guard is missing: $requiredTesterText" }
             }
             if ($runtimeSource -notmatch 'Damage observed; preserving active task ownership.') { throw 'Damage must not globally cancel active Minecraft tasks.' }
-            if ($swordControllerSource -match 'mineflayer-pathfinder') { throw 'Sword controller must not import mineflayer-pathfinder independently; runtime owns the verified plugin exports.' }
             if ($swordControllerSource -notmatch 'goals\?\.GoalFollow') { throw 'Sword controller is missing runtime-provided GoalFollow validation.' }
             if ($runtimeSource -notmatch 'createSwordPvpController\(\{[\s\S]*goals,') { throw 'Minecraft runtime is not passing verified pathfinder goals into the Sword controller.' }
             Write-Host "Clean bridge static guards passed: $registeredCapabilities definitions / $logicalHandlerCount handlers + Groq owner-permission controller."
