@@ -869,6 +869,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           }
           case "emergency_disengage": ok=await emergencyDisengage(t);break;
           case "spacing_retreat": ok=await spacingRetreat(t);break;
+          case "spacing_hold": {
+            await lookAtTarget(t,.04);
+            bot.setControlState("forward",false);
+            bot.setControlState("back",false);
+            bot.setControlState("sprint",false);
+            bot.setControlState(state.strafe<0?"left":"right",true);
+            await sleep(140);
+            stop();
+            ok=true;
+            break;
+          }
           case "pearl_escape":
             ok=await throwPearl(t,"escape");
             if(ok) state.maceEscapeCooldownUntil=Date.now()+2600;
