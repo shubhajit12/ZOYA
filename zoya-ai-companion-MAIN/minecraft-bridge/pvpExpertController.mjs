@@ -204,7 +204,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
     const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45&&dist(bot.entity,t)<=3.05;
     if(!valid){stop();return false}
-    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.nextAttackAt=state.lastAttackAt+700;state.attackCount++;await sprintReset("sword");stop();return true;
+    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;await sprintReset("sword");stop();return true;
   };
 
   const hitSelect=async t=>{
@@ -212,7 +212,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     bot.setControlState("sprint",true);
     bot.setControlState("forward",true);
     await sleep(45);
-    if(dist(bot.entity,t)<=3.05){await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.nextAttackAt=state.lastAttackAt+700;state.attackCount++}
+    if(dist(bot.entity,t)<=3.05){await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++}
     await sprintReset();
     bot.setControlState("sprint",false);
     return true;
@@ -471,7 +471,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         bot.setControlState("sprint",true);
         if(nd<=4.75&&nd>=2.0){
           // The 1.21.11 spear charge deals contact damage while held; keep
-          // the charge active while moving through the valid range.
+          // the charge active while moving through the valid range. The
+          // entityHurt listener separately confirms whether damage landed.
+          state.lastAttackAttemptAt=Date.now();
           hit=true;
         }
         await sleep(35);
@@ -634,9 +636,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // cancels the intended reset and produces the close-range oscillation
       // seen in live logs.
       const useSTap=Boolean(combatDifficulty.sTap&&(
-        type==="sword" ||
+        // Alternate W-tap and S-tap rhythms; a confirmed hit can bias the
+        // immediate next reset toward S-tap to preserve combo spacing.
         state.attackCount%2===0 ||
-        (state.lastTargetHealth!=null&&state.lastTargetHealth<Math.max(1,state.lastHealth))
+        (state.lastAttackConfirmedAt>0&&Date.now()-state.lastAttackConfirmedAt<220)
       ));
       bot.setControlState("sprint",false);
       bot.setControlState("forward",false);
@@ -717,8 +720,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(d<=3.05&&vy<-.12&&y>num(live.position?.y)+.3){
           bot.attack(live);
           state.lastAttackAt=Date.now();
-          state.nextAttackAt=state.lastAttackAt+950;
+          state.lastAttackAttemptAt=state.lastAttackAt;
+          state.nextAttackAt=state.lastAttackAt+1667;
           state.attackCount++;
+          log("[PVP-EXPERT] elytra_mace_smash_issued distance="+d.toFixed(2)+"; awaiting server damage confirmation");
           stop();
           await sleep(300);
           return true;
@@ -764,7 +769,21 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
+    const onTargetHurt=(entity,source)=>{
+      const target=targetOf(bot,state.targetUsername);
+      if(!state.active||!target||entity?.id!==target.id) return;
+      const age=Date.now()-state.lastAttackAttemptAt;
+      if(age<0||age>450) return;
+      // When Mineflayer identifies the source, reject damage from other
+      // entities. Some servers omit source metadata, so the short attack-time
+      // + target-identity window is the fallback for PvP players.
+      if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;
+      state.hits++;
+      state.lastAttackConfirmedAt=Date.now();
+      log("[PVP-EXPERT] hit_confirmed source=entityHurt target="+state.targetUsername+" totalHits="+state.hits);
+    };
     try{bot.on?.("playerLeft",onTargetGone)}catch{}
+    try{bot.on?.("entityHurt",onTargetHurt)}catch{}
     try{bot.on?.("entityElytraFlew",onElytra)}catch{}
     log("[PVP-EXPERT] active target="+state.targetUsername);
 
@@ -1005,6 +1024,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }finally{
       state.active=false;stop();
       try{bot.removeListener?.("entityElytraFlew",onElytra)}catch{}
+      try{bot.removeListener?.("entityHurt",onTargetHurt)}catch{}
       try{bot.removeListener?.("playerLeft",onTargetGone)}catch{}
     }
   };
