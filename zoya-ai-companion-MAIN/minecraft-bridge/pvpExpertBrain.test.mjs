@@ -136,8 +136,10 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 }
 
 {
-  const d=makeBrain().decide({...base,distance:3.0,falling:false,onGround:true,fallDistance:0,hitSelectReady:true,enemy:{...base.enemy,airborne:true}});
-  assert.equal(d.action,"hit_select","Theo-impossible profile should use hit-select against an airborne target when no higher-priority counter applies");
+  const d=makeBrain().decide({...base,distance:3.0,falling:false,onGround:true,fallDistance:0,hitSelectReady:true,
+    inventory:{...base.inventory,spear:0},capabilities:{...base.capabilities,spear:false},
+    enemy:{...base.enemy,airborne:false}});
+  assert.equal(d.action,"hit_select","Theo-impossible profile should hit-select inside the short post-landing window, not at any arbitrary airborne moment");
 }
 
 {
@@ -153,6 +155,7 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 {
   const d=makeBrain().decide({...base,distance:2.3});
   assert.equal(d.action,"spacing_retreat","the minimum attack buffer must extend beyond point-blank collision range");
+  assert.notEqual(d.style,"utility","spacing recovery must preserve the selected combat style rather than visually thrash to utility");
 }
 
 {
@@ -175,4 +178,11 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
   assert.equal(d.action,"shield_break","shield break remains available at valid melee spacing");
 }
 
+
+{
+  const d=makeBrain().decide({...base,distance:3.0,falling:false,onGround:true,fallDistance:0,hitSelectReady:false,
+    inventory:{...base.inventory,spear:0},capabilities:{...base.capabilities,spear:false},
+    enemy:{...base.enemy,airborne:true}});
+  assert.notEqual(d.action,"hit_select","an airborne target alone is not a landing-timed hit-select window");
+}
 console.log("Theobald-impossible difficulty regression tests passed.");
