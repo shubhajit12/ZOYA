@@ -6,1223 +6,857 @@ Bridge script: A:\whitehat-jr\Downloads\ZOYA\TEST-EXE\Zoya\minecraft-bridge\inde
 Config: C:\Users\tapan\AppData\Roaming\com.zoya.aicompanion\minecraft\config.json
 Starting Mineflayer bridge...
 
-[2026-10-08T14:46:19.001Z] [ZOYA Minecraft Bridge] Listening on http://127.0.0.1:32123
-[2026-10-08T14:46:19.006Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
-[2026-10-08T14:46:19.007Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
-[2026-10-08T14:46:36.554Z] [STATE] Position: X=8.063 Y=64 Z=-2.3
-[2026-10-08T14:46:36.555Z] [STATE] Health: ? | Hunger: ? | XP: Lv.0 (0%)
-[2026-10-08T14:46:36.555Z] [STATE] Dimension: overworld | Time: 13910 | Day: 0 | Rain=NO | Thunder=0
-[2026-10-08T14:46:36.556Z] [STATE] Held: Netherite Sword | Nearby: 0
-[2026-10-08T14:46:36.556Z] [STATE] Below: unknown | Light=? | Sky Light=?
-[2026-10-08T14:46:36.902Z] [EVENT] Zoya spawned into the Minecraft world.
-[2026-10-08T14:46:36.910Z] [ZOYA Minecraft Bridge] Mineflayer login: Zoya
-[2026-10-08T14:46:36.912Z] [PROTOCOL] negotiatedVersion=1.21.11 protocol=774 configuredVersion=1.21.11 elytra=ENABLED action=start_elytra_flying
-[2026-10-08T14:46:36.912Z] [PHYSICS] Mineflayer physics enabled for movement and knockback.
-[2026-10-08T14:46:36.913Z] [PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.
-[2026-10-08T14:46:36.914Z] [MOVEMENT] Autonomous movement enabled.
-[2026-10-08T14:46:37.041Z] [BRAIN] Zoya Minecraft brain started (Groq planner, 168 capabilities).
-[2026-10-08T14:46:37.048Z] [PHYSICS] Damage 13 health; no server velocity packet observed yet.
-[2026-10-08T14:46:37.049Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:46:37.398Z] [EVENT] Health changed: null -> 7
-[2026-10-08T14:46:37.398Z] [EVENT] Zoya respawned (health restored).
-[2026-10-08T14:46:37.399Z] [EVENT] Hunger changed: null -> 19
-[2026-10-08T14:46:37.401Z] [EVENT] XP changed: Lv.0 (0 pts) -> Lv.8 (126 pts)
-[2026-10-08T14:46:37.401Z] [EVENT] Block below changed: unknown -> grass_block
-[2026-10-08T14:46:37.896Z] [EVENT] Health changed: 7 -> 9
-[2026-10-08T14:46:37.897Z] [EVENT] Hunger changed: 19 -> 18
-[2026-10-08T14:46:38.003Z] [SURVIVAL] Eating cooked_beef (health=9, food=17, trigger=health event).
-[2026-10-08T14:46:38.405Z] [EVENT] Hunger changed: 18 -> 17
-[2026-10-08T14:46:38.414Z] [EVENT] Held item changed: netherite_sword -> cooked_beef
-[2026-10-08T14:46:40.142Z] [SURVIVAL] Finished eating cooked_beef (health=9, food=20).
-[2026-10-08T14:46:40.464Z] [EVENT] Hunger changed: 17 -> 20
-[2026-10-08T14:46:40.465Z] [EVENT] Held item changed: cooked_beef -> netherite_sword
-[2026-10-08T14:46:40.520Z] [ZOYA Minecraft Bridge] HTTP client request was closed by the client.
-[2026-10-08T14:46:40.974Z] [EVENT] Health changed: 9 -> 10
-[2026-10-08T14:46:40.975Z] [EVENT] Inventory changed.
-[2026-10-08T14:46:41.052Z] [BRAIN] Thinking (startup)...
-[2026-10-08T14:46:41.475Z] [EVENT] Health changed: 10 -> 11
-[2026-10-08T14:46:42.090Z] [BRAIN] Plan: Respond to server request | actions=chat.
-[2026-10-08T14:46:42.092Z] [TASK] Started #1 manual:clean:chat.
-[2026-10-08T14:46:42.096Z] [TASK] Finished #1 manual:clean:chat -> completed.
-[2026-10-08T14:46:57.801Z] [EVENT] Health changed: 11 -> 12
-[2026-10-08T14:46:59.316Z] [EVENT] Health changed: 12 -> 13
-[2026-10-08T14:46:59.817Z] [EVENT] Health changed: 13 -> 14
-[2026-10-08T14:47:01.055Z] [BRAIN] Thinking (event)...
-[2026-10-08T14:47:02.350Z] [EVENT] Health changed: 14 -> 20
-[2026-10-08T14:47:02.796Z] [BRAIN] Plan: Respond to server request | actions=chat.
-[2026-10-08T14:47:02.797Z] [TASK] Started #2 manual:clean:chat.
-[2026-10-08T14:47:02.801Z] [TASK] Finished #2 manual:clean:chat -> completed.
-[2026-10-08T14:47:06.888Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(8.063,64,-2.3) | Nearby=0 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:47:21.067Z] [BRAIN] Thinking (event)...
-[2026-10-08T14:47:22.577Z] [BRAIN] Plan: Respond to server's request | actions=chat.
-[2026-10-08T14:47:22.578Z] [TASK] Started #3 manual:clean:chat.
-[2026-10-08T14:47:22.581Z] [TASK] Finished #3 manual:clean:chat -> completed.
-[2026-10-08T14:47:37.382Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(8.063,64,-2.3) | Nearby=0 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:47:41.067Z] [BRAIN] Thinking (event)...
-[2026-10-08T14:47:42.273Z] [BRAIN] Plan: Respond to server's request | actions=chat.
-[2026-10-08T14:47:42.419Z] [TASK] Started #4 manual:clean:chat.
-[2026-10-08T14:47:42.489Z] [TASK] Finished #4 manual:clean:chat -> completed.
-[2026-10-08T14:48:01.076Z] [BRAIN] Thinking (event)...
-[2026-10-08T14:48:01.904Z] [BRAIN] Plan: Respond to server's request | actions=chat.
-[2026-10-08T14:48:01.905Z] [TASK] Started #5 manual:clean:chat.
-[2026-10-08T14:48:01.908Z] [TASK] Finished #5 manual:clean:chat -> completed.
-[2026-10-08T14:48:07.894Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(8.063,64,-2.3) | Nearby=0 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:48:21.088Z] [BRAIN] Thinking (event)...
-[2026-10-08T14:48:21.722Z] [EVENT] Entity detected: ShubhTheGOAT (distance 3.4m)
-[2026-10-08T14:48:21.844Z] [BRAIN] Plan: Respond to server's request | actions=chat.
-[2026-10-08T14:48:21.890Z] [TASK] Started #6 manual:clean:chat.
-[2026-10-08T14:48:21.896Z] [TASK] Finished #6 manual:clean:chat -> completed.
-[2026-10-08T14:48:41.638Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Set own game mode to Creative Mode]
-[2026-10-08T14:48:42.166Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(8.063,64,-2.3) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:48:42.285Z] [BRAIN] Thinking (player_message)...
-[2026-10-08T14:48:43.184Z] [BRAIN] Plan: Set own game mode to Creative | actions=op_command.
-[2026-10-08T14:48:43.191Z] [TASK] Started #7 manual:clean:op_command.
-[2026-10-08T14:48:43.204Z] [TASK] Finished #7 manual:clean:op_command -> completed.
-[2026-10-08T14:48:47.266Z] [EVENT] Entity detected: skeleton (distance 15.91m)
-[2026-10-08T14:48:52.571Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Set own game mode to Survival Mode]
-[2026-10-08T14:49:02.285Z] [BRAIN] Thinking (player_message)...
-[2026-10-08T14:49:03.115Z] [BRAIN] Plan: Set own game mode to Survival Mode | actions=op_command.
-[2026-10-08T14:49:03.115Z] [TASK] Started #8 manual:clean:op_command.
-[2026-10-08T14:49:03.117Z] [TASK] Finished #8 manual:clean:op_command -> completed.
-[2026-10-08T14:49:04.971Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> set the time to day
-[2026-10-08T14:49:05.816Z] [EVENT] Entity detected: arrow (distance 12.53m)
-[2026-10-08T14:49:06.045Z] [PHYSICS] Server knockback velocity: x=-0.1146 y=0.1184 z=0.0636
-[2026-10-08T14:49:06.325Z] [SAFETY] Hostile mob entered Zoya's danger range; cancelling active task and waking brain.
-[2026-10-08T14:49:06.330Z] [EVENT] Health changed: 20 -> 19.802000045776367
-[2026-10-08T14:49:06.332Z] [EVENT] Entity left nearby range: 361
-[2026-10-08T14:49:06.830Z] [EVENT] Health changed: 19.802000045776367 -> 20
-[2026-10-08T14:49:08.350Z] [SAFETY] Hostile mob entered Zoya's danger range; cancelling active task and waking brain.
-[2026-10-08T14:49:12.446Z] [EVENT] Entity detected: item (distance 10.62m)
-[2026-10-08T14:49:12.448Z] [EVENT] Entity detected: experience_orb (distance 10.62m)
-[2026-10-08T14:49:12.450Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(8.063,64,-2.3) | Nearby=4 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:49:12.948Z] [EVENT] Entity left nearby range: 373
-[2026-10-08T14:49:13.455Z] [EVENT] Entity left nearby range: 228
-[2026-10-08T14:49:22.286Z] [BRAIN] Thinking (player_message)...
-[2026-10-08T14:49:23.464Z] [BRAIN] Plan: Set time to day | actions=op_command.
-[2026-10-08T14:49:23.465Z] [TASK] Started #9 manual:clean:op_command.
-[2026-10-08T14:49:23.467Z] [TASK] Finished #9 manual:clean:op_command -> completed.
-[2026-10-08T14:49:42.290Z] [BRAIN] Thinking (event)...
-[2026-10-08T14:49:42.454Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(8.063,64,-2.3) | Nearby=2 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:49:43.455Z] [BRAIN] Plan: Respond to server's request | actions=chat.
-[2026-10-08T14:49:43.462Z] [TASK] Started #10 manual:clean:chat.
-[2026-10-08T14:49:43.468Z] [TASK] Finished #10 manual:clean:chat -> completed.
-[2026-10-08T14:50:02.296Z] [BRAIN] Thinking (event)...
-[2026-10-08T14:50:03.214Z] [BRAIN] Plan: No new task | actions=.
-[2026-10-08T14:50:09.068Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> fight me
-[2026-10-08T14:50:12.558Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(8.063,64,-2.3) | Nearby=2 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:50:13.070Z] [BRAIN] Thinking (player_message)...
-[2026-10-08T14:50:13.084Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
-[2026-10-08T14:50:13.084Z] [BRAIN] Plan: Fight the requester | actions=pvp.
-[2026-10-08T14:50:13.095Z] [TASK] Started #11 pvp -> ShubhTheGOAT.
-[2026-10-08T14:50:13.119Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-08T14:50:13.390Z] [PVP-EXPERT] style=mace action=approach reason=default_engagement dist=7.70
-[2026-10-08T14:50:13.572Z] [EVENT] Position changed → X=6.913 Y=64 Z=-4.13
-[2026-10-08T14:50:14.081Z] [EVENT] Position changed → X=4.909 Y=64 Z=-6.089
-[2026-10-08T14:50:14.200Z] [PVP-EXPERT] style=mace action=strafe_pressure reason=maintain_pressure dist=2.29
-[2026-10-08T14:50:14.442Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.70
-[2026-10-08T14:50:14.582Z] [EVENT] Position changed → X=3.524 Y=64 Z=-7.301
-[2026-10-08T14:50:15.105Z] [EVENT] Position changed → X=2.674 Y=64 Z=-7.479
-[2026-10-08T14:50:15.328Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.53
-[2026-10-08T14:50:15.608Z] [EVENT] Position changed → X=2.061 Y=64 Z=-7.769
-[2026-10-08T14:50:16.241Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.59
-[2026-10-08T14:50:16.255Z] [EVENT] Position changed → X=2.048 Y=64 Z=-9.074
-[2026-10-08T14:50:16.762Z] [EVENT] Position changed → X=1.96 Y=64 Z=-9.85
-[2026-10-08T14:50:17.144Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.49
-[2026-10-08T14:50:17.262Z] [EVENT] Position changed → X=1.87 Y=64 Z=-8.99
-[2026-10-08T14:50:18.130Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.57
-[2026-10-08T14:50:18.801Z] [EVENT] Position changed → X=0.766 Y=64 Z=-8.63
-[2026-10-08T14:50:18.972Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.18
-[2026-10-08T14:50:19.795Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.32
-[2026-10-08T14:50:20.416Z] [EVENT] Position changed → X=0.3 Y=64 Z=-7.75
-[2026-10-08T14:50:20.618Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.23
-[2026-10-08T14:50:21.433Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.77
-[2026-10-08T14:50:21.434Z] [EVENT] Position changed → X=0.707 Y=64 Z=-8.54
-[2026-10-08T14:50:23.129Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.63
-[2026-10-08T14:50:23.148Z] [EVENT] Position changed → X=1.131 Y=64 Z=-8.011
-[2026-10-08T14:50:23.349Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.89
-[2026-10-08T14:50:23.541Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.05
-[2026-10-08T14:50:23.656Z] [EVENT] Position changed → X=4.081 Y=64 Z=-7.528
-[2026-10-08T14:50:23.737Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.50
-[2026-10-08T14:50:23.895Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.06
-[2026-10-08T14:50:24.158Z] [EVENT] Position changed → X=0.689 Y=64 Z=-7.706
-[2026-10-08T14:50:24.663Z] [EVENT] Position changed → X=1.014 Y=64 Z=-6.47
-[2026-10-08T14:50:24.811Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.60
-[2026-10-08T14:50:25.173Z] [EVENT] Position changed → X=0.3 Y=64 Z=-6.419
-[2026-10-08T14:50:25.722Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.86
-[2026-10-08T14:50:26.179Z] [EVENT] Position changed → X=0.392 Y=64 Z=-5.845
-[2026-10-08T14:50:26.630Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.50
-[2026-10-08T14:50:27.580Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.52
-[2026-10-08T14:50:28.212Z] [EVENT] Position changed → X=2.568 Y=64 Z=-4.581
-[2026-10-08T14:50:28.268Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.33
-[2026-10-08T14:50:28.496Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.75
-[2026-10-08T14:50:28.711Z] [EVENT] Position changed → X=2.946 Y=64 Z=-5.124
-[2026-10-08T14:50:29.225Z] [EVENT] Position changed → X=3.5 Y=64 Z=-5.5
-[2026-10-08T14:50:29.779Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.64
-[2026-10-08T14:50:29.794Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:50:30.313Z] [EVENT] Position changed → X=2.458 Y=66.682 Z=-4.794
-[2026-10-08T14:50:30.320Z] [EVENT] Inventory changed.
-[2026-10-08T14:50:30.323Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:50:30.808Z] [EVENT] Position changed → X=1.724 Y=64.675 Z=-4.297
-[2026-10-08T14:50:30.808Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:50:31.308Z] [EVENT] Position changed → X=1.571 Y=64 Z=-4.195
-[2026-10-08T14:50:31.311Z] [EVENT] Entity detected: wind_charge (distance 12.19m)
-[2026-10-08T14:50:31.812Z] [EVENT] Entity left nearby range: 529
-[2026-10-08T14:50:33.005Z] [PVP-EXPERT] style=spear action=approach reason=default_engagement dist=9.50
-[2026-10-08T14:50:33.319Z] [EVENT] Position changed → X=2.357 Y=64 Z=-5.299
-[2026-10-08T14:50:33.862Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.15
-[2026-10-08T14:50:33.866Z] [EVENT] Position changed → X=3.537 Y=64 Z=-7.598
-[2026-10-08T14:50:33.868Z] [EVENT] Entity detected: wind_charge (distance 2.52m)
-[2026-10-08T14:50:34.339Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=3.88
-[2026-10-08T14:50:34.482Z] [EVENT] Position changed → X=4.469 Y=64 Z=-7.599
-[2026-10-08T14:50:34.488Z] [EVENT] Entity left nearby range: 535
-[2026-10-08T14:50:35.691Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.38
-[2026-10-08T14:50:35.726Z] [EVENT] Position changed → X=4.139 Y=64 Z=-7.188
-[2026-10-08T14:50:35.727Z] [EVENT] Held item changed: wind_charge -> netherite_spear
-[2026-10-08T14:50:35.864Z] [PHYSICS] Server knockback velocity: x=0.1823 y=0.2008 z=-0.2523
-[2026-10-08T14:50:35.873Z] [PHYSICS] Damage 6.719049453735352 health; observed server velocity = (0.1823, 0.2008, -0.2523).
-[2026-10-08T14:50:35.873Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:50:36.051Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.12
-[2026-10-08T14:50:36.228Z] [EVENT] Position changed → X=4.9 Y=69.37 Z=-8.241
-[2026-10-08T14:50:36.229Z] [EVENT] Health changed: 20 -> 13.580950736999512
-[2026-10-08T14:50:36.233Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:50:36.552Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.78
-[2026-10-08T14:50:36.719Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.02
-[2026-10-08T14:50:36.743Z] [EVENT] Health changed: 13.580950736999512 -> 13.880950927734375
-[2026-10-08T14:50:37.320Z] [EVENT] Position changed → X=4.391 Y=64 Z=-8.573
-[2026-10-08T14:50:37.322Z] [EVENT] Health changed: 13.880950927734375 -> 14.014284133911133
-[2026-10-08T14:50:37.324Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:50:37.435Z] [PHYSICS] Server knockback velocity: x=0.0031 y=-0.1552 z=-0.0043
-[2026-10-08T14:50:37.525Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.75
-[2026-10-08T14:50:37.715Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.38
-[2026-10-08T14:50:37.833Z] [EVENT] Health changed: 14.014284133911133 -> 13.547616958618164
-[2026-10-08T14:50:37.834Z] [EVENT] Held item changed: netherite_spear -> netherite_sword
-[2026-10-08T14:50:38.080Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.70
-[2026-10-08T14:50:38.259Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.19
-[2026-10-08T14:50:38.335Z] [EVENT] Position changed → X=3.732 Y=64 Z=-7.014
-[2026-10-08T14:50:38.510Z] [EVENT] Health changed: 13.547616958618164 -> 13.680950164794922
-[2026-10-08T14:50:38.710Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.72
-[2026-10-08T14:50:38.843Z] [EVENT] Position changed → X=1.796 Y=64 Z=-5.931
-[2026-10-08T14:50:38.908Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.30
-[2026-10-08T14:50:39.361Z] [EVENT] Position changed → X=3.5 Y=64 Z=-6.53
-[2026-10-08T14:50:39.520Z] [PVP-EXPERT] style=spear action=defensive_strafe reason=too_close_spacing dist=1.59
-[2026-10-08T14:50:39.869Z] [EVENT] Position changed → X=4.24 Y=64 Z=-7.551
-[2026-10-08T14:50:39.948Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.69
-[2026-10-08T14:50:40.470Z] [EVENT] Position changed → X=5.338 Y=64.605 Z=-7.167
-[2026-10-08T14:50:40.686Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.08
-[2026-10-08T14:50:41.008Z] [EVENT] Position changed → X=6.136 Y=64 Z=-7.657
-[2026-10-08T14:50:41.648Z] [EVENT] Position changed → X=9.021 Y=64 Z=-7.047
-[2026-10-08T14:50:41.840Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.62
-[2026-10-08T14:50:42.058Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.70
-[2026-10-08T14:50:42.149Z] [EVENT] Position changed → X=9.767 Y=64 Z=-7.044
-[2026-10-08T14:50:42.149Z] [EVENT] Health changed: 13.680950164794922 -> 14.680950164794922
-[2026-10-08T14:50:42.150Z] [EVENT] Hunger changed: 20 -> 19
-[2026-10-08T14:50:42.670Z] [EVENT] Position changed → X=8.646 Y=64 Z=-7.448
-[2026-10-08T14:50:42.672Z] [HEARTBEAT] Zoya online | Health=14.680950164794922 | Pos=(8.646,64,-7.448) | Nearby=2 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:50:43.176Z] [EVENT] Position changed → X=6.763 Y=64 Z=-7.238
-[2026-10-08T14:50:43.376Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=6.26
-[2026-10-08T14:50:43.686Z] [EVENT] Position changed → X=6.466 Y=65.929 Z=-7.008
-[2026-10-08T14:50:43.689Z] [EVENT] Held item changed: netherite_sword -> empty
-[2026-10-08T14:50:43.690Z] [EVENT] Inventory changed.
-[2026-10-08T14:50:43.691Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:50:44.198Z] [EVENT] Position changed → X=6.466 Y=70.018 Z=-7.081
-[2026-10-08T14:50:44.698Z] [EVENT] Position changed → X=6.466 Y=65.52 Z=-7.087
-[2026-10-08T14:50:44.698Z] [EVENT] Entity detected: wind_charge (distance 13.59m)
-[2026-10-08T14:50:45.201Z] [EVENT] Position changed → X=6.466 Y=64 Z=-7.087
-[2026-10-08T14:50:45.201Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:50:45.202Z] [EVENT] Entity left nearby range: 564
-[2026-10-08T14:50:46.215Z] [EVENT] Health changed: 14.680950164794922 -> 15.680950164794922
-[2026-10-08T14:50:46.218Z] [EVENT] Hunger changed: 19 -> 17
-[2026-10-08T14:50:46.540Z] [PVP-EXPERT] style=spear action=approach reason=default_engagement dist=12.12
-[2026-10-08T14:50:46.761Z] [EVENT] Position changed → X=5.952 Y=64 Z=-7.307
-[2026-10-08T14:50:47.298Z] [EVENT] Position changed → X=3.395 Y=64 Z=-6.371
-[2026-10-08T14:50:47.737Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=4.89
-[2026-10-08T14:50:47.811Z] [EVENT] Position changed → X=2.861 Y=64 Z=-6.991
-[2026-10-08T14:50:48.350Z] [EVENT] Position changed → X=5.606 Y=64 Z=-7.51
-[2026-10-08T14:50:48.896Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=3.57
-[2026-10-08T14:50:48.901Z] [EVENT] Position changed → X=8.346 Y=64 Z=-8.226
-[2026-10-08T14:50:48.902Z] [EVENT] Held item changed: empty -> wind_charge
-[2026-10-08T14:50:49.109Z] [PHYSICS] Server knockback velocity: x=0.1801 y=0.4000 z=-0.2077
-[2026-10-08T14:50:49.127Z] [PHYSICS] Damage 5.735649108886719 health; observed server velocity = (0.1801, 0.4000, -0.2077).
-[2026-10-08T14:50:49.128Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:50:49.413Z] [EVENT] Position changed → X=10.124 Y=69.145 Z=-10.026
-[2026-10-08T14:50:49.413Z] [EVENT] Health changed: 15.680950164794922 -> 9.945301055908203
-[2026-10-08T14:50:49.414Z] [EVENT] Inventory changed.
-[2026-10-08T14:50:49.415Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:50:49.926Z] [EVENT] Position changed → X=11.431 Y=69.539 Z=-11.35
-[2026-10-08T14:50:50.426Z] [EVENT] Position changed → X=12.062 Y=64 Z=-11.99
-[2026-10-08T14:50:50.429Z] [EVENT] Inventory changed.
-[2026-10-08T14:50:50.431Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:50:50.432Z] [EVENT] Entity left nearby range: 372
-[2026-10-08T14:50:50.476Z] [PHYSICS] Server knockback velocity: x=0.0109 y=-0.0784 z=-0.0125
-[2026-10-08T14:50:50.938Z] [EVENT] Health changed: 9.945301055908203 -> 9.345300674438477
-[2026-10-08T14:50:52.051Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=6.88
-[2026-10-08T14:50:52.294Z] [PHYSICS] Server knockback velocity: x=0.1983 y=0.2008 z=-0.1351
-[2026-10-08T14:50:52.299Z] [PHYSICS] Damage 4.379603862762451 health; observed server velocity = (0.1983, 0.2008, -0.1351).
-[2026-10-08T14:50:52.299Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:50:52.454Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.56
-[2026-10-08T14:50:52.475Z] [EVENT] Position changed → X=12.876 Y=64 Z=-13.443
-[2026-10-08T14:50:52.476Z] [EVENT] Health changed: 9.345300674438477 -> 4.965696811676025
-[2026-10-08T14:50:52.976Z] [EVENT] Position changed → X=12.866 Y=64 Z=-16.221
-[2026-10-08T14:50:53.026Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=10.08
-[2026-10-08T14:50:53.567Z] [EVENT] Position changed → X=11.455 Y=64 Z=-14.759
-[2026-10-08T14:50:54.181Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.22
-[2026-10-08T14:50:54.182Z] [EVENT] Position changed → X=10.465 Y=64.753 Z=-12.3
-[2026-10-08T14:50:54.861Z] [EVENT] Position changed → X=10.723 Y=64 Z=-12.551
-[2026-10-08T14:50:54.861Z] [EVENT] Entity detected: wind_charge (distance 3.48m)
-[2026-10-08T14:50:54.901Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.30
-[2026-10-08T14:50:55.465Z] [EVENT] Position changed → X=8.446 Y=64 Z=-12.056
-[2026-10-08T14:50:55.469Z] [EVENT] Entity left nearby range: 592
-[2026-10-08T14:50:55.978Z] [EVENT] Position changed → X=8.364 Y=64 Z=-9.362
-[2026-10-08T14:50:56.212Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=7.23
-[2026-10-08T14:50:57.052Z] [EVENT] Position changed → X=8.7 Y=64 Z=-11.894
-[2026-10-08T14:50:57.247Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.23
-[2026-10-08T14:50:57.559Z] [EVENT] Position changed → X=7.053 Y=65.522 Z=-11.31
-[2026-10-08T14:50:57.561Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:50:57.826Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.48
-[2026-10-08T14:50:58.134Z] [EVENT] Position changed → X=6.384 Y=64 Z=-11.42
-[2026-10-08T14:50:58.134Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:50:58.708Z] [EVENT] Position changed → X=7.5 Y=64 Z=-11.524
-[2026-10-08T14:50:58.847Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.27
-[2026-10-08T14:50:59.209Z] [EVENT] Position changed → X=6.499 Y=64 Z=-13.242
-[2026-10-08T14:50:59.712Z] [EVENT] Position changed → X=6.7 Y=64 Z=-15.775
-[2026-10-08T14:50:59.980Z] [PVP-EXPERT] style=spear action=approach reason=default_engagement dist=8.46
-[2026-10-08T14:51:00.681Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.10
-[2026-10-08T14:51:00.856Z] [EVENT] Position changed → X=6.043 Y=64 Z=-13.85
-[2026-10-08T14:51:01.254Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.89
-[2026-10-08T14:51:01.358Z] [EVENT] Position changed → X=4.088 Y=64 Z=-15.371
-[2026-10-08T14:51:01.869Z] [EVENT] Position changed → X=3.497 Y=64 Z=-16.958
-[2026-10-08T14:51:02.208Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.00
-[2026-10-08T14:51:02.388Z] [EVENT] Position changed → X=4.269 Y=64.932 Z=-18.836
-[2026-10-08T14:51:02.898Z] [EVENT] Position changed → X=7.213 Y=69.192 Z=-19.129
-[2026-10-08T14:51:02.898Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:03.340Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.65
-[2026-10-08T14:51:03.519Z] [EVENT] Position changed → X=9.418 Y=64.011 Z=-20.468
-[2026-10-08T14:51:03.520Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:04.020Z] [EVENT] Position changed → X=7.552 Y=64 Z=-19.604
-[2026-10-08T14:51:04.062Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.55
-[2026-10-08T14:51:04.535Z] [EVENT] Position changed → X=8.929 Y=64 Z=-17.423
-[2026-10-08T14:51:04.626Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.23
-[2026-10-08T14:51:05.062Z] [EVENT] Position changed → X=9.528 Y=64 Z=-18.345
-[2026-10-08T14:51:05.307Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=1.98
-[2026-10-08T14:51:05.572Z] [EVENT] Position changed → X=9.955 Y=64.567 Z=-19.01
-[2026-10-08T14:51:05.859Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=4.63
-[2026-10-08T14:51:06.072Z] [EVENT] Position changed → X=10.837 Y=64 Z=-17.667
-[2026-10-08T14:51:06.072Z] [EVENT] Held item changed: wind_charge -> netherite_spear
-[2026-10-08T14:51:06.583Z] [EVENT] Position changed → X=10.389 Y=64 Z=-16.458
-[2026-10-08T14:51:06.833Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=0.34
-[2026-10-08T14:51:07.090Z] [EVENT] Position changed → X=9.8 Y=64 Z=-15.356
-[2026-10-08T14:51:07.423Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.11
-[2026-10-08T14:51:07.603Z] [EVENT] Position changed → X=9.009 Y=64 Z=-14.1
-[2026-10-08T14:51:07.605Z] [EVENT] Entity detected: wind_charge (distance 5.33m)
-[2026-10-08T14:51:08.166Z] [EVENT] Position changed → X=9.726 Y=64 Z=-16.8
-[2026-10-08T14:51:08.166Z] [EVENT] Entity left nearby range: 621
-[2026-10-08T14:51:08.680Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=4.00
-[2026-10-08T14:51:08.685Z] [EVENT] Position changed → X=10.561 Y=64 Z=-18.389
-[2026-10-08T14:51:09.193Z] [EVENT] Position changed → X=10.097 Y=64 Z=-21.156
-[2026-10-08T14:51:09.259Z] [PVP-EXPERT] style=utility action=approach reason=failed_action_backoff dist=4.85
-[2026-10-08T14:51:09.702Z] [EVENT] Position changed → X=10.529 Y=64 Z=-19.689
-[2026-10-08T14:51:10.241Z] [EVENT] Position changed → X=9.228 Y=64 Z=-17.418
-[2026-10-08T14:51:10.531Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=3.04
-[2026-10-08T14:51:10.744Z] [EVENT] Position changed → X=8.225 Y=65.177 Z=-15.336
-[2026-10-08T14:51:10.745Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:11.094Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.87
-[2026-10-08T14:51:11.258Z] [EVENT] Position changed → X=6.654 Y=64.232 Z=-14.743
-[2026-10-08T14:51:11.258Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:11.770Z] [EVENT] Position changed → X=6.7 Y=64 Z=-17.161
-[2026-10-08T14:51:12.289Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.91
-[2026-10-08T14:51:12.305Z] [EVENT] Position changed → X=7.5 Y=64 Z=-17.539
-[2026-10-08T14:51:12.815Z] [EVENT] Position changed → X=8.165 Y=64 Z=-17.3
-[2026-10-08T14:51:12.816Z] [HEARTBEAT] Zoya online | Health=4.965696811676025 | Pos=(8.165,64,-17.3) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:51:13.335Z] [EVENT] Position changed → X=5.957 Y=64 Z=-17.062
-[2026-10-08T14:51:13.433Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.52
-[2026-10-08T14:51:13.841Z] [EVENT] Position changed → X=6.52 Y=64 Z=-17.548
-[2026-10-08T14:51:14.173Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.68
-[2026-10-08T14:51:14.355Z] [EVENT] Position changed → X=8.219 Y=64 Z=-17.779
-[2026-10-08T14:51:14.736Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.92
-[2026-10-08T14:51:14.855Z] [EVENT] Position changed → X=8.536 Y=64 Z=-16.083
-[2026-10-08T14:51:15.248Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.36
-[2026-10-08T14:51:15.373Z] [EVENT] Position changed → X=8.191 Y=64 Z=-18.375
-[2026-10-08T14:51:15.801Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=4.51
-[2026-10-08T14:51:15.881Z] [EVENT] Position changed → X=6.174 Y=64 Z=-17.684
-[2026-10-08T14:51:16.389Z] [EVENT] Position changed → X=8.079 Y=64 Z=-19.469
-[2026-10-08T14:51:16.389Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:16.549Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=1.28
-[2026-10-08T14:51:16.890Z] [EVENT] Position changed → X=8.49 Y=63 Z=-19.3
-[2026-10-08T14:51:16.890Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:17.085Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.42
-[2026-10-08T14:51:17.401Z] [EVENT] Position changed → X=8.54 Y=63.583 Z=-19.54
-[2026-10-08T14:51:17.914Z] [EVENT] Position changed → X=9.026 Y=64.024 Z=-20.027
-[2026-10-08T14:51:18.282Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.02
-[2026-10-08T14:51:18.426Z] [EVENT] Position changed → X=10.497 Y=64 Z=-21.792
-[2026-10-08T14:51:18.539Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.04
-[2026-10-08T14:51:18.938Z] [EVENT] Position changed → X=10.262 Y=65.024 Z=-23.618
-[2026-10-08T14:51:18.938Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:19.085Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=4.26
-[2026-10-08T14:51:19.438Z] [EVENT] Position changed → X=10.433 Y=64 Z=-22.778
-[2026-10-08T14:51:19.438Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:19.823Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=1.48
-[2026-10-08T14:51:19.950Z] [EVENT] Position changed → X=10.849 Y=64 Z=-21.381
-[2026-10-08T14:51:20.463Z] [EVENT] Position changed → X=8.323 Y=64 Z=-22.873
-[2026-10-08T14:51:20.915Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=7.85
-[2026-10-08T14:51:21.062Z] [EVENT] Position changed → X=7.435 Y=63 Z=-25.382
-[2026-10-08T14:51:21.480Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.08
-[2026-10-08T14:51:21.565Z] [EVENT] Position changed → X=9.324 Y=64.249 Z=-24.233
-[2026-10-08T14:51:21.566Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:22.076Z] [EVENT] Position changed → X=8.112 Y=64 Z=-23.97
-[2026-10-08T14:51:22.076Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:22.077Z] [EVENT] Entity detected: wind_charge (distance 2.72m)
-[2026-10-08T14:51:22.543Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=7.59
-[2026-10-08T14:51:22.588Z] [EVENT] Position changed → X=5.735 Y=63 Z=-25.955
-[2026-10-08T14:51:22.588Z] [EVENT] Entity left nearby range: 652
-[2026-10-08T14:51:23.116Z] [EVENT] Position changed → X=7.21 Y=63 Z=-25.956
-[2026-10-08T14:51:23.692Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.99
-[2026-10-08T14:51:23.695Z] [EVENT] Position changed → X=9.421 Y=64.249 Z=-24.18
-[2026-10-08T14:51:23.695Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:23.743Z] [PHYSICS] Server knockback velocity: x=-0.2039 y=0.1647 z=0.1848
-[2026-10-08T14:51:23.819Z] [PHYSICS] Damage 2.9656968116760254 health; observed server velocity = (-0.2039, 0.1647, 0.1848).
-[2026-10-08T14:51:23.820Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:51:24.205Z] [EVENT] Position changed → X=7.657 Y=70.344 Z=-22.013
-[2026-10-08T14:51:24.210Z] [EVENT] Health changed: 4.965696811676025 -> 2
-[2026-10-08T14:51:24.212Z] [EVENT] Inventory changed.
-[2026-10-08T14:51:24.244Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=4.47
-[2026-10-08T14:51:24.716Z] [EVENT] Position changed → X=6.269 Y=68.643 Z=-21.499
-[2026-10-08T14:51:25.155Z] [PHYSICS] Server knockback velocity: x=-0.0193 y=-0.9944 z=0.0205
-[2026-10-08T14:51:25.228Z] [EVENT] Position changed → X=6.012 Y=64 Z=-23.217
-[2026-10-08T14:51:25.228Z] [EVENT] Health changed: 2 -> 3
-[2026-10-08T14:51:25.229Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:25.320Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=1.01
-[2026-10-08T14:51:25.741Z] [EVENT] Position changed → X=4.524 Y=64 Z=-25.052
-[2026-10-08T14:51:25.742Z] [EVENT] Block below changed: grass_block -> short_grass
-[2026-10-08T14:51:25.743Z] [EVENT] Entity detected: item (distance 15.76m)
-[2026-10-08T14:51:25.879Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.08
-[2026-10-08T14:51:26.874Z] [EVENT] Position changed → X=5.441 Y=64 Z=-23.299
-[2026-10-08T14:51:26.875Z] [EVENT] Health changed: 3 -> 4
-[2026-10-08T14:51:26.876Z] [EVENT] Block below changed: short_grass -> grass_block
-[2026-10-08T14:51:26.876Z] [EVENT] Entity left nearby range: 570
-[2026-10-08T14:51:26.987Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=1.62
-[2026-10-08T14:51:27.375Z] [EVENT] Position changed → X=4.363 Y=64 Z=-23.595
-[2026-10-08T14:51:27.376Z] [EVENT] Entity detected: item (distance 15.98m)
-[2026-10-08T14:51:27.379Z] [EVENT] Entity detected: wind_charge (distance 1.89m)
-[2026-10-08T14:51:27.879Z] [EVENT] Position changed → X=1.717 Y=67.889 Z=-25.582
-[2026-10-08T14:51:27.879Z] [EVENT] Health changed: 4 -> 5
-[2026-10-08T14:51:27.880Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:27.881Z] [EVENT] Entity left nearby range: 664
-[2026-10-08T14:51:28.125Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.98
-[2026-10-08T14:51:28.379Z] [EVENT] Position changed → X=-0.416 Y=64.811 Z=-27.239
-[2026-10-08T14:51:28.426Z] [EVENT] Block below changed: air -> short_grass
-[2026-10-08T14:51:28.429Z] [EVENT] Entity detected: item (distance 12.94m)
-[2026-10-08T14:51:28.681Z] [PVP-EXPERT] style=shield action=shield reason=projectile_defense dist=5.53
-[2026-10-08T14:51:28.890Z] [EVENT] Position changed → X=-1.703 Y=63 Z=-27.075
-[2026-10-08T14:51:28.895Z] [EVENT] Health changed: 5 -> 6
-[2026-10-08T14:51:28.898Z] [EVENT] Held item changed: netherite_spear -> shield
-[2026-10-08T14:51:28.906Z] [EVENT] Inventory changed.
-[2026-10-08T14:51:28.909Z] [EVENT] Block below changed: short_grass -> grass_block
-[2026-10-08T14:51:29.022Z] [PVP-EXPERT] style=mace action=mace_approach reason=mace_geometry dist=6.25
-[2026-10-08T14:51:29.398Z] [EVENT] Position changed → X=-0.295 Y=63 Z=-26.3
-[2026-10-08T14:51:29.899Z] [EVENT] Position changed → X=1.661 Y=63 Z=-25.434
-[2026-10-08T14:51:30.185Z] [PHYSICS] Server knockback velocity: x=0.1753 y=0.2008 z=0.1640
-[2026-10-08T14:51:30.192Z] [PHYSICS] Damage 5.615619659423828 health; observed server velocity = (0.1753, 0.2008, 0.1640).
-[2026-10-08T14:51:30.193Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:51:30.202Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.75
-[2026-10-08T14:51:30.416Z] [EVENT] Position changed → X=4.036 Y=63.977 Z=-25.3
-[2026-10-08T14:51:30.419Z] [EVENT] Health changed: 6 -> 1.3843803405761719
-[2026-10-08T14:51:30.422Z] [EVENT] Entity left nearby range: 569
-[2026-10-08T14:51:30.775Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.08
-[2026-10-08T14:51:30.916Z] [EVENT] Position changed → X=5.225 Y=64 Z=-23.703
-[2026-10-08T14:51:30.916Z] [EVENT] Entity left nearby range: 570
-[2026-10-08T14:51:31.494Z] [EVENT] Position changed → X=2.295 Y=64 Z=-23.504
-[2026-10-08T14:51:31.532Z] [EVENT] Health changed: 1.3843803405761719 -> 2.384380340576172
-[2026-10-08T14:51:31.560Z] [EVENT] Entity detected: item (distance 14.06m)
-[2026-10-08T14:51:31.949Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.10
-[2026-10-08T14:51:31.994Z] [EVENT] Position changed → X=1.026 Y=66.673 Z=-24.7
-[2026-10-08T14:51:31.994Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:31.995Z] [EVENT] Entity detected: item (distance 15.83m)
-[2026-10-08T14:51:32.497Z] [PVP-EXPERT] style=mace action=mace_approach reason=mace_geometry dist=5.69
-[2026-10-08T14:51:32.625Z] [EVENT] Position changed → X=0.548 Y=65.515 Z=-28.5
-[2026-10-08T14:51:33.302Z] [EVENT] Position changed → X=0.633 Y=61.287 Z=-29.67
-[2026-10-08T14:51:33.303Z] [EVENT] Health changed: 2.384380340576172 -> 3.384380340576172
-[2026-10-08T14:51:33.305Z] [EVENT] Block below changed: air -> dirt
-[2026-10-08T14:51:33.778Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=8.22
-[2026-10-08T14:51:33.810Z] [EVENT] Position changed → X=1.364 Y=62.195 Z=-28.649
-[2026-10-08T14:51:33.811Z] [EVENT] Health changed: 3.384380340576172 -> 4.384380340576172
-[2026-10-08T14:51:34.411Z] [EVENT] Position changed → X=1.568 Y=63.389 Z=-28.237
-[2026-10-08T14:51:34.412Z] [EVENT] Block below changed: dirt -> water
-[2026-10-08T14:51:34.951Z] [PVP-EXPERT] style=axe action=approach reason=close_distance dist=6.23
-[2026-10-08T14:51:34.954Z] [EVENT] Position changed → X=2.046 Y=63 Z=-26.818
-[2026-10-08T14:51:34.954Z] [EVENT] Block below changed: water -> grass_block
-[2026-10-08T14:51:35.055Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=2.04
-[2026-10-08T14:51:35.459Z] [EVENT] Position changed → X=2.418 Y=63 Z=-27.916
-[2026-10-08T14:51:35.462Z] [EVENT] Health changed: 4.384380340576172 -> 5.384380340576172
-[2026-10-08T14:51:35.969Z] [EVENT] Position changed → X=2.501 Y=61.816 Z=-31.258
-[2026-10-08T14:51:35.969Z] [EVENT] Block below changed: grass_block -> water
-[2026-10-08T14:51:35.971Z] [EVENT] Entity detected: salmon (distance 15.29m)
-[2026-10-08T14:51:36.119Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=9.98
-[2026-10-08T14:51:36.512Z] [EVENT] Position changed → X=2.221 Y=61.213 Z=-32.354
-[2026-10-08T14:51:36.538Z] [EVENT] Health changed: 5.384380340576172 -> 6.384380340576172
-[2026-10-08T14:51:36.540Z] [EVENT] Entity detected: salmon (distance 15.77m)
-[2026-10-08T14:51:37.012Z] [EVENT] Position changed → X=1.476 Y=62.74 Z=-31.943
-[2026-10-08T14:51:37.275Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=8.48
-[2026-10-08T14:51:37.590Z] [EVENT] Position changed → X=0.426 Y=61.95 Z=-31.234
-[2026-10-08T14:51:37.591Z] [EVENT] Health changed: 6.384380340576172 -> 7.384380340576172
-[2026-10-08T14:51:37.593Z] [EVENT] Entity left nearby range: 602
-[2026-10-08T14:51:38.182Z] [EVENT] Position changed → X=0.685 Y=62.427 Z=-30.323
-[2026-10-08T14:51:38.184Z] [EVENT] Entity detected: wind_charge (distance 12.31m)
-[2026-10-08T14:51:38.188Z] [EVENT] Entity left nearby range: 419
-[2026-10-08T14:51:38.532Z] [PVP-EXPERT] style=axe action=approach reason=failed_action_backoff dist=13.05
-[2026-10-08T14:51:38.685Z] [EVENT] Position changed → X=0.824 Y=62.327 Z=-29.127
-[2026-10-08T14:51:38.686Z] [EVENT] Block below changed: water -> tall_seagrass
-[2026-10-08T14:51:38.687Z] [EVENT] Entity left nearby range: 702
-[2026-10-08T14:51:39.330Z] [EVENT] Position changed → X=0.867 Y=62 Z=-28.3
-[2026-10-08T14:51:39.332Z] [EVENT] Health changed: 7.384380340576172 -> 8.384380340576172
-[2026-10-08T14:51:39.334Z] [EVENT] Block below changed: tall_seagrass -> dirt
-[2026-10-08T14:51:39.335Z] [EVENT] Entity left nearby range: 277
-[2026-10-08T14:51:39.834Z] [PVP-EXPERT] style=axe action=approach reason=failed_action_backoff dist=18.35
-[2026-10-08T14:51:39.836Z] [EVENT] Position changed → X=0.568 Y=63.546 Z=-28.087
-[2026-10-08T14:51:39.836Z] [EVENT] Block below changed: dirt -> water
-[2026-10-08T14:51:40.423Z] [EVENT] Position changed → X=1.671 Y=63 Z=-26.439
-[2026-10-08T14:51:40.423Z] [EVENT] Health changed: 8.384380340576172 -> 9.384380340576172
-[2026-10-08T14:51:40.425Z] [EVENT] Block below changed: water -> grass_block
-[2026-10-08T14:51:40.985Z] [EVENT] Position changed → X=4.326 Y=63 Z=-25.474
-[2026-10-08T14:51:40.985Z] [EVENT] Entity left nearby range: 569
-[2026-10-08T14:51:41.093Z] [PVP-EXPERT] style=axe action=approach reason=failed_action_backoff dist=19.80
-[2026-10-08T14:51:41.499Z] [EVENT] Position changed → X=5.766 Y=63 Z=-24.905
-[2026-10-08T14:51:41.501Z] [EVENT] Health changed: 9.384380340576172 -> 10.384380340576172
-[2026-10-08T14:51:41.502Z] [EVENT] Entity left nearby range: 570
-[2026-10-08T14:51:42.001Z] [EVENT] Position changed → X=7.72 Y=64.001 Z=-23.989
-[2026-10-08T14:51:42.001Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:42.002Z] [EVENT] Entity detected: ShubhTheGOAT (distance 14.34m)
-[2026-10-08T14:51:42.224Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=13.69
-[2026-10-08T14:51:42.505Z] [EVENT] Position changed → X=9.359 Y=64 Z=-22.556
-[2026-10-08T14:51:42.507Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:43.018Z] [EVENT] Position changed → X=11.778 Y=64 Z=-21.454
-[2026-10-08T14:51:43.019Z] [EVENT] Health changed: 10.384380340576172 -> 11.384380340576172
-[2026-10-08T14:51:43.020Z] [HEARTBEAT] Zoya online | Health=11.384380340576172 | Pos=(11.778,64,-21.454) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:51:43.407Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=7.79
-[2026-10-08T14:51:43.532Z] [EVENT] Position changed → X=13.898 Y=64 Z=-20.471
-[2026-10-08T14:51:44.047Z] [EVENT] Position changed → X=16.156 Y=64 Z=-19.417
-[2026-10-08T14:51:44.049Z] [EVENT] Health changed: 11.384380340576172 -> 12.384380340576172
-[2026-10-08T14:51:44.596Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Teleported Zoya to ShubhTheGOAT]
-[2026-10-08T14:51:44.603Z] [EVENT] Position changed → X=20.002 Y=64 Z=-16.581
-[2026-10-08T14:51:44.616Z] [PVP-EXPERT] style=axe action=defensive_strafe reason=too_close_spacing dist=0.32
-[2026-10-08T14:51:45.158Z] [EVENT] Position changed → X=20.751 Y=64 Z=-15.563
-[2026-10-08T14:51:45.301Z] [PVP-EXPERT] style=axe action=melee_attack reason=axe_attack dist=2.82
-[2026-10-08T14:51:45.474Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.45
-[2026-10-08T14:51:45.713Z] [EVENT] Position changed → X=21.448 Y=64.753 Z=-15.3
-[2026-10-08T14:51:45.714Z] [EVENT] Health changed: 12.384380340576172 -> 13.384380340576172
-[2026-10-08T14:51:45.715Z] [EVENT] Held item changed: shield -> netherite_axe
-[2026-10-08T14:51:45.716Z] [EVENT] Inventory changed.
-[2026-10-08T14:51:46.222Z] [EVENT] Position changed → X=21.5 Y=65 Z=-13.941
-[2026-10-08T14:51:46.223Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:46.734Z] [EVENT] Position changed → X=22.295 Y=64 Z=-12.367
-[2026-10-08T14:51:46.734Z] [EVENT] Health changed: 13.384380340576172 -> 14.384380340576172
-[2026-10-08T14:51:46.735Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:46.774Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=3.93
-[2026-10-08T14:51:47.236Z] [EVENT] Position changed → X=22.364 Y=69.096 Z=-12.329
-[2026-10-08T14:51:47.236Z] [EVENT] Held item changed: netherite_axe -> wind_charge
-[2026-10-08T14:51:47.237Z] [EVENT] Inventory changed.
-[2026-10-08T14:51:47.238Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:51:48.259Z] [EVENT] Position changed → X=22.364 Y=64 Z=-12.329
-[2026-10-08T14:51:48.259Z] [EVENT] Health changed: 14.384380340576172 -> 15.384380340576172
-[2026-10-08T14:51:48.262Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:51:49.286Z] [EVENT] Health changed: 15.384380340576172 -> 16.384380340576172
-[2026-10-08T14:51:49.926Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=3.90
-[2026-10-08T14:51:50.306Z] [EVENT] Position changed → X=23.383 Y=64 Z=-11.481
-[2026-10-08T14:51:50.351Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.45
-[2026-10-08T14:51:50.523Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.70
-[2026-10-08T14:51:50.826Z] [EVENT] Position changed → X=23.907 Y=64 Z=-10.758
-[2026-10-08T14:51:50.828Z] [EVENT] Health changed: 16.384380340576172 -> 17.384380340576172
-[2026-10-08T14:51:50.830Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:51:50.831Z] [EVENT] Inventory changed.
-[2026-10-08T14:51:51.114Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.44
-[2026-10-08T14:51:51.335Z] [EVENT] Position changed → X=24.535 Y=64 Z=-8.841
-[2026-10-08T14:51:51.847Z] [EVENT] Position changed → X=23.914 Y=64 Z=-8.859
-[2026-10-08T14:51:51.849Z] [EVENT] Health changed: 17.384380340576172 -> 18.384380340576172
-[2026-10-08T14:51:51.956Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.76
-[2026-10-08T14:51:52.362Z] [EVENT] Position changed → X=24.879 Y=64 Z=-9.081
-[2026-10-08T14:51:52.838Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.81
-[2026-10-08T14:51:53.362Z] [EVENT] Position changed → X=25.432 Y=64 Z=-8.875
-[2026-10-08T14:51:53.363Z] [EVENT] Health changed: 18.384380340576172 -> 19.384380340576172
-[2026-10-08T14:51:53.700Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.73
-[2026-10-08T14:51:53.864Z] [EVENT] Position changed → X=25.726 Y=64 Z=-8.299
-[2026-10-08T14:51:54.380Z] [EVENT] Health changed: 19.384380340576172 -> 20
-[2026-10-08T14:51:54.565Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.16
-[2026-10-08T14:51:54.888Z] [EVENT] Position changed → X=25.703 Y=64 Z=-7.3
-[2026-10-08T14:51:55.412Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.42
-[2026-10-08T14:51:56.228Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.70
-[2026-10-08T14:51:56.942Z] [EVENT] Position changed → X=25.213 Y=64 Z=-5.943
-[2026-10-08T14:51:57.081Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.41
-[2026-10-08T14:51:57.452Z] [EVENT] Position changed → X=25.195 Y=64 Z=-5.429
-[2026-10-08T14:51:57.894Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.49
-[2026-10-08T14:51:57.957Z] [EVENT] Position changed → X=24.828 Y=64 Z=-5.814
-[2026-10-08T14:51:58.733Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.46
-[2026-10-08T14:51:59.552Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.37
-[2026-10-08T14:52:00.484Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.34
-[2026-10-08T14:52:00.535Z] [EVENT] Position changed → X=23.212 Y=64 Z=-5.753
-[2026-10-08T14:52:01.329Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.34
-[2026-10-08T14:52:01.558Z] [EVENT] Position changed → X=22.807 Y=64 Z=-5.954
-[2026-10-08T14:52:02.068Z] [EVENT] Position changed → X=22.227 Y=64 Z=-6.085
-[2026-10-08T14:52:02.157Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.45
-[2026-10-08T14:52:02.577Z] [EVENT] Position changed → X=21.662 Y=64 Z=-6.136
-[2026-10-08T14:52:02.976Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.34
-[2026-10-08T14:52:03.079Z] [EVENT] Position changed → X=22.175 Y=64 Z=-6.978
-[2026-10-08T14:52:03.783Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.38
-[2026-10-08T14:52:04.609Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.74
-[2026-10-08T14:52:04.613Z] [EVENT] Position changed → X=21.941 Y=64 Z=-8.065
-[2026-10-08T14:52:05.441Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.68
-[2026-10-08T14:52:05.649Z] [EVENT] Position changed → X=21.052 Y=64 Z=-8.153
-[2026-10-08T14:52:06.283Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.83
-[2026-10-08T14:52:06.653Z] [EVENT] Position changed → X=20.553 Y=64 Z=-7.757
-[2026-10-08T14:52:07.129Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.63
-[2026-10-08T14:52:07.669Z] [EVENT] Position changed → X=19.855 Y=64 Z=-7.325
-[2026-10-08T14:52:07.961Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.71
-[2026-10-08T14:52:08.175Z] [EVENT] Position changed → X=19.504 Y=64 Z=-6.769
-[2026-10-08T14:52:08.792Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.49
-[2026-10-08T14:52:09.676Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.57
-[2026-10-08T14:52:09.969Z] [EVENT] Position changed → X=19.489 Y=64 Z=-6.922
-[2026-10-08T14:52:10.481Z] [EVENT] Position changed → X=19.576 Y=64 Z=-7.723
-[2026-10-08T14:52:10.575Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.79
-[2026-10-08T14:52:10.979Z] [EVENT] Position changed → X=18.756 Y=64 Z=-7.633
-[2026-10-08T14:52:11.387Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.22
-[2026-10-08T14:52:11.996Z] [EVENT] Position changed → X=17.973 Y=64 Z=-8.048
-[2026-10-08T14:52:12.196Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.57
-[2026-10-08T14:52:13.020Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.70
-[2026-10-08T14:52:13.022Z] [EVENT] Position changed → X=17.29 Y=64 Z=-8.516
-[2026-10-08T14:52:13.023Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(17.29,64,-8.516) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:52:13.533Z] [EVENT] Position changed → X=18.167 Y=64 Z=-7.953
-[2026-10-08T14:52:13.845Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.54
-[2026-10-08T14:52:14.045Z] [EVENT] Position changed → X=18.109 Y=64 Z=-8.632
-[2026-10-08T14:52:14.554Z] [EVENT] Position changed → X=18.33 Y=64 Z=-9.194
-[2026-10-08T14:52:14.691Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.70
-[2026-10-08T14:52:15.056Z] [EVENT] Position changed → X=17.586 Y=64 Z=-9.734
-[2026-10-08T14:52:15.631Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.83
-[2026-10-08T14:52:16.079Z] [EVENT] Position changed → X=17.032 Y=64 Z=-9.991
-[2026-10-08T14:52:16.485Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.93
-[2026-10-08T14:52:17.305Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.52
-[2026-10-08T14:52:17.622Z] [EVENT] Position changed → X=16.049 Y=64 Z=-9.385
-[2026-10-08T14:52:18.170Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.71
-[2026-10-08T14:52:19.055Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.38
-[2026-10-08T14:52:19.945Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.92
-[2026-10-08T14:52:20.164Z] [EVENT] Position changed → X=15.205 Y=64 Z=-9.334
-[2026-10-08T14:52:20.669Z] [EVENT] Position changed → X=15.152 Y=64 Z=-8.789
-[2026-10-08T14:52:20.867Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.82
-[2026-10-08T14:52:21.803Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.64
-[2026-10-08T14:52:22.419Z] [EVENT] Position changed → X=14.919 Y=64 Z=-7.554
-[2026-10-08T14:52:22.653Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.54
-[2026-10-08T14:52:22.947Z] [EVENT] Position changed → X=15.37 Y=64 Z=-8.623
-[2026-10-08T14:52:23.416Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.12
-[2026-10-08T14:52:23.876Z] [EVENT] Position changed → X=15.145 Y=64 Z=-7.495
-[2026-10-08T14:52:24.320Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.54
-[2026-10-08T14:52:24.893Z] [EVENT] Position changed → X=15.466 Y=64 Z=-8.009
-[2026-10-08T14:52:25.267Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.50
-[2026-10-08T14:52:25.391Z] [EVENT] Position changed → X=15.476 Y=64 Z=-7.3
-[2026-10-08T14:52:25.920Z] [EVENT] Position changed → X=14.919 Y=64 Z=-7.318
-[2026-10-08T14:52:26.135Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.55
-[2026-10-08T14:52:26.431Z] [EVENT] Position changed → X=15.7 Y=64 Z=-7.534
-[2026-10-08T14:52:27.039Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.26
-[2026-10-08T14:52:27.494Z] [EVENT] Position changed → X=14.819 Y=64 Z=-8.323
-[2026-10-08T14:52:27.928Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.29
-[2026-10-08T14:52:28.725Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.94
-[2026-10-08T14:52:28.766Z] [EVENT] Position changed → X=14.965 Y=64 Z=-11.638
-[2026-10-08T14:52:29.334Z] [EVENT] Position changed → X=14.402 Y=64 Z=-11.148
-[2026-10-08T14:52:29.607Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.95
-[2026-10-08T14:52:29.837Z] [EVENT] Position changed → X=13.802 Y=64 Z=-11.402
-[2026-10-08T14:52:30.477Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.46
-[2026-10-08T14:52:30.851Z] [EVENT] Position changed → X=12.951 Y=64 Z=-11.295
-[2026-10-08T14:52:31.348Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.91
-[2026-10-08T14:52:31.358Z] [EVENT] Position changed → X=13.608 Y=64 Z=-10.988
-[2026-10-08T14:52:31.868Z] [EVENT] Position changed → X=13.059 Y=64 Z=-9.567
-[2026-10-08T14:52:32.145Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.78
-[2026-10-08T14:52:32.364Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.83
-[2026-10-08T14:52:32.410Z] [EVENT] Position changed → X=13.357 Y=64 Z=-10.146
-[2026-10-08T14:52:32.949Z] [EVENT] Position changed → X=14.5 Y=64 Z=-9.331
-[2026-10-08T14:52:33.453Z] [EVENT] Position changed → X=14.969 Y=65.001 Z=-7.28
-[2026-10-08T14:52:33.453Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:52:33.633Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=6.25
-[2026-10-08T14:52:33.961Z] [EVENT] Position changed → X=15.821 Y=66.341 Z=-7.041
-[2026-10-08T14:52:33.962Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:52:33.963Z] [EVENT] Inventory changed.
-[2026-10-08T14:52:34.470Z] [EVENT] Position changed → X=16.01 Y=65.002 Z=-6.997
-[2026-10-08T14:52:34.471Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:52:36.778Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=5.93
-[2026-10-08T14:52:37.005Z] [EVENT] Position changed → X=16.199 Y=65 Z=-6.464
-[2026-10-08T14:52:37.512Z] [PVP-EXPERT] style=mace action=strafe_pressure reason=maintain_pressure dist=2.57
-[2026-10-08T14:52:37.517Z] [EVENT] Position changed → X=17.118 Y=65 Z=-3.741
-[2026-10-08T14:52:37.805Z] [PVP-EXPERT] style=mace action=defensive_strafe reason=too_close_spacing dist=1.46
-[2026-10-08T14:52:38.016Z] [EVENT] Position changed → X=17.225 Y=65 Z=-1.923
-[2026-10-08T14:52:38.428Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.55
-[2026-10-08T14:52:39.075Z] [EVENT] Position changed → X=17.086 Y=65 Z=-0.879
-[2026-10-08T14:52:39.280Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.38
-[2026-10-08T14:52:40.113Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.36
-[2026-10-08T14:52:40.116Z] [EVENT] Position changed → X=16.001 Y=65 Z=-0.466
-[2026-10-08T14:52:40.943Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.97
-[2026-10-08T14:52:41.226Z] [EVENT] Position changed → X=16.419 Y=65 Z=0.785
-[2026-10-08T14:52:41.728Z] [EVENT] Position changed → X=17.225 Y=65 Z=2.022
-[2026-10-08T14:52:41.809Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.50
-[2026-10-08T14:52:42.223Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.45
-[2026-10-08T14:52:42.243Z] [EVENT] Position changed → X=17.667 Y=65 Z=3.434
-[2026-10-08T14:52:42.261Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:52:42.390Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.63
-[2026-10-08T14:52:42.723Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.53
-[2026-10-08T14:52:42.750Z] [EVENT] Position changed → X=17.822 Y=65 Z=4.594
-[2026-10-08T14:52:42.873Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.04
-[2026-10-08T14:52:43.288Z] [EVENT] Position changed → X=18.535 Y=65 Z=5.922
-[2026-10-08T14:52:43.288Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(18.535,65,5.922) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:52:43.693Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.54
-[2026-10-08T14:52:44.301Z] [EVENT] Position changed → X=17.38 Y=65 Z=4.868
-[2026-10-08T14:52:44.571Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.25
-[2026-10-08T14:52:44.728Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.32
-[2026-10-08T14:52:44.803Z] [EVENT] Position changed → X=16.762 Y=65 Z=5.061
-[2026-10-08T14:52:45.309Z] [EVENT] Position changed → X=14.716 Y=65 Z=3.569
-[2026-10-08T14:52:45.825Z] [EVENT] Position changed → X=14.503 Y=65 Z=0.667
-[2026-10-08T14:52:45.960Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=7.63
-[2026-10-08T14:52:46.325Z] [EVENT] Position changed → X=13.768 Y=65 Z=-1.29
-[2026-10-08T14:52:46.832Z] [EVENT] Position changed → X=13.493 Y=65 Z=-3.702
-[2026-10-08T14:52:47.182Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=6.54
-[2026-10-08T14:52:47.341Z] [EVENT] Position changed → X=13.493 Y=64 Z=-5.216
-[2026-10-08T14:52:47.852Z] [EVENT] Position changed → X=13.756 Y=64 Z=-7.742
-[2026-10-08T14:52:48.352Z] [EVENT] Position changed → X=14.532 Y=64 Z=-10.201
-[2026-10-08T14:52:48.574Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=8.83
-[2026-10-08T14:52:48.861Z] [EVENT] Position changed → X=15.289 Y=64 Z=-11.296
-[2026-10-08T14:52:49.371Z] [EVENT] Position changed → X=16.433 Y=64 Z=-13.684
-[2026-10-08T14:52:49.793Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=9.77
-[2026-10-08T14:52:49.884Z] [EVENT] Position changed → X=17.392 Y=64 Z=-15.414
-[2026-10-08T14:52:50.384Z] [EVENT] Position changed → X=19.512 Y=64 Z=-17.408
-[2026-10-08T14:52:50.892Z] [EVENT] Position changed → X=21.884 Y=64 Z=-17.724
-[2026-10-08T14:52:50.983Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.71
-[2026-10-08T14:52:51.406Z] [EVENT] Position changed → X=22.434 Y=67.357 Z=-18.352
-[2026-10-08T14:52:51.406Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:52:51.407Z] [EVENT] Inventory changed.
-[2026-10-08T14:52:51.409Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:52:51.908Z] [EVENT] Position changed → X=22.256 Y=69.533 Z=-18.145
-[2026-10-08T14:52:52.420Z] [EVENT] Position changed → X=22.183 Y=64 Z=-18.059
-[2026-10-08T14:52:52.420Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:52:54.135Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=6.07
-[2026-10-08T14:52:54.884Z] [EVENT] Position changed → X=22.557 Y=64 Z=-18.468
-[2026-10-08T14:52:55.350Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.95
-[2026-10-08T14:52:55.388Z] [EVENT] Position changed → X=26.291 Y=64 Z=-20.3
-[2026-10-08T14:52:55.901Z] [EVENT] Position changed → X=26.7 Y=64 Z=-20.748
-[2026-10-08T14:52:56.302Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.64
-[2026-10-08T14:52:56.409Z] [EVENT] Position changed → X=26.951 Y=64 Z=-21.606
-[2026-10-08T14:52:56.410Z] [EVENT] Entity detected: wind_charge (distance 1.66m)
-[2026-10-08T14:52:56.800Z] [PHYSICS] Server knockback velocity: x=-0.3186 y=0.1999 z=-0.0822
-[2026-10-08T14:52:56.913Z] [EVENT] Position changed → X=27.816 Y=64 Z=-21.3
-[2026-10-08T14:52:56.913Z] [EVENT] Health changed: 20 -> 19.925119400024414
-[2026-10-08T14:52:56.915Z] [EVENT] Entity left nearby range: 847
-[2026-10-08T14:52:57.202Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.44
-[2026-10-08T14:52:57.428Z] [EVENT] Position changed → X=28.582 Y=64 Z=-21.473
-[2026-10-08T14:52:57.943Z] [EVENT] Position changed → X=28.399 Y=64 Z=-22.598
-[2026-10-08T14:52:57.955Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.50
-[2026-10-08T14:52:58.760Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.62
-[2026-10-08T14:52:59.480Z] [EVENT] Position changed → X=29.587 Y=64 Z=-22.563
-[2026-10-08T14:52:59.702Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.03
-[2026-10-08T14:52:59.982Z] [EVENT] Position changed → X=29.444 Y=64 Z=-23.381
-[2026-10-08T14:53:00.493Z] [EVENT] Position changed → X=29.7 Y=64 Z=-22.504
-[2026-10-08T14:53:00.509Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.19
-[2026-10-08T14:53:01.261Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.59
-[2026-10-08T14:53:02.023Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.62
-[2026-10-08T14:53:02.801Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.55
-[2026-10-08T14:53:03.606Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.62
-[2026-10-08T14:53:04.553Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.46
-[2026-10-08T14:53:05.481Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.55
-[2026-10-08T14:53:06.250Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.26
-[2026-10-08T14:53:07.009Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.42
-[2026-10-08T14:53:07.095Z] [EVENT] Position changed → X=28.256 Y=64 Z=-22.577
-[2026-10-08T14:53:07.396Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.36
-[2026-10-08T14:53:07.554Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.63
-[2026-10-08T14:53:07.604Z] [EVENT] Position changed → X=27.712 Y=64 Z=-21.987
-[2026-10-08T14:53:07.605Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:53:08.105Z] [EVENT] Position changed → X=26.5 Y=64 Z=-21.584
-[2026-10-08T14:53:08.606Z] [EVENT] Position changed → X=24.126 Y=64 Z=-21.269
-[2026-10-08T14:53:08.779Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=3.77
-[2026-10-08T14:53:09.113Z] [EVENT] Position changed → X=23.769 Y=67.455 Z=-20.966
-[2026-10-08T14:53:09.113Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:53:09.114Z] [EVENT] Inventory changed.
-[2026-10-08T14:53:09.115Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:53:09.626Z] [EVENT] Position changed → X=23.852 Y=69.843 Z=-21.047
-[2026-10-08T14:53:10.140Z] [EVENT] Position changed → X=23.872 Y=64.624 Z=-21.067
-[2026-10-08T14:53:10.140Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:53:10.654Z] [EVENT] Position changed → X=23.872 Y=64 Z=-21.067
-[2026-10-08T14:53:11.920Z] [PVP-EXPERT] style=spear action=approach reason=default_engagement dist=12.90
-[2026-10-08T14:53:12.164Z] [EVENT] Position changed → X=23.095 Y=64 Z=-21.312
-[2026-10-08T14:53:12.672Z] [EVENT] Position changed → X=20.948 Y=64 Z=-19.992
-[2026-10-08T14:53:13.042Z] [PVP-EXPERT] style=shield action=shield reason=projectile_defense dist=6.70
-[2026-10-08T14:53:13.172Z] [EVENT] Position changed → X=19.383 Y=64 Z=-18.381
-[2026-10-08T14:53:13.172Z] [EVENT] Held item changed: wind_charge -> shield
-[2026-10-08T14:53:13.363Z] [PVP-EXPERT] style=shield action=approach reason=failed_action_backoff dist=4.65
-[2026-10-08T14:53:13.683Z] [EVENT] Position changed → X=18.585 Y=64 Z=-17.585
-[2026-10-08T14:53:13.684Z] [HEARTBEAT] Zoya online | Health=19.925119400024414 | Pos=(18.585,64,-17.585) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:53:13.879Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.65
-[2026-10-08T14:53:14.023Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.94
-[2026-10-08T14:53:14.193Z] [EVENT] Position changed → X=17.665 Y=64 Z=-16.119
-[2026-10-08T14:53:14.215Z] [EVENT] Held item changed: shield -> netherite_sword
-[2026-10-08T14:53:14.710Z] [EVENT] Position changed → X=17.444 Y=64.945 Z=-17.244
-[2026-10-08T14:53:14.816Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.90
-[2026-10-08T14:53:14.966Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.75
-[2026-10-08T14:53:15.233Z] [EVENT] Position changed → X=16.574 Y=64.766 Z=-16.269
-[2026-10-08T14:53:15.739Z] [EVENT] Position changed → X=16.615 Y=64 Z=-15.633
-[2026-10-08T14:53:16.203Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.36
-[2026-10-08T14:53:16.242Z] [EVENT] Position changed → X=16.495 Y=64 Z=-13.984
-[2026-10-08T14:53:16.255Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:53:16.742Z] [EVENT] Position changed → X=16.491 Y=69.096 Z=-13.926
-[2026-10-08T14:53:16.742Z] [EVENT] Inventory changed.
-[2026-10-08T14:53:16.743Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:53:17.755Z] [EVENT] Position changed → X=16.491 Y=64 Z=-13.923
-[2026-10-08T14:53:17.758Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:53:19.381Z] [PVP-EXPERT] style=spear action=approach reason=default_engagement dist=7.95
-[2026-10-08T14:53:19.774Z] [EVENT] Position changed → X=16.142 Y=64 Z=-12.139
-[2026-10-08T14:53:20.383Z] [EVENT] Position changed → X=14.688 Y=64 Z=-9.648
-[2026-10-08T14:53:20.620Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=10.51
-[2026-10-08T14:53:21.009Z] [EVENT] Position changed → X=12.884 Y=64 Z=-7.882
-[2026-10-08T14:53:21.799Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.02
-[2026-10-08T14:53:22.074Z] [EVENT] Held item changed: wind_charge -> netherite_spear
-[2026-10-08T14:53:22.669Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.61
-[2026-10-08T14:53:22.835Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.47
-[2026-10-08T14:53:23.101Z] [EVENT] Position changed → X=14.708 Y=64 Z=-8.08
-[2026-10-08T14:53:23.786Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.73
-[2026-10-08T14:53:23.791Z] [EVENT] Position changed → X=15.511 Y=64 Z=-10.672
-[2026-10-08T14:53:23.791Z] [EVENT] Held item changed: netherite_spear -> netherite_sword
-[2026-10-08T14:53:23.952Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.38
-[2026-10-08T14:53:24.952Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.38
-[2026-10-08T14:53:24.956Z] [EVENT] Position changed → X=16.471 Y=64.312 Z=-10.366
-[2026-10-08T14:53:25.128Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.76
-[2026-10-08T14:53:25.459Z] [EVENT] Position changed → X=16.9 Y=64 Z=-10.517
-[2026-10-08T14:53:26.514Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=6.69
-[2026-10-08T14:53:26.520Z] [EVENT] Position changed → X=15.534 Y=64 Z=-10.506
-[2026-10-08T14:53:27.034Z] [EVENT] Position changed → X=13.211 Y=64 Z=-9.551
-[2026-10-08T14:53:27.545Z] [EVENT] Position changed → X=11.961 Y=65.177 Z=-9.469
-[2026-10-08T14:53:27.546Z] [EVENT] Block below changed: grass_block -> furnace
-[2026-10-08T14:53:27.689Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.26
-[2026-10-08T14:53:28.059Z] [EVENT] Position changed → X=11.23 Y=69.763 Z=-9.607
-[2026-10-08T14:53:28.062Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:53:28.063Z] [EVENT] Inventory changed.
-[2026-10-08T14:53:28.064Z] [EVENT] Block below changed: furnace -> air
-[2026-10-08T14:53:28.560Z] [EVENT] Position changed → X=10.922 Y=72.281 Z=-9.691
-[2026-10-08T14:53:29.068Z] [EVENT] Position changed → X=10.818 Y=66.628 Z=-9.705
-[2026-10-08T14:53:29.069Z] [EVENT] Entity detected: wind_charge (distance 3.77m)
-[2026-10-08T14:53:29.583Z] [EVENT] Position changed → X=10.807 Y=66 Z=-9.705
-[2026-10-08T14:53:29.583Z] [EVENT] Entity left nearby range: 931
-[2026-10-08T14:53:30.379Z] [PHYSICS] Server knockback velocity: x=0.0686 y=0.2008 z=0.2300
-[2026-10-08T14:53:30.602Z] [EVENT] Health changed: 19.925119400024414 -> 19.54602813720703
-[2026-10-08T14:53:30.921Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.02
-[2026-10-08T14:53:31.112Z] [EVENT] Position changed → X=10.13 Y=66.283 Z=-10.009
-[2026-10-08T14:53:31.186Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.19
-[2026-10-08T14:53:31.471Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.25
-[2026-10-08T14:53:31.619Z] [EVENT] Position changed → X=9.43 Y=64 Z=-10.477
-[2026-10-08T14:53:31.620Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:53:31.620Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:53:32.124Z] [EVENT] Position changed → X=10.54 Y=64 Z=-7.951
-[2026-10-08T14:53:32.185Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.04
-[2026-10-08T14:53:32.403Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.44
-[2026-10-08T14:53:32.635Z] [EVENT] Position changed → X=10.366 Y=64 Z=-6.553
-[2026-10-08T14:53:32.636Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:53:32.637Z] [EVENT] Inventory changed.
-[2026-10-08T14:53:33.137Z] [EVENT] Position changed → X=10.362 Y=69.875 Z=-6.771
-[2026-10-08T14:53:33.143Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:53:33.648Z] [EVENT] Position changed → X=10.362 Y=67.505 Z=-6.848
-[2026-10-08T14:53:34.151Z] [EVENT] Position changed → X=10.487 Y=64.191 Z=-5.958
-[2026-10-08T14:53:34.151Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:53:35.612Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.62
-[2026-10-08T14:53:35.685Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:53:35.796Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.57
-[2026-10-08T14:53:36.197Z] [EVENT] Position changed → X=9.881 Y=64.332 Z=-5.822
-[2026-10-08T14:53:36.496Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.89
-[2026-10-08T14:53:36.667Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.06
-[2026-10-08T14:53:36.761Z] [EVENT] Position changed → X=9.51 Y=64 Z=-5.725
-[2026-10-08T14:53:37.265Z] [EVENT] Position changed → X=10.552 Y=64 Z=-7.5
-[2026-10-08T14:53:37.643Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.24
-[2026-10-08T14:53:37.646Z] [PHYSICS] Server knockback velocity: x=-0.3112 y=0.4000 z=0.2811
-[2026-10-08T14:53:37.768Z] [EVENT] Health changed: 19.54602813720703 -> 19.091848373413086
-[2026-10-08T14:53:37.850Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.16
-[2026-10-08T14:53:38.362Z] [EVENT] Position changed → X=10.965 Y=64 Z=-6.944
-[2026-10-08T14:53:38.581Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.17
-[2026-10-08T14:53:38.869Z] [EVENT] Position changed → X=11.589 Y=69.566 Z=-6.367
-[2026-10-08T14:53:38.871Z] [EVENT] Held item changed: netherite_sword -> netherite_spear
-[2026-10-08T14:53:38.873Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:53:39.371Z] [EVENT] Position changed → X=10.363 Y=65.442 Z=-7.101
-[2026-10-08T14:53:39.662Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.28
-[2026-10-08T14:53:39.864Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.79
-[2026-10-08T14:53:39.877Z] [EVENT] Position changed → X=8.328 Y=64 Z=-7.444
-[2026-10-08T14:53:39.879Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:53:39.880Z] [EVENT] Entity detected: wind_charge (distance 2.01m)
-[2026-10-08T14:53:40.313Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.18
-[2026-10-08T14:53:40.463Z] [EVENT] Entity left nearby range: 953
-[2026-10-08T14:53:40.969Z] [EVENT] Position changed → X=10.622 Y=64 Z=-8.567
-[2026-10-08T14:53:41.254Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.97
-[2026-10-08T14:53:41.476Z] [EVENT] Position changed → X=13.472 Y=64 Z=-7.961
-[2026-10-08T14:53:41.476Z] [EVENT] Entity detected: wind_charge (distance 2.1m)
-[2026-10-08T14:53:41.695Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.26
-[2026-10-08T14:53:41.885Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.70
-[2026-10-08T14:53:42.072Z] [EVENT] Hunger changed: 17 -> 16
-[2026-10-08T14:53:42.072Z] [EVENT] Held item changed: netherite_spear -> netherite_sword
-[2026-10-08T14:53:42.074Z] [EVENT] Entity left nearby range: 954
-[2026-10-08T14:53:42.616Z] [EVENT] Position changed → X=10.587 Y=64 Z=-7.494
-[2026-10-08T14:53:43.138Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.89
-[2026-10-08T14:53:43.142Z] [EVENT] Position changed → X=8.843 Y=64 Z=-8.402
-[2026-10-08T14:53:43.142Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:53:43.710Z] [EVENT] Position changed → X=8.839 Y=69.738 Z=-8.435
-[2026-10-08T14:53:43.722Z] [EVENT] Inventory changed.
-[2026-10-08T14:53:43.723Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:53:43.726Z] [HEARTBEAT] Zoya online | Health=19.091848373413086 | Pos=(8.839,69.738,-8.435) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:53:44.209Z] [EVENT] Position changed → X=8.839 Y=68.167 Z=-8.435
-[2026-10-08T14:53:44.718Z] [EVENT] Position changed → X=8.839 Y=64 Z=-8.435
-[2026-10-08T14:53:44.719Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:53:45.469Z] [PHYSICS] Server knockback velocity: x=0.1290 y=0.2008 z=0.2023
-[2026-10-08T14:53:45.480Z] [PHYSICS] Damage 17.091848373413086 health; observed server velocity = (0.1290, 0.2008, 0.2023).
-[2026-10-08T14:53:45.484Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:53:45.728Z] [EVENT] Position changed → X=10.137 Y=65.484 Z=-6.4
-[2026-10-08T14:53:45.729Z] [EVENT] Health changed: 19.091848373413086 -> 2
-[2026-10-08T14:53:45.730Z] [EVENT] Inventory changed.
-[2026-10-08T14:53:45.732Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:53:46.243Z] [EVENT] Position changed → X=11.242 Y=64 Z=-4.666
-[2026-10-08T14:53:46.244Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:53:46.335Z] [PVP-EXPERT] style=spear action=approach reason=default_engagement dist=9.93
-[2026-10-08T14:53:46.833Z] [EVENT] Position changed → X=10.881 Y=64 Z=-6.49
-[2026-10-08T14:53:46.833Z] [EVENT] Health changed: 2 -> 3
-[2026-10-08T14:53:47.102Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=0.81
-[2026-10-08T14:53:47.344Z] [EVENT] Position changed → X=10.208 Y=64 Z=-8.538
-[2026-10-08T14:53:47.660Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.40
-[2026-10-08T14:53:47.858Z] [EVENT] Position changed → X=10.656 Y=64 Z=-9.708
-[2026-10-08T14:53:48.411Z] [EVENT] Position changed → X=10.495 Y=64 Z=-6.769
-[2026-10-08T14:53:48.411Z] [EVENT] Health changed: 3 -> 4
-[2026-10-08T14:53:48.982Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=1.21
-[2026-10-08T14:53:49.420Z] [EVENT] Position changed → X=11.953 Y=64 Z=-4.442
-[2026-10-08T14:53:49.421Z] [EVENT] Health changed: 4 -> 5
-[2026-10-08T14:53:49.933Z] [EVENT] Position changed → X=12.026 Y=64 Z=-2.3
-[2026-10-08T14:53:50.107Z] [PVP-EXPERT] style=utility action=approach reason=failed_action_backoff dist=7.61
-[2026-10-08T14:53:50.474Z] [EVENT] Position changed → X=10.921 Y=64 Z=-3.065
-[2026-10-08T14:53:50.987Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_create_distance dist=1.20
-[2026-10-08T14:53:50.998Z] [EVENT] Position changed → X=10.84 Y=64 Z=-5.625
-[2026-10-08T14:53:50.999Z] [EVENT] Health changed: 5 -> 6
-[2026-10-08T14:53:51.508Z] [EVENT] Position changed → X=8.41 Y=64 Z=-6.831
-[2026-10-08T14:53:51.546Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.78
-[2026-10-08T14:53:52.059Z] [EVENT] Position changed → X=9.438 Y=64 Z=-5.299
-[2026-10-08T14:53:52.059Z] [EVENT] Health changed: 6 -> 7
-[2026-10-08T14:53:52.608Z] [EVENT] Position changed → X=8.5 Y=64 Z=-2.607
-[2026-10-08T14:53:52.806Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.89
-[2026-10-08T14:53:53.115Z] [EVENT] Position changed → X=7.605 Y=64 Z=-4
-[2026-10-08T14:53:53.118Z] [EVENT] Held item changed: wind_charge -> netherite_spear
-[2026-10-08T14:53:53.408Z] [PVP-EXPERT] style=spear action=defensive_strafe reason=too_close_spacing dist=1.86
-[2026-10-08T14:53:53.623Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.38
-[2026-10-08T14:53:53.625Z] [EVENT] Position changed → X=8.445 Y=64 Z=-3.987
-[2026-10-08T14:53:53.625Z] [EVENT] Health changed: 7 -> 8
-[2026-10-08T14:53:53.780Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.06
-[2026-10-08T14:53:54.134Z] [EVENT] Position changed → X=9.456 Y=64 Z=-3.265
-[2026-10-08T14:53:54.649Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.11
-[2026-10-08T14:53:54.650Z] [EVENT] Health changed: 8 -> 9
-[2026-10-08T14:53:55.084Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.21
-[2026-10-08T14:53:55.160Z] [EVENT] Position changed → X=9.387 Y=64 Z=-3.446
-[2026-10-08T14:53:55.671Z] [EVENT] Position changed → X=11.009 Y=64 Z=-5.651
-[2026-10-08T14:53:55.672Z] [EVENT] Health changed: 9 -> 10
-[2026-10-08T14:53:56.167Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.94
-[2026-10-08T14:53:56.172Z] [EVENT] Position changed → X=11.947 Y=64 Z=-7.205
-[2026-10-08T14:53:56.822Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.57
-[2026-10-08T14:53:56.870Z] [EVENT] Position changed → X=13.107 Y=64 Z=-9.16
-[2026-10-08T14:53:56.899Z] [EVENT] Health changed: 10 -> 11
-[2026-10-08T14:53:57.081Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.78
-[2026-10-08T14:53:57.386Z] [EVENT] Position changed → X=15.089 Y=64 Z=-10.113
-[2026-10-08T14:53:57.862Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.54
-[2026-10-08T14:53:57.900Z] [EVENT] Position changed → X=15.32 Y=64 Z=-11.019
-[2026-10-08T14:53:58.565Z] [EVENT] Position changed → X=14.799 Y=64 Z=-10.713
-[2026-10-08T14:53:59.170Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.51
-[2026-10-08T14:53:59.591Z] [EVENT] Position changed → X=13.912 Y=64 Z=-10.118
-[2026-10-08T14:53:59.595Z] [EVENT] Health changed: 11 -> 13
-[2026-10-08T14:53:59.938Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.13
-[2026-10-08T14:54:00.102Z] [EVENT] Position changed → X=13.026 Y=64 Z=-11.154
-[2026-10-08T14:54:00.668Z] [EVENT] Position changed → X=14.342 Y=64 Z=-10.387
-[2026-10-08T14:54:00.681Z] [EVENT] Health changed: 13 -> 14
-[2026-10-08T14:54:00.884Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.45
-[2026-10-08T14:54:01.165Z] [EVENT] Position changed → X=15.539 Y=64 Z=-10.455
-[2026-10-08T14:54:01.676Z] [EVENT] Position changed → X=14.958 Y=64 Z=-11.322
-[2026-10-08T14:54:01.808Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.63
-[2026-10-08T14:54:02.191Z] [EVENT] Health changed: 14 -> 15
-[2026-10-08T14:54:02.596Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.05
-[2026-10-08T14:54:03.216Z] [EVENT] Position changed → X=15.267 Y=64 Z=-12.067
-[2026-10-08T14:54:03.218Z] [EVENT] Health changed: 15 -> 16
-[2026-10-08T14:54:03.494Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.75
-[2026-10-08T14:54:04.225Z] [EVENT] Position changed → X=15.929 Y=64 Z=-12.48
-[2026-10-08T14:54:04.225Z] [EVENT] Health changed: 16 -> 17
-[2026-10-08T14:54:04.350Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.20
-[2026-10-08T14:54:05.231Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.51
-[2026-10-08T14:54:05.261Z] [EVENT] Position changed → X=15.825 Y=64 Z=-13.497
-[2026-10-08T14:54:05.762Z] [EVENT] Health changed: 17 -> 18
-[2026-10-08T14:54:06.170Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.51
-[2026-10-08T14:54:06.270Z] [EVENT] Position changed → X=16.887 Y=64 Z=-14.052
-[2026-10-08T14:54:06.779Z] [EVENT] Health changed: 18 -> 19
-[2026-10-08T14:54:07.023Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.61
-[2026-10-08T14:54:07.295Z] [EVENT] Position changed → X=16.443 Y=64 Z=-13.508
-[2026-10-08T14:54:07.802Z] [EVENT] Position changed → X=16.7 Y=64 Z=-12.707
-[2026-10-08T14:54:07.876Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.03
-[2026-10-08T14:54:08.332Z] [EVENT] Position changed → X=16.004 Y=64 Z=-12.734
-[2026-10-08T14:54:08.334Z] [EVENT] Health changed: 19 -> 20
-[2026-10-08T14:54:08.741Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.42
-[2026-10-08T14:54:08.840Z] [EVENT] Position changed → X=16.555 Y=64 Z=-12.497
-[2026-10-08T14:54:09.414Z] [EVENT] Position changed → X=15.982 Y=64 Z=-12.36
-[2026-10-08T14:54:09.596Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.92
-[2026-10-08T14:54:09.928Z] [EVENT] Position changed → X=16.434 Y=64 Z=-12.616
-[2026-10-08T14:54:10.435Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.30
-[2026-10-08T14:54:10.438Z] [EVENT] Position changed → X=16.7 Y=64 Z=-11.76
-[2026-10-08T14:54:10.950Z] [EVENT] Position changed → X=16.562 Y=64 Z=-11.232
-[2026-10-08T14:54:11.250Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.39
-[2026-10-08T14:54:12.094Z] [EVENT] Position changed → X=17.687 Y=64 Z=-11.067
-[2026-10-08T14:54:12.192Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.40
-[2026-10-08T14:54:13.010Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.75
-[2026-10-08T14:54:13.125Z] [EVENT] Position changed → X=17.977 Y=64 Z=-10.483
-[2026-10-08T14:54:13.636Z] [EVENT] Position changed → X=18.263 Y=64 Z=-9.408
-[2026-10-08T14:54:13.810Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.62
-[2026-10-08T14:54:14.149Z] [EVENT] Position changed → X=18.348 Y=64 Z=-10.002
-[2026-10-08T14:54:14.149Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(18.348,64,-10.002) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:54:14.623Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.63
-[2026-10-08T14:54:14.653Z] [EVENT] Position changed → X=18.657 Y=64 Z=-10.488
-[2026-10-08T14:54:15.154Z] [EVENT] Position changed → X=19.003 Y=64 Z=-9.965
-[2026-10-08T14:54:15.431Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.26
-[2026-10-08T14:54:15.658Z] [EVENT] Position changed → X=19.449 Y=64 Z=-9.011
-[2026-10-08T14:54:16.282Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.57
-[2026-10-08T14:54:16.684Z] [EVENT] Position changed → X=19.806 Y=64 Z=-9.781
-[2026-10-08T14:54:17.139Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.50
-[2026-10-08T14:54:17.198Z] [EVENT] Position changed → X=20.238 Y=64 Z=-10.132
-[2026-10-08T14:54:17.703Z] [EVENT] Position changed → X=20.773 Y=64 Z=-9.761
-[2026-10-08T14:54:17.946Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.52
-[2026-10-08T14:54:18.206Z] [EVENT] Position changed → X=21.152 Y=64 Z=-10.303
-[2026-10-08T14:54:18.825Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.52
-[2026-10-08T14:54:19.225Z] [EVENT] Position changed → X=21.748 Y=64 Z=-10.651
-[2026-10-08T14:54:19.624Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.38
-[2026-10-08T14:54:19.733Z] [EVENT] Position changed → X=22.308 Y=64 Z=-11.203
-[2026-10-08T14:54:20.241Z] [EVENT] Position changed → X=22.509 Y=64 Z=-11.686
-[2026-10-08T14:54:20.443Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.54
-[2026-10-08T14:54:21.261Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.10
-[2026-10-08T14:54:21.264Z] [EVENT] Position changed → X=22.048 Y=64 Z=-12.733
-[2026-10-08T14:54:21.468Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.42
-[2026-10-08T14:54:21.679Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.67
-[2026-10-08T14:54:21.770Z] [EVENT] Position changed → X=23.384 Y=64 Z=-12.939
-[2026-10-08T14:54:21.770Z] [EVENT] Held item changed: netherite_spear -> netherite_sword
-[2026-10-08T14:54:22.275Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.70
-[2026-10-08T14:54:22.277Z] [EVENT] Position changed → X=23.563 Y=64 Z=-14.97
-[2026-10-08T14:54:22.777Z] [EVENT] Position changed → X=23.011 Y=64 Z=-16.391
-[2026-10-08T14:54:23.069Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.37
-[2026-10-08T14:54:23.714Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Set the time to 1000]
-[2026-10-08T14:54:23.806Z] [EVENT] Position changed → X=22.29 Y=64 Z=-16.611
-[2026-10-08T14:54:23.839Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.36
-[2026-10-08T14:54:24.655Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.83
-[2026-10-08T14:54:24.815Z] [EVENT] Position changed → X=21.951 Y=64 Z=-17.01
-[2026-10-08T14:54:25.241Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.57
-[2026-10-08T14:54:25.325Z] [EVENT] Position changed → X=20.602 Y=64 Z=-16.688
-[2026-10-08T14:54:25.398Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.25
-[2026-10-08T14:54:25.834Z] [EVENT] Position changed → X=19.079 Y=64 Z=-17.481
-[2026-10-08T14:54:26.347Z] [EVENT] Position changed → X=16.998 Y=64 Z=-16.48
-[2026-10-08T14:54:26.633Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.78
-[2026-10-08T14:54:26.860Z] [EVENT] Position changed → X=16.3 Y=64 Z=-15.887
-[2026-10-08T14:54:26.864Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:54:26.865Z] [EVENT] Inventory changed.
-[2026-10-08T14:54:26.865Z] [EVENT] Entity detected: wind_charge (distance 1.62m)
-[2026-10-08T14:54:27.374Z] [EVENT] Position changed → X=16.3 Y=69.721 Z=-16.024
-[2026-10-08T14:54:27.381Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:54:27.383Z] [EVENT] Entity left nearby range: 1048
-[2026-10-08T14:54:27.874Z] [EVENT] Position changed → X=16.3 Y=68.625 Z=-16.077
-[2026-10-08T14:54:28.386Z] [EVENT] Position changed → X=16.3 Y=64 Z=-16.084
-[2026-10-08T14:54:28.387Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:54:29.929Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=4.71
-[2026-10-08T14:54:30.412Z] [EVENT] Position changed → X=15.227 Y=64 Z=-15.457
-[2026-10-08T14:54:30.773Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.72
-[2026-10-08T14:54:30.913Z] [EVENT] Position changed → X=12.82 Y=64 Z=-16.478
-[2026-10-08T14:54:31.432Z] [EVENT] Position changed → X=12.521 Y=64 Z=-15.741
-[2026-10-08T14:54:31.640Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.65
-[2026-10-08T14:54:32.580Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.69
-[2026-10-08T14:54:32.956Z] [EVENT] Position changed → X=10.385 Y=64 Z=-15.174
-[2026-10-08T14:54:33.026Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.19
-[2026-10-08T14:54:33.220Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.42
-[2026-10-08T14:54:33.457Z] [EVENT] Position changed → X=9.897 Y=64 Z=-15.377
-[2026-10-08T14:54:33.464Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:54:34.455Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=6.34
-[2026-10-08T14:54:34.476Z] [EVENT] Position changed → X=8.3 Y=64 Z=-14.833
-[2026-10-08T14:54:34.479Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:54:34.989Z] [EVENT] Position changed → X=8.3 Y=68.645 Z=-14.775
-[2026-10-08T14:54:34.990Z] [EVENT] Inventory changed.
-[2026-10-08T14:54:34.991Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:54:35.502Z] [EVENT] Position changed → X=8.3 Y=69.425 Z=-14.775
-[2026-10-08T14:54:36.010Z] [EVENT] Position changed → X=8.3 Y=64 Z=-14.775
-[2026-10-08T14:54:36.010Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:54:37.634Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=3.74
-[2026-10-08T14:54:37.914Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.66
-[2026-10-08T14:54:38.046Z] [EVENT] Position changed → X=7.964 Y=64 Z=-13.797
-[2026-10-08T14:54:38.046Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:54:38.112Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.99
-[2026-10-08T14:54:38.652Z] [EVENT] Position changed → X=5.787 Y=64 Z=-13.795
-[2026-10-08T14:54:38.782Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.92
-[2026-10-08T14:54:39.158Z] [EVENT] Position changed → X=5.046 Y=64 Z=-12.563
-[2026-10-08T14:54:39.664Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.42
-[2026-10-08T14:54:39.669Z] [EVENT] Position changed → X=4.277 Y=64 Z=-12.727
-[2026-10-08T14:54:40.536Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.35
-[2026-10-08T14:54:40.691Z] [EVENT] Position changed → X=3.844 Y=64 Z=-11.792
-[2026-10-08T14:54:41.218Z] [EVENT] Position changed → X=2.984 Y=64 Z=-11.6
-[2026-10-08T14:54:41.441Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.68
-[2026-10-08T14:54:42.245Z] [EVENT] Position changed → X=3.085 Y=64 Z=-12.268
-[2026-10-08T14:54:42.308Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.45
-[2026-10-08T14:54:43.192Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.47
-[2026-10-08T14:54:44.076Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.59
-[2026-10-08T14:54:44.274Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(2.42,64,-12.779) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:54:44.786Z] [EVENT] Position changed → X=1.371 Y=64 Z=-12.93
-[2026-10-08T14:54:44.984Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.56
-[2026-10-08T14:54:45.808Z] [EVENT] Position changed → X=1.487 Y=64 Z=-14.068
-[2026-10-08T14:54:45.884Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.54
-[2026-10-08T14:54:46.826Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.14
-[2026-10-08T14:54:47.441Z] [EVENT] Position changed → X=0.944 Y=64 Z=-14.94
-[2026-10-08T14:54:47.618Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.55
-[2026-10-08T14:54:48.465Z] [EVENT] Position changed → X=0.384 Y=64 Z=-14.442
-[2026-10-08T14:54:48.530Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.30
-[2026-10-08T14:54:48.978Z] [EVENT] Position changed → X=1.679 Y=64 Z=-15.372
-[2026-10-08T14:54:49.355Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.65
-[2026-10-08T14:54:49.489Z] [EVENT] Position changed → X=0.543 Y=64 Z=-14.862
-[2026-10-08T14:54:50.217Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.31
-[2026-10-08T14:54:50.501Z] [EVENT] Position changed → X=0.455 Y=64 Z=-14.009
-[2026-10-08T14:54:51.032Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.60
-[2026-10-08T14:54:51.034Z] [EVENT] Position changed → X=0.888 Y=64 Z=-14.705
-[2026-10-08T14:54:51.549Z] [EVENT] Position changed → X=0.317 Y=64 Z=-14.777
-[2026-10-08T14:54:51.854Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.81
-[2026-10-08T14:54:52.079Z] [EVENT] Position changed → X=0.995 Y=64 Z=-14.748
-[2026-10-08T14:54:52.586Z] [EVENT] Position changed → X=0.886 Y=64 Z=-15.433
-[2026-10-08T14:54:52.717Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.77
-[2026-10-08T14:54:53.099Z] [EVENT] Position changed → X=0.459 Y=64 Z=-14.814
-[2026-10-08T14:54:53.974Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.29
-[2026-10-08T14:54:54.421Z] [EVENT] Position changed → X=-0.659 Y=64.348 Z=-15.77
-[2026-10-08T14:54:54.939Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.66
-[2026-10-08T14:54:55.009Z] [EVENT] Entity detected: wind_charge (distance 2.35m)
-[2026-10-08T14:54:55.201Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.20
-[2026-10-08T14:54:55.404Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.89
-[2026-10-08T14:54:55.510Z] [EVENT] Position changed → X=-0.655 Y=64.42 Z=-15.356
-[2026-10-08T14:54:55.511Z] [EVENT] Entity left nearby range: 1102
-[2026-10-08T14:54:56.134Z] [EVENT] Position changed → X=-2.5 Y=65 Z=-16.5
-[2026-10-08T14:54:56.138Z] [EVENT] Entity detected: item (distance 14.6m)
-[2026-10-08T14:54:56.553Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.51
-[2026-10-08T14:54:56.649Z] [EVENT] Position changed → X=-1.994 Y=65 Z=-16.764
-[2026-10-08T14:54:56.652Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:54:57.167Z] [EVENT] Position changed → X=-1.056 Y=64.313 Z=-17.405
-[2026-10-08T14:54:57.188Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:54:57.461Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=3.79
-[2026-10-08T14:54:57.673Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:54:57.673Z] [EVENT] Inventory changed.
-[2026-10-08T14:54:58.187Z] [EVENT] Position changed → X=-0.922 Y=69.929 Z=-17.656
-[2026-10-08T14:54:58.188Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:54:58.189Z] [EVENT] Entity left nearby range: 570
-[2026-10-08T14:54:58.698Z] [EVENT] Position changed → X=-0.922 Y=67.602 Z=-17.653
-[2026-10-08T14:54:58.699Z] [EVENT] Entity detected: item (distance 15.39m)
-[2026-10-08T14:54:59.208Z] [EVENT] Position changed → X=-0.922 Y=64 Z=-17.653
-[2026-10-08T14:54:59.209Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:00.627Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.24
-[2026-10-08T14:55:01.242Z] [EVENT] Position changed → X=-0.639 Y=64.407 Z=-17.187
-[2026-10-08T14:55:01.441Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.38
-[2026-10-08T14:55:01.654Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=3.67
-[2026-10-08T14:55:01.754Z] [EVENT] Position changed → X=-0.392 Y=64 Z=-17.458
-[2026-10-08T14:55:02.260Z] [EVENT] Position changed → X=-1.5 Y=64 Z=-16.5
-[2026-10-08T14:55:02.512Z] [PVP-EXPERT] style=spear action=defensive_strafe reason=too_close_spacing dist=1.55
-[2026-10-08T14:55:02.724Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.12
-[2026-10-08T14:55:02.764Z] [EVENT] Position changed → X=-1.423 Y=64 Z=-17.084
-[2026-10-08T14:55:03.270Z] [EVENT] Position changed → X=-0.858 Y=64.888 Z=-16.364
-[2026-10-08T14:55:03.554Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.40
-[2026-10-08T14:55:03.776Z] [EVENT] Position changed → X=-0.515 Y=64 Z=-16.878
-[2026-10-08T14:55:03.776Z] [EVENT] Inventory changed.
-[2026-10-08T14:55:04.277Z] [EVENT] Position changed → X=-0.429 Y=70.749 Z=-16.947
-[2026-10-08T14:55:04.277Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:04.278Z] [EVENT] Entity left nearby range: 570
-[2026-10-08T14:55:04.784Z] [EVENT] Position changed → X=-0.419 Y=68.784 Z=-16.95
-[2026-10-08T14:55:05.297Z] [EVENT] Position changed → X=-0.419 Y=64 Z=-16.95
-[2026-10-08T14:55:05.298Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:05.299Z] [EVENT] Entity detected: item (distance 15.4m)
-[2026-10-08T14:55:06.718Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.35
-[2026-10-08T14:55:06.809Z] [EVENT] Position changed → X=-0.545 Y=64 Z=-16.393
-[2026-10-08T14:55:07.371Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=4.60
-[2026-10-08T14:55:07.885Z] [EVENT] Position changed → X=1.514 Y=64 Z=-14.604
-[2026-10-08T14:55:07.890Z] [EVENT] Entity left nearby range: 570
-[2026-10-08T14:55:08.481Z] [EVENT] Position changed → X=3.44 Y=64 Z=-12.931
-[2026-10-08T14:55:08.685Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.19
-[2026-10-08T14:55:08.985Z] [EVENT] Position changed → X=3.47 Y=65.014 Z=-12.918
-[2026-10-08T14:55:08.986Z] [EVENT] Inventory changed.
-[2026-10-08T14:55:08.987Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:09.499Z] [EVENT] Position changed → X=3.505 Y=70.042 Z=-12.918
-[2026-10-08T14:55:09.999Z] [EVENT] Position changed → X=3.505 Y=66.98 Z=-12.918
-[2026-10-08T14:55:10.499Z] [EVENT] Position changed → X=3.505 Y=64 Z=-12.918
-[2026-10-08T14:55:10.500Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:11.518Z] [EVENT] Position changed → X=2.789 Y=69.57 Z=-12.803
-[2026-10-08T14:55:11.518Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:12.014Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=5.26
-[2026-10-08T14:55:12.048Z] [EVENT] Position changed → X=2.557 Y=65.438 Z=-12.779
-[2026-10-08T14:55:12.550Z] [EVENT] Position changed → X=3.341 Y=64 Z=-11.705
-[2026-10-08T14:55:12.550Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:12.687Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.39
-[2026-10-08T14:55:12.874Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.45
-[2026-10-08T14:55:13.101Z] [EVENT] Position changed → X=4.854 Y=64 Z=-11.851
-[2026-10-08T14:55:13.101Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-08T14:55:13.261Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.00
-[2026-10-08T14:55:13.601Z] [EVENT] Position changed → X=6.415 Y=64 Z=-11.816
-[2026-10-08T14:55:14.100Z] [EVENT] Position changed → X=7.324 Y=64 Z=-12.022
-[2026-10-08T14:55:14.164Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.65
-[2026-10-08T14:55:14.612Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(7.595,64,-11.737) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-08T14:55:15.062Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.84
-[2026-10-08T14:55:15.621Z] [EVENT] Position changed → X=7.635 Y=64 Z=-10.952
-[2026-10-08T14:55:16.010Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=0.97
-[2026-10-08T14:55:16.633Z] [EVENT] Position changed → X=8.239 Y=65.611 Z=-10.716
-[2026-10-08T14:55:16.633Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:16.910Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.54
-[2026-10-08T14:55:17.157Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.70
-[2026-10-08T14:55:17.159Z] [EVENT] Position changed → X=8.197 Y=64 Z=-10.239
-[2026-10-08T14:55:17.160Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:17.706Z] [EVENT] Position changed → X=7.5 Y=64 Z=-10.5
-[2026-10-08T14:55:17.811Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=2.00
-[2026-10-08T14:55:18.215Z] [EVENT] Position changed → X=7.081 Y=64 Z=-10.957
-[2026-10-08T14:55:18.702Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.17
-[2026-10-08T14:55:18.730Z] [EVENT] Position changed → X=5.755 Y=68.084 Z=-11.185
-[2026-10-08T14:55:18.730Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:18.922Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.22
-[2026-10-08T14:55:19.104Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.32
-[2026-10-08T14:55:19.753Z] [EVENT] Position changed → X=5.342 Y=64 Z=-10.79
-[2026-10-08T14:55:19.754Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:20.339Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.55
-[2026-10-08T14:55:20.340Z] [EVENT] Position changed → X=5.506 Y=64 Z=-9.168
-[2026-10-08T14:55:20.513Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.00
-[2026-10-08T14:55:20.843Z] [EVENT] Position changed → X=5.323 Y=66.706 Z=-9.553
-[2026-10-08T14:55:20.843Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:21.152Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.83
-[2026-10-08T14:55:21.355Z] [EVENT] Position changed → X=5.825 Y=65.405 Z=-10.067
-[2026-10-08T14:55:21.355Z] [EVENT] Held item changed: netherite_sword -> wind_charge
-[2026-10-08T14:55:21.356Z] [EVENT] Inventory changed.
-[2026-10-08T14:55:21.356Z] [EVENT] Entity detected: wind_charge (distance 3.38m)
-[2026-10-08T14:55:21.868Z] [EVENT] Position changed → X=5.981 Y=64.718 Z=-10.298
-[2026-10-08T14:55:21.869Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:21.870Z] [EVENT] Entity left nearby range: 1162
-[2026-10-08T14:55:22.300Z] [PHYSICS] Server knockback velocity: x=-0.2049 y=0.2008 z=0.1249
-[2026-10-08T14:55:22.319Z] [PHYSICS] Damage 12.343421936035156 health; observed server velocity = (-0.2049, 0.2008, 0.1249).
-[2026-10-08T14:55:22.321Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-08T14:55:22.376Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.54
-[2026-10-08T14:55:22.382Z] [EVENT] Position changed → X=5.271 Y=65.109 Z=-9.707
-[2026-10-08T14:55:22.386Z] [EVENT] Health changed: 20 -> 7.656578063964844
-[2026-10-08T14:55:22.386Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:22.606Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.35
-[2026-10-08T14:55:22.893Z] [EVENT] Position changed → X=4.687 Y=65.912 Z=-8.6
-[2026-10-08T14:55:22.894Z] [EVENT] Held item changed: wind_charge -> netherite_spear
-[2026-10-08T14:55:23.404Z] [EVENT] Position changed → X=6.122 Y=64 Z=-9.874
-[2026-10-08T14:55:23.404Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:23.702Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.75
-[2026-10-08T14:55:23.841Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.38
-[2026-10-08T14:55:24.431Z] [EVENT] Position changed → X=6.292 Y=64 Z=-10.362
-[2026-10-08T14:55:24.726Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.95
-[2026-10-08T14:55:24.943Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.74
-[2026-10-08T14:55:24.949Z] [EVENT] Position changed → X=7.277 Y=64 Z=-9.542
-[2026-10-08T14:55:24.951Z] [EVENT] Held item changed: netherite_spear -> netherite_sword
-[2026-10-08T14:55:25.119Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.46
-[2026-10-08T14:55:25.521Z] [EVENT] Position changed → X=8.315 Y=64 Z=-9.487
-[2026-10-08T14:55:26.106Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=too_close_spacing dist=1.99
-[2026-10-08T14:55:26.113Z] [EVENT] Position changed → X=10.619 Y=65 Z=-10.813
-[2026-10-08T14:55:26.114Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:26.536Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.50
-[2026-10-08T14:55:26.717Z] [PVP-EXPERT] style=shield action=shield reason=projectile_defense dist=3.26
-[2026-10-08T14:55:27.067Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.71
-[2026-10-08T14:55:27.132Z] [EVENT] Held item changed: netherite_sword -> shield
-[2026-10-08T14:55:27.655Z] [EVENT] Position changed → X=9.134 Y=64 Z=-9.128
-[2026-10-08T14:55:27.656Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-08T14:55:28.159Z] [EVENT] Position changed → X=6.743 Y=64 Z=-8.494
-[2026-10-08T14:55:28.229Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=3.63
-[2026-10-08T14:55:28.659Z] [EVENT] Position changed → X=6.063 Y=68.073 Z=-8.275
-[2026-10-08T14:55:28.659Z] [EVENT] Held item changed: shield -> wind_charge
-[2026-10-08T14:55:28.661Z] [EVENT] Inventory changed.
-[2026-10-08T14:55:28.665Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-08T14:55:29.173Z] [EVENT] Position changed → X=6.152 Y=69.334 Z=-8.256
+[2026-10-09T14:27:49.002Z] [ZOYA Minecraft Bridge] Listening on http://127.0.0.1:32123
+[2026-10-09T14:27:49.067Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
+[2026-10-09T14:27:49.102Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
+[2026-10-09T14:27:54.922Z] [STATE] Position: X=1.67 Y=64.118 Z=-6.861
+[2026-10-09T14:27:54.924Z] [STATE] Health: ? | Hunger: ? | XP: Lv.0 (0%)
+[2026-10-09T14:27:54.924Z] [STATE] Dimension: overworld | Time: 53664 | Day: 2 | Rain=NO | Thunder=0
+[2026-10-09T14:27:54.924Z] [STATE] Held: Steak | Nearby: 0
+[2026-10-09T14:27:54.925Z] [STATE] Below: unknown | Light=? | Sky Light=?
+[2026-10-09T14:27:55.101Z] [EVENT] Zoya spawned into the Minecraft world.
+[2026-10-09T14:27:55.140Z] [ZOYA Minecraft Bridge] Mineflayer login: Zoya
+[2026-10-09T14:27:55.141Z] [PROTOCOL] negotiatedVersion=1.21.11 protocol=774 configuredVersion=1.21.11 elytra=ENABLED action=start_elytra_flying
+[2026-10-09T14:27:55.144Z] [PHYSICS] Mineflayer physics enabled for movement and knockback.
+[2026-10-09T14:27:55.144Z] [PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.
+[2026-10-09T14:27:55.144Z] [MOVEMENT] Autonomous movement enabled.
+[2026-10-09T14:27:55.252Z] [BRAIN] Zoya Minecraft brain started (Groq planner, 168 capabilities).
+[2026-10-09T14:27:55.425Z] [SAFETY] Hostile mob entered Zoya's danger range; cancelling active task and waking brain.
+[2026-10-09T14:27:55.427Z] [EVENT] Health changed: null -> 19.53933334350586
+[2026-10-09T14:27:55.427Z] [EVENT] Zoya respawned (health restored).
+[2026-10-09T14:27:55.427Z] [EVENT] Hunger changed: null -> 20
+[2026-10-09T14:27:55.428Z] [EVENT] XP changed: Lv.0 (0 pts) -> Lv.8 (126 pts)
+[2026-10-09T14:27:55.431Z] [EVENT] Block below changed: unknown -> grass_block
+[2026-10-09T14:27:55.442Z] [EVENT] Entity detected: zombie (distance 1.1m)
+[2026-10-09T14:27:55.443Z] [EVENT] Entity detected: zombie (distance 1.64m)
+[2026-10-09T14:27:55.444Z] [EVENT] Entity detected: zombie (distance 3.45m)
+[2026-10-09T14:27:57.313Z] [PHYSICS] Server knockback velocity: x=-0.0839 y=0.1184 z=-0.1006
+[2026-10-09T14:27:57.447Z] [EVENT] Health changed: 19.53933334350586 -> 19.341333389282227
+[2026-10-09T14:27:59.255Z] [BRAIN] Thinking (startup)...
+[2026-10-09T14:27:59.786Z] [PHYSICS] Server knockback velocity: x=0.0046 y=0.1184 z=-0.1448
+[2026-10-09T14:28:00.130Z] [EVENT] Health changed: 19.341333389282227 -> 19.143333435058594
+[2026-10-09T14:28:00.972Z] [BRAIN] Plan: Enter verification code | actions=chat.
+[2026-10-09T14:28:00.990Z] [TASK] Started #1 manual:clean:chat.
+[2026-10-09T14:28:01.009Z] [TASK] Finished #1 manual:clean:chat -> completed.
+[2026-10-09T14:28:01.419Z] [PHYSICS] Server knockback velocity: x=-0.0911 y=0.1184 z=-0.1496
+[2026-10-09T14:28:01.658Z] [EVENT] Health changed: 19.143333435058594 -> 19.94533348083496
+[2026-10-09T14:28:02.172Z] [EVENT] Hunger changed: 20 -> 19
+[2026-10-09T14:28:02.637Z] [PHYSICS] Server knockback velocity: x=0.0978 y=0.1184 z=-0.0858
+[2026-10-09T14:28:02.674Z] [EVENT] Health changed: 19.94533348083496 -> 19.747333526611328
+[2026-10-09T14:28:02.675Z] [EVENT] Entity detected: ShubhTheGOAT (distance 3.27m)
+[2026-10-09T14:28:03.243Z] [PHYSICS] Server knockback velocity: x=-0.0529 y=0.1184 z=-0.1398
+[2026-10-09T14:28:03.681Z] [EVENT] Health changed: 19.747333526611328 -> 19.549333572387695
+[2026-10-09T14:28:03.878Z] [PHYSICS] Server knockback velocity: x=0.1068 y=0.1184 z=-0.0771
+[2026-10-09T14:28:04.193Z] [EVENT] Health changed: 19.549333572387695 -> 19.351333618164062
+[2026-10-09T14:28:04.321Z] [PHYSICS] Server knockback velocity: x=-0.0154 y=0.1184 z=-0.1318
+[2026-10-09T14:28:04.695Z] [EVENT] Health changed: 19.351333618164062 -> 18.955333709716797
+[2026-10-09T14:28:04.768Z] [PHYSICS] Server knockback velocity: x=0.1309 y=0.1184 z=-0.0016
+[2026-10-09T14:28:05.376Z] [PHYSICS] Server knockback velocity: x=-0.0250 y=0.1184 z=-0.1377
+[2026-10-09T14:28:05.720Z] [EVENT] Health changed: 18.955333709716797 -> 18.757333755493164
+[2026-10-09T14:28:06.738Z] [EVENT] Health changed: 18.757333755493164 -> 18.55933380126953
+[2026-10-09T14:28:06.770Z] [PHYSICS] Server knockback velocity: x=0.1267 y=0.1184 z=-0.0325
+[2026-10-09T14:28:07.177Z] [PHYSICS] Server knockback velocity: x=-0.0707 y=0.1184 z=-0.1099
+[2026-10-09T14:28:07.248Z] [EVENT] Health changed: 18.55933380126953 -> 18.3613338470459
+[2026-10-09T14:28:07.253Z] [EVENT] Hunger changed: 19 -> 18
+[2026-10-09T14:28:07.602Z] [PHYSICS] Server knockback velocity: x=0.1298 y=0.1184 z=-0.0126
+[2026-10-09T14:28:07.761Z] [EVENT] Health changed: 18.3613338470459 -> 19.163333892822266
+[2026-10-09T14:28:07.762Z] [EVENT] Hunger changed: 18 -> 17
+[2026-10-09T14:28:08.055Z] [PHYSICS] Server knockback velocity: x=-0.0260 y=0.1184 z=-0.1342
+[2026-10-09T14:28:08.262Z] [EVENT] Health changed: 19.163333892822266 -> 18.965333938598633
+[2026-10-09T14:28:08.622Z] [PHYSICS] Server knockback velocity: x=0.1279 y=0.1184 z=-0.0271
+[2026-10-09T14:28:08.774Z] [EVENT] Health changed: 18.965333938598633 -> 18.767333984375
+[2026-10-09T14:28:09.096Z] [PHYSICS] Server knockback velocity: x=-0.1004 y=0.1184 z=-0.1220
+[2026-10-09T14:28:09.276Z] [EVENT] Health changed: 18.767333984375 -> 18.569334030151367
+[2026-10-09T14:28:09.595Z] [PHYSICS] Server knockback velocity: x=0.1091 y=0.1184 z=-0.0148
+[2026-10-09T14:28:09.778Z] [EVENT] Health changed: 18.569334030151367 -> 18.371334075927734
+[2026-10-09T14:28:10.083Z] [PHYSICS] Server knockback velocity: x=-0.1475 y=0.1184 z=-0.1124
+[2026-10-09T14:28:10.287Z] [EVENT] Health changed: 18.371334075927734 -> 18.1733341217041
+[2026-10-09T14:28:10.574Z] [PHYSICS] Server knockback velocity: x=0.0938 y=0.1184 z=-0.0976
+[2026-10-09T14:28:10.789Z] [EVENT] Health changed: 18.1733341217041 -> 17.97533416748047
+[2026-10-09T14:28:11.577Z] [PHYSICS] Server knockback velocity: x=0.1296 y=0.1184 z=-0.0193
+[2026-10-09T14:28:11.809Z] [EVENT] Health changed: 17.97533416748047 -> 17.777334213256836
+[2026-10-09T14:28:12.573Z] [PHYSICS] Server knockback velocity: x=0.1193 y=0.1184 z=-0.0543
+[2026-10-09T14:28:12.829Z] [EVENT] Health changed: 17.777334213256836 -> 17.579334259033203
+[2026-10-09T14:28:13.289Z] [PHYSICS] Server knockback velocity: x=0.0332 y=0.1184 z=-0.1268
+[2026-10-09T14:28:13.332Z] [EVENT] Health changed: 17.579334259033203 -> 17.38133430480957
+[2026-10-09T14:28:13.751Z] [PHYSICS] Server knockback velocity: x=-0.0755 y=0.1184 z=-0.1085
+[2026-10-09T14:28:13.843Z] [EVENT] Health changed: 17.38133430480957 -> 17.183334350585938
+[2026-10-09T14:28:14.566Z] [PHYSICS] Server knockback velocity: x=0.1293 y=0.1184 z=-0.0199
+[2026-10-09T14:28:14.854Z] [EVENT] Health changed: 17.183334350585938 -> 16.985334396362305
+[2026-10-09T14:28:15.575Z] [PHYSICS] Server knockback velocity: x=0.1309 y=0.1184 z=-0.0057
+[2026-10-09T14:28:15.865Z] [EVENT] Health changed: 16.985334396362305 -> 16.787334442138672
+[2026-10-09T14:28:16.566Z] [PHYSICS] Server knockback velocity: x=0.1243 y=0.1184 z=-0.0415
+[2026-10-09T14:28:16.874Z] [EVENT] Health changed: 16.787334442138672 -> 16.474855422973633
+[2026-10-09T14:28:16.874Z] [EVENT] XP changed: Lv.8 (126 pts) -> Lv.8 (127 pts)
+[2026-10-09T14:28:16.875Z] [EVENT] Entity detected: item (distance 0.72m)
+[2026-10-09T14:28:16.877Z] [EVENT] Entity detected: experience_orb (distance 0.72m)
+[2026-10-09T14:28:16.879Z] [EVENT] Entity detected: experience_orb (distance 1.06m)
+[2026-10-09T14:28:16.880Z] [EVENT] Entity detected: experience_orb (distance 1.06m)
+[2026-10-09T14:28:16.881Z] [EVENT] Entity detected: experience_orb (distance 1.06m)
+[2026-10-09T14:28:17.388Z] [EVENT] XP changed: Lv.8 (127 pts) -> Lv.8 (131 pts)
+[2026-10-09T14:28:17.389Z] [EVENT] Inventory changed.
+[2026-10-09T14:28:17.390Z] [EVENT] Entity left nearby range: 152
+[2026-10-09T14:28:17.391Z] [EVENT] Entity left nearby range: 155
+[2026-10-09T14:28:17.392Z] [EVENT] Entity left nearby range: 156
+[2026-10-09T14:28:17.393Z] [EVENT] Entity left nearby range: 157
+[2026-10-09T14:28:17.394Z] [EVENT] Entity left nearby range: 158
+[2026-10-09T14:28:17.900Z] [EVENT] Entity left nearby range: 35
+[2026-10-09T14:28:17.924Z] [EVENT] Entity left nearby range: 36
+[2026-10-09T14:28:17.965Z] [PHYSICS] Server knockback velocity: x=-0.1748 y=0.2008 z=-0.1644
+[2026-10-09T14:28:18.039Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (-0.1748, 0.2008, -0.1644).
+[2026-10-09T14:28:18.041Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:28:18.416Z] [EVENT] Health changed: 16.474855422973633 -> 15.334375381469727
+[2026-10-09T14:28:18.916Z] [EVENT] XP changed: Lv.8 (131 pts) -> Lv.8 (134 pts)
+[2026-10-09T14:28:18.917Z] [EVENT] Entity detected: item (distance 0.81m)
+[2026-10-09T14:28:18.918Z] [EVENT] Entity detected: experience_orb (distance 0.81m)
+[2026-10-09T14:28:18.919Z] [EVENT] Entity detected: experience_orb (distance 0.81m)
+[2026-10-09T14:28:19.318Z] [BRAIN] Thinking (event)...
+[2026-10-09T14:28:19.555Z] [EVENT] XP changed: Lv.8 (134 pts) -> Lv.9 (136 pts)
+[2026-10-09T14:28:19.607Z] [EVENT] Entity left nearby range: 161
+[2026-10-09T14:28:19.615Z] [EVENT] Entity left nearby range: 162
+[2026-10-09T14:28:20.071Z] [EVENT] Entity left nearby range: 33
+[2026-10-09T14:28:20.814Z] [BRAIN] Plan: Set server time to 1000 | actions=op_command.
+[2026-10-09T14:28:20.818Z] [PERMISSION] Asked owner ShubhTheGOAT to allow  -> op_command|time set 1000.
+[2026-10-09T14:28:20.818Z] [PERMISSION] Plan paused: owner approval required for op_command.
+[2026-10-09T14:28:25.199Z] [HEARTBEAT] Zoya online | Health=15.334375381469727 | Pos=(1.67,64,-6.861) | Nearby=2 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:28:51.109Z] [EVENT] Entity left nearby range: 148
+[2026-10-09T14:28:55.385Z] [HEARTBEAT] Zoya online | Health=15.334375381469727 | Pos=(1.67,64,-6.861) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:28:58.331Z] [EVENT] Entity detected: enderman (distance 7.61m)
+[2026-10-09T14:28:59.815Z] [EVENT] Entity left nearby range: 53
+[2026-10-09T14:29:16.474Z] [EVENT] Entity detected: ShubhTheGOAT (distance 6.58m)
+[2026-10-09T14:29:20.938Z] [PERMISSION] Request expired:  -> op_command|time set 1000.
+[2026-10-09T14:29:25.698Z] [HEARTBEAT] Zoya online | Health=15.334375381469727 | Pos=(1.67,64,-6.861) | Nearby=2 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:29:56.155Z] [HEARTBEAT] Zoya online | Health=15.334375381469727 | Pos=(1.67,64,-6.861) | Nearby=2 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:30:26.494Z] [HEARTBEAT] Zoya online | Health=15.334375381469727 | Pos=(1.67,64,-6.861) | Nearby=2 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:30:43.294Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
+[2026-10-09T14:30:47.346Z] [BRAIN] Thinking (player_message)...
+[2026-10-09T14:30:47.376Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
+[2026-10-09T14:30:47.379Z] [BRAIN] Plan: Fight the requester | actions=pvp.
+[2026-10-09T14:30:47.418Z] [TASK] Started #2 pvp -> ShubhTheGOAT.
+[2026-10-09T14:30:47.480Z] [PVP-EXPERT] active target=ShubhTheGOAT
+[2026-10-09T14:30:47.788Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=8.64
+[2026-10-09T14:30:48.093Z] [EVENT] Position changed → X=1.478 Y=64 Z=-7.377
+[2026-10-09T14:30:50.385Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=3.88
+[2026-10-09T14:30:50.507Z] [EVENT] Position changed → X=-0.48 Y=65 Z=-10.975
+[2026-10-09T14:30:50.508Z] [EVENT] Held item changed: cooked_beef -> wind_charge
+[2026-10-09T14:30:51.371Z] [EVENT] Position changed → X=-0.485 Y=68.119 Z=-10.813
+[2026-10-09T14:30:51.378Z] [EVENT] Inventory changed.
+[2026-10-09T14:30:51.383Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-09T14:30:51.894Z] [EVENT] Position changed → X=-2.371 Y=64.536 Z=-18.043
+[2026-10-09T14:30:52.100Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-09T14:30:52.402Z] [EVENT] Position changed → X=-2.408 Y=64 Z=-18.116
+[2026-10-09T14:30:53.006Z] [EVENT] Position changed → X=-0.323 Y=64 Z=-15.3
+[2026-10-09T14:30:54.673Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=3.80
+[2026-10-09T14:30:54.867Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.63
+[2026-10-09T14:30:55.065Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.83
+[2026-10-09T14:30:55.165Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.65
+[2026-10-09T14:30:55.239Z] [EVENT] Position changed → X=-0.339 Y=64 Z=-18.167
+[2026-10-09T14:30:55.239Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-09T14:30:55.481Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.73
+[2026-10-09T14:30:55.643Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.35
+[2026-10-09T14:30:55.752Z] [EVENT] Position changed → X=-0.974 Y=64 Z=-16.738
+[2026-10-09T14:30:55.815Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=3.03
+[2026-10-09T14:30:56.234Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.20
+[2026-10-09T14:30:56.391Z] [EVENT] Position changed → X=-1.889 Y=64 Z=-17.716
+[2026-10-09T14:30:57.168Z] [EVENT] Position changed → X=-3.516 Y=64 Z=-18.844
+[2026-10-09T14:30:57.180Z] [HEARTBEAT] Zoya online | Health=15.334375381469727 | Pos=(-3.516,64,-18.844) | Nearby=2 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:30:57.481Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.04
+[2026-10-09T14:30:57.590Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.44
+[2026-10-09T14:30:57.679Z] [EVENT] Position changed → X=-6.523 Y=64 Z=-19.894
+[2026-10-09T14:30:57.680Z] [EVENT] Hunger changed: 17 -> 16
+[2026-10-09T14:30:57.767Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.82
+[2026-10-09T14:30:58.188Z] [EVENT] Position changed → X=-5.664 Y=64 Z=-20.784
+[2026-10-09T14:30:58.396Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.15
+[2026-10-09T14:30:58.695Z] [EVENT] Position changed → X=-5.661 Y=65.926 Z=-22.032
+[2026-10-09T14:30:58.696Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-09T14:30:58.696Z] [EVENT] Inventory changed.
+[2026-10-09T14:30:58.697Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-09T14:30:58.697Z] [EVENT] Entity left nearby range: 159
+[2026-10-09T14:30:59.195Z] [EVENT] Position changed → X=-4.665 Y=70.001 Z=-23.054
+[2026-10-09T14:30:59.701Z] [EVENT] Position changed → X=-4.346 Y=66.251 Z=-23.472
+[2026-10-09T14:31:00.201Z] [EVENT] Position changed → X=-5.796 Y=64 Z=-21.541
+[2026-10-09T14:31:00.204Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-09T14:31:00.710Z] [EVENT] Position changed → X=-7.451 Y=64 Z=-19.277
+[2026-10-09T14:31:00.713Z] [EVENT] Entity detected: item (distance 15.61m)
+[2026-10-09T14:31:01.210Z] [EVENT] Position changed → X=-9.107 Y=64 Z=-17.011
+[2026-10-09T14:31:01.575Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=10.46
+[2026-10-09T14:31:01.769Z] [EVENT] Position changed → X=-9.452 Y=64 Z=-16.065
+[2026-10-09T14:31:02.276Z] [EVENT] Position changed → X=-8.733 Y=64 Z=-18.358
+[2026-10-09T14:31:02.814Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.06
+[2026-10-09T14:31:03.387Z] [EVENT] Position changed → X=-9.567 Y=64 Z=-16.653
+[2026-10-09T14:31:03.488Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.45
+[2026-10-09T14:31:03.900Z] [EVENT] Position changed → X=-8.598 Y=64 Z=-18.292
+[2026-10-09T14:31:04.370Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.56
+[2026-10-09T14:31:04.395Z] [EVENT] Position changed → X=-7.125 Y=64 Z=-19.634
+[2026-10-09T14:31:04.397Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-09T14:31:04.399Z] [EVENT] Entity detected: wind_charge (distance 3.88m)
+[2026-10-09T14:31:04.527Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.52
+[2026-10-09T14:31:05.100Z] [EVENT] Position changed → X=-7.609 Y=64 Z=-19.5
+[2026-10-09T14:31:05.102Z] [EVENT] Entity left nearby range: 454
+[2026-10-09T14:31:05.709Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.18
+[2026-10-09T14:31:05.713Z] [EVENT] Position changed → X=-10.355 Y=64 Z=-18.5
+[2026-10-09T14:31:05.713Z] [EVENT] Held item changed: netherite_sword -> netherite_spear
+[2026-10-09T14:31:05.714Z] [EVENT] Entity left nearby range: 159
+[2026-10-09T14:31:05.911Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=0.27
+[2026-10-09T14:31:06.215Z] [PHYSICS] Server knockback velocity: x=0.2158 y=0.4000 z=-0.1915
+[2026-10-09T14:31:06.217Z] [EVENT] Position changed → X=-11.735 Y=64 Z=-19.185
+[2026-10-09T14:31:06.228Z] [EVENT] Entity detected: salmon (distance 15.26m)
+[2026-10-09T14:31:06.229Z] [EVENT] Entity detected: salmon (distance 15.37m)
+[2026-10-09T14:31:06.467Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.36
+[2026-10-09T14:31:06.616Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.08
+[2026-10-09T14:31:06.748Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.54
+[2026-10-09T14:31:06.758Z] [EVENT] Position changed → X=-12.652 Y=64 Z=-18.878
+[2026-10-09T14:31:06.760Z] [EVENT] Health changed: 15.334375381469727 -> 14.79869556427002
+[2026-10-09T14:31:07.114Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.94
+[2026-10-09T14:31:07.246Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.52
+[2026-10-09T14:31:07.265Z] [EVENT] Position changed → X=-12.777 Y=64 Z=-19.542
+[2026-10-09T14:31:07.267Z] [EVENT] Held item changed: netherite_spear -> netherite_sword
+[2026-10-09T14:31:07.422Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.28
+[2026-10-09T14:31:07.801Z] [EVENT] Position changed → X=-12.27 Y=64 Z=-18.568
+[2026-10-09T14:31:08.236Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.91
+[2026-10-09T14:31:08.303Z] [EVENT] Position changed → X=-10.004 Y=64 Z=-18.211
+[2026-10-09T14:31:08.303Z] [EVENT] Entity left nearby range: 274
+[2026-10-09T14:31:08.304Z] [EVENT] Entity left nearby range: 286
+[2026-10-09T14:31:08.797Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.44
+[2026-10-09T14:31:08.808Z] [EVENT] Position changed → X=-10.699 Y=64 Z=-20.618
+[2026-10-09T14:31:08.809Z] [EVENT] Entity detected: salmon (distance 14.53m)
+[2026-10-09T14:31:08.809Z] [EVENT] Entity detected: wind_charge (distance 3.12m)
+[2026-10-09T14:31:08.978Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.15
+[2026-10-09T14:31:09.312Z] [EVENT] Entity left nearby range: 461
+[2026-10-09T14:31:09.794Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.61
+[2026-10-09T14:31:09.817Z] [EVENT] Position changed → X=-10.585 Y=64 Z=-18.295
+[2026-10-09T14:31:09.967Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.58
+[2026-10-09T14:31:10.329Z] [EVENT] Position changed → X=-11.213 Y=64 Z=-17.859
+[2026-10-09T14:31:10.434Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.88
+[2026-10-09T14:31:10.607Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.81
+[2026-10-09T14:31:10.765Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.18
+[2026-10-09T14:31:10.829Z] [EVENT] Position changed → X=-10.654 Y=64 Z=-18.002
+[2026-10-09T14:31:11.038Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.62
+[2026-10-09T14:31:11.461Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.06
+[2026-10-09T14:31:11.631Z] [EVENT] Position changed → X=-11.97 Y=64 Z=-16.626
+[2026-10-09T14:31:11.776Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.79
+[2026-10-09T14:31:11.971Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.23
+[2026-10-09T14:31:12.147Z] [EVENT] Position changed → X=-10.92 Y=64 Z=-17.948
+[2026-10-09T14:31:12.226Z] [EVENT] Entity detected: salmon (distance 15.75m)
+[2026-10-09T14:31:12.539Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.78
+[2026-10-09T14:31:12.655Z] [EVENT] Position changed → X=-12.254 Y=64 Z=-16.816
+[2026-10-09T14:31:12.712Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.94
+[2026-10-09T14:31:13.229Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.58
+[2026-10-09T14:31:13.238Z] [EVENT] Position changed → X=-13.879 Y=64 Z=-15.829
+[2026-10-09T14:31:13.424Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.24
+[2026-10-09T14:31:13.611Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=3.03
+[2026-10-09T14:31:13.784Z] [EVENT] Position changed → X=-13.684 Y=64 Z=-16.661
+[2026-10-09T14:31:13.949Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.13
+[2026-10-09T14:31:14.110Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.74
+[2026-10-09T14:31:14.272Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.72
+[2026-10-09T14:31:14.290Z] [EVENT] Position changed → X=-13.869 Y=64 Z=-17.168
+[2026-10-09T14:31:14.440Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.19
+[2026-10-09T14:31:14.715Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.44
+[2026-10-09T14:31:14.794Z] [EVENT] Position changed → X=-14.085 Y=64 Z=-16.296
+[2026-10-09T14:31:14.861Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.93
+[2026-10-09T14:31:15.061Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.37
+[2026-10-09T14:31:15.275Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.09
+[2026-10-09T14:31:15.413Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.55
+[2026-10-09T14:31:15.524Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Set own game mode to Creative Mode]
+[2026-10-09T14:31:15.607Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.54
+[2026-10-09T14:31:15.819Z] [EVENT] Position changed → X=-13.317 Y=64 Z=-17.13
+[2026-10-09T14:31:15.972Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.61
+[2026-10-09T14:31:16.129Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.10
+[2026-10-09T14:31:16.257Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.55
+[2026-10-09T14:31:16.332Z] [EVENT] Position changed → X=-14.414 Y=64 Z=-17.055
+[2026-10-09T14:31:16.443Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.95
+[2026-10-09T14:31:16.746Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.11
+[2026-10-09T14:31:16.919Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.74
+[2026-10-09T14:31:17.065Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.61
+[2026-10-09T14:31:17.229Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.69
+[2026-10-09T14:31:17.560Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.80
+[2026-10-09T14:31:17.706Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.47
+[2026-10-09T14:31:17.856Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.45
+[2026-10-09T14:31:17.862Z] [EVENT] Position changed → X=-13.566 Y=64 Z=-16.516
+[2026-10-09T14:31:18.027Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.92
+[2026-10-09T14:31:18.342Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.12
+[2026-10-09T14:31:18.370Z] [EVENT] Position changed → X=-14.151 Y=64 Z=-16.417
+[2026-10-09T14:31:18.523Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.54
+[2026-10-09T14:31:18.677Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.25
+[2026-10-09T14:31:18.850Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.34
+[2026-10-09T14:31:18.870Z] [EVENT] Position changed → X=-13.429 Y=64 Z=-16.313
+[2026-10-09T14:31:19.007Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.12
+[2026-10-09T14:31:19.112Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.56
+[2026-10-09T14:31:19.384Z] [EVENT] Position changed → X=-13.953 Y=64 Z=-16.263
+[2026-10-09T14:31:19.427Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.91
+[2026-10-09T14:31:19.641Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.84
+[2026-10-09T14:31:19.818Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.21
+[2026-10-09T14:31:19.887Z] [EVENT] Position changed → X=-14.312 Y=64 Z=-17.309
+[2026-10-09T14:31:20.088Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.21
+[2026-10-09T14:31:20.243Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.99
+[2026-10-09T14:31:20.341Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.43
+[2026-10-09T14:31:20.394Z] [EVENT] Position changed → X=-14.039 Y=64 Z=-16.687
+[2026-10-09T14:31:20.705Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.62
+[2026-10-09T14:31:20.863Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.29
+[2026-10-09T14:31:20.903Z] [EVENT] Position changed → X=-13.498 Y=64 Z=-16.556
+[2026-10-09T14:31:21.027Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.86
+[2026-10-09T14:31:21.411Z] [EVENT] Position changed → X=-14.343 Y=64 Z=-16.007
+[2026-10-09T14:31:21.510Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.58
+[2026-10-09T14:31:21.662Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.26
+[2026-10-09T14:31:21.833Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.69
+[2026-10-09T14:31:21.925Z] [EVENT] Position changed → X=-14.676 Y=64 Z=-16.825
+[2026-10-09T14:31:22.271Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.73
+[2026-10-09T14:31:22.407Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.43
+[2026-10-09T14:31:22.434Z] [EVENT] Position changed → X=-15.99 Y=64 Z=-16.836
+[2026-10-09T14:31:22.584Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.23
+[2026-10-09T14:31:22.865Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.59
+[2026-10-09T14:31:22.946Z] [EVENT] Position changed → X=-15.533 Y=64 Z=-16.623
+[2026-10-09T14:31:23.210Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.69
+[2026-10-09T14:31:23.403Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.36
+[2026-10-09T14:31:23.457Z] [EVENT] Position changed → X=-15.9 Y=64 Z=-16.257
+[2026-10-09T14:31:23.558Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.24
+[2026-10-09T14:31:23.742Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.66
+[2026-10-09T14:31:24.076Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.86
+[2026-10-09T14:31:24.257Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.50
+[2026-10-09T14:31:24.402Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.24
+[2026-10-09T14:31:24.557Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.31
+[2026-10-09T14:31:24.717Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.82
+[2026-10-09T14:31:24.923Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.52
+[2026-10-09T14:31:24.991Z] [EVENT] Position changed → X=-15.644 Y=64 Z=-16.581
+[2026-10-09T14:31:25.221Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.90
+[2026-10-09T14:31:25.430Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.54
+[2026-10-09T14:31:25.505Z] [EVENT] Position changed → X=-15.499 Y=64 Z=-17.159
+[2026-10-09T14:31:25.505Z] [EVENT] Entity left nearby range: 274
+[2026-10-09T14:31:25.603Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.11
+[2026-10-09T14:31:25.842Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.38
+[2026-10-09T14:31:26.053Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.89
+[2026-10-09T14:31:26.055Z] [EVENT] Position changed → X=-15.847 Y=64 Z=-15.731
+[2026-10-09T14:31:26.217Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.85
+[2026-10-09T14:31:26.421Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.45
+[2026-10-09T14:31:26.556Z] [EVENT] Position changed → X=-17.076 Y=64 Z=-16.443
+[2026-10-09T14:31:26.715Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.40
+[2026-10-09T14:31:26.900Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.04
+[2026-10-09T14:31:27.039Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.72
+[2026-10-09T14:31:27.059Z] [EVENT] Position changed → X=-16.502 Y=64 Z=-16.255
+[2026-10-09T14:31:27.061Z] [EVENT] Entity left nearby range: 286
+[2026-10-09T14:31:27.372Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.25
+[2026-10-09T14:31:27.541Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.61
+[2026-10-09T14:31:27.565Z] [HEARTBEAT] Zoya online | Health=14.79869556427002 | Pos=(-16.284,64,-16.253) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:31:27.883Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.81
+[2026-10-09T14:31:28.031Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.44
+[2026-10-09T14:31:28.214Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.32
+[2026-10-09T14:31:28.384Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.75
+[2026-10-09T14:31:28.766Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.95
+[2026-10-09T14:31:28.964Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.84
+[2026-10-09T14:31:29.089Z] [EVENT] Position changed → X=-17.58 Y=64 Z=-16.589
+[2026-10-09T14:31:29.206Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.08
+[2026-10-09T14:31:29.698Z] [EVENT] Position changed → X=-17.173 Y=64 Z=-16.135
+[2026-10-09T14:31:29.793Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.23
+[2026-10-09T14:31:29.987Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.65
+[2026-10-09T14:31:30.236Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.40
+[2026-10-09T14:31:30.239Z] [EVENT] Position changed → X=-15.475 Y=64 Z=-16.543
+[2026-10-09T14:31:30.409Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.21
+[2026-10-09T14:31:30.595Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.78
+[2026-10-09T14:31:30.884Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.04
+[2026-10-09T14:31:30.886Z] [EVENT] Position changed → X=-15.886 Y=64 Z=-15.896
+[2026-10-09T14:31:31.163Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.71
+[2026-10-09T14:31:31.322Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.83
+[2026-10-09T14:31:31.388Z] [EVENT] Position changed → X=-17.289 Y=64 Z=-17.067
+[2026-10-09T14:31:31.700Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.53
+[2026-10-09T14:31:31.857Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.91
+[2026-10-09T14:31:31.897Z] [EVENT] Position changed → X=-15.392 Y=64 Z=-16.087
+[2026-10-09T14:31:32.044Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.55
+[2026-10-09T14:31:32.400Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.30
+[2026-10-09T14:31:32.986Z] [EVENT] Position changed → X=-16.426 Y=64 Z=-16.459
+[2026-10-09T14:31:33.254Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=3.02
+[2026-10-09T14:31:33.498Z] [EVENT] Position changed → X=-16.976 Y=64 Z=-17.108
+[2026-10-09T14:31:33.581Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.89
+[2026-10-09T14:31:33.704Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.28
+[2026-10-09T14:31:33.899Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.51
+[2026-10-09T14:31:33.991Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.20
+[2026-10-09T14:31:34.000Z] [EVENT] Position changed → X=-13.39 Y=64 Z=-16.186
+[2026-10-09T14:31:34.146Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.98
+[2026-10-09T14:31:34.406Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.45
+[2026-10-09T14:31:34.665Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.97
+[2026-10-09T14:31:34.829Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.47
+[2026-10-09T14:31:35.243Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.25
+[2026-10-09T14:31:35.798Z] [EVENT] Position changed → X=-12.545 Y=64 Z=-16.218
+[2026-10-09T14:31:35.905Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.64
+[2026-10-09T14:31:35.960Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.45
+[2026-10-09T14:31:36.111Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.45
+[2026-10-09T14:31:36.309Z] [EVENT] Position changed → X=-11.928 Y=64 Z=-17.161
+[2026-10-09T14:31:36.659Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.30
+[2026-10-09T14:31:36.818Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.52
+[2026-10-09T14:31:36.825Z] [EVENT] Position changed → X=-14.076 Y=64 Z=-15.726
+[2026-10-09T14:31:37.055Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.49
+[2026-10-09T14:31:37.213Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.49
+[2026-10-09T14:31:37.330Z] [EVENT] Position changed → X=-13.634 Y=64 Z=-17
+[2026-10-09T14:31:37.379Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.97
+[2026-10-09T14:31:37.814Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.79
+[2026-10-09T14:31:37.829Z] [EVENT] Position changed → X=-14.228 Y=64 Z=-16.214
+[2026-10-09T14:31:37.998Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.40
+[2026-10-09T14:31:38.200Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=3.04
+[2026-10-09T14:31:38.351Z] [EVENT] Position changed → X=-13.718 Y=64 Z=-16.878
+[2026-10-09T14:31:38.704Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.48
+[2026-10-09T14:31:38.861Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.16
+[2026-10-09T14:31:38.868Z] [EVENT] Position changed → X=-13.289 Y=64 Z=-16.001
+[2026-10-09T14:31:39.022Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.58
+[2026-10-09T14:31:39.329Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.77
+[2026-10-09T14:31:39.373Z] [EVENT] Position changed → X=-13.223 Y=64 Z=-15.465
+[2026-10-09T14:31:39.576Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.43
+[2026-10-09T14:31:39.734Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.23
+[2026-10-09T14:31:39.880Z] [EVENT] Position changed → X=-12.114 Y=64 Z=-16.036
+[2026-10-09T14:31:40.012Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.60
+[2026-10-09T14:31:40.168Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.10
+[2026-10-09T14:31:40.362Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.79
+[2026-10-09T14:31:40.391Z] [EVENT] Position changed → X=-12.859 Y=64 Z=-16.525
+[2026-10-09T14:31:41.127Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.53
+[2026-10-09T14:31:41.381Z] [EVENT] Position changed → X=-13.188 Y=64 Z=-14.839
+[2026-10-09T14:31:41.525Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.25
+[2026-10-09T14:31:41.742Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.41
+[2026-10-09T14:31:41.891Z] [EVENT] Position changed → X=-11.832 Y=64 Z=-15.277
+[2026-10-09T14:31:42.026Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.56
+[2026-10-09T14:31:42.373Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.66
+[2026-10-09T14:31:42.395Z] [EVENT] Position changed → X=-12.789 Y=64 Z=-14.696
+[2026-10-09T14:31:42.560Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.33
+[2026-10-09T14:31:42.746Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.12
+[2026-10-09T14:31:42.905Z] [EVENT] Position changed → X=-11.939 Y=64 Z=-14.714
+[2026-10-09T14:31:42.986Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.71
+[2026-10-09T14:31:43.155Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.95
+[2026-10-09T14:31:43.311Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.62
+[2026-10-09T14:31:43.411Z] [EVENT] Position changed → X=-12.068 Y=64 Z=-15.848
+[2026-10-09T14:31:43.472Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.98
+[2026-10-09T14:31:43.890Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.87
+[2026-10-09T14:31:43.918Z] [EVENT] Position changed → X=-12.766 Y=64 Z=-14.748
+[2026-10-09T14:31:44.109Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.76
+[2026-10-09T14:31:44.311Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.20
+[2026-10-09T14:31:44.416Z] [EVENT] Position changed → X=-11.776 Y=64 Z=-15.284
+[2026-10-09T14:31:44.620Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.40
+[2026-10-09T14:31:44.791Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.90
+[2026-10-09T14:31:44.927Z] [EVENT] Position changed → X=-12.265 Y=64 Z=-14.455
+[2026-10-09T14:31:45.023Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.36
+[2026-10-09T14:31:45.201Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.97
+[2026-10-09T14:31:45.375Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.70
+[2026-10-09T14:31:45.426Z] [EVENT] Position changed → X=-12.151 Y=64 Z=-15.891
+[2026-10-09T14:31:45.548Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.28
+[2026-10-09T14:31:45.772Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.43
+[2026-10-09T14:31:45.945Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.94
+[2026-10-09T14:31:45.973Z] [EVENT] Position changed → X=-12.722 Y=64 Z=-14.698
+[2026-10-09T14:31:46.105Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.39
+[2026-10-09T14:31:46.284Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=3.00
+[2026-10-09T14:31:46.473Z] [EVENT] Position changed → X=-12.164 Y=64 Z=-14.923
+[2026-10-09T14:31:46.831Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.33
+[2026-10-09T14:31:46.975Z] [EVENT] Position changed → X=-13.327 Y=64 Z=-15.575
+[2026-10-09T14:31:47.152Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.33
+[2026-10-09T14:31:47.321Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.36
+[2026-10-09T14:31:47.474Z] [EVENT] Position changed → X=-12.565 Y=64 Z=-16.403
+[2026-10-09T14:31:47.671Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.42
+[2026-10-09T14:31:47.904Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.80
+[2026-10-09T14:31:48.022Z] [EVENT] Position changed → X=-12.227 Y=64 Z=-15.552
+[2026-10-09T14:31:48.275Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.70
+[2026-10-09T14:31:48.454Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.38
+[2026-10-09T14:31:48.533Z] [EVENT] Position changed → X=-10.737 Y=64 Z=-16.285
+[2026-10-09T14:31:48.914Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.43
+[2026-10-09T14:31:49.046Z] [EVENT] Position changed → X=-13.05 Y=64 Z=-15.642
+[2026-10-09T14:31:49.107Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.93
+[2026-10-09T14:31:49.207Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.38
+[2026-10-09T14:31:49.383Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.78
+[2026-10-09T14:31:49.681Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.95
+[2026-10-09T14:31:49.938Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.58
+[2026-10-09T14:31:50.053Z] [EVENT] Position changed → X=-12.697 Y=64 Z=-17.079
+[2026-10-09T14:31:50.121Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.38
+[2026-10-09T14:31:50.396Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.64
+[2026-10-09T14:31:50.558Z] [EVENT] Position changed → X=-13.304 Y=64 Z=-16.157
+[2026-10-09T14:31:50.728Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.75
+[2026-10-09T14:31:50.921Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.64
+[2026-10-09T14:31:51.074Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.63
+[2026-10-09T14:31:51.076Z] [EVENT] Position changed → X=-13.148 Y=64 Z=-16.73
+[2026-10-09T14:31:51.301Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.37
+[2026-10-09T14:31:51.546Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.47
+[2026-10-09T14:31:51.586Z] [EVENT] Position changed → X=-13.624 Y=64 Z=-16.46
+[2026-10-09T14:31:51.882Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.57
+[2026-10-09T14:31:52.069Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.25
+[2026-10-09T14:31:52.095Z] [EVENT] Position changed → X=-12.898 Y=64 Z=-16.09
+[2026-10-09T14:31:52.224Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.83
+[2026-10-09T14:31:52.573Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.06
+[2026-10-09T14:31:52.605Z] [EVENT] Position changed → X=-12.753 Y=64 Z=-15.59
+[2026-10-09T14:31:52.711Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.48
+[2026-10-09T14:31:52.888Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.32
+[2026-10-09T14:31:53.071Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.74
+[2026-10-09T14:31:53.653Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.40
+[2026-10-09T14:31:53.975Z] [EVENT] Position changed → X=-13.955 Y=64 Z=-16.349
+[2026-10-09T14:31:54.068Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.15
+[2026-10-09T14:31:54.231Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.10
+[2026-10-09T14:31:54.477Z] [EVENT] Position changed → X=-14.008 Y=64 Z=-17.829
+[2026-10-09T14:31:54.477Z] [EVENT] Entity detected: salmon (distance 14.97m)
+[2026-10-09T14:31:54.743Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.69
+[2026-10-09T14:31:54.977Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.77
+[2026-10-09T14:31:54.988Z] [EVENT] Position changed → X=-13.544 Y=64 Z=-16.002
+[2026-10-09T14:31:54.989Z] [EVENT] Entity left nearby range: 384
+[2026-10-09T14:31:55.147Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.48
+[2026-10-09T14:31:55.316Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.36
+[2026-10-09T14:31:55.480Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.79
+[2026-10-09T14:31:55.513Z] [EVENT] Position changed → X=-13.675 Y=64 Z=-16.924
+[2026-10-09T14:31:55.517Z] [EVENT] Entity detected: salmon (distance 15.85m)
+[2026-10-09T14:31:55.873Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.85
+[2026-10-09T14:31:56.033Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.48
+[2026-10-09T14:31:56.034Z] [EVENT] Entity left nearby range: 384
+[2026-10-09T14:31:56.210Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.05
+[2026-10-09T14:31:56.484Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.64
+[2026-10-09T14:31:56.535Z] [EVENT] Position changed → X=-13.271 Y=64 Z=-16.13
+[2026-10-09T14:31:56.669Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.01
+[2026-10-09T14:31:56.775Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.48
+[2026-10-09T14:31:56.945Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=3.04
+[2026-10-09T14:31:57.043Z] [EVENT] Position changed → X=-12.349 Y=64 Z=-16.133
+[2026-10-09T14:31:57.267Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.10
+[2026-10-09T14:31:57.471Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.50
+[2026-10-09T14:31:57.543Z] [EVENT] Position changed → X=-12.73 Y=64 Z=-15.686
+[2026-10-09T14:31:57.918Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.95
+[2026-10-09T14:31:58.029Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.73
+[2026-10-09T14:31:58.693Z] [EVENT] Position changed → X=-13.337 Y=64 Z=-17.703
+[2026-10-09T14:31:58.693Z] [EVENT] Entity detected: salmon (distance 15.68m)
+[2026-10-09T14:31:58.693Z] [HEARTBEAT] Zoya online | Health=14.79869556427002 | Pos=(-13.337,64,-17.703) | Nearby=2 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:31:58.825Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.88
+[2026-10-09T14:31:58.938Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.58
+[2026-10-09T14:31:59.099Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.88
+[2026-10-09T14:31:59.215Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.39
+[2026-10-09T14:31:59.555Z] [EVENT] Position changed → X=-12.463 Y=64 Z=-15.328
+[2026-10-09T14:31:59.564Z] [EVENT] Entity left nearby range: 385
+[2026-10-09T14:31:59.588Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.12
+[2026-10-09T14:32:00.370Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.83
+[2026-10-09T14:32:00.982Z] [EVENT] Position changed → X=-12.633 Y=64 Z=-16.317
+[2026-10-09T14:32:01.135Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.98
+[2026-10-09T14:32:01.330Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.64
+[2026-10-09T14:32:01.396Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.45
+[2026-10-09T14:32:02.287Z] [EVENT] Position changed → X=-12.724 Y=64 Z=-15.471
+[2026-10-09T14:32:02.996Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.95
+[2026-10-09T14:32:03.832Z] [EVENT] Position changed → X=-11.839 Y=64 Z=-14.314
+[2026-10-09T14:32:03.882Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.78
+[2026-10-09T14:32:04.058Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=4.79
+[2026-10-09T14:32:04.265Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.13
+[2026-10-09T14:32:04.327Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.94
+[2026-10-09T14:32:04.335Z] [EVENT] Position changed → X=-12.054 Y=64 Z=-15.147
+[2026-10-09T14:32:04.614Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.57
+[2026-10-09T14:32:04.997Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.39
+[2026-10-09T14:32:05.804Z] [EVENT] Position changed → X=-12.869 Y=64 Z=-15.577
+[2026-10-09T14:32:09.561Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.91
+[2026-10-09T14:32:09.652Z] [EVENT] Position changed → X=-13.86 Y=64 Z=-16.055
+[2026-10-09T14:32:09.653Z] [EVENT] Entity detected: salmon (distance 15.07m)
+[2026-10-09T14:32:09.658Z] [EVENT] Entity detected: salmon (distance 14.07m)
+[2026-10-09T14:32:09.718Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.75
+[2026-10-09T14:32:13.253Z] [EVENT] Position changed → X=-13.554 Y=64 Z=-17.804
+[2026-10-09T14:32:13.253Z] [EVENT] Entity detected: salmon (distance 14.06m)
+[2026-10-09T14:32:13.254Z] [EVENT] Entity detected: salmon (distance 14.02m)
+[2026-10-09T14:32:13.256Z] [EVENT] Entity detected: salmon (distance 15.91m)
+[2026-10-09T14:32:13.355Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.90
+[2026-10-09T14:32:13.465Z] [PVP-EXPERT] style=spear action=strafe_pressure reason=maintain_pressure dist=2.70
+[2026-10-09T14:32:13.664Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.13
+[2026-10-09T14:32:13.762Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.16
+[2026-10-09T14:32:15.467Z] [EVENT] Position changed → X=-11.715 Y=64 Z=-14.409
+[2026-10-09T14:32:16.555Z] [EVENT] Entity left nearby range: 234
+[2026-10-09T14:32:16.564Z] [EVENT] Entity left nearby range: 254
+[2026-10-09T14:32:18.315Z] [EVENT] Entity left nearby range: 354
+[2026-10-09T14:32:18.317Z] [EVENT] Entity left nearby range: 384
+[2026-10-09T14:32:22.437Z] [TASK] Finished #2 pvp -> failed (target_lost).
+[2026-10-09T14:32:22.487Z] [BRAIN] Action failed: pvp
+[2026-10-09T14:32:22.490Z] [EVENT] Entity left nearby range: 250
+[2026-10-09T14:32:22.490Z] [EVENT] Entity left nearby range: 255
+[2026-10-09T14:32:26.498Z] [BRAIN] Thinking (player_message)...
+[2026-10-09T14:32:31.204Z] [HEARTBEAT] Zoya online | Health=14.79869556427002 | Pos=(-11.962,64,-14.441) | Nearby=0 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:32:39.734Z] [BRAIN] Plan: Set ShubhTheGOAT to Creative Mode | actions=op_command.
+[2026-10-09T14:32:39.736Z] [TASK] Started #3 manual:clean:op_command.
+[2026-10-09T14:32:39.773Z] [TASK] Finished #3 manual:clean:op_command -> completed.
+Error: write ECONNABORTED
+    at afterWriteDispatched (node:internal/stream_base_commons:159:15)
+    at writeGeneric (node:internal/stream_base_commons:150:3)
+    at Socket._writeGeneric (node:net:1262:11)
+    at Socket._write (node:net:1274:8)
+    at writeOrBuffer (node:internal/streams/writable:574:12)
+    at _write (node:internal/streams/writable:503:10)
+    at Writable.write (node:internal/streams/writable:512:10)
+    at Framer.ondata (A:\whitehat-jr\Downloads\ZOYA\TEST-EXE\Zoya\minecraft-bridge\node_modules\readable-stream\lib\internal\streams\readable.js:707:22)
+    at Framer.emit (node:events:514:28)
+    at addChunk (A:\whitehat-jr\Downloads\ZOYA\TEST-EXE\Zoya\minecraft-bridge\node_modules\readable-stream\lib\internal\streams\readable.js:323:12) {
+  errno: -4079,
+  code: 'ECONNABORTED',
+  syscall: 'write'
+}
+[2026-10-09T14:33:06.995Z] [ZOYA Minecraft Bridge] Mineflayer connection error: write ECONNABORTED
+[2026-10-09T14:33:17.698Z] [ZOYA Minecraft Bridge] Connection ended. reason=socketClosed | previousStatus=CONNECTING | activeTask=none
+[2026-10-09T14:33:17.698Z] [RECONNECT] Minecraft connection ended (socketClosed); retrying in 2s (attempt 1).
+[2026-10-09T14:33:17.818Z] [BRAIN] Thinking (event)...
+[2026-10-09T14:33:18.863Z] [BRAIN] Plan: Idle | actions=.
+[2026-10-09T14:33:19.706Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
+[2026-10-09T14:33:19.706Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20) {
+  errno: -4077,
+  code: 'ECONNRESET',
+  syscall: 'read'
+}
+[2026-10-09T14:33:37.609Z] [ZOYA Minecraft Bridge] Mineflayer connection error: read ECONNRESET
+[2026-10-09T14:33:39.582Z] [ZOYA Minecraft Bridge] Connection ended. reason=socketClosed | previousStatus=CONNECTING | activeTask=none
+[2026-10-09T14:33:39.585Z] [RECONNECT] Minecraft connection ended (socketClosed); retrying in 4s (attempt 2).
+[2026-10-09T14:33:43.599Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
+[2026-10-09T14:33:43.599Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
+[2026-10-09T14:33:49.778Z] [EVENT] Zoya spawned into the Minecraft world.
+[2026-10-09T14:33:49.778Z] [ZOYA Minecraft Bridge] Mineflayer login: Zoya
+[2026-10-09T14:33:49.781Z] [PROTOCOL] negotiatedVersion=1.21.11 protocol=774 configuredVersion=1.21.11 elytra=ENABLED action=start_elytra_flying
+[2026-10-09T14:33:49.788Z] [PHYSICS] Mineflayer physics enabled for movement and knockback.
+[2026-10-09T14:33:49.790Z] [PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.
+[2026-10-09T14:33:49.795Z] [MOVEMENT] Autonomous movement enabled.
+[2026-10-09T14:33:50.349Z] [BRAIN] Zoya Minecraft brain started (Groq planner, 168 capabilities).
+[2026-10-09T14:33:50.477Z] [PHYSICS] Damage 5.2013044357299805 health; no server velocity packet observed yet.
+[2026-10-09T14:33:50.477Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:33:56.630Z] [STATE] Position: X=-11.962 Y=64 Z=-14.441
+[2026-10-09T14:33:56.636Z] [STATE] Health: 14.79869556427002 | Hunger: 16 | XP: Lv.9 (4%)
+[2026-10-09T14:33:56.637Z] [STATE] Dimension: overworld | Time: 60664 | Day: 2 | Rain=NO | Thunder=0
+[2026-10-09T14:33:56.638Z] [STATE] Held: Netherite Sword | Nearby: 2
+[2026-10-09T14:33:56.639Z] [STATE] Below: Grass Block | Light=0 | Sky Light=0
+[2026-10-09T14:33:56.688Z] [BRAIN] Thinking (startup)...
+[2026-10-09T14:33:59.171Z] [EVENT] Entity left nearby range: 658
+[2026-10-09T14:33:59.994Z] [BRAIN] Plan: Respond to owner request | actions=chat.
+[2026-10-09T14:33:59.995Z] [TASK] Started #1 manual:clean:chat.
+[2026-10-09T14:34:00.003Z] [TASK] Finished #1 manual:clean:chat -> completed.
+[2026-10-09T14:34:03.238Z] [EVENT] Entity left nearby range: 645
+[2026-10-09T14:34:05.795Z] [EVENT] Entity detected: salmon (distance 15.78m)
+[2026-10-09T14:34:08.836Z] [EVENT] Entity left nearby range: 659
+[2026-10-09T14:34:13.930Z] [EVENT] Entity detected: salmon (distance 15.94m)
+[2026-10-09T14:34:14.944Z] [EVENT] Entity left nearby range: 639
+[2026-10-09T14:34:16.695Z] [BRAIN] Thinking (event)...
+[2026-10-09T14:34:17.713Z] [BRAIN] Plan: idle | actions=.
+[2026-10-09T14:34:27.099Z] [HEARTBEAT] Zoya online | Health=14.79869556427002 | Pos=(-11.962,64,-14.441) | Nearby=0 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:34:32.717Z] [EVENT] Entity detected: salmon (distance 15.99m)
+[2026-10-09T14:34:39.821Z] [EVENT] Entity detected: salmon (distance 16m)
+[2026-10-09T14:34:41.857Z] [EVENT] Entity detected: salmon (distance 15.99m)
+[2026-10-09T14:34:48.979Z] [EVENT] Entity left nearby range: 639
+[2026-10-09T14:34:48.980Z] [EVENT] Entity left nearby range: 658
+[2026-10-09T14:34:49.485Z] [EVENT] Entity detected: salmon (distance 15.99m)
+[2026-10-09T14:34:52.545Z] [EVENT] Entity detected: salmon (distance 16m)
+[2026-10-09T14:34:54.064Z] [EVENT] Entity left nearby range: 657
+[2026-10-09T14:34:56.601Z] [EVENT] Entity left nearby range: 658
+[2026-10-09T14:34:57.114Z] [HEARTBEAT] Zoya online | Health=14.79869556427002 | Pos=(-11.962,64,-14.441) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:35:00.617Z] [EVENT] Entity detected: ShubhTheGOAT (distance 2.66m)
+[2026-10-09T14:35:02.258Z] [EVENT] Entity left nearby range: 639
+[2026-10-09T14:35:06.353Z] [EVENT] Entity detected: squid (distance 15.67m)
+[2026-10-09T14:35:09.279Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Set the time to 1000]
+[2026-10-09T14:35:09.396Z] [EVENT] Entity left nearby range: 720
+[2026-10-09T14:35:10.509Z] [PHYSICS] Server knockback velocity: x=0.2396 y=0.2008 z=-0.0127
+[2026-10-09T14:35:10.554Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (0.2396, 0.2008, -0.0127).
+[2026-10-09T14:35:10.554Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:35:10.591Z] [SURVIVAL] Eating cooked_beef (health=13.658215522766113, food=16, trigger=health event).
+[2026-10-09T14:35:10.918Z] [EVENT] Health changed: 14.79869556427002 -> 13.658215522766113
+[2026-10-09T14:35:10.924Z] [EVENT] Held item changed: netherite_sword -> cooked_beef
+[2026-10-09T14:35:11.854Z] [PHYSICS] Server knockback velocity: x=0.1409 y=0.2008 z=0.1942
+[2026-10-09T14:35:11.903Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (0.1409, 0.2008, 0.1942).
+[2026-10-09T14:35:11.904Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:35:11.930Z] [EVENT] Health changed: 13.658215522766113 -> 12.517735481262207
+[2026-10-09T14:35:12.304Z] [SURVIVAL] Finished eating cooked_beef (health=12.517735481262207, food=20).
+[2026-10-09T14:35:12.441Z] [EVENT] Hunger changed: 16 -> 20
+[2026-10-09T14:35:12.441Z] [EVENT] Held item changed: cooked_beef -> netherite_sword
+[2026-10-09T14:35:12.442Z] [EVENT] Inventory changed.
+[2026-10-09T14:35:12.989Z] [EVENT] Health changed: 12.517735481262207 -> 13.517735481262207
+[2026-10-09T14:35:13.634Z] [BRAIN] Thinking (player_message)...
+[2026-10-09T14:35:14.366Z] [EVENT] Health changed: 13.517735481262207 -> 14.517735481262207
+[2026-10-09T14:35:14.876Z] [EVENT] Health changed: 14.517735481262207 -> 17.51773452758789
+[2026-10-09T14:35:15.280Z] [BRAIN] Plan: Set server time to 1000 | actions=op_command.
+[2026-10-09T14:35:15.284Z] [TASK] Started #2 manual:clean:op_command.
+[2026-10-09T14:35:15.293Z] [TASK] Finished #2 manual:clean:op_command -> completed.
+[2026-10-09T14:35:15.389Z] [EVENT] Health changed: 17.51773452758789 -> 18.48440170288086
+[2026-10-09T14:35:15.896Z] [EVENT] Health changed: 18.48440170288086 -> 19.117734909057617
+[2026-10-09T14:35:16.401Z] [EVENT] Health changed: 19.117734909057617 -> 19.584402084350586
+[2026-10-09T14:35:16.912Z] [EVENT] Health changed: 19.584402084350586 -> 20
+[2026-10-09T14:35:27.331Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-11.962,64,-14.441) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:35:33.642Z] [BRAIN] Thinking (event)...
+[2026-10-09T14:35:34.361Z] [BRAIN] Plan: No action needed | actions=.
+[2026-10-09T14:35:57.359Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-11.962,64,-14.441) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:36:27.817Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-11.962,64,-14.441) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:36:58.611Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-11.962,64,-14.441) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:37:34.152Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-11.962,64,-14.441) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:38:04.427Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-11.962,64,-14.441) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:38:45.560Z] [ZOYA Minecraft Bridge] Connection ended. reason=socketClosed | previousStatus=CONNECTED | activeTask=none
+[2026-10-09T14:38:48.009Z] [RECONNECT] Minecraft connection ended (socketClosed); retrying in 2s (attempt 1).
+[2026-10-09T14:38:57.664Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
+[2026-10-09T14:38:57.672Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
+[2026-10-09T14:39:16.749Z] [EVENT] Zoya spawned into the Minecraft world.
+[2026-10-09T14:39:16.762Z] [ZOYA Minecraft Bridge] Mineflayer login: Zoya
+[2026-10-09T14:39:16.776Z] [PROTOCOL] negotiatedVersion=1.21.11 protocol=774 configuredVersion=1.21.11 elytra=ENABLED action=start_elytra_flying
+[2026-10-09T14:39:16.810Z] [PHYSICS] Mineflayer physics enabled for movement and knockback.
+[2026-10-09T14:39:16.825Z] [PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.
+[2026-10-09T14:39:16.834Z] [MOVEMENT] Autonomous movement enabled.
+[2026-10-09T14:39:17.273Z] [BRAIN] Zoya Minecraft brain started (Groq planner, 168 capabilities).
+[2026-10-09T14:39:21.392Z] [STATE] Position: X=-11.962 Y=64 Z=-14.441
+[2026-10-09T14:39:21.459Z] [STATE] Health: 20 | Hunger: 20 | XP: Lv.9 (4%)
+[2026-10-09T14:39:21.495Z] [STATE] Dimension: overworld | Time: 5837 | Day: 0 | Rain=NO | Thunder=0
+[2026-10-09T14:39:21.495Z] [STATE] Held: Netherite Sword | Nearby: 0
+[2026-10-09T14:39:21.496Z] [STATE] Below: Grass Block | Light=0 | Sky Light=0
+[2026-10-09T14:39:21.499Z] [BRAIN] Thinking (startup)...
+[2026-10-09T14:39:22.991Z] [BRAIN] Plan: idle | actions=.
+[2026-10-09T14:39:25.198Z] [EVENT] Entity detected: salmon (distance 15.09m)
+[2026-10-09T14:39:25.199Z] [EVENT] Entity detected: ShubhTheGOAT (distance 15.2m)
+[2026-10-09T14:39:26.726Z] [EVENT] Entity left nearby range: 1242
+[2026-10-09T14:39:38.034Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
+[2026-10-09T14:39:41.654Z] [EVENT] Entity left nearby range: 1381
+[2026-10-09T14:39:42.041Z] [BRAIN] Thinking (player_message)...
+[2026-10-09T14:39:42.048Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
+[2026-10-09T14:39:42.049Z] [BRAIN] Plan: Fight the requester | actions=pvp.
+[2026-10-09T14:39:42.058Z] [TASK] Started #1 pvp -> ShubhTheGOAT.
+[2026-10-09T14:39:42.075Z] [PVP-EXPERT] active target=ShubhTheGOAT
+[2026-10-09T14:39:42.233Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=17.42
+[2026-10-09T14:39:42.306Z] [EVENT] Position changed → X=-11.403 Y=64 Z=-14.456
+[2026-10-09T14:39:42.306Z] [EVENT] Entity detected: ShubhTheGOAT (distance 15.94m)
+[2026-10-09T14:39:42.815Z] [EVENT] Position changed → X=-8.447 Y=64 Z=-15.383
+[2026-10-09T14:39:43.330Z] [EVENT] Position changed → X=-5.707 Y=64 Z=-15.505
+[2026-10-09T14:39:43.424Z] [PVP-EXPERT] style=axe action=approach reason=default_engagement dist=8.24
+[2026-10-09T14:39:43.832Z] [EVENT] Position changed → X=-3.428 Y=64 Z=-16.497
+[2026-10-09T14:39:44.341Z] [EVENT] Position changed → X=-2.222 Y=64 Z=-17.551
+[2026-10-09T14:39:44.594Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.20
+[2026-10-09T14:39:44.844Z] [EVENT] Position changed → X=-1.067 Y=65.014 Z=-17.51
+[2026-10-09T14:39:44.847Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-09T14:39:44.852Z] [EVENT] Inventory changed.
+[2026-10-09T14:39:44.855Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-09T14:39:45.354Z] [EVENT] Position changed → X=-0.016 Y=70.044 Z=-17.795
+[2026-10-09T14:39:45.855Z] [EVENT] Position changed → X=2.305 Y=66.291 Z=-18.398
+[2026-10-09T14:39:46.077Z] [PHYSICS] Server knockback velocity: x=-0.2321 y=-1.0018 z=0.0609
+[2026-10-09T14:39:46.097Z] [PHYSICS] Damage 4.657048225402832 health; observed server velocity = (-0.2321, -1.0018, 0.0609).
+[2026-10-09T14:39:46.097Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:39:46.367Z] [EVENT] Position changed → X=3.656 Y=64 Z=-18.769
+[2026-10-09T14:39:46.368Z] [EVENT] Health changed: 20 -> 15.342951774597168
+[2026-10-09T14:39:46.369Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-09T14:39:47.003Z] [EVENT] Position changed → X=6.606 Y=64 Z=-19.575
+[2026-10-09T14:39:47.030Z] [EVENT] Health changed: 15.342951774597168 -> 15.642951965332031
+[2026-10-09T14:39:47.509Z] [EVENT] Position changed → X=9.855 Y=64 Z=-20.463
+[2026-10-09T14:39:47.510Z] [EVENT] Health changed: 15.642951965332031 -> 15.776285171508789
+[2026-10-09T14:39:47.802Z] [PVP-EXPERT] style=spear action=approach reason=default_engagement dist=10.12
+[2026-10-09T14:39:48.022Z] [EVENT] Position changed → X=10.505 Y=64 Z=-20.543
+[2026-10-09T14:39:48.022Z] [EVENT] Health changed: 15.776285171508789 -> 15.909618377685547
+[2026-10-09T14:39:48.024Z] [EVENT] Entity detected: wind_charge (distance 8.73m)
+[2026-10-09T14:39:48.536Z] [EVENT] Position changed → X=7.753 Y=64 Z=-20.49
+[2026-10-09T14:39:48.536Z] [EVENT] Health changed: 15.909618377685547 -> 16.042951583862305
+[2026-10-09T14:39:48.538Z] [EVENT] Entity left nearby range: 1407
+[2026-10-09T14:39:48.982Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=6.40
+[2026-10-09T14:39:49.156Z] [EVENT] Position changed → X=7.19 Y=64 Z=-20.498
+[2026-10-09T14:39:49.156Z] [EVENT] Health changed: 16.042951583862305 -> 16.30961799621582
+[2026-10-09T14:39:49.363Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.65
+[2026-10-09T14:39:49.541Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.94
+[2026-10-09T14:39:49.662Z] [EVENT] Position changed → X=6.897 Y=64 Z=-21.173
+[2026-10-09T14:39:49.663Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-09T14:39:49.664Z] [EVENT] Entity detected: wind_charge (distance 2.78m)
+[2026-10-09T14:39:49.816Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.82
+[2026-10-09T14:39:49.986Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.49
+[2026-10-09T14:39:50.184Z] [EVENT] Position changed → X=5.23 Y=64 Z=-21.507
+[2026-10-09T14:39:50.184Z] [EVENT] Entity left nearby range: 1415
+[2026-10-09T14:39:50.691Z] [EVENT] Position changed → X=5.909 Y=64 Z=-18.979
+[2026-10-09T14:39:51.010Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.43
+[2026-10-09T14:39:51.170Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=2.04
+[2026-10-09T14:39:51.205Z] [EVENT] Position changed → X=6.831 Y=64 Z=-18.523
+[2026-10-09T14:39:51.228Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.44
+[2026-10-09T14:39:51.382Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.44
+[2026-10-09T14:39:51.640Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.76
+[2026-10-09T14:39:51.717Z] [EVENT] Position changed → X=9.136 Y=65.237 Z=-17.909
+[2026-10-09T14:39:51.718Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-09T14:39:51.719Z] [HEARTBEAT] Zoya online | Health=16.30961799621582 | Pos=(9.136,65.237,-17.909) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-09T14:39:51.789Z] [PVP-EXPERT] style=spear action=spear_pressure reason=spear_range dist=3.16
+[2026-10-09T14:39:52.233Z] [EVENT] Position changed → X=10.138 Y=64 Z=-18.126
+[2026-10-09T14:39:52.234Z] [EVENT] Held item changed: netherite_sword -> netherite_spear
+[2026-10-09T14:39:52.235Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-09T14:39:52.740Z] [EVENT] Position changed → X=7.551 Y=64 Z=-18.201
+[2026-10-09T14:39:52.886Z] [PVP-EXPERT] style=utility action=spacing_retreat reason=too_close_spacing dist=1.49
+[2026-10-09T14:39:52.896Z] [PHYSICS] Server knockback velocity: x=-0.2676 y=0.2008 z=0.0592
+[2026-10-09T14:39:52.952Z] [PHYSICS] Damage 6.058470726013184 health; observed server velocity = (-0.2676, 0.2008, 0.0592).
+[2026-10-09T14:39:52.954Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:39:53.022Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.59
+[2026-10-09T14:39:53.181Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.45
+[2026-10-09T14:39:53.242Z] [EVENT] Position changed → X=5.042 Y=68.184 Z=-18.062
+[2026-10-09T14:39:53.242Z] [EVENT] Health changed: 16.30961799621582 -> 11.251147270202637
+[2026-10-09T14:39:53.243Z] [EVENT] Hunger changed: 20 -> 19
+[2026-10-09T14:39:53.251Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-09T14:39:53.756Z] [EVENT] Position changed → X=3.663 Y=67.903 Z=-18.161
+[2026-10-09T14:39:54.197Z] [PHYSICS] Server knockback velocity: x=-0.0190 y=-0.0784 z=0.0042
+[2026-10-09T14:39:54.284Z] [EVENT] Position changed → X=3.243 Y=64 Z=-18.185
+[2026-10-09T14:39:54.284Z] [EVENT] Health changed: 11.251147270202637 -> 10.851147651672363
+[2026-10-09T14:39:54.285Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-09T14:39:54.456Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=6.85
+[2026-10-09T14:39:54.789Z] [EVENT] Position changed → X=4.63 Y=64 Z=-18.505
+[2026-10-09T14:39:55.339Z] [EVENT] Position changed → X=6.063 Y=64 Z=-17.975
+[2026-10-09T14:39:55.609Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.04
+[2026-10-09T14:39:55.841Z] [EVENT] Position changed → X=5.506 Y=65.014 Z=-18.309
+[2026-10-09T14:39:55.841Z] [EVENT] Held item changed: netherite_spear -> wind_charge
+[2026-10-09T14:39:55.845Z] [EVENT] Inventory changed.
+[2026-10-09T14:39:55.846Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-09T14:39:55.913Z] [PHYSICS] Server knockback velocity: x=0.2413 y=0.7242 z=-0.0045
+[2026-10-09T14:39:55.956Z] [PHYSICS] Damage 6.800138473510742 health; observed server velocity = (0.2413, 0.7242, -0.0045).
+[2026-10-09T14:39:55.958Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:39:56.342Z] [EVENT] Position changed → X=8.113 Y=70.142 Z=-18.343
+[2026-10-09T14:39:56.344Z] [EVENT] Health changed: 10.851147651672363 -> 4.051009178161621
+[2026-10-09T14:39:56.845Z] [EVENT] Position changed → X=8.108 Y=67.113 Z=-18.341
+[2026-10-09T14:39:57.091Z] [PHYSICS] Server knockback velocity: x=0.0681 y=-0.5995 z=-0.0012
+[2026-10-09T14:39:57.355Z] [EVENT] Position changed → X=5.821 Y=64 Z=-18.319
+[2026-10-09T14:39:57.355Z] [EVENT] Health changed: 4.051009178161621 -> 4.451009273529053
+[2026-10-09T14:39:57.357Z] [EVENT] Hunger changed: 19 -> 17
+[2026-10-09T14:39:57.358Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-09T14:39:57.443Z] [PHYSICS] Damage 2.4510092735290527 health; observed server velocity = (0.0681, -0.5995, -0.0012).
+[2026-10-09T14:39:57.447Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-09T14:39:57.866Z] [EVENT] Position changed → X=4.978 Y=64 Z=-18.414
+[2026-10-09T14:39:57.866Z] [EVENT] Health changed: 4.451009273529053 -> 2
+[2026-10-09T14:39:57.868Z] [EVENT] Inventory changed.
+[2026-10-09T14:39:58.366Z] [EVENT] Position changed → X=1.9 Y=64 Z=-18.374
+[2026-10-09T14:39:58.739Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_no_heal dist=9.67
+[2026-10-09T14:39:59.719Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:00.478Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:01.315Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:02.289Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:03.067Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:03.847Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:04.765Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:05.586Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:06.352Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:07.115Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:07.892Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:08.682Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:09.434Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:10.184Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:10.965Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:11.739Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:12.507Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:13.264Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:14.191Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:14.965Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:15.731Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:16.492Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:17.264Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:18.028Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:18.802Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:19.555Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:20.325Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:21.086Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:21.854Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:22.616Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:23.375Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:24.225Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:25.385Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:26.487Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:27.384Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:28.152Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:28.904Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:30.171Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:31.084Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:31.848Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:32.609Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:33.365Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:34.134Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:34.899Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:35.656Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:36.411Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:37.203Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:37.990Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:38.745Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:39.534Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:40.286Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:41.041Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:41.810Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:42.575Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:43.333Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:44.083Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:44.843Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:45.611Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:46.367Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:47.122Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:47.895Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
+[2026-10-09T14:40:48.645Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=9.67
 [
