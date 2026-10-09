@@ -102,13 +102,16 @@ export function createPvpExpertBrain(options={}){
     if(c.projectileThreat&&c.projectileDodge) return {action:"dodge_projectile",style:"utility",priority:9490,reason:"projectile_dodge"};
     if(e.retreating&&d>=4&&d<=9&&has(c,"rod")) return {action:"rod_control",style:"utility",priority:7550,reason:"rod_control"};
 
-    if(e.shield&&has(c,"axe")&&d>=2.15&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
-    if(e.usingItem&&e.shield&&has(c,"axe")&&d>=2.15&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
+    if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
+    if(e.usingItem&&e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
 
-    // Close-range spacing is a hard tactical constraint. Special smash/finish
-    // windows above may override it; ordinary melee must never start inside
-    // the collision-heavy 2.15m zone.
-    if(d<2.15) return {action:"spacing_retreat",style:"utility",priority:8000,reason:"too_close_spacing"};
+    // A completed retreat gets a short lateral-only recovery window. Without
+    // it, the next brain tick immediately attacks and recreates the collision.
+    if(c.spacingLockUntil&&now<c.spacingLockUntil&&d<3.05)
+      return {action:"spacing_hold",style:"utility",priority:8050,reason:"spacing_recovery_window"};
+
+    // Keep a usable buffer for hit registration and avoid attack/retreat chatter.
+    if(d<2.45) return {action:"spacing_retreat",style:"utility",priority:8000,reason:"too_close_spacing"};
     if(e.totemPopped&&d<=5&&has(c,"burst")) return {action:"finish",style:styleMemory,priority:9300,reason:"totem_pop_finish"};
     if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
@@ -145,9 +148,9 @@ export function createPvpExpertBrain(options={}){
 
     if(styleMemory==="spear"&&has(c,"spear")&&d>=3&&d<=4.75&&attackReady)
       return {action:"spear_pressure",style:"spear",priority:7400,reason:"spear_range"};
-    if(styleMemory==="axe"&&has(c,"axe")&&d<=3.2&&attackReady)
+    if(styleMemory==="axe"&&has(c,"axe")&&d>=2.45&&d<=3.2&&attackReady)
       return {action:"melee_attack",style:"axe",priority:7300,reason:"axe_attack"};
-    if(styleMemory==="sword"&&has(c,"sword")&&d>=2.15&&d<=3.05&&attackReady){
+    if(styleMemory==="sword"&&has(c,"sword")&&d>=2.45&&d<=3.05&&attackReady){
       if(falling&&!onGround&&num(c.fallDistance)>=.45&&d>=Number(difficulty.critMinRange||2.45)) return {action:"falling_crit",style:"sword",priority:7800,reason:"falling_crit"};
       if(e.airborne&&c.hitSelectReady&&d>=2.35) return {action:"hit_select",style:"sword",priority:7350,reason:"hit_select"};
       return {action:"melee_attack",style:"sword",priority:7200,reason:"sword_attack"};
