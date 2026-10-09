@@ -921,6 +921,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             break;
           }
           case "emergency_disengage": ok=await emergencyDisengage(t);break;
+          case "emergency_hold":
+            // Already at a safe gap with no recovery item: stop issuing retreat
+            // movement every tick and wait for health/target state to change.
+            stop();
+            await sleep(140);
+            ok=true;
+            break;
           case "spacing_retreat": ok=await spacingRetreat(t);break;
           case "spacing_hold": {
             await lookAtTarget(t,.04);
