@@ -53,7 +53,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     enemyTotemWasEquipped:false,enemyTotemPopUntil:0,
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
-    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,
+    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0
   };
 
@@ -148,7 +148,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const spacingRetreat=async t=>{
     if(!t)return false;
     const start=dist(bot.entity,t);
-    const deadline=Date.now()+700;
+    const deadline=Date.now()+900;
+    let separated=false;
     try{
       bot.setControlState("back",true);
       bot.setControlState("sprint",true);
@@ -156,11 +157,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const live=targetOf(bot,state.targetUsername)||t;
         if(live) await lookAtTarget(live,.04);
         const d=dist(bot.entity,live||t);
-        // Exit the collision zone with a real geometric success condition.
-        if(d>=2.35||d>=start+0.65) return true;
+        // Create a real buffer, not a one-tick step into attack range.
+        if(d>=2.65||d>=start+0.8){separated=true;break;}
         await sleep(35);
       }
-      return dist(bot.entity,t)>=2.35;
+      separated=separated||dist(bot.entity,t)>=2.65||dist(bot.entity,t)>=start+0.8;
+      state.spacingLockUntil=Date.now()+450;
+      return separated;
     }finally{
       stop();
     }
@@ -548,8 +551,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
       state.maceLaunchUntil=Date.now()+2800;
 
-      // Do not equip/swing the mace during ascent. Wait for a real smash
-      // window: descending, >1.5 blocks of fall, and valid melee geometry.
+      // The launch itself supplies the vertical impulse. Do not hold forward
+      // throughout ascent/descent: that drove ZOYA past the target by 7-10m.
+      // During descent, steer only when outside the smash window and brake if
+      // too close; swing only after the real falling-distance gate is met.
       const smashDeadline=state.maceLaunchUntil;
       while(state.active&&taskIsActive()&&Date.now()<smashDeadline){
         const live=targetOf(bot,state.targetUsername)||t;
@@ -557,16 +562,29 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const d=dist(bot.entity,live);
         const vy=num(bot.entity?.velocity?.y);
         const fallDistance=num(bot.entity?.fallDistance);
-        if(isAirborne(bot.entity)){
-          await lookAtTarget(live,.04);
-          // During descent, close the horizontal gap instead of waiting
-          // stationary for the target to wander into the smash radius.
-          bot.setControlState("forward",true);
-          bot.setControlState("sprint",true);
-        }
-        if(isAirborne(bot.entity)&&vy<-.08&&fallDistance>1.5&&d>=2.35&&d<=3.1){
-          stop();
-          return await maceSmash(live);
+        await lookAtTarget(live,.04);
+        if(isAirborne(bot.entity)&&vy<-.08){
+          if(fallDistance>1.5&&d>=2.35&&d<=3.1){
+            stop();
+            return await maceSmash(live);
+          }
+          if(d>3.1){
+            bot.setControlState("back",false);
+            bot.setControlState("forward",true);
+            bot.setControlState("sprint",true);
+          }else if(d<2.35){
+            bot.setControlState("forward",false);
+            bot.setControlState("back",true);
+            bot.setControlState("sprint",false);
+          }else{
+            bot.setControlState("forward",false);
+            bot.setControlState("back",false);
+            bot.setControlState("sprint",false);
+          }
+        }else{
+          bot.setControlState("forward",false);
+          bot.setControlState("back",false);
+          bot.setControlState("sprint",false);
         }
         await sleep(25);
       }
@@ -711,6 +729,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.pearlCooldownUntil=0;
     state.maceEscapeCooldownUntil=0;
     state.emergencyRetreatUntil=0;
+    state.spacingLockUntil=0;
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
@@ -809,7 +828,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
           badPosition:Boolean(hazard()||d>14||!lineOfSight),
           totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
-          hardCounter:Boolean(eq.shield||eq.elytra||enemy.totemPopped),
+          hardCounter:Boolean((eq.shield&&enemy.usingItem)||(eq.elytra&&isAirborne(t))||enemy.totemPopped),
+          spacingLockUntil:state.spacingLockUntil,
           enemyBurstThreat,enemyMaceThreat,
           enemyMaceHeldClose:Boolean(enemyMaceHeld&&d<=5),
           strafeDirection:state.strafe>0?"right":"left"
