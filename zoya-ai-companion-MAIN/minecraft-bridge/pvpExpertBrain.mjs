@@ -108,10 +108,10 @@ export function createPvpExpertBrain(options={}){
     // A completed retreat gets a short lateral-only recovery window. Without
     // it, the next brain tick immediately attacks and recreates the collision.
     if(c.spacingLockUntil&&now<c.spacingLockUntil&&d<3.05)
-      return {action:"spacing_hold",style:"utility",priority:8050,reason:"spacing_recovery_window"};
+      return {action:"spacing_hold",style:styleMemory||"sword",priority:8050,reason:"spacing_recovery_window"};
 
     // Keep a usable buffer for hit registration and avoid attack/retreat chatter.
-    if(d<2.45) return {action:"spacing_retreat",style:"utility",priority:8000,reason:"too_close_spacing"};
+    if(d<2.45) return {action:"spacing_retreat",style:styleMemory||"sword",priority:8000,reason:"too_close_spacing"};
     if(e.totemPopped&&d<=5&&has(c,"burst")) return {action:"finish",style:styleMemory,priority:9300,reason:"totem_pop_finish"};
     if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
@@ -152,7 +152,7 @@ export function createPvpExpertBrain(options={}){
       return {action:"melee_attack",style:"axe",priority:7300,reason:"axe_attack"};
     if(styleMemory==="sword"&&has(c,"sword")&&d>=2.45&&d<=3.05&&attackReady){
       if(falling&&!onGround&&num(c.fallDistance)>=.45&&d>=Number(difficulty.critMinRange||2.45)) return {action:"falling_crit",style:"sword",priority:7800,reason:"falling_crit"};
-      if(e.airborne&&c.hitSelectReady&&d>=2.35) return {action:"hit_select",style:"sword",priority:7350,reason:"hit_select"};
+      if(c.hitSelectReady&&attackReady&&d>=2.35) return {action:"hit_select",style:"sword",priority:7350,reason:"landing_timed_hit_select"};
       return {action:"melee_attack",style:"sword",priority:7200,reason:"sword_attack"};
     }
 
