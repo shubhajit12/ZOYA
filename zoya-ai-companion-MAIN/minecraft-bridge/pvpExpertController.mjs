@@ -461,7 +461,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{
       bot.activateItem();
       const until=Date.now()+950;
-      let hit=false;
+      const hitsBefore=state.hits;
+      let enteredRange=false;
       while(state.active&&taskIsActive()&&Date.now()<until){
         const live=targetOf(bot,state.targetUsername)||t;
         if(!live)break;
@@ -470,23 +471,23 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         bot.setControlState("forward",true);
         bot.setControlState("sprint",true);
         if(nd<=4.75&&nd>=2.0){
-          // The 1.21.11 spear charge deals contact damage while held; keep
-          // the charge active while moving through the valid range. The
-          // entityHurt listener separately confirms whether damage landed.
+          // Being inside the nominal spear range is only an attempt, not a
+          // confirmed hit. Mineflayer's entityHurt event verifies contact.
           state.lastAttackAttemptAt=Date.now();
-          hit=true;
+          enteredRange=true;
         }
         await sleep(35);
-        if(hit&&nd<2.0)break;
+        if(enteredRange&&nd<2.0)break;
       }
       bot.deactivateItem();
       stop();
-      if(hit){
+      if(enteredRange){
         state.lastAttackAt=Date.now();
-        state.nextAttackAt=state.lastAttackAt+1150;
-        await sprintReset();
+        state.nextAttackAt=state.lastAttackAt+900;
+        await sprintReset("spear");
+        await sleep(110);
       }
-      return hit;
+      return state.hits>hitsBefore;
     }catch(error){
       try{bot.deactivateItem()}catch{}
       stop();
