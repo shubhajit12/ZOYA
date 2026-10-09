@@ -151,6 +151,16 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 }
 
 {
+  const d=makeBrain().decide({...base,distance:2.3});
+  assert.equal(d.action,"spacing_retreat","the minimum attack buffer must extend beyond point-blank collision range");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:2.8,spacingLockUntil:Date.now()+500});
+  assert.equal(d.action,"spacing_hold","after retreat, the bot should strafe without immediately advancing or attacking");
+}
+
+{
   const d=makeBrain().decide({...base,health:5,distance:8,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:0});
   assert.equal(d.action,"emergency_disengage","critical health without healing or totem must not re-engage");
 }
