@@ -54,7 +54,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
     lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,
-    maceLaunchUntil:0,lastMaceSmashAt:0
+    maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,
+    lastAttackAttemptAt:0,lastAttackConfirmedAt:0
   };
 
   const stop=()=>{
@@ -175,10 +176,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(d>maxReach){state.failedAction="attack_out_of_range";state.failedActionAt=Date.now();return false}
     await lookAtTarget(t,.05);
     bot.attack(t);
-    const cooldown=type==="spear"?1150:type==="mace"?950:700;
+    // Respect Java attack-speed recovery instead of issuing sword-speed swings
+    // with slow weapons. A mace smash is handled separately by its fall window.
+    const cooldown=type==="spear"?900:type==="mace"?1667:type==="axe"?1000:625;
     state.lastAttackAt=Date.now();
+    state.lastAttackAttemptAt=state.lastAttackAt;
     state.nextAttackAt=state.lastAttackAt+cooldown;
     state.attackCount++;
+    log("[PVP-EXPERT] swing_issued weapon="+type+" distance="+d.toFixed(2)+"; awaiting server damage confirmation");
     await sprintReset(type);
     await sleep(55);
     return true;
@@ -491,7 +496,6 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!t||!has(bot,"mace"))return false;
     if(!await equip("mace"))return false;
     const until=Date.now()+900;
-    let attempted=false;
     while(state.active&&taskIsActive()&&Date.now()<until){
       const live=targetOf(bot,state.targetUsername)||t;
       if(!live)break;
@@ -500,22 +504,36 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const fallDistance=num(bot.entity?.fallDistance);
       await lookAtTarget(live,.02);
       if(falling&&fallDistance>1.5&&d>=2.35&&d<=3.1){
+        stop();
         bot.attack(live);
         state.lastAttackAt=Date.now();
-        state.nextAttackAt=state.lastAttackAt+950;
+        state.lastAttackAttemptAt=state.lastAttackAt;
+        state.nextAttackAt=state.lastAttackAt+1667;
         state.lastMaceSmashAt=Date.now();
         state.attackCount++;
-        attempted=true;
-        stop();
+        log("[PVP-EXPERT] mace_smash_issued distance="+d.toFixed(2)+" fall="+fallDistance.toFixed(2)+"; awaiting server damage confirmation");
         await sleep(180);
         return true;
       }
-      bot.setControlState("forward",true);
-      bot.setControlState("sprint",true);
+      // Keep the target in the real smash window. Forward-only steering was
+      // the source of the launch overshoot; brake/backpedal when too close.
+      if(falling&&d>3.1){
+        bot.setControlState("back",false);
+        bot.setControlState("forward",true);
+        bot.setControlState("sprint",true);
+      }else if(d<2.35){
+        bot.setControlState("forward",false);
+        bot.setControlState("back",true);
+        bot.setControlState("sprint",false);
+      }else{
+        bot.setControlState("forward",false);
+        bot.setControlState("back",false);
+        bot.setControlState("sprint",false);
+      }
       await sleep(25);
     }
     stop();
-    return attempted;
+    return false;
   };
 
   const wind=async t=>{
@@ -612,23 +630,31 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const sprintReset=async(type="auto")=>{
     try{
-      // Theobald-style combo rhythm: alternate deterministic W/S sprint resets
-      // instead of random timing. This preserves one movement authority.
-      const useSTap=combatDifficulty.sTap&&(
+      // W/S taps must be mutually exclusive. Holding forward and back together
+      // cancels the intended reset and produces the close-range oscillation
+      // seen in live logs.
+      const useSTap=Boolean(combatDifficulty.sTap&&(
         type==="sword" ||
         state.attackCount%2===0 ||
         (state.lastTargetHealth!=null&&state.lastTargetHealth<Math.max(1,state.lastHealth))
-      );
+      ));
       bot.setControlState("sprint",false);
+      bot.setControlState("forward",false);
       if(useSTap){
         bot.setControlState("back",true);
         await sleep(Math.max(55,Number(combatDifficulty.sprintResetMs||82)-10));
         bot.setControlState("back",false);
+      }else if(combatDifficulty.wTap!==false){
+        // Release W briefly to reset sprint, then re-enter with sprint.
+        await sleep(Math.max(45,Math.min(75,Number(combatDifficulty.sprintResetMs||82)-12)));
       }else{
         await sleep(Number(combatDifficulty.sprintResetMs||82));
       }
+      bot.setControlState("forward",true);
       bot.setControlState("sprint",true);
-    }catch{}
+    }catch{
+      try{bot.setControlState("back",false);bot.setControlState("forward",true);bot.setControlState("sprint",true)}catch{}
+    }
   };
 
   const elytraMace=async t=>{
@@ -730,6 +756,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.maceEscapeCooldownUntil=0;
     state.emergencyRetreatUntil=0;
     state.spacingLockUntil=0;
+    state.lastJumpResetAt=0;
+    state.lastTargetOnGround=null;
+    state.targetLandedAt=0;
+    state.lastAttackAttemptAt=0;
+    state.lastAttackConfirmedAt=0;
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
@@ -749,10 +780,32 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(t.health!=null&&num(t.health)<=0){task.terminationReason="target_defeated";return true}
 
         const hp=num(bot.health,20),th=num(t.health,20),d=dist(bot.entity,t);
-        if(state.lastHealth>hp)state.damageTaken+=state.lastHealth-hp;
-        if(state.lastTargetHealth!=null&&state.lastTargetHealth>th){
-          state.hits++;state.damageDealt+=state.lastTargetHealth-th;
+        const tookDamage=state.lastHealth>hp+0.05;
+        if(tookDamage){
+          state.damageTaken+=state.lastHealth-hp;
+          // Jump-reset only on a fresh hit, while grounded and in a real duel
+          // range. This is a short, bounded input rather than constant jumping.
+          if(combatDifficulty.jumpReset&&bot.entity?.onGround===true&&d<=4.5&&Date.now()-state.lastJumpResetAt>=500){
+            state.lastJumpResetAt=Date.now();
+            try{
+              bot.setControlState("jump",true);
+              await sleep(50);
+            }finally{
+              try{bot.setControlState("jump",false)}catch{}
+            }
+            log("[PVP-EXPERT] jump_reset triggered after observed damage at distance="+d.toFixed(2));
+          }
         }
+        if(state.lastTargetHealth!=null&&state.lastTargetHealth>th){
+          const dealt=state.lastTargetHealth-th;
+          state.hits++;state.damageDealt+=dealt;state.lastAttackConfirmedAt=Date.now();
+          log("[PVP-EXPERT] hit_confirmed damage="+dealt.toFixed(2)+" totalHits="+state.hits);
+        }
+        // Combo timing is based on the target's actual landing transition, not
+        // merely on seeing an airborne entity at any point during its jump.
+        const targetGrounded=t.onGround===true;
+        if(state.lastTargetOnGround===false&&targetGrounded) state.targetLandedAt=Date.now();
+        state.lastTargetOnGround=targetGrounded;
         state.lastHealth=hp;state.lastTargetHealth=th;
         const eq=detectEquipment(t);
         const enemyTotemNow=eq.totem;
@@ -817,7 +870,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6&&lineOfSight),
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
-          hitSelectReady:Boolean(isAirborne(t)&&d<=3.2),
+          hitSelectReady:Boolean(state.targetLandedAt>0&&Date.now()-state.targetLandedAt<=150&&d<=3.2),
           selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&num(bot.entity?.fallDistance)>1.5),
           windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7),
           pearlEscapeReady:pearlReady("escape",t),
