@@ -262,6 +262,25 @@ console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
 console.log("Impossible style-selection regression tests passed.");
 
 
+// Shield policy: block only in a valid defensive window and respect cooldown gates.
+{
+  const d=makeBrain().decide({...base,distance:3.4,shieldReady:true,meleeBlockReady:true,enemy:{...base.enemy,shield:false}});
+  assert.equal(d.action,"shield","a closing melee opponent in the shield window should trigger a timed block");
+  assert.equal(d.reason,"incoming_melee_block");
+}
+{
+  const d=makeBrain().decide({...base,distance:3.4,shieldReady:false,meleeBlockReady:true,enemy:{...base.enemy,shield:false}});
+  assert.notEqual(d.action,"shield","shield cooldown must prevent repeated blocks");
+}
+{
+  const d=makeBrain().decide({...base,distance:2.2,shieldReady:true,meleeBlockReady:true,enemy:{...base.enemy,shield:false}});
+  assert.notEqual(d.action,"shield","shielding must not mask point-blank spacing recovery");
+}
+{
+  const d=makeBrain().decide({...base,distance:3.4,projectileThreat:true,shieldReady:true,enemy:{...base.enemy,shield:false}});
+  assert.equal(d.action,"shield","a detected projectile should use a ready shield");
+}
+
 // Expert sword pressure keeps real vanilla spacing instead of walking into the target.
 assert.equal(pressureOrbitMode(4.0),"approach","close distance while outside sword reach");
 assert.equal(pressureOrbitMode(3.0),"orbit","circle at the edge of normal sword range");
