@@ -794,12 +794,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const fall=estimateObservedFallDistance(bot.entity,peakY);
       const vy=num(bot.entity?.velocity?.y);
       await lookAtTarget(live,.02);
-      if(vy<-.08&&fall>=1.35&&d>=2.35&&d<=3.1){
+      if(vy<-.08&&fall>1.5&&d>=2.35&&d<=3.1){
         // Last-moment swap: do not carry mace throughout the whole setup.
         if(!selectHotbarItem("mace"))return false;
         const finalD=dist(bot.entity,live);
         if(!isAirborne(bot.entity)||num(bot.entity?.velocity?.y)>=-.04||finalD>3.1||finalD<2.25){
-          await equip("sword");
+          selectHotbarItem("sword");
           return false;
         }
         bot.attack(live);
