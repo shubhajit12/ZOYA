@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -229,6 +229,9 @@ console.log("Theobald-impossible difficulty regression tests passed.");
   assert.equal(isNewHitConfirmation(1501,1000,450),true,"a later attack confirmation should count after the dedupe window");
   assert.equal(shouldCountHealthDeltaHit(1800,2100,1600,450),false,"a delayed health delta must not double-count a hit already confirmed by entityHurt");
   assert.equal(shouldCountHealthDeltaHit(2201,2100,1600,450),true,"a health-delta fallback should count when no entityHurt confirmation is pending");
+  assert.equal(shouldApplyFailedActionBackoff("emergency_disengage"),false,"failed-action cooldowns must never override emergency retreat");
+  assert.equal(shouldApplyFailedActionBackoff("emergency_hold"),false,"failed-action cooldowns must never override emergency safe spacing");
+  assert.equal(shouldApplyFailedActionBackoff("approach"),true,"ordinary navigation actions may still use failure cooldowns");
 }
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
