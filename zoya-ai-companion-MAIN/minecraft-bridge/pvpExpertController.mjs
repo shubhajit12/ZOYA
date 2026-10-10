@@ -779,6 +779,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.targetLandedAt=0;
     state.lastAttackAttemptAt=0;
     state.lastAttackConfirmedAt=0;
+    state.selfPeakY=num(bot.entity?.position?.y);
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
