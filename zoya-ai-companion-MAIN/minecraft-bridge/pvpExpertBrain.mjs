@@ -77,13 +77,15 @@ export function createPvpExpertBrain(options={}){
     }
 
     if(c.dead) return {action:"stop",style:styleMemory,priority:10000,reason:"dead"};
-    // If the opponent has a mace in hand and ZOYA has no equipped totem,
-    // do not stand still to eat while in burst range. A pearl is preferred
-    // when its landing has been validated; otherwise create distance now.
-    if(c.enemyMaceHeldClose&&hp<=14&&!c.totemEquipped){
+    // If the opponent has a mace in hand inside burst range and health is
+    // dropping, equip an available totem first; otherwise use a validated
+    // pearl or create a real distance buffer. Never try to eat through it.
+    if(c.enemyMaceHeldClose&&hp<=14){
+      if(has(c,"totem")&&!c.totemEquipped)
+        return {action:"totem",style:"utility",priority:9990,reason:"mace_burst_equip_totem"};
       if(c.recoveryPearlReady&&c.pearlEscapeReady&&d>=2.8)
-        return {action:"pearl_escape",style:"utility",priority:9980,reason:"no_totem_mace_burst_escape"};
-      return {action:"emergency_disengage",style:"utility",priority:9970,reason:"no_totem_mace_burst_evade"};
+        return {action:"pearl_escape",style:"utility",priority:9980,reason:"mace_burst_escape"};
+      return {action:"emergency_disengage",style:"utility",priority:9970,reason:"mace_burst_evade"};
     }
     // Emergency survival is a sequence, not a repeated single action:
     // equip the totem once, immediately create distance, then heal/re-engage.
