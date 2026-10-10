@@ -201,9 +201,6 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
     enemy:{...base.enemy,airborne:true}});
   assert.notEqual(d.action,"hit_select","an airborne target alone is not a landing-timed hit-select window");
 }
-console.log("Theobald-impossible difficulty regression tests passed.");
-
-
 {
   const distance=estimateObservedFallDistance({position:{y:65},onGround:false,velocity:{y:-0.4}},70.4);
   assert.ok(Math.abs(distance-5.4)<0.001,"wind-charge descent must be estimated from observed Y positions when Mineflayer exposes no fallDistance field");
@@ -213,3 +210,5 @@ console.log("Theobald-impossible difficulty regression tests passed.");
   const distance=estimateObservedFallDistance({position:{y:68.2},fallDistance:0},70.4);
   assert.ok(Math.abs(distance-2.2)<0.001,"estimated descent must advance as the bot falls from the tracked apex");
 }
+
+console.log("Theobald-impossible difficulty regression tests passed.");
