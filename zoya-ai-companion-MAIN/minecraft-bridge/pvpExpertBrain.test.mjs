@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
+import { failedActionBackoffMs } from "./pvpExpertController.mjs";
 import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
@@ -462,6 +463,12 @@ console.log("Stun-slam and rocket-mace routing regression tests passed.");
   assert.equal(d.action,"wind_charge_reset","a verified mid-air wind-charge reset window should precede a normal mace swing");
 }
 console.log("Wind-charge fall-reset routing regression test passed.");
+
+assert.equal(failedActionBackoffMs("melee_attack",true),0,"an unconfirmed swing must use the vanilla weapon cooldown, not an extra action lock");
+assert.equal(failedActionBackoffMs("finish",true),0,"a totem-pop finisher must not be suppressed for 1.6 seconds after a swing");
+assert.equal(failedActionBackoffMs("melee_attack",false),450,"an equip/precondition failure still gets a bounded retry delay");
+assert.equal(failedActionBackoffMs("wind_mace_launch",false),1600,"complex launch failures retain a longer bounded recovery window");
+console.log("PvP failed-strike cooldown regression tests passed.");
 
 {
   const d=makeBrain().decide({...base,distance:2.8,maceCrystalDTapReady:true,selfMaceSmashReady:true,attackReadyAt:0,
