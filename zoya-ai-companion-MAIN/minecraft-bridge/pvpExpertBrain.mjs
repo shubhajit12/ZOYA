@@ -23,8 +23,13 @@ function styleScores(c){
   const d=num(c.distance,Infinity), e=c.enemy||{}, s={};
   for(const k of STYLES) s[k]=-1000;
 
-  if(invHas(c,"mace")) s.mace=52+(e.airborne?34:0)+(e.falling?45:0)+(c.heightAdvantage?18:0)+(c.elytraMaceReady?58:0)-(d>8?28:0);
-  if(invHas(c,"spear")) s.spear=48+(d>=3&&d<=5?35:0)+(e.retreating?12:0);
+  // A mace in the inventory is not, by itself, a reason to select mace.
+  // The old base score (52) made it the default style even on flat ground,
+  // where the executor could not produce a smash and fell back to strafing.
+  // Promote it only when the controller has verified a real launch/smash or
+  // Elytra setup window; height is a modest opportunity, not a permanent lock.
+  if(invHas(c,"mace")) s.mace=12+(c.selfMaceSmashReady?62:0)+(c.windMaceSmashReady?54:0)+(c.elytraMaceReady?58:0)+(c.heightAdvantage?10:0)-(d>8?28:0);
+  if(invHas(c,"spear")) s.spear=20+(d>=3&&d<=5?35:0)+(e.retreating?12:0);
   if(invHas(c,"axe")) s.axe=50+(e.shield?42:0)+(d<=3.5?15:0);
   if(invHas(c,"sword")) s.sword=48+(d<=3.15?32:0)+(e.airborne?14:0);
   if(invHas(c,"bow")) s.bow=30+(d>=7?35:0)+(e.retreating?18:0);
@@ -57,7 +62,13 @@ export function createPvpExpertBrain(options={}){
     const falling=Boolean(c.falling), onGround=c.onGround!==false;
     const attackReady=num(c.attackReadyAt,0)<=Date.now();
     const scores=styleScores(c), preferred=bestStyle(c);
-    if(!styleMemory||(!c.hardCounter&&now>=styleLockUntil&&scores[preferred]>scores[styleMemory]+Number(difficulty.styleSwitchMargin||18))){
+    // Keep a deliberate style lock to avoid weapon thrashing, but never let
+    // that lock suppress the basic sword combo when the duel has collapsed
+    // into ordinary melee range. Previously a mace/spear selected at 4-5m
+    // could remain committed for nearly a second at 2.5m, producing strafes
+    // instead of attacks while the opponent was already in reach.
+    const urgentMeleeFallback=d<=3.05&&has(c,"sword")&&preferred==="sword"&&styleMemory!=="sword";
+    if(!styleMemory||(!c.hardCounter&&(now>=styleLockUntil||urgentMeleeFallback)&&scores[preferred]>scores[styleMemory]+Number(difficulty.styleSwitchMargin||18))){
       styleMemory=preferred;
       styleLockUntil=now+Number(difficulty.styleLockMs||450);
     }
