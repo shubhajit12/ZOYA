@@ -81,7 +81,7 @@ export function createPvpExpertBrain(options={}){
         return {action:"pearl_escape",style:"utility",priority:9950,reason:"emergency_mace_escape"};
       if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9940,reason:"emergency_mace_totem"};
-      if(c.enemyMaceThreat&&c.maceEscapeReady)
+      if(c.enemyMaceThreat)
         return {action:"emergency_disengage",style:"utility",priority:9930,reason:"emergency_mace_evade_no_totem"};
       if(has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
@@ -113,7 +113,7 @@ export function createPvpExpertBrain(options={}){
       return {action:"pearl_escape",style:"utility",priority:9870,reason:"mace_attack_escape"};
     if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
       return {action:"totem",style:"utility",priority:9860,reason:"mace_burst_totem"};
-    if(c.enemyMaceThreat&&c.maceEscapeReady)
+    if(c.enemyMaceThreat)
       return {action:"emergency_disengage",style:"utility",priority:9855,reason:"mace_evade_no_totem"};
     if((c.enemyMaceThreat||c.enemyMaceHeldClose)&&has(c,"totem")&&!c.totemEquipped&&c.health<=10)
       return {action:"totem",style:"utility",priority:9850,reason:"mace_burst_totem"};
