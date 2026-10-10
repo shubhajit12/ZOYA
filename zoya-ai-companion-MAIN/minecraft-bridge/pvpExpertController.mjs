@@ -904,7 +904,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // the safe crystal follow-up on a validated nearby obsidian base.
   const maceDTap=async t=>{
     if(!t?.position||!has(bot,"mace")||!has(bot,"crystal")||!has(bot,"obsidian")||!crystalBase(t))return false;
-    const smashed=await maceSmash(t,0,45);
+    const fall=estimateObservedFallDistance(bot.entity,state.selfPeakY);
+    const smashed=await maceSmash(t,fall,45);
     if(!smashed)return false;
     const live=targetOf(bot,state.targetUsername)||t;
     if(!live?.position||dist(bot.entity,live)>5||!crystalBase(live))return true;
@@ -1389,7 +1390,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(state.targetLandedAt>0&&Date.now()-state.targetLandedAt<=150&&d<=3.2),
           selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5),
-           maceDTapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&hotbarSlot("mace")!=null&&hotbarSlot("sword")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
+           maceAttributeSwapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&hotbarSlot("mace")!=null&&hotbarSlot("sword")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
+           maceCrystalDTapReady:Boolean(has(bot,"mace")&&has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t))&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.35&&d<=3.1),
           windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7),
           pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7),
            diagonalPearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&enemy.retreating),
