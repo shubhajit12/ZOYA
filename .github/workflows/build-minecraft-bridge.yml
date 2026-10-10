@@ -79,12 +79,12 @@ jobs:
             if ($pvpExpertControllerSource -notmatch 'bot\.elytraFly\(\)') { throw 'Mineflayer Elytra flight API is not wired.' }
             if ($pvpExpertControllerSource -notmatch 'crystalCycle') { throw 'Crystal combat executor is missing.' }
             if ($pvpExpertControllerSource -notmatch 'anchorCycle') { throw 'Anchor combat executor is missing.' }
-  foreach ($requiredAdvancedControllerText in @('pearlCatch','windChargeCancel','shieldDrain','backstab','maceDTap','stunSlam','elytraMace','fireworkBoost','pearlDestination')) {
-    if ($pvpExpertControllerSource -notmatch [regex]::Escape($requiredAdvancedControllerText)) { throw "Advanced PvP executor is missing: $requiredAdvancedControllerText" }
-  }
-  foreach ($requiredAdvancedBrainText in @('pearl_catch','diagonal_pearl_catch','pearl_grapple','wind_charge_cancel','shield_drain','backstab','mace_d_tap','stun_slam','rocket_mace')) {
-    if ($pvpExpertBrainSource -notmatch [regex]::Escape($requiredAdvancedBrainText)) { throw "Advanced PvP brain route is missing: $requiredAdvancedBrainText" }
-  }
+            foreach ($requiredAdvancedControllerText in @('pearlCatch','windChargeCancel','shieldDrain','backstab','maceDTap','stunSlam','elytraMace','fireworkBoost','pearlDestination')) {
+              if ($pvpExpertControllerSource -notmatch [regex]::Escape($requiredAdvancedControllerText)) { throw "Advanced PvP executor is missing: $requiredAdvancedControllerText" }
+            }
+            foreach ($requiredAdvancedBrainText in @('pearl_catch','diagonal_pearl_catch','pearl_grapple','wind_charge_cancel','shield_drain','backstab','mace_d_tap','stun_slam','rocket_mace')) {
+              if ($pvpExpertBrainSource -notmatch [regex]::Escape($requiredAdvancedBrainText)) { throw "Advanced PvP brain route is missing: $requiredAdvancedBrainText" }
+            }
             $capabilityMarker = [regex]::Match($indexSource, 'manual-capability-v\d+-clean-168-mode-engine-complete-player-actions-\d{4}-\d{2}-\d{2}')
             if (-not $capabilityMarker.Success) { throw 'Capability build marker is missing or invalid.' }
             Write-Host "Capability build marker: $($capabilityMarker.Value)"
