@@ -176,7 +176,7 @@ export function createPvpExpertBrain(options={}){
     // Retreat only when body overlap makes aim/attack unreliable. The old
     // 2.45-block cutoff forced ZOYA to back away while still inside sword
     // reach; that wasted attack windows and made her far too passive.
-    if(d<1.75) return {action:"spacing_retreat",style:styleMemory||"sword",priority:8100,reason:"too_close_spacing"};
+    if(d<1.85) return {action:"spacing_retreat",style:styleMemory||"sword",priority:8100,reason:"too_close_spacing"};
     if(c.spacingLockUntil&&now<c.spacingLockUntil&&d<3.05)
       return {action:"spacing_hold",style:styleMemory||"sword",priority:8050,reason:"spacing_recovery_window"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
