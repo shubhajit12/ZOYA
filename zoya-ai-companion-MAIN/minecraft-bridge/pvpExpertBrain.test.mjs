@@ -311,3 +311,35 @@ console.log("PvP Expert spacing-lock priority regression test passed.");
   assert.equal(d.action,"pearl_escape","low health in melee range should use a safe pearl to disengage before trying to eat");
 }
 console.log("PvP Expert heal/pearl recovery priority tests passed.");
+
+
+// Advanced Impossible combat routes must select real, gated executor actions.
+{
+  const d=makeBrain().decide({...base,distance:4.5,pearlCatchReady:true,diagonalPearlCatchReady:true,recoveryPearlReady:true,pearlEscapeReady:true});
+  assert.equal(d.action,"diagonal_pearl_catch","diagonal pearl catch requires a prevalidated safe landing");
+}
+{
+  const d=makeBrain().decide({...base,distance:4.5,pearlCatchReady:true,diagonalPearlCatchReady:false,recoveryPearlReady:true,pearlEscapeReady:true});
+  assert.equal(d.action,"pearl_catch","fall recovery should use the validated non-diagonal catch when diagonal landing is unavailable");
+}
+{
+  const d=makeBrain().decide({...base,distance:4.5,windCancelReady:true,capabilities:{...base.capabilities,wind:true},enemy:{...base.enemy,airborne:true}});
+  assert.equal(d.action,"wind_charge_cancel","wind-charge cancel is separate from self-launch mace setup");
+}
+{
+  const d=makeBrain().decide({...base,distance:2.8,shieldDrainReady:true,attackReadyAt:0,enemy:{...base.enemy,shield:true,usingItem:true}});
+  assert.equal(d.action,"shield_drain","raised shield with axe available should select bounded drain sequence");
+}
+{
+  const d=makeBrain().decide({...base,distance:2.8,backstabReady:true,attackReadyAt:0});
+  assert.equal(d.action,"backstab","rear-arc opportunity should select the verified backstab executor");
+}
+{
+  const d=makeBrain().decide({...base,distance:12,pearlGrappleReady:true,recoveryPearlReady:true,enemy:{...base.enemy,retreating:true}});
+  assert.equal(d.action,"pearl_grapple","far pearl intercept should only be selected with a validated landing");
+}
+{
+  const d=makeBrain().decide({...base,distance:2.8,maceDTapReady:true,selfMaceSmashReady:true,attackReadyAt:0});
+  assert.equal(d.action,"mace_d_tap","mace smash should chain into a bounded sword follow-up when the inventory supports it");
+}
+console.log("Advanced Impossible tactical routing regression tests passed.");
