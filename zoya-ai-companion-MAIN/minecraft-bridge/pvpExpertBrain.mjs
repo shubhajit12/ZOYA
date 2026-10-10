@@ -92,6 +92,10 @@ export function createPvpExpertBrain(options={}){
     if(emergency){
       if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9950,reason:"emergency_mace_escape"};
+      // If a validated pearl can break melee range, teleport before spending
+      // a tick equipping a totem or attempting to eat under immediate pressure.
+      if(c.recoveryPearlReady&&c.pearlEscapeReady&&d<4.75)
+        return {action:"pearl_escape",style:"utility",priority:9945,reason:"critical_health_close_pearl_escape"};
       if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9940,reason:"emergency_mace_totem"};
       if(c.enemyMaceThreat)
