@@ -778,7 +778,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // Attribute-swap mace D-tap: keep the fast sword selected during setup,
   // equip mace only at the verified falling hit window, then restore sword
   // immediately after the server receives the mace attack.
-  const maceDTap=async t=>{
+  const maceAttributeSwap=async t=>{
     if(!t?.position||!has(bot,"sword")||!has(bot,"mace")||!isAirborne(bot.entity))return false;
     // Last-tick attribute swaps require both weapons on the hotbar; inventory
     // transfers during the fall window are too slow and are rejected safely.
@@ -900,7 +900,21 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
-  const maceSmash=async(t,priorFallDistance=0)=>{
+  // Mace D-tap: first land the falling mace hit, then immediately execute
+  // the safe crystal follow-up on a validated nearby obsidian base.
+  const maceDTap=async t=>{
+    if(!t?.position||!has(bot,"mace")||!has(bot,"crystal")||!has(bot,"obsidian")||!crystalBase(t))return false;
+    const smashed=await maceSmash(t,0,45);
+    if(!smashed)return false;
+    const live=targetOf(bot,state.targetUsername)||t;
+    if(!live?.position||dist(bot.entity,live)>5||!crystalBase(live))return true;
+    await sleep(35);
+    const crystalHit=await crystalCycle(live);
+    log("[PVP-EXPERT] mace_d_tap mace_attempt=true crystal_followup="+crystalHit);
+    return crystalHit;
+  };
+
+  const maceSmash=async(t,priorFallDistance=0,settleMs=180)=>{
     if(!t||!has(bot,"mace"))return false;
     if(!await equip("mace"))return false;
     const until=Date.now()+900;
@@ -922,7 +936,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         state.lastMaceSmashAt=Date.now();
         state.attackCount++;
         log("[PVP-EXPERT] mace_smash_issued distance="+d.toFixed(2)+" fall="+fallDistance.toFixed(2)+"; awaiting server damage confirmation");
-        await sleep(180);
+        await sleep(settleMs);
         return true;
       }
       // Keep the target in the real smash window. Forward-only steering was
@@ -1464,6 +1478,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "shield_drain": ok=await shieldDrain(t);break;
           case "backstab": ok=await backstab(t);break;
           case "mace_d_tap": ok=await maceDTap(t);break;
+          case "mace_attribute_swap": ok=await maceAttributeSwap(t);break;
           case "stun_slam": ok=await stunSlam(t);break;
           case "rocket_mace": ok=await elytraMace(t);break;
           case "water_clutch": ok=await waterRecover();break;
