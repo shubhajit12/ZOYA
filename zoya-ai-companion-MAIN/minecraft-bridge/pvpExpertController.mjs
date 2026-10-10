@@ -54,6 +54,12 @@ export function isNewHitConfirmation(now, lastConfirmedAt, dedupeWindowMs=450) {
   return !Number.isFinite(Number(lastConfirmedAt)) || Number(now)-Number(lastConfirmedAt)>Math.max(0,Number(dedupeWindowMs)||0);
 }
 
+export function isHitConfirmed(hitsBefore,hitsAfter,healthBefore,healthAfter) {
+  const hitCountIncreased=Number.isFinite(Number(hitsBefore))&&Number.isFinite(Number(hitsAfter))&&Number(hitsAfter)>Number(hitsBefore);
+  const healthDropped=healthBefore!=null&&healthAfter!=null&&Number.isFinite(Number(healthBefore))&&Number.isFinite(Number(healthAfter))&&Number(healthAfter)<Number(healthBefore)-0.05;
+  return hitCountIncreased||healthDropped;
+}
+
 export function shouldCountHealthDeltaHit(now, pendingEntityHitUntil, lastConfirmedAt, dedupeWindowMs=450) {
   return !(Number(pendingEntityHitUntil)>Number(now)) && isNewHitConfirmation(now,lastConfirmedAt,dedupeWindowMs);
 }
@@ -115,6 +121,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{bot.pathfinder?.setGoal?.(null)}catch{}
     try{bot.clearControlStates?.()}catch{}
     try{bot.deactivateItem?.()}catch{}
+  };
+
+  const waitForHitConfirmation=async(t,hitsBefore,healthBefore,timeout=280)=>{
+    const deadline=Date.now()+Math.max(0,Number(timeout)||0);
+    while(state.active&&taskIsActive()&&Date.now()<deadline){
+      const healthAfter=t?.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+      if(isHitConfirmed(hitsBefore,state.hits,healthBefore,healthAfter))return true;
+      await sleep(20);
+    }
+    const healthAfter=t?.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+    return isHitConfirmed(hitsBefore,state.hits,healthBefore,healthAfter);
   };
 
   const equip=async(type,destination="hand")=>{
@@ -296,6 +313,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const d=dist(bot.entity,t);
     if(d>maxReach){state.failedAction="attack_out_of_range";state.failedActionAt=Date.now();return false}
     await lookAtTarget(t,.05);
+    const hitsBefore=state.hits;
+    const targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
     bot.attack(t);
     // Respect Java attack-speed recovery instead of issuing sword-speed swings
     // with slow weapons. A mace smash is handled separately by its fall window.
@@ -307,7 +326,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     log("[PVP-EXPERT] swing_issued weapon="+type+" distance="+d.toFixed(2)+"; awaiting server damage confirmation");
     await sprintReset(type);
     await sleep(55);
-    return true;
+    const confirmed=await waitForHitConfirmation(t,hitsBefore,targetHealthBefore,280);
+    if(!confirmed)log("[PVP-EXPERT] swing_unconfirmed weapon="+type+" target="+state.targetUsername+"; action will enter bounded backoff");
+    return confirmed;
   };
 
   const fallingCrit=async t=>{
@@ -328,7 +349,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     peakY=Math.max(peakY,num(bot.entity?.position?.y));
     const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&estimateObservedFallDistance(bot.entity,peakY)>=.45&&dist(bot.entity,t)<=3.05;
     if(!valid){stop();return false}
-    await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;await sprintReset("sword");stop();return true;
+    await lookAtTarget(t,.02);
+    const hitsBefore=state.hits,targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+    bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;
+    await sprintReset("sword");stop();
+    return await waitForHitConfirmation(t,hitsBefore,targetHealthBefore,280);
   };
 
   const hitSelect=async t=>{
@@ -336,10 +361,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     bot.setControlState("sprint",true);
     bot.setControlState("forward",true);
     await sleep(45);
-    if(dist(bot.entity,t)<=3.05){await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++}
+    if(dist(bot.entity,t)>3.05){await sprintReset();stop();return false}
+    await lookAtTarget(t,.02);
+    const hitsBefore=state.hits,targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+    bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;
     await sprintReset();
     bot.setControlState("sprint",false);
-    return true;
+    const confirmed=await waitForHitConfirmation(t,hitsBefore,targetHealthBefore,280);
+    if(!confirmed)log("[PVP-EXPERT] hit_select_unconfirmed target="+state.targetUsername);
+    return confirmed;
   };
 
   const rod=async t=>{
@@ -920,6 +950,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           selectHotbarItem("sword");
           return false;
         }
+        const hitsBefore=state.hits,targetHealthBefore=live.health!=null&&Number.isFinite(Number(live.health))?Number(live.health):null;
         bot.attack(live);
         state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
         state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
@@ -927,7 +958,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         selectHotbarItem("sword");
         log("[PVP-EXPERT] mace_attribute_swap issued sword_setup=true mace_impact=true sword_restored=true distance="+finalD.toFixed(2)+" fall="+fall.toFixed(2));
         await sprintReset("sword");
-        return true;
+        const confirmed=await waitForHitConfirmation(live,hitsBefore,targetHealthBefore,280);
+        log("[PVP-EXPERT] mace_attribute_swap confirmed="+confirmed);
+        return confirmed;
       }
       if(d>3.1){
         bot.setControlState("forward",true);bot.setControlState("sprint",true);
@@ -954,6 +987,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||estimateObservedFallDistance(bot.entity,state.selfPeakY)<=1.5)return false;
     if(num(state.nextAttackAt)>Date.now())return false;
     const originalSlot=Number.isInteger(bot.quickBarSlot)?bot.quickBarSlot:null;
+    const hitsBefore=state.hits,targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
     // Packet sequence is deliberately synchronous: axe hit, hotbar swap,
     // mace hit, all within one client tick when both items are already hotbar.
     if(!selectHotbarItem("axe"))return false;
@@ -967,8 +1001,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
     await sleep(40);
     if(originalSlot!=null)try{bot.setQuickBarSlot(originalSlot)}catch{}
-    log("[PVP-EXPERT] stun_slam packet_sequence=axe_then_mace same_tick=true");
-    return true;
+    const confirmed=await waitForHitConfirmation(t,hitsBefore,targetHealthBefore,280);
+    log("[PVP-EXPERT] stun_slam packet_sequence=axe_then_mace same_tick=true confirmed="+confirmed);
+    return confirmed;
   };
 
   // Mid-air wind-charge reset: use a downward charge to brake a dangerous
@@ -1048,6 +1083,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await lookAtTarget(live,.02);
       if(falling&&fallDistance>1.5&&d>=2.35&&d<=3.1){
         stop();
+        const hitsBefore=state.hits;
+        const targetHealthBefore=live.health!=null&&Number.isFinite(Number(live.health))?Number(live.health):null;
         bot.attack(live);
         state.lastAttackAt=Date.now();
         state.lastAttackAttemptAt=state.lastAttackAt;
@@ -1056,7 +1093,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         state.attackCount++;
         log("[PVP-EXPERT] mace_smash_issued distance="+d.toFixed(2)+" fall="+fallDistance.toFixed(2)+"; awaiting server damage confirmation");
         await sleep(settleMs);
-        return true;
+        const confirmed=await waitForHitConfirmation(live,hitsBefore,targetHealthBefore,280);
+        log("[PVP-EXPERT] mace_smash_confirmed="+confirmed);
+        return confirmed;
       }
       // Keep the target in the real smash window. Forward-only steering was
       // the source of the launch overshoot; brake/backpedal when too close.
