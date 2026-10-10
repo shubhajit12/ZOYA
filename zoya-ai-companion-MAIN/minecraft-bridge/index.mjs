@@ -188,10 +188,11 @@ function logMinecraftState() {
       debugLog("[EVENT] Health changed: " + lastLoggedState.health + " -> " + p.health);
       const previousHealth = Number(lastLoggedState.health);
       const currentHealth = Number(p.health);
-      if (Number.isFinite(previousHealth) && previousHealth > 0 && Number.isFinite(currentHealth) && currentHealth <= 0) {
+      const hasPreviousHealth = lastLoggedState.health != null && Number.isFinite(previousHealth);
+      if (hasPreviousHealth && p.health != null && previousHealth > 0 && Number.isFinite(currentHealth) && currentHealth <= 0) {
         debugLog("[EVENT] Zoya died (health reached 0).");
       }
-      if (Number.isFinite(previousHealth) && previousHealth <= 0 && Number.isFinite(currentHealth) && currentHealth > 0) {
+      if (hasPreviousHealth && p.health != null && previousHealth <= 0 && Number.isFinite(currentHealth) && currentHealth > 0) {
         debugLog("[EVENT] Zoya respawned (health restored).");
       }
     }
