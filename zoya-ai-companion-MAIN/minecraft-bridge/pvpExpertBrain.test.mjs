@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isProjectileOnCollisionCourse, pressureOrbitMode } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -242,6 +242,11 @@ assert.equal(isConfirmedPearlCatch(true, true), false, "a blast that moves ZOYA 
 assert.equal(isConfirmedPearlCatch(false, false), false, "pearl disappearance alone is not enough");
 assert.equal(isConfirmedPearlCatch(true, false), true, "displacement plus removal of the tracked pearl confirms the catch sequence");
 console.log("Pearl catch confirmation regression tests passed.");
+assert.equal(isConfirmedPearlTeleport(0,true),false,"a pearl throw without displacement must not be reported as a teleport");
+assert.equal(isConfirmedPearlTeleport(5,true),false,"displacement while the projectile still exists is not a confirmed teleport");
+assert.equal(isConfirmedPearlTeleport(5,false),true,"a vanished projectile plus a teleport-sized displacement confirms the pearl");
+assert.equal(isConfirmedPearlTeleport(3.5,false),false,"small movement is not enough to confirm a pearl teleport");
+console.log("Pearl throw confirmation regression tests passed.");
 
 {
   const d=makeBrain().decide({...base,health:7.5,distance:3.2,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:0});
