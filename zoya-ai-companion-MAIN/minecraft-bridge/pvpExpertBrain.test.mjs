@@ -28,6 +28,12 @@ const base={
 }
 
 {
+  const d=makeBrain().decide({...base,distance:2.4,lineOfSight:false,enemy:{...base.enemy,totemPopped:false}});
+  assert.equal(d.action,"reacquire","melee cooldowns must not be wasted attacking through blocked line of sight");
+  assert.equal(d.reason,"lost_los_before_attack");
+}
+
+{
   const d=makeBrain().decide({...base,distance:8,elytraEquipped:true,elytraMaceReady:true,elytraLaunchReady:true,
     capabilities:{...base.capabilities,elytraMace:true}});
   assert.equal(d.action,"elytra_mace");
