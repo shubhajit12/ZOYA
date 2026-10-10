@@ -354,3 +354,9 @@ console.log("Advanced Impossible tactical routing regression tests passed.");
   assert.equal(d.action,"rocket_mace","firework-capable Elytra setup should select rocket macing");
 }
 console.log("Stun-slam and rocket-mace routing regression tests passed.");
+
+{
+  const d=makeBrain().decide({...base,distance:2.8,windChargeResetReady:true,attackReadyAt:0,capabilities:{...base.capabilities,wind:true,mace:true}});
+  assert.equal(d.action,"wind_charge_reset","a verified mid-air wind-charge reset window should precede a normal mace swing");
+}
+console.log("Wind-charge fall-reset routing regression test passed.");
