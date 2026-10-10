@@ -1437,6 +1437,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const targetYaw=num(t.yaw);
         const targetFacingDot=(-Math.sin(targetYaw)*botDx+Math.cos(targetYaw)*botDz)/botHoriz;
         const backstabReady=d>=2.15&&d<=3.05&&targetFacingDot<.35;
+        const projectileIncoming=projectileThreat();
+        const crystalCycleReady=has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t));
         const enemy={
           health:th,shield:eq.shield,usingItem:Boolean(t.isUsingItem||t.metadata?.isUsingItem),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
@@ -1450,8 +1452,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           onGround:bot.entity?.onGround!==false,falling:num(bot.entity?.velocity?.y)<-.08,
           fallDistance:selfFallDistance,heightAdvantage:num(bot.entity?.position?.y)>num(t.position?.y)+1.5,
           knockbacked:speed(bot.entity)>.84,lineOfSight,enemy,
-          projectileThreat:projectileThreat(),projectileDodge:projectileThreat(),
-          crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
+          projectileThreat:projectileIncoming,projectileDodge:projectileIncoming,
+          crystalCycleSafe:crystalCycleReady,
           hazard:hazard(),stuck:state.failedAction==="approach:stuck",
           hasSword:has(bot,"sword"),hasAxe:has(bot,"axe"),hasMace:has(bot,"mace"),hasSpear:has(bot,"spear"),
           hasMelee:has(bot,"sword")||has(bot,"axe")||has(bot,"mace")||has(bot,"spear"),
@@ -1473,7 +1475,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
             anchorArena:["overworld","the_end"].includes(String(bot.game?.dimension||"")),
             anchorCycleSafe:["overworld","the_end"].includes(String(bot.game?.dimension||""))&&has(bot,"anchor")&&has(bot,"glowstone")&&num(bot.health,20)>=10,
-            projectileDodge:projectileThreat(),
+            projectileDodge:projectileIncoming,
             rod:has(bot,"rod"),
              wind:has(bot,"wind"),
              firework:has(bot,"firework"),
@@ -1491,7 +1493,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            rocketMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&d>=6&&lineOfSight),
            elytraStunSlamReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"axe")&&eq.shield&&enemy.usingItem&&d>=6&&lineOfSight),
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
-          crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
+          crystalArena:crystalCycleReady,nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(state.targetLandedAt>0&&Date.now()-state.targetLandedAt<=150&&d<=3.2),
           selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5),
            maceAttributeSwapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&hotbarSlot("mace")!=null&&hotbarSlot("sword")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
