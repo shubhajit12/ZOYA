@@ -390,6 +390,17 @@ console.log("Projectile collision-course regression tests passed.");
   assert.equal(d.action,"rod_control","a retreating target at rod range should select the wired rod executor");
 }
 
+// Prefer sustained sword pressure over unnecessary axe swaps when no shield is involved.
+{
+  const d=makeBrain().decide({...base,distance:3.3,enemy:{...base.enemy,shield:false}});
+  assert.equal(d.action,"approach","outside sword reach, close with the sword instead of issuing slow out-of-range axe swings");
+  assert.equal(d.style,"sword");
+}
+{
+  const d=makeBrain().decide({...base,distance:3.0,enemy:{...base.enemy,shield:true}});
+  assert.equal(d.style,"axe","an observed shield should still promote axe counterplay");
+}
+
 // Expert sword pressure keeps real vanilla spacing instead of walking into the target.
 assert.equal(pressureOrbitMode(4.0),"approach","close distance while outside sword reach");
 assert.equal(pressureOrbitMode(3.0),"orbit","circle at the edge of normal sword range");
