@@ -51,6 +51,14 @@ console.log("PvP Expert Brain deterministic tests passed.");
     enemyMaceThreat:true,maceEscapeReady:true,enemy:{...base.enemy,held:"mace",airborne:true,falling:true}});
   assert.equal(d.action,"emergency_disengage","critical health without totem/pearl must prioritize evasive movement");
 }
+// The closest-range branch must not depend on pearl-escape eligibility.
+{
+  const d=makeBrain().decide({...base,health:16,distance:2.4,hasTotem:false,hasPearl:false,maceEscapeReady:false,
+    capabilities:{...base.capabilities,totem:false,pearl:false},enemyMaceThreat:true,
+    enemy:{...base.enemy,held:"mace",airborne:true,falling:true}});
+  assert.equal(d.action,"emergency_disengage","at point-blank range, no-totem survival must still evade when pearl escape is unavailable");
+}
+
 // A confirmed pop must beat close-spacing retreat and finish with a fast sword hit.
 {
   const d=makeBrain().decide({...base,distance:2.1,attackReadyAt:0,enemy:{...base.enemy,totemPopped:true}});
