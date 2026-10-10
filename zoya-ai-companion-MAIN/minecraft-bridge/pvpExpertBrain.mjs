@@ -53,7 +53,7 @@ export function createPvpExpertBrain(options={}){
     const c=ctx||{}, e=c.enemy||{}, d=num(c.distance,Infinity);
     const now=Date.now();
     const hp=num(c.health,20), maxHp=Math.max(1,num(c.maxHealth,20));
-    const low=hp<=Math.min(10,maxHp*.5), emergency=hp<=Math.min(6,maxHp*.3);
+    const low=hp<=Math.min(10,maxHp*.5), emergency=hp<=Math.min(8,maxHp*.4);
     const falling=Boolean(c.falling), onGround=c.onGround!==false;
     const attackReady=num(c.attackReadyAt,0)<=Date.now();
     const scores=styleScores(c), preferred=bestStyle(c);
