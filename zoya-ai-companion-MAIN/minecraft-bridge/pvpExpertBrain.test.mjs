@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -260,3 +260,11 @@ console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
 }
 
 console.log("Impossible style-selection regression tests passed.");
+
+
+// Expert sword pressure keeps real vanilla spacing instead of walking into the target.
+assert.equal(pressureOrbitMode(4.0),"approach","close distance while outside sword reach");
+assert.equal(pressureOrbitMode(3.0),"orbit","circle at the edge of normal sword range");
+assert.equal(pressureOrbitMode(2.4),"retreat","rebuild spacing when inside the opponent's hitbox pressure");
+assert.equal(pressureOrbitMode(Infinity),"approach","reacquire a target when distance is unavailable");
+console.log("PvP expert pressure-orbit spacing tests passed.");
