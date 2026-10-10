@@ -288,6 +288,19 @@ console.log("Impossible style-selection regression tests passed.");
   assert.equal(d.action,"shield","a detected projectile should use a ready shield");
 }
 
+// Respawn-anchor PvP is only eligible where anchors actually explode.
+{
+  const d=makeBrain().decide({...base,distance:5,anchorArena:true,anchorCycleSafe:true,
+    inventory:{...base.inventory,respawn_anchor:1,glowstone:4},
+    capabilities:{...base.capabilities,anchorCycleSafe:true}});
+  assert.equal(d.action,"anchor_cycle","an available safe anchor setup in the Overworld/End should be selected");
+}
+{
+  const d=makeBrain().decide({...base,distance:5,anchorArena:false,anchorCycleSafe:false,
+    inventory:{...base.inventory,respawn_anchor:1,glowstone:4}});
+  assert.notEqual(d.action,"anchor_cycle","anchor combat must not be selected in the Nether where anchors do not explode");
+}
+
 // Rod control must be reachable only when the controller exposes the rod capability.
 {
   const d=makeBrain().decide({...base,distance:6,capabilities:{...base.capabilities,rod:true},enemy:{...base.enemy,retreating:true}});
