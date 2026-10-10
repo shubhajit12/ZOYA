@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
 import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
+
+const controllerSource=readFileSync(new URL("./pvpExpertController.mjs",import.meta.url),"utf8");
+const heldCloseDeclaration=controllerSource.indexOf("const enemyMaceHeldClose=Boolean(enemyMaceHeld&&d<=7.5);");
+const windMaceReadiness=controllerSource.indexOf("windMaceSmashReady:Boolean(");
+assert.ok(heldCloseDeclaration>=0,"enemyMaceHeldClose must be explicitly defined in the combat tick");
+assert.ok(windMaceReadiness>heldCloseDeclaration,"enemyMaceHeldClose must be defined before wind-mace readiness reads it");
+
 
 const base={
   health:20,maxHealth:20,food:20,distance:4,onGround:true,falling:false,fallDistance:0,
