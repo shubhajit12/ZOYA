@@ -763,24 +763,79 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     return false;
   };
 
-  // D-tap sequence: verified mace-smash attempt followed by one sword follow-up
-  // only after landing and only if ordinary sword reach/cooldown permit it.
+  // Attribute-swap mace D-tap: keep the fast sword selected during setup,
+  // equip mace only at the verified falling hit window, then restore sword
+  // immediately after the server receives the mace attack.
   const maceDTap=async t=>{
-    const before=state.hits;
-    const didSmash=await maceSmash(t);
-    if(!didSmash)return false;
-    const deadline=Date.now()+420;
-    while(state.active&&taskIsActive()&&Date.now()<deadline&&isAirborne(bot.entity))await sleep(25);
-    const live=targetOf(bot,state.targetUsername)||t;
-    if(live?.position&&has(bot,"sword")&&dist(bot.entity,live)<=3.05&&Date.now()>=state.nextAttackAt){
-      await equip("sword");
+    if(!t?.position||!has(bot,"sword")||!has(bot,"mace")||!isAirborne(bot.entity))return false;
+    if(!await equip("sword"))return false;
+    const deadline=Date.now()+900;
+    let peakY=num(bot.entity?.position?.y);
+    while(state.active&&taskIsActive()&&Date.now()<deadline){
+      const live=targetOf(bot,state.targetUsername)||t;
+      if(!live?.position)break;
+      peakY=Math.max(peakY,num(bot.entity?.position?.y));
+      const d=dist(bot.entity,live);
+      const fall=estimateObservedFallDistance(bot.entity,peakY);
+      const vy=num(bot.entity?.velocity?.y);
       await lookAtTarget(live,.02);
-      bot.attack(live);
-      state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
-      state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;
-      await sprintReset("sword");
+      if(vy<-.08&&fall>=1.35&&d>=2.35&&d<=3.1){
+        // Last-moment swap: do not carry mace throughout the whole setup.
+        if(!await equip("mace"))return false;
+        const finalD=dist(bot.entity,live);
+        if(!isAirborne(bot.entity)||num(bot.entity?.velocity?.y)>=-.04||finalD>3.1||finalD<2.25){
+          await equip("sword");
+          return false;
+        }
+        await lookAtTarget(live,.0);
+        bot.attack(live);
+        state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
+        state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
+        state.lastMaceSmashAt=Date.now();
+        await sleep(50);
+        await equip("sword");
+        log("[PVP-EXPERT] mace_attribute_swap issued sword_setup=true mace_impact=true sword_restored=true distance="+finalD.toFixed(2)+" fall="+fall.toFixed(2));
+        await sprintReset("sword");
+        return true;
+      }
+      if(d>3.1){
+        bot.setControlState("forward",true);bot.setControlState("sprint",true);
+      }else if(d<2.35){
+        bot.setControlState("forward",false);bot.setControlState("back",true);bot.setControlState("sprint",false);
+      }else{
+        bot.setControlState("forward",false);bot.setControlState("back",false);bot.setControlState("sprint",false);
+      }
+      await sleep(20);
     }
-    log("[PVP-EXPERT] mace_d_tap sequence_complete smash_attempted=true hits_delta="+(state.hits-before));
+    stop();
+    await equip("sword");
+    return false;
+  };
+
+  // Stun-slam: only attempts the axe stun + mace impact when already falling
+  // through a real smash window and the target is visibly using a shield.
+  const stunSlam=async t=>{
+    if(!t?.position||!has(bot,"axe")||!has(bot,"mace")||!isAirborne(bot.entity))return false;
+    const held=lname(t.equipment?.[0]||t.heldItem||"");
+    if(!/shield/.test(held)||!Boolean(t.isUsingItem||t.metadata?.isUsingItem))return false;
+    const d=dist(bot.entity,t);
+    if(d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||estimateObservedFallDistance(bot.entity,state.selfPeakY)>20)return false;
+    if(!await equip("axe"))return false;
+    await lookAtTarget(t,.0);
+    bot.attack(t);
+    state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
+    state.nextAttackAt=state.lastAttackAt+1000;state.attackCount++;
+    await sleep(45);
+    const live=targetOf(bot,state.targetUsername)||t;
+    if(!live?.position||dist(bot.entity,live)>3.1||num(bot.entity?.velocity?.y)>=-.04)return false;
+    if(!await equip("mace"))return false;
+    await lookAtTarget(live,.0);
+    bot.attack(live);
+    state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
+    state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
+    await sleep(45);
+    await equipBestMelee("sword");
+    log("[PVP-EXPERT] stun_slam sequence_issued axe_stun_attempt=true mace_impact_attempt=true");
     return true;
   };
 
@@ -1309,6 +1364,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "shield_drain": ok=await shieldDrain(t);break;
           case "backstab": ok=await backstab(t);break;
           case "mace_d_tap": ok=await maceDTap(t);break;
+          case "stun_slam": ok=await stunSlam(t);break;
           case "water_clutch": ok=await waterRecover();break;
           case "web_escape": ok=await webEscape();break;
           case "shield_break": ok=await attack(t,"axe",3.2);break;
