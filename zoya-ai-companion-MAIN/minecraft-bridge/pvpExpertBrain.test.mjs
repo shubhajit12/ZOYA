@@ -434,6 +434,14 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
 
 
 // Advanced Impossible combat routes must select real, gated executor actions.
+// Never self-launch into a close opponent who is already holding a mace.
+{
+  const d=makeBrain().decide({...base,distance:4.5,windMaceSmashReady:true,enemyMaceHeldClose:true,
+    capabilities:{...base.capabilities,wind:true,mace:true},enemy:{...base.enemy,held:"mace"}});
+  assert.notEqual(d.action,"wind_mace_launch","a close mace holder makes self-launching into the air an unsafe opening");
+  assert.equal(d.style,"sword","prefer grounded sword pressure against a nearby mace holder");
+}
+
 {
   const d=makeBrain().decide({...base,distance:4.5,pearlCatchReady:true,diagonalPearlCatchReady:true});
   assert.equal(d.action,"diagonal_pearl_catch","diagonal pearl catch requires a prevalidated safe landing");
