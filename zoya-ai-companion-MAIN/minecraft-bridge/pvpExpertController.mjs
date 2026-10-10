@@ -1527,6 +1527,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         state.lastHealth=hp;state.lastTargetHealth=th;
         const eq=detectEquipment(t);
         const enemyTotemNow=eq.totem;
+        if(enemyTotemNow!==state.enemyTotemWasEquipped){
+          log("[PVP-EXPERT] enemy_totem_equipment="+(enemyTotemNow?"equipped":"not_equipped")+" target="+state.targetUsername);
+        }
         const enemyTotemPopped=state.enemyTotemWasEquipped && !enemyTotemNow && th<=4;
         if(enemyTotemPopped) state.enemyTotemPopUntil=Date.now()+2600;
         state.enemyTotemWasEquipped=enemyTotemNow;
@@ -1714,6 +1717,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "falling_crit": ok=await fallingCrit(t);break;
           case "hit_select": ok=await hitSelect(t);break;
           case "melee_attack": ok=await attack(t,decision.style==="axe"?"axe":decision.style==="mace"?"mace":decision.style==="spear"?"spear":"sword",decision.style==="spear"?5.0:decision.style==="mace"?3.1:3.05);break;
+          case "finish_wait": {
+            // A totem pop is a short, high-value window. If weapon cooldown
+            // has not recovered, keep facing and strafe in range instead of
+            // retreating or switching styles; the next brain tick may finish.
+            await lookAtTarget(t,.02);
+            bot.setControlState(state.strafe<0?"left":"right",true);
+            await sleep(85);
+            stop();
+            ok=true;
+            break;
+          }
           case "finish": ok=await attack(t,has(bot,"sword")?"sword":has(bot,"axe")?"axe":"mace",has(bot,"sword")?3.05:3.1);break;
           case "mace_drop": ok=await attack(t,"mace",3.1);break;
           case "mace_dive": ok=await maceSmash(t);break;
