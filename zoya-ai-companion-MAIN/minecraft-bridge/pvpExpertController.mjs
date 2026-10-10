@@ -765,6 +765,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const elytraMace=async t=>{
     if(!has(bot,"elytra")||!has(bot,"mace"))return false;
+    // Always restore the flight chest item on every exit path, including exceptions.
+    const restoreElytra=async()=>{
+      if(has(bot,"elytra")&&num(bot.health,20)>0){
+        try{await equip("elytra","torso");log("[PVP-EXPERT] elytra_preserved_and_restored")}catch{}
+      }
+    };
     // Vanilla does not allow gliding down onto a target with an Elytra.
     // Use the Elytra only to gain altitude, then remove it before the smash.
     try{
@@ -807,11 +813,6 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // Vanilla mace smash requires leaving Elytra glide before impact.
       // Actually swap the torso slot (the previous code only changed the hand,
       // leaving Elytra equipped and making the advertised swap a no-op).
-      const restoreElytra=async()=>{
-        if(has(bot,"elytra")&&num(bot.health,20)>0){
-          try{await equip("elytra","torso");log("[PVP-EXPERT] elytra_preserved_and_restored")}catch{}
-        }
-      };
       if(has(bot,"chestplate")){
         if(!await equip("chestplate","torso"))return false;
       }else{
@@ -852,6 +853,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       return false;
     }catch(error){
       stop();
+      await restoreElytra();
       state.failedAction="elytra_mace_error";
       state.failedActionAt=Date.now();
       log("[PVP-EXPERT] elytra-mace failed: "+(error?.message||String(error)));
