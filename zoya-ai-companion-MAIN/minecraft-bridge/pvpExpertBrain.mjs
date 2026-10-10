@@ -58,7 +58,10 @@ export function createPvpExpertBrain(options={}){
     const c=ctx||{}, e=c.enemy||{}, d=num(c.distance,Infinity);
     const now=Date.now();
     const hp=num(c.health,20), maxHp=Math.max(1,num(c.maxHealth,20));
-    const low=hp<=Math.min(10,maxHp*.5), emergency=hp<=Math.min(8,maxHp*.4);
+    // Treat 12 HP as the low-health decision boundary and 10 HP as an
+    // emergency. Five modern mace contacts can outpace a golden-apple heal;
+    // waiting until 8 HP makes the first defensive action too late.
+    const low=hp<=Math.min(12,maxHp*.6), emergency=hp<=Math.min(10,maxHp*.5);
     const falling=Boolean(c.falling), onGround=c.onGround!==false;
     const attackReady=num(c.attackReadyAt,0)<=Date.now();
     const scores=styleScores(c), preferred=bestStyle(c);
@@ -74,6 +77,14 @@ export function createPvpExpertBrain(options={}){
     }
 
     if(c.dead) return {action:"stop",style:styleMemory,priority:10000,reason:"dead"};
+    // If the opponent has a mace in hand and ZOYA has no equipped totem,
+    // do not stand still to eat while in burst range. A pearl is preferred
+    // when its landing has been validated; otherwise create distance now.
+    if(c.enemyMaceHeldClose&&hp<=14&&!c.totemEquipped){
+      if(c.recoveryPearlReady&&c.pearlEscapeReady&&d>=2.8)
+        return {action:"pearl_escape",style:"utility",priority:9980,reason:"no_totem_mace_burst_escape"};
+      return {action:"emergency_disengage",style:"utility",priority:9970,reason:"no_totem_mace_burst_evade"};
+    }
     // Emergency survival is a sequence, not a repeated single action:
     // equip the totem once, immediately create distance, then heal/re-engage.
     if(emergency){
@@ -154,7 +165,7 @@ export function createPvpExpertBrain(options={}){
     // The pop signal has a short lifetime; spend it on immediate melee pressure.
     if(e.totemPopped&&d<=3.05&&has(c,"sword")&&attackReady)
       return {action:"finish",style:"sword",priority:9600,reason:"totem_pop_sword_finish"};
-    if(e.totemPopped&&d<=5&&has(c,"melee"))
+    if(e.totemPopped&&d>3.05&&d<=5&&has(c,"melee"))
       return {action:"approach",style:styleMemory||"sword",priority:9550,reason:"totem_pop_pressure"};
     if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
 
