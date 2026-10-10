@@ -76,17 +76,17 @@ export function createPvpExpertBrain(options={}){
       // crossed back inside the combat radius. Stay in survival mode until
       // healing or a meaningful recovery window exists.
       if(c.emergencyRetreatUntil&&now<c.emergencyRetreatUntil)
-        return {action:d>=7.5?"emergency_hold":"emergency_disengage",style:"utility",priority:9890,reason:d>=7.5?"emergency_safe_distance_hold":"emergency_retreat_lock"};
+        return {action:d>=4.25?"emergency_hold":"emergency_disengage",style:"utility",priority:9890,reason:d>=4.25?"emergency_safe_distance_hold":"emergency_retreat_lock"};
       if(has(c,"heal")&&d>=4.2)
         return {action:"heal",style:"utility",priority:9750,reason:"emergency_heal"};
       if(has(c,"heal")&&d<4.2)
         return {action:"emergency_disengage",style:"utility",priority:9800,reason:"emergency_heal_distance"};
       if(has(c,"pearl")&&c.pearlEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9700,reason:"emergency_escape"};
-      // With no recovery item, create distance once and then hold a safe gap.
-      // Reissuing back+sprint every brain tick can leave a stuck bot endlessly
-      // repeating a retreat command without gaining any additional distance.
-      if(d>=7.5) return {action:"emergency_hold",style:"utility",priority:9640,reason:"emergency_safe_distance"};
+      // Match the controller's actual retreat target: once there is a 4.25-block
+      // gap, hold it. Requiring 7.5 blocks made the controller repeatedly restart
+      // its own emergency lock and could keep it in retreat mode indefinitely.
+      if(d>=4.25) return {action:"emergency_hold",style:"utility",priority:9640,reason:"emergency_safe_distance"};
       return {action:"emergency_disengage",style:"utility",priority:9650,reason:"emergency_no_heal"};
     }
     if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
