@@ -1136,6 +1136,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.failedActions=Object.create(null);state.failedActionUntil=0;
     const onElytra=e=>{if(e===bot.entity)state.elytraFlying=true};
     state.pearlCooldownUntil=0;
+      state.pearlCatchCooldownUntil=0;
     state.maceEscapeCooldownUntil=0;
     state.emergencyRetreatUntil=0;
     state.spacingLockUntil=0;
@@ -1289,19 +1290,31 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
             anchorCycleSafe:bot.game?.dimension==="the_nether"&&has(bot,"anchor")&&has(bot,"glowstone"),
             projectileDodge:projectileThreat(),
+             wind:has(bot,"wind"),
+             firework:has(bot,"firework"),
             windMace:Boolean(has(bot,"wind")&&has(bot,"mace")),
             debuff:has(bot,"potion"),
             elytraMace:Boolean(elytraEquipped&&has(bot,"mace")),
           },
           elytraEquipped,elytraLaunchReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&(bot.entity?.elytraFlying===true||(bot.entity?.onGround===false&&num(bot.entity?.velocity?.y)<-.05)||Boolean(bot.entity?.position?.y>t.position?.y+2))),
           elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6&&lineOfSight),
+           rocketMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&d>=6&&lineOfSight),
+           elytraStunSlamReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"axe")&&eq.shield&&enemy.usingItem&&d>=6&&lineOfSight),
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(state.targetLandedAt>0&&Date.now()-state.targetLandedAt<=150&&d<=3.2),
           selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5),
+           maceDTapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
           windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7),
-          pearlEscapeReady:pearlReady("escape",t),
+          pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7),
+           diagonalPearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&enemy.retreating),
+           pearlEscapeReady:pearlReady("escape",t),
           pearlAmbushReady:pearlReady("ambush",t),
+           pearlGrappleReady:Boolean(has(bot,"pearl")&&pearlDestination(t,"grapple")),
+           windCancelReady:Boolean(has(bot,"wind")&&isAirborne(t)&&d>=3&&d<=7),
+           shieldDrainReady:Boolean(eq.shield&&enemy.usingItem),
+           backstabReady:Boolean(backstabReady),
+           stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>.7&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
           maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
           shieldReady:Boolean(Date.now()>=state.shieldCooldownUntil),
