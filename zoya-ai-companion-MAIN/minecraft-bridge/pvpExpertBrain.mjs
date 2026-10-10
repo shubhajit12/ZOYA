@@ -122,6 +122,8 @@ export function createPvpExpertBrain(options={}){
       return {action:c.diagonalPearlCatchReady?"diagonal_pearl_catch":"pearl_catch",style:"utility",priority:9670,reason:c.diagonalPearlCatchReady?"diagonal_pearl_wind_catch":"pearl_wind_catch"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
+    if(c.stunSlamReady&&has(c,"axe")&&has(c,"mace"))
+      return {action:"stun_slam",style:"mace",priority:9420,reason:"falling_shield_stun_slam"};
     if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady&&c.shieldDrainReady)
       return {action:"shield_drain",style:"axe",priority:9410,reason:"shield_drain_sequence"};
     if(c.windCancelReady&&has(c,"wind")&&d>=3&&d<=7)
