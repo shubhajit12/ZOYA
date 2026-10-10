@@ -80,7 +80,21 @@ console.log("PvP Expert Brain deterministic tests passed.");
 
 {
   const d=makeBrain().decide({...base,distance:4,enemy:{...base.enemy,totemPopped:true},capabilities:{...base.capabilities,burst:true}});
-  assert.equal(d.action,"finish");
+  assert.equal(d.action,"approach","at four blocks Zoya must close into actual sword reach rather than issue an out-of-range finish");
+}
+
+{
+  const d=makeBrain().decide({...base,health:11,distance:6.5,totemEquipped:false,
+    capabilities:{...base.capabilities,totem:false,pearl:false},enemyMaceHeldClose:true,
+    enemy:{...base.enemy,held:"mace"}});
+  assert.equal(d.action,"emergency_disengage","without a totem, low-health Zoya must evade a nearby mace holder before eating");
+}
+
+{
+  const d=makeBrain().decide({...base,health:13,distance:5,totemEquipped:false,
+    capabilities:{...base.capabilities,totem:false,pearl:true},recoveryPearlReady:true,pearlEscapeReady:true,
+    enemyMaceHeldClose:true,enemy:{...base.enemy,held:"mace"}});
+  assert.equal(d.action,"pearl_escape","use a validated pearl to escape a mace burst when no totem is equipped");
 }
 
 {
