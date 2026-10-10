@@ -17,7 +17,7 @@ const ITEMS=Object.freeze({
   mace:["mace"],
   spear:["netherite_spear","diamond_spear","iron_spear","stone_spear","golden_spear","wooden_spear","spear"],
   bow:["bow"], crossbow:["crossbow"], shield:["shield"], pearl:["ender_pearl"],
-  totem:["totem_of_undying"], heal:["enchanted_golden_apple","golden_apple"],
+  totem:["totem_of_undying"], chestplate:["netherite_chestplate","diamond_chestplate","iron_chestplate","chainmail_chestplate","golden_chestplate","leather_chestplate","turtle_shell"], heal:["enchanted_golden_apple","golden_apple"],
   water:["water_bucket"], lava:["lava_bucket"], crystal:["end_crystal"], anchor:["respawn_anchor"],
   glowstone:["glowstone"], obsidian:["obsidian"], web:["cobweb"], shears:["shears"], wind:["wind_charge"],
   rod:["fishing_rod"], firework:["firework_rocket"], elytra:["elytra"],
@@ -804,10 +804,20 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       stop();
 
-      // Remove Elytra before the smash; this is required by vanilla mace rules.
-      if(!await equipBestMelee())return false;
-      // equipBestMelee may select mace/another weapon; force mace for the smash.
-      if(!await equip("mace","hand"))return false;
+      // Vanilla mace smash requires leaving Elytra glide before impact.
+      // Actually swap the torso slot (the previous code only changed the hand,
+      // leaving Elytra equipped and making the advertised swap a no-op).
+      const restoreElytra=async()=>{
+        if(has(bot,"elytra")&&num(bot.health,20)>0){
+          try{await equip("elytra","torso");log("[PVP-EXPERT] elytra_preserved_and_restored")}catch{}
+        }
+      };
+      if(has(bot,"chestplate")){
+        if(!await equip("chestplate","torso"))return false;
+      }else{
+        try{await bot.unequip("torso")}catch{return false}
+      }
+      if(!await equip("mace","hand")){await restoreElytra();return false}
 
       const diveUntil=Date.now()+1800;
       while(state.active&&taskIsActive()&&Date.now()<diveUntil){
@@ -828,12 +838,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           state.attackCount++;
           log("[PVP-EXPERT] elytra_mace_smash_issued distance="+d.toFixed(2)+"; awaiting server damage confirmation");
           stop();
-          await sleep(300);
+          await sleep(180);
+          await restoreElytra();
+          await sleep(120);
           return true;
         }
         await sleep(30);
       }
       stop();
+      await restoreElytra();
       state.failedAction="elytra_mace_no_smash";
       state.failedActionAt=Date.now();
       return false;
