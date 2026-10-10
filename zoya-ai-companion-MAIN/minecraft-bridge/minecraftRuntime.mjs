@@ -1601,10 +1601,12 @@ export function createMinecraftRuntime({ bot, config, stateDir, wakeBrain = () =
     survivalEatPromise = null;
     survivalEating = false;
   });
-  let previousHealth = bot.health ?? 20;
+  let previousHealth = bot.health != null && Number.isFinite(Number(bot.health)) ? Number(bot.health) : null;
   bot.on("health", () => {
-    const health = bot.health ?? 0;
-    const drop = previousHealth - health;
+    const rawHealth = bot.health;
+    if (rawHealth == null || !Number.isFinite(Number(rawHealth))) return;
+    const health = Number(rawHealth);
+    const drop = previousHealth == null ? 0 : previousHealth - health;
     rememberEvent("health", { health, food: bot.food ?? null });
     if (drop >= 1) {
       if (lastServerVelocity) {
