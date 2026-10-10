@@ -76,7 +76,7 @@ export function createPvpExpertBrain(options={}){
       // crossed back inside the combat radius. Stay in survival mode until
       // healing or a meaningful recovery window exists.
       if(c.emergencyRetreatUntil&&now<c.emergencyRetreatUntil)
-        return {action:d>=3.9?"emergency_hold":"emergency_disengage",style:"utility",priority:9890,reason:d>=3.9?"emergency_safe_distance_hold":"emergency_retreat_lock"};
+        return {action:d>=4.75?"emergency_hold":"emergency_disengage",style:"utility",priority:9890,reason:d>=4.75?"emergency_safe_distance_hold":"emergency_retreat_lock"};
       if(has(c,"heal")&&d>=4.75)
         return {action:"heal",style:"utility",priority:9750,reason:"emergency_heal"};
       if(has(c,"heal")&&d<4.75)
