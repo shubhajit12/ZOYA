@@ -35,7 +35,7 @@ function styleScores(c){
   if(invHas(c,"bow")) s.bow=30+(d>=7?35:0)+(e.retreating?18:0);
   if(invHas(c,"crossbow")) s.crossbow=34+(d>=8?35:0)+(e.retreating?18:0);
   if(invHas(c,"crystal")&&invHas(c,"obsidian")) s.crystal=38+(c.crystalArena?38:0)+(d<=6?18:0);
-  if(invHas(c,"respawn_anchor")&&invHas(c,"glowstone")&&c.nether) s.anchor=42+(d<=7?25:0);
+  if(invHas(c,"respawn_anchor")&&invHas(c,"glowstone")&&c.anchorArena) s.anchor=42+(d<=7?25:0);
   if(c.elytraEquipped&&invHas(c,"mace")) s.elytra=60+(c.elytraMaceReady?70:0)+(d>7?15:0);
   if(invHas(c,"shield")) s.shield=18+(e.meleeThreat?30:0)+(c.projectileThreat?35:0);
   s.utility=15+(c.projectileThreat?30:0)+(c.hazard?30:0);
