@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, pressureOrbitMode } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -254,6 +254,11 @@ console.log("Theobald-impossible difficulty regression tests passed.");
 }
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
+
+// Predict a credible airborne mace threat before the damage lands.
+assert.equal(isEnemyMaceDiveThreat({heldItem:"mace",airborne:true,distance:5.8,targetY:65,selfY:64,targetVelocityY:0,verticalDelta:0}),true,"an airborne mace holder in dive range is a threat before downward velocity is observed");
+assert.equal(isEnemyMaceDiveThreat({heldItem:"mace",airborne:false,distance:9,targetY:64,selfY:64,targetVelocityY:0,verticalDelta:0}),false,"a distant grounded mace holder is not an immediate dive threat");
+assert.equal(isEnemyMaceDiveThreat({heldItem:"netherite_sword",airborne:true,distance:4,targetY:65,selfY:64,targetVelocityY:-0.4,verticalDelta:-0.4}),false,"ordinary airborne sword combat is not classified as mace dive");
 
 // Attack attempts are only successful when the server confirms a hit.
 assert.equal(isHitConfirmed(4,5,20,20),true,"an entityHurt hit counter increment confirms a hit");
