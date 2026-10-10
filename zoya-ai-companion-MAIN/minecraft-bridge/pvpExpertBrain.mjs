@@ -151,6 +151,13 @@ export function createPvpExpertBrain(options={}){
     if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
     if(e.usingItem&&e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
 
+    // The pop signal has a short lifetime; spend it on immediate melee pressure.
+    if(e.totemPopped&&d<=3.05&&has(c,"sword")&&attackReady)
+      return {action:"finish",style:"sword",priority:9600,reason:"totem_pop_sword_finish"};
+    if(e.totemPopped&&d<=5&&has(c,"melee"))
+      return {action:"approach",style:styleMemory||"sword",priority:9550,reason:"totem_pop_pressure"};
+    if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
+
     // Emergency spacing has priority over the post-retreat lateral window.
     // The previous order let spacing_hold mask a fresh close-range collision
     // whenever d<2.45, leaving ZOYA strafing at point-blank range until the lock
@@ -158,12 +165,6 @@ export function createPvpExpertBrain(options={}){
     if(d<2.45) return {action:"spacing_retreat",style:styleMemory||"sword",priority:8100,reason:"too_close_spacing"};
     if(c.spacingLockUntil&&now<c.spacingLockUntil&&d<3.05)
       return {action:"spacing_hold",style:styleMemory||"sword",priority:8050,reason:"spacing_recovery_window"};
-    // The pop signal has a short lifetime; spend it on immediate melee pressure.
-    if(e.totemPopped&&d<=3.05&&has(c,"sword")&&attackReady)
-      return {action:"finish",style:"sword",priority:9600,reason:"totem_pop_sword_finish"};
-    if(e.totemPopped&&d<=5&&has(c,"melee"))
-      return {action:"approach",style:styleMemory||"sword",priority:9550,reason:"totem_pop_pressure"};
-    if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
 
     // Genuine Elytra + mace sequence. It outranks ordinary mace only when the
