@@ -560,27 +560,91 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const anchorCycle=async t=>{
-    if(!bot.game||bot.game.dimension!=="the_nether"||!has(bot,"anchor")||!has(bot,"glowstone"))return false;
-    const p=t?.position;if(!p)return false;
-    const id=bot.registry?.blocksByName?.respawn_anchor?.id;
-    if(!Number.isInteger(id)||typeof bot.findBlocks!=="function")return false;
-    const positions=bot.findBlocks({matching:id,maxDistance:7,count:20});
-    let anchor=null,best=Infinity;
-    for(const pos of positions){const d=pos.distanceTo(p);if(d<best){anchor=bot.blockAt(pos);best=d}}
-    if(!anchor||dist(bot.entity,{position:anchor.position})>5)return false;
-    const blast=anchor.position.offset(.5,.5,.5);
-    const enemyDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(t,blast,5,false):null;
-    const selfDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(bot.entity,blast,5,false):null;
-    if(selfDamage!=null&&selfDamage>5)return false;
-    if(enemyDamage!=null&&enemyDamage<4)return false;
+    const dimension=String(bot.game?.dimension||"");
+    // Respawn anchors explode in the Overworld and End, not in the Nether.
+    if(!["overworld","the_end"].includes(dimension)||!has(bot,"anchor")||!has(bot,"glowstone")||!t?.position||typeof bot.placeBlock!=="function")return false;
+    const target=t.position;
+    if(typeof bot.canSeeEntity==="function"&&!bot.canSeeEntity(t))return false;
+    // Treat exposure as 100% when checking our own safety: select only a
+    // placement at least 7.5 blocks away, and only engage above safe HP.
+    // This is deliberately conservative because vanilla Mineflayer does not
+    // expose a dependable built-in explosion-damage estimator.
+    if(num(bot.health,20)<10&&!state.totemEquipped)return false;
+    const anchorId=bot.registry?.blocksByName?.respawn_anchor?.id;
+    if(!Number.isInteger(anchorId))return false;
+    const candidates=[];
+    const isSafeAir=block=>Boolean(block&&block.boundingBox==="empty"&&/^(air|cave_air|void_air)$/.test(String(block.name||"")));
+    const consider=pos=>{
+      const block=bot.blockAt(pos);
+      if(!block||block.type!==anchorId)return;
+      const blast=pos.offset(.5,.5,.5);
+      const selfDistance=blast.distanceTo(bot.entity.position);
+      const targetDistance=blast.distanceTo(target);
+      if(selfDistance>=7.5&&targetDistance<=4.5)candidates.push({pos,block,selfDistance,targetDistance,existing:true});
+    };
+    if(typeof bot.findBlocks==="function"){
+      for(const pos of bot.findBlocks({matching:anchorId,maxDistance:12,count:30}))consider(pos);
+    }
+    // If there is no suitable pre-placed anchor, find a safe supported floor
+    // cell near the target and place one. Never place into occupied/unknown cells.
+    if(!candidates.length){
+      const tx=Math.floor(target.x),ty=Math.floor(target.y),tz=Math.floor(target.z);
+      for(let dy=-2;dy<=0;dy++)for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++){
+        const supportPos=new Vec3(tx+dx,ty+dy-1,tz+dz);
+        const support=bot.blockAt(supportPos);
+        const anchorPos=supportPos.offset(0,1,0);
+        const cell=bot.blockAt(anchorPos),head=bot.blockAt(anchorPos.offset(0,1,0));
+        if(!support||support.boundingBox!=="block"||!isSafeAir(cell)||!isSafeAir(head))continue;
+        const blast=anchorPos.offset(.5,.5,.5);
+        const selfDistance=blast.distanceTo(bot.entity.position),targetDistance=blast.distanceTo(target);
+        if(selfDistance<7.5||targetDistance>4.5||targetDistance<1.5)continue;
+        candidates.push({pos:anchorPos,block:support,support,selfDistance,targetDistance,existing:false});
+      }
+    }
+    candidates.sort((a,b)=>a.targetDistance-b.targetDistance||b.selfDistance-a.selfDistance);
+    const chosen=candidates[0];
+    if(!chosen)return false;
     try{
-      await equip("glowstone");await bot.activateBlock(anchor);await sleep(100);
-      const refreshed=bot.blockAt(anchor.position);
-      if(refreshed?.name==="respawn_anchor"){await equip("glowstone");await bot.activateBlock(refreshed)}
-      await sleep(180);return true;
-    }catch{return false}
+      if(!chosen.existing){
+        if(!await equip("anchor"))return false;
+        await bot.placeBlock(chosen.support,new Vec3(0,1,0));
+        await sleep(120);
+      }
+      let anchor=bot.blockAt(chosen.pos);
+      if(!anchor||anchor.name!=="respawn_anchor")return false;
+      let charges=Number(anchor.properties?.charges||0);
+      if(charges<1){
+        if(!await equip("glowstone"))return false;
+        await bot.activateBlock(anchor);
+        await sleep(120);
+        anchor=bot.blockAt(chosen.pos);
+        charges=Number(anchor?.properties?.charges||0);
+      }
+      if(!anchor||anchor.name!=="respawn_anchor"||charges<1)return false;
+      // Recheck the live geometry before detonating: target movement or our own
+      // movement during placement can invalidate the original safe-distance gate.
+      const blast=chosen.pos.offset(.5,.5,.5);
+      if(blast.distanceTo(bot.entity.position)<7.5||blast.distanceTo((targetOf(bot,state.targetUsername)||t).position)>4.5)return false;
+      const liveTarget=targetOf(bot,state.targetUsername)||t;
+      const targetHealthBefore=Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
+      const selfHealthBefore=num(bot.health,20);
+      try{await bot.unequip("hand")}catch{}
+      await bot.activateBlock(anchor);
+      await sleep(350);
+      const targetHealthAfter=Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
+      const targetDamaged=targetHealthBefore!=null&&targetHealthAfter!=null&&targetHealthAfter<targetHealthBefore;
+      const selfDamaged=num(bot.health,20)<selfHealthBefore;
+      const exploded=bot.blockAt(chosen.pos)?.name!=="respawn_anchor";
+      const confirmed=exploded&&(targetDamaged||selfDamaged);
+      log("[PVP-EXPERT] anchor_detonation_confirmed="+confirmed+" target_damage_observed="+targetDamaged+" self_damage_observed="+selfDamaged+" self_distance="+blast.distanceTo(bot.entity.position).toFixed(2));
+      await equipBestMelee();
+      return confirmed;
+    }catch(error){
+      log("[PVP-EXPERT] anchor cycle failed: "+(error?.message||String(error)));
+      await equipBestMelee();
+      return false;
+    }
   };
-
   const spearCharge=async t=>{
     if(!await equip("spear"))return false;
     const d=dist(bot.entity,t);
@@ -1384,7 +1448,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             shield:has(bot,"shield"),burst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
             spear:has(bot,"spear"),mace:has(bot,"mace"),axe:has(bot,"axe"),sword:has(bot,"sword"),
             crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
-            anchorCycleSafe:bot.game?.dimension==="the_nether"&&has(bot,"anchor")&&has(bot,"glowstone"),
+            anchorArena:["overworld","the_end"].includes(String(bot.game?.dimension||"")),
+            anchorCycleSafe:["overworld","the_end"].includes(String(bot.game?.dimension||""))&&has(bot,"anchor")&&has(bot,"glowstone")&&num(bot.health,20)>=10,
             projectileDodge:projectileThreat(),
             rod:has(bot,"rod"),
              wind:has(bot,"wind"),
