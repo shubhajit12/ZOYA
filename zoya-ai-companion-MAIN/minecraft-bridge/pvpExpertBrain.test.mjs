@@ -339,8 +339,8 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
   assert.equal(d.action,"pearl_grapple","far pearl intercept should only be selected with a validated landing");
 }
 {
-  const d=makeBrain().decide({...base,distance:2.8,maceDTapReady:true,selfMaceSmashReady:true,attackReadyAt:0});
-  assert.equal(d.action,"mace_d_tap","mace smash should chain into a bounded sword follow-up when the inventory supports it");
+  const d=makeBrain().decide({...base,distance:2.8,maceAttributeSwapReady:true,selfMaceSmashReady:true,attackReadyAt:0});
+  assert.equal(d.action,"mace_attribute_swap","falling mace hit should use a last-tick sword-to-mace attribute swap when both weapons are hotbar-ready");
 }
 console.log("Advanced Impossible tactical routing regression tests passed.");
 
@@ -360,3 +360,10 @@ console.log("Stun-slam and rocket-mace routing regression tests passed.");
   assert.equal(d.action,"wind_charge_reset","a verified mid-air wind-charge reset window should precede a normal mace swing");
 }
 console.log("Wind-charge fall-reset routing regression test passed.");
+
+{
+  const d=makeBrain().decide({...base,distance:2.8,maceCrystalDTapReady:true,selfMaceSmashReady:true,attackReadyAt:0,
+    capabilities:{...base.capabilities,crystal:true},inventory:{...base.inventory,crystal:2,obsidian:8}});
+  assert.equal(d.action,"mace_d_tap","validated mace smash window with a safe crystal base should select mace-crystal D-tap");
+}
+console.log("Mace-crystal D-tap and attribute-swap separation tests passed.");
