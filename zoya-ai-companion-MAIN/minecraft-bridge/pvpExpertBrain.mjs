@@ -29,7 +29,7 @@ function styleScores(c){
   // Promote it only when the controller has verified a real launch/smash or
   // Elytra setup window; height is a modest opportunity, not a permanent lock.
   if(invHas(c,"mace")) s.mace=12+(c.selfMaceSmashReady?62:0)+(c.windMaceSmashReady?54:0)+(c.elytraMaceReady?58:0)+(c.heightAdvantage?10:0)-(d>8?28:0)-(c.enemyMaceHeldClose?35:0)-(c.enemyMaceThreat?45:0);
-  if(invHas(c,"spear")) s.spear=20+(d>=3&&d<=5?35:0)+(e.retreating?12:0);
+  if(invHas(c,"spear")) s.spear=20+(d>=3&&d<=4.75?38:0)+(e.retreating?12:0);
   // Sword is the default combo weapon: its sustained attack speed is more
   // valuable than an axe's small per-hit advantage. Select axe aggressively
   // only when a shield counter is actually needed.
