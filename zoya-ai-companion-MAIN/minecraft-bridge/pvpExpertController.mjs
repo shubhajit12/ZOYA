@@ -1630,7 +1630,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5),
            maceAttributeSwapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&hotbarSlot("mace")!=null&&hotbarSlot("sword")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
            maceCrystalDTapReady:Boolean(has(bot,"mace")&&has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t))&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.35&&d<=3.1),
-          windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7),
+          windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat),
           pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7),
            diagonalPearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&enemy.retreating),
            pearlEscapeReady:pearlReady("escape",t),
