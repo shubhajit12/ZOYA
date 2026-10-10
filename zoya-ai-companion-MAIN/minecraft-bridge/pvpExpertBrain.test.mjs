@@ -174,6 +174,16 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 }
 
 {
+  const d=makeBrain().decide({...base,health:5,distance:5.86,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:0});
+  assert.equal(d.action,"emergency_hold","a 5.86-block gap is already beyond the controller's 4.25-block retreat target");
+}
+
+{
+  const d=makeBrain().decide({...base,health:5,distance:5.86,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:Date.now()+2000});
+  assert.equal(d.action,"emergency_hold","an active emergency lock must not reissue retreat after a safe gap has been reached");
+}
+
+{
   const d=makeBrain().decide({...base,distance:2.0,enemy:{...base.enemy,shield:true}});
   assert.equal(d.action,"spacing_retreat","shield counter must also respect the minimum spacing gate");
 }
