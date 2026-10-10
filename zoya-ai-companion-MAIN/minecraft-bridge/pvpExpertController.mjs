@@ -68,6 +68,24 @@ export function isConfirmedPearlCatch(displaced, pearlStillExists) {
   return Boolean(displaced) && !Boolean(pearlStillExists);
 }
 
+export function isProjectileOnCollisionCourse(projectilePosition, projectileVelocity, playerPosition, playerVelocity={x:0,y:0,z:0}, radius=1.35, horizonTicks=16) {
+  if(!projectilePosition||!playerPosition)return false;
+  const n=(v)=>Number.isFinite(Number(v))?Number(v):0;
+  const rx=n(projectilePosition.x)-n(playerPosition.x);
+  const ry=n(projectilePosition.y)-n(playerPosition.y);
+  const rz=n(projectilePosition.z)-n(playerPosition.z);
+  const vx=n(projectileVelocity?.x)-n(playerVelocity?.x);
+  const vy=n(projectileVelocity?.y)-n(playerVelocity?.y);
+  const vz=n(projectileVelocity?.z)-n(playerVelocity?.z);
+  const current=Math.hypot(rx,ry,rz);
+  if(current<=radius)return true;
+  const speed2=vx*vx+vy*vy+vz*vz;
+  if(speed2<0.0025)return current<=2.5;
+  const closestTick=-(rx*vx+ry*vy+rz*vz)/speed2;
+  if(closestTick<0||closestTick>horizonTicks)return false;
+  return Math.hypot(rx+vx*closestTick,ry+vy*closestTick,rz+vz*closestTick)<=radius;
+}
+
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
@@ -511,11 +529,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       if(bot.projectiles?.projectileAtMe||bot.projectiles?.isAimedAt)return true;
     }catch{}
     const p=bot.entity?.position;if(!p)return false;
+    const playerVelocity=bot.entity?.velocity||{x:0,y:0,z:0};
     return Object.values(bot.entities||{}).some(e=>{
       if(!e?.position||e===bot.entity)return false;
       const n=String(e.name||"").toLowerCase();
       if(!/arrow|spectral_arrow|trident|fireball|small_fireball|wind_charge|snowball|egg/.test(n))return false;
-      return e.position.distanceTo(p)<8;
+      // Distance alone creates false alarms for projectiles flying away or
+      // passing beside ZOYA. Predict relative-motion closest approach instead.
+      return isProjectileOnCollisionCourse(e.position,e.velocity,p,playerVelocity,1.35,16);
     });
   };
 
