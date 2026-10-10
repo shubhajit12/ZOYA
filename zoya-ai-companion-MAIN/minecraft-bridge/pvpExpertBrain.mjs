@@ -80,7 +80,7 @@ export function createPvpExpertBrain(options={}){
     // If the opponent has a mace in hand inside burst range and health is
     // dropping, equip an available totem first; otherwise use a validated
     // pearl or create a real distance buffer. Never try to eat through it.
-    if(c.enemyMaceHeldClose&&hp<=14){
+    if(c.enemyMaceHeldClose&&hp<=16){
       if(has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9990,reason:"mace_burst_equip_totem"};
       if(c.recoveryPearlReady&&c.pearlEscapeReady&&d>=2.8)
