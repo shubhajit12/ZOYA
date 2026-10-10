@@ -343,3 +343,14 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
   assert.equal(d.action,"mace_d_tap","mace smash should chain into a bounded sword follow-up when the inventory supports it");
 }
 console.log("Advanced Impossible tactical routing regression tests passed.");
+
+{
+  const d=makeBrain().decide({...base,distance:2.8,stunSlamReady:true,enemy:{...base.enemy,shield:true,usingItem:true}});
+  assert.equal(d.action,"stun_slam","falling shield target should trigger the bounded axe-stun then mace sequence");
+}
+{
+  const d=makeBrain().decide({...base,distance:8,rocketMaceReady:true,elytraMaceReady:true,elytraLaunchReady:true,elytraEquipped:true,
+    capabilities:{...base.capabilities,elytraMace:true,firework:true}});
+  assert.equal(d.action,"rocket_mace","firework-capable Elytra setup should select rocket macing");
+}
+console.log("Stun-slam and rocket-mace routing regression tests passed.");
