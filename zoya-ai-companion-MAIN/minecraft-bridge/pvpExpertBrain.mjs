@@ -79,6 +79,10 @@ export function createPvpExpertBrain(options={}){
     if(emergency){
       if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9950,reason:"emergency_mace_escape"};
+      if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
+        return {action:"totem",style:"utility",priority:9940,reason:"emergency_mace_totem"};
+      if(c.enemyMaceThreat&&c.maceEscapeReady)
+        return {action:"emergency_disengage",style:"utility",priority:9930,reason:"emergency_mace_evade_no_totem"};
       if(has(c,"totem")&&!c.totemEquipped)
         return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
       if(c.recoveryPearlReady&&c.pearlEscapeReady)
@@ -107,6 +111,10 @@ export function createPvpExpertBrain(options={}){
     }
     if(c.enemyMaceThreat&&c.pearlEscapeReady&&c.maceEscapeReady)
       return {action:"pearl_escape",style:"utility",priority:9870,reason:"mace_attack_escape"};
+    if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
+      return {action:"totem",style:"utility",priority:9860,reason:"mace_burst_totem"};
+    if(c.enemyMaceThreat&&c.maceEscapeReady)
+      return {action:"emergency_disengage",style:"utility",priority:9855,reason:"mace_evade_no_totem"};
     if((c.enemyMaceThreat||c.enemyMaceHeldClose)&&has(c,"totem")&&!c.totemEquipped&&c.health<=10)
       return {action:"totem",style:"utility",priority:9850,reason:"mace_burst_totem"};
     if(c.enemyMaceThreat&&has(c,"totem")&&!c.totemEquipped)
@@ -143,6 +151,12 @@ export function createPvpExpertBrain(options={}){
     if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
     if(e.usingItem&&e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
 
+    // A server-confirmed totem pop is a short, decisive pressure window.
+    // Do not let the generic close-range retreat rule waste that window.
+    if(e.totemPopped&&d<=3.05&&has(c,"sword")&&attackReady)
+      return {action:"finish",style:"sword",priority:9600,reason:"totem_pop_sword_finish"};
+    if(e.totemPopped&&d<=5&&has(c,"melee"))
+      return {action:"approach",style:styleMemory||"sword",priority:9550,reason:"totem_pop_pressure"};
     // Emergency spacing has priority over the post-retreat lateral window.
     // The previous order let spacing_hold mask a fresh close-range collision
     // whenever d<2.45, leaving ZOYA strafing at point-blank range until the lock
