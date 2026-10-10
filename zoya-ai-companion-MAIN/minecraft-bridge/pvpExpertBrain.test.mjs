@@ -207,8 +207,8 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 
 {
   const d=makeBrain().decide({...base,distance:2.3});
-  assert.equal(d.action,"spacing_retreat","the minimum attack buffer must extend beyond point-blank collision range");
-  assert.notEqual(d.style,"utility","spacing recovery must preserve the selected combat style rather than visually thrash to utility");
+  assert.equal(d.action,"melee_attack","2.3 blocks is valid sword reach and should not trigger passive retreat");
+  assert.equal(d.style,"sword","close-range pressure should use the sword rather than a utility fallback");
 }
 
 {
