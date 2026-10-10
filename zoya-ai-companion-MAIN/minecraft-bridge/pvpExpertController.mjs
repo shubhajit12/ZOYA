@@ -1552,6 +1552,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const targetVelocity=t.velocity||{x:0,y:0,z:0};
         const enemyHeld=lname(t.equipment?.[0]||t.heldItem||"");
         const enemyMaceHeld=/mace/.test(enemyHeld);
+        // Compute this before any combat-context fields consume it. Keeping it
+        // as a local avoids a temporal-dead-zone ReferenceError during PvP.
+        const enemyMaceHeldClose=Boolean(enemyMaceHeld&&d<=7.5);
         const enemyWindHeld=/wind_charge/.test(enemyHeld);
         const enemyMaceThreat=isEnemyMaceDiveThreat({
           heldItem:enemyHeld,airborne:isAirborne(t),distance:d,
@@ -1652,7 +1655,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           hardCounter:Boolean((eq.shield&&enemy.usingItem)||(eq.elytra&&isAirborne(t))||enemy.totemPopped),
           spacingLockUntil:state.spacingLockUntil,
           enemyBurstThreat,enemyMaceThreat,
-          enemyMaceHeldClose:Boolean(enemyMaceHeld&&d<=7.5),
+          enemyMaceHeldClose,
           strafeDirection:state.strafe>0?"right":"left"
         };
 
