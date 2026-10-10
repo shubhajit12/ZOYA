@@ -60,7 +60,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
     lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,
-    lastAttackAttemptAt:0,lastAttackConfirmedAt:0
+    lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null
   };
 
   const stop=()=>{
@@ -202,12 +202,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     bot.setControlState("jump",true);
     await sleep(75);
     bot.setControlState("jump",false);
+    let peakY=num(bot.entity?.position?.y);
     const until=Date.now()+700;
     while(state.active&&taskIsActive()&&Date.now()<until){
-      if(isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45) break;
+      peakY=Math.max(peakY,num(bot.entity?.position?.y));
+      if(isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&estimateObservedFallDistance(bot.entity,peakY)>=.45) break;
       await sleep(20);
     }
-    const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&num(bot.entity.fallDistance)>=.45&&dist(bot.entity,t)<=3.05;
+    peakY=Math.max(peakY,num(bot.entity?.position?.y));
+    const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&estimateObservedFallDistance(bot.entity,peakY)>=.45&&dist(bot.entity,t)<=3.05;
     if(!valid){stop();return false}
     await lookAtTarget(t,.02);bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;await sprintReset("sword");stop();return true;
   };
@@ -809,6 +812,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(t.health!=null&&num(t.health)<=0){task.terminationReason="target_defeated";return true}
 
         const hp=num(bot.health,20),th=num(t.health,20),d=dist(bot.entity,t);
+        const selfY=num(bot.entity?.position?.y);
+        if(bot.entity?.onGround!==false||!Number.isFinite(state.selfPeakY)) state.selfPeakY=selfY;
+        else state.selfPeakY=Math.max(num(state.selfPeakY,selfY),selfY);
+        const selfFallDistance=estimateObservedFallDistance(bot.entity,state.selfPeakY);
         const tookDamage=state.lastHealth>hp+0.05;
         if(tookDamage){
           state.damageTaken+=state.lastHealth-hp;
@@ -852,7 +859,6 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const enemyWindHeld=/wind_charge/.test(enemyHeld);
         const enemyMaceThreat=enemyMaceHeld&&(
           (isAirborne(t)&&(num(targetVelocity.y)<-.08||num(t.position?.y)>num(bot.entity?.position?.y)+.6))||
-          num(t.fallDistance)>1.5||
           targetVerticalDelta<-.18||
           (d<=3.2&&num(targetVelocity.y)<-.03)
         );
@@ -868,7 +874,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const ctx={
           distance:d,health:hp,maxHealth:num(bot.maxHealth,20),food:num(bot.food,20),
           onGround:bot.entity?.onGround!==false,falling:num(bot.entity?.velocity?.y)<-.08,
-          fallDistance:num(bot.entity?.fallDistance),heightAdvantage:num(bot.entity?.position?.y)>num(t.position?.y)+1.5,
+          fallDistance:selfFallDistance,heightAdvantage:num(bot.entity?.position?.y)>num(t.position?.y)+1.5,
           knockbacked:speed(bot.entity)>.84,lineOfSight,enemy,
           projectileThreat:projectileThreat(),hazard:hazard(),stuck:state.failedAction==="approach:stuck",
           hasSword:has(bot,"sword"),hasAxe:has(bot,"axe"),hasMace:has(bot,"mace"),hasSpear:has(bot,"spear"),
@@ -900,7 +906,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(state.targetLandedAt>0&&Date.now()-state.targetLandedAt<=150&&d<=3.2),
-          selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&num(bot.entity?.fallDistance)>1.5),
+          selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5),
           windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7),
           pearlEscapeReady:pearlReady("escape",t),
           pearlAmbushReady:pearlReady("ambush",t),
