@@ -138,7 +138,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,pearlCatchCooldownUntil:0,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
     lastAttackConfirmedAt:0,pendingEntityHitUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,
-    lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null
+    lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null,lastCombatDiagAt:0
   };
 
   const stop=()=>{
@@ -1669,7 +1669,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(decision.style&&decision.style!=="utility"&&decision.style!==state.committedStyle){state.committedStyle=decision.style;state.styleCommitUntil=Date.now()+Number(combatDifficulty.styleLockMs||450);}
         brain.noteAction(decision.action);
 
-        const now=Date.now(),changed=state.style!==state.lastLoggedStyle||state.action!==state.lastLoggedAction;
+        const now=Date.now();
+        if(now-state.lastCombatDiagAt>=1000){
+          state.lastCombatDiagAt=now;
+          log("[PVP-EXPERT] combat_state selfHP="+hp.toFixed(1)+" selfTotemEquipped="+Boolean(state.totemEquipped)+" selfTotemInventory="+count(bot,"totem")+
+            " target="+state.targetUsername+" targetHP="+(Number.isFinite(Number(t.health))?Number(t.health).toFixed(1):"unknown")+
+            " targetHeld="+(enemyHeld||"unknown")+" targetTotemEquipped="+enemyTotemNow+" targetTotemPopWindow="+(Date.now()<state.enemyTotemPopUntil)+
+            " maceThreat="+enemyMaceThreat+" maceHeldClose="+Boolean(enemyMaceHeld&&d<=7.5)+" distance="+d.toFixed(2)+
+            " attackCooldownMs="+Math.max(0,state.nextAttackAt-Date.now())+" action="+decision.action);
+        }
+        const changed=state.style!==state.lastLoggedStyle||state.action!==state.lastLoggedAction;
         if(changed||now-state.lastDecisionLogAt>=750){
           log("[PVP-EXPERT] style="+state.style+" action="+state.action+" reason="+decision.reason+" dist="+d.toFixed(2));
           state.lastDecisionLogAt=now;state.lastLoggedStyle=state.style;state.lastLoggedAction=state.action;
