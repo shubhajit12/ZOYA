@@ -977,8 +977,21 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const fireworkBoost=async()=>{
     if(!has(bot,"firework"))return false;
-    if(!await equip("firework","off-hand"))return false;
-    try{bot.activateItem(true);await sleep(90);return true}catch{return false}
+    // Never replace an off-hand totem with a firework during Elytra combat.
+    // Fireworks can be launched from the main hand; restore the melee weapon
+    // immediately after the short boost input.
+    if(!await equip("firework","hand"))return false;
+    try{
+      bot.activateItem();
+      await sleep(90);
+      bot.deactivateItem();
+      await equipBestMelee();
+      return true;
+    }catch{
+      try{bot.deactivateItem()}catch{}
+      await equipBestMelee();
+      return false;
+    }
   };
 
   const sprintReset=async(type="auto")=>{
