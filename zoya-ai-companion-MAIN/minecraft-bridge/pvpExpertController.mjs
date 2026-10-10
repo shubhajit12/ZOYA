@@ -102,6 +102,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
+  const hotbarSlot=type=>{
+    const i=item(bot,type);
+    return i&&Number.isInteger(i.slot)&&i.slot>=36&&i.slot<=44?i.slot-36:null;
+  };
+  const selectHotbarItem=type=>{
+    const slot=hotbarSlot(type);
+    if(slot==null||typeof bot.setQuickBarSlot!=="function")return false;
+    try{bot.setQuickBarSlot(slot);return true}catch{return false}
+  };
+
   const equipBestMelee=async(preferred=null)=>{
     const order=preferred?[preferred,"sword","axe","spear","mace"]:["sword","axe","spear","mace"];
     for(const type of [...new Set(order)]) if(has(bot,type)&&await equip(type)) return type;
@@ -770,7 +780,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // immediately after the server receives the mace attack.
   const maceDTap=async t=>{
     if(!t?.position||!has(bot,"sword")||!has(bot,"mace")||!isAirborne(bot.entity))return false;
-    if(!await equip("sword"))return false;
+    // Last-tick attribute swaps require both weapons on the hotbar; inventory
+    // transfers during the fall window are too slow and are rejected safely.
+    if(hotbarSlot("sword")==null||hotbarSlot("mace")==null)return false;
+    if(!selectHotbarItem("sword"))return false;
     const deadline=Date.now()+900;
     let peakY=Math.max(num(bot.entity?.position?.y),num(state.selfPeakY,bot.entity?.position?.y));
     while(state.active&&taskIsActive()&&Date.now()<deadline){
@@ -783,7 +796,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await lookAtTarget(live,.02);
       if(vy<-.08&&fall>=1.35&&d>=2.35&&d<=3.1){
         // Last-moment swap: do not carry mace throughout the whole setup.
-        if(!await equip("mace"))return false;
+        if(!selectHotbarItem("mace"))return false;
         const finalD=dist(bot.entity,live);
         if(!isAirborne(bot.entity)||num(bot.entity?.velocity?.y)>=-.04||finalD>3.1||finalD<2.25){
           await equip("sword");
@@ -794,8 +807,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
         state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
         state.lastMaceSmashAt=Date.now();
-        await sleep(50);
-        await equip("sword");
+        selectHotbarItem("sword");
         log("[PVP-EXPERT] mace_attribute_swap issued sword_setup=true mace_impact=true sword_restored=true distance="+finalD.toFixed(2)+" fall="+fall.toFixed(2));
         await sprintReset("sword");
         return true;
@@ -810,34 +822,36 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await sleep(20);
     }
     stop();
-    await equip("sword");
+    selectHotbarItem("sword");
     return false;
   };
 
   // Stun-slam: only attempts the axe stun + mace impact when already falling
   // through a real smash window and the target is visibly using a shield.
   const stunSlam=async t=>{
-    if(!t?.position||!has(bot,"axe")||!has(bot,"mace")||!isAirborne(bot.entity))return false;
+    if(!t?.position||!isAirborne(bot.entity)||!has(bot,"axe")||!has(bot,"mace"))return false;
+    if(hotbarSlot("axe")==null||hotbarSlot("mace")==null)return false;
     const held=lname(t.equipment?.[0]||t.heldItem||"");
     if(!/shield/.test(held)||!Boolean(t.isUsingItem||t.metadata?.isUsingItem))return false;
     const d=dist(bot.entity,t);
-    if(d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||estimateObservedFallDistance(bot.entity,state.selfPeakY)>20)return false;
-    if(!await equip("axe"))return false;
+    if(d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||estimateObservedFallDistance(bot.entity,state.selfPeakY)<=1.5)return false;
+    if(num(state.nextAttackAt)>Date.now())return false;
+    const originalSlot=Number.isInteger(bot.quickBarSlot)?bot.quickBarSlot:null;
+    // Packet sequence is deliberately synchronous: axe hit, hotbar swap,
+    // mace hit, all within one client tick when both items are already hotbar.
+    if(!selectHotbarItem("axe"))return false;
     await lookAtTarget(t,.0);
     bot.attack(t);
     state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
-    state.nextAttackAt=state.lastAttackAt+1000;state.attackCount++;
-    await sleep(45);
-    const live=targetOf(bot,state.targetUsername)||t;
-    if(!live?.position||dist(bot.entity,live)>3.1||num(bot.entity?.velocity?.y)>=-.04)return false;
-    if(!await equip("mace"))return false;
-    await lookAtTarget(live,.0);
-    bot.attack(live);
+    state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
+    if(!selectHotbarItem("mace"))return false;
+    await lookAtTarget(t,.0);
+    bot.attack(t);
     state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
     state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
-    await sleep(45);
-    await equipBestMelee("sword");
-    log("[PVP-EXPERT] stun_slam sequence_issued axe_stun_attempt=true mace_impact_attempt=true");
+    await sleep(40);
+    if(originalSlot!=null)try{bot.setQuickBarSlot(originalSlot)}catch{}
+    log("[PVP-EXPERT] stun_slam packet_sequence=axe_then_mace same_tick=true");
     return true;
   };
 
@@ -1095,17 +1109,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(d<=3.05&&vy<-.12&&y>num(live.position?.y)+.3){
           const enemyHeld=lname(live.equipment?.[0]||live.heldItem||"");
           const enemyShielding=/shield/.test(enemyHeld)&&Boolean(live.isUsingItem||live.metadata?.isUsingItem);
-          if(enemyShielding&&has(bot,"axe")){
-            // Elytra stun-slam: axe tap to interrupt shield use, then switch
-            // back to mace for the same falling impact window.
-            if(!await equip("axe")){await restoreElytra();return false}
-            await lookAtTarget(live,.0);
+          if(enemyShielding&&has(bot,"axe")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null){
+            // Elytra stun-slam uses the same synchronous axe→mace hotbar
+            // packet sequence; never pretend a slow inventory transfer is a stun.
+            const originalSlot=Number.isInteger(bot.quickBarSlot)?bot.quickBarSlot:null;
+            if(selectHotbarItem("axe")){await lookAtTarget(live,.0);bot.attack(live);selectHotbarItem("mace");await lookAtTarget(live,.0)}
             bot.attack(live);
-            await sleep(45);
-            if(!await equip("mace")){await restoreElytra();return false}
-            await lookAtTarget(live,.0);
+            if(originalSlot!=null)try{bot.setQuickBarSlot(originalSlot)}catch{}
+          }else{
+            bot.attack(live);
           }
-          bot.attack(live);
           state.lastAttackAt=Date.now();
           state.lastAttackAttemptAt=state.lastAttackAt;
           state.nextAttackAt=state.lastAttackAt+1667;
@@ -1317,7 +1330,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           crystalArena:Boolean(crystalBase(t)),nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(state.targetLandedAt>0&&Date.now()-state.targetLandedAt<=150&&d<=3.2),
           selfMaceSmashReady:Boolean(has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5),
-           maceDTapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
+           maceDTapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&hotbarSlot("mace")!=null&&hotbarSlot("sword")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
           windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7),
           pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7),
            diagonalPearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&enemy.retreating),
@@ -1327,7 +1340,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            windCancelReady:Boolean(has(bot,"wind")&&isAirborne(t)&&d>=3&&d<=7),
            shieldDrainReady:Boolean(eq.shield&&enemy.usingItem),
            backstabReady:Boolean(backstabReady),
-           stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>.7&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
+           stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
           maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
           shieldReady:Boolean(Date.now()>=state.shieldCooldownUntil),
