@@ -853,6 +853,53 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     return true;
   };
 
+  // Mid-air wind-charge reset: use a downward charge to brake a dangerous
+  // descent, preserve the observed apex/fall estimate, then re-enter the mace
+  // impact window only if the game actually changes vertical velocity.
+  const windChargeReset=async t=>{
+    if(!t?.position||!has(bot,"wind")||!has(bot,"mace")||!isAirborne(bot.entity))return false;
+    const d=dist(bot.entity,t),vy0=num(bot.entity?.velocity?.y);
+    const fall0=estimateObservedFallDistance(bot.entity,state.selfPeakY);
+    if(d<2.25||d>3.25||vy0>=-.25||fall0<=1.5||!await equip("wind"))return false;
+    const peak=num(state.selfPeakY,num(bot.entity?.position?.y)+fall0);
+    try{
+      await bot.lookAt(bot.entity.position.offset(0,-8,0),true);
+      bot.activateItem();await sleep(65);bot.deactivateItem();
+      const until=Date.now()+420;
+      let resetObserved=false;
+      while(state.active&&taskIsActive()&&Date.now()<until){
+        const vy=num(bot.entity?.velocity?.y);
+        if(vy>vy0+.22||vy>-.08){resetObserved=true;break}
+        await sleep(20);
+      }
+      const retainedFall=Math.max(fall0,estimateObservedFallDistance(bot.entity,peak));
+      if(!resetObserved){
+        log("[PVP-EXPERT] wind_charge_reset unavailable; preserve ordinary mace descent");
+        return await maceSmash(t,retainedFall);
+      }
+      const relaunchUntil=Date.now()+850;
+      while(state.active&&taskIsActive()&&Date.now()<relaunchUntil){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(!live?.position)break;
+        const fall=estimateObservedFallDistance(bot.entity,peak);
+        const vy=num(bot.entity?.velocity?.y);
+        const nd=dist(bot.entity,live);
+        await lookAtTarget(live,.02);
+        if(isAirborne(bot.entity)&&vy<-.08&&fall>1.5&&nd>=2.25&&nd<=3.1){
+          log("[PVP-EXPERT] wind_charge_reset observed=true fall_retained="+fall.toFixed(2));
+          return await maceSmash(live,fall);
+        }
+        await sleep(20);
+      }
+      stop();
+      return false;
+    }catch{
+      try{bot.deactivateItem()}catch{}
+      stop();
+      return false;
+    }
+  };
+
   const maceSmash=async(t,priorFallDistance=0)=>{
     if(!t||!has(bot,"mace"))return false;
     if(!await equip("mace"))return false;
@@ -1336,6 +1383,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           pearlAmbushReady:pearlReady("ambush",t),
            pearlGrappleReady:Boolean(has(bot,"pearl")&&pearlDestination(t,"grapple")),
            windCancelReady:Boolean(has(bot,"wind")&&isAirborne(t)&&d>=3&&d<=7),
+           windChargeResetReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.25&&selfFallDistance>1.5&&d>=2.25&&d<=3.25),
            shieldDrainReady:Boolean(eq.shield&&enemy.usingItem),
            backstabReady:Boolean(backstabReady),
            stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
@@ -1412,6 +1460,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "diagonal_pearl_catch": ok=await pearlCatch(t,true);break;
           case "pearl_grapple": ok=await throwPearl(t,"grapple");break;
           case "wind_charge_cancel": ok=await windChargeCancel(t);break;
+          case "wind_charge_reset": ok=await windChargeReset(t);break;
           case "shield_drain": ok=await shieldDrain(t);break;
           case "backstab": ok=await backstab(t);break;
           case "mace_d_tap": ok=await maceDTap(t);break;
