@@ -255,7 +255,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const emergencyDisengage=async t=>{
     if(!t)return false;
     const start=dist(bot.entity,t);
-    const deadline=Date.now()+1100;
+    const targetHeld=lname(t.equipment?.[0]||t.heldItem||"");
+    // When the opponent is holding a mace, a four-block retreat is not a
+    // reliable safety gap. Evade far enough to break immediate melee/burst.
+    const safeDistance=/mace/.test(targetHeld)?8.0:4.75;
+    const deadline=Date.now()+1500;
     try{
       bot.setControlState("back",true);
       bot.setControlState("sprint",true);
@@ -264,7 +268,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const live=targetOf(bot,state.targetUsername)||t;
         if(live) await lookAtTarget(live,.05);
         const d=dist(bot.entity,live||t);
-        if(d>=4.75) break;
+        if(d>=safeDistance) break;
         await sleep(35);
       }
     }finally{
@@ -1634,7 +1638,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           hardCounter:Boolean((eq.shield&&enemy.usingItem)||(eq.elytra&&isAirborne(t))||enemy.totemPopped),
           spacingLockUntil:state.spacingLockUntil,
           enemyBurstThreat,enemyMaceThreat,
-          enemyMaceHeldClose:Boolean(enemyMaceHeld&&d<=5),
+          enemyMaceHeldClose:Boolean(enemyMaceHeld&&d<=7.5),
           strafeDirection:state.strafe>0?"right":"left"
         };
 
