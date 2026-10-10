@@ -147,6 +147,9 @@ export function createPvpExpertBrain(options={}){
       return {action:c.diagonalPearlCatchReady?"diagonal_pearl_catch":"pearl_catch",style:"utility",priority:9670,reason:c.diagonalPearlCatchReady?"diagonal_pearl_wind_catch":"pearl_wind_catch"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
+    // Do not waste a weapon cooldown on attacks through walls or around
+    // corners. Survival/escape decisions above remain higher priority.
+    if(!c.lineOfSight) return {action:"reacquire",style:styleMemory||"sword",priority:9580,reason:"lost_los_before_attack"};
     if(c.stunSlamReady&&has(c,"axe")&&has(c,"mace"))
       return {action:"stun_slam",style:"mace",priority:9420,reason:"falling_shield_stun_slam"};
     if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady&&c.shieldDrainReady)
