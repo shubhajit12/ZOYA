@@ -802,7 +802,6 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           await equip("sword");
           return false;
         }
-        await lookAtTarget(live,.0);
         bot.attack(live);
         state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
         state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
@@ -845,7 +844,6 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
     state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
     if(!selectHotbarItem("mace"))return false;
-    await lookAtTarget(t,.0);
     bot.attack(t);
     state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
     state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
@@ -1113,8 +1111,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             // Elytra stun-slam uses the same synchronous axe→mace hotbar
             // packet sequence; never pretend a slow inventory transfer is a stun.
             const originalSlot=Number.isInteger(bot.quickBarSlot)?bot.quickBarSlot:null;
-            if(selectHotbarItem("axe")){await lookAtTarget(live,.0);bot.attack(live);selectHotbarItem("mace");await lookAtTarget(live,.0)}
-            bot.attack(live);
+            if(selectHotbarItem("axe")){bot.attack(live);selectHotbarItem("mace");bot.attack(live)}
+            else bot.attack(live);
             if(originalSlot!=null)try{bot.setQuickBarSlot(originalSlot)}catch{}
           }else{
             bot.attack(live);
