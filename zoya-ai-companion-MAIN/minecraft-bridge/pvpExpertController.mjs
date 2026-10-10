@@ -613,21 +613,45 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const crystalCycle=async t=>{
-    if(!has(bot,"crystal")||!has(bot,"obsidian")||!bot.placeEntity)return false;
+    if(!has(bot,"crystal")||!has(bot,"obsidian")||!bot.placeEntity||!t?.position)return false;
     const base=crystalBase(t);
     if(!base||dist(bot.entity,{position:base.position})>4.5)return false;
-    const selfPos=bot.entity.position;
     const crystalPos=base.position.offset(.5,1,.5);
     const enemyDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(t,crystalPos,6,false):null;
     const selfDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(bot.entity,crystalPos,6,false):null;
-    if(selfDamage!=null&&enemyDamage!=null&&selfDamage>Math.max(6,enemyDamage*.8))return false;
-    await equip("crystal");
+    if(selfDamage!=null&&enemyDamage!=null){
+      if(selfDamage>Math.max(6,enemyDamage*.8))return false;
+    }else{
+      // Vanilla Mineflayer has no standard explosion-damage estimator. When
+      // one is not installed, use a conservative geometry/health fallback
+      // instead of silently treating unknown self-damage as safe.
+      const selfDistance=bot.entity.position.distanceTo(crystalPos);
+      if(selfDistance<5.5||(num(bot.health,20)<18&&!state.totemEquipped))return false;
+    }
+    if(!await equip("crystal"))return false;
     try{
       await bot.placeEntity(base,new Vec3(0,1,0));
       await sleep(180);
       const crystals=Object.values(bot.entities||{}).filter(e=>String(e.name||"").toLowerCase()==="end_crystal"&&e.position.distanceTo(crystalPos)<1.4);
-      const c=crystals.sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
-      if(c){await equipBestMelee();await lookAtTarget(c,.0);bot.attack(c);await sleep(120);return true}
+      const crystal=crystals.sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
+      if(!crystal)return false;
+      await equipBestMelee();
+      await lookAtTarget(crystal,.0);
+      const targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+      const selfHealthBefore=num(bot.health,20);
+      bot.attack(crystal);
+      const deadline=Date.now()+450;
+      let confirmed=false;
+      while(state.active&&taskIsActive()&&Date.now()<deadline){
+        const crystalGone=!bot.entities?.[crystal.id];
+        const targetHealthAfter=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+        const targetDamaged=targetHealthBefore!=null&&targetHealthAfter!=null&&targetHealthAfter<targetHealthBefore-.05;
+        const selfDamaged=num(bot.health,20)<selfHealthBefore-.05;
+        if(crystalGone&&(targetDamaged||selfDamaged)){confirmed=true;break}
+        await sleep(20);
+      }
+      log("[PVP-EXPERT] crystal_detonation_confirmed="+confirmed);
+      return confirmed;
     }catch(error){log("[PVP-EXPERT] crystal cycle failed: "+(error?.message||String(error)));}
     return false;
   };
