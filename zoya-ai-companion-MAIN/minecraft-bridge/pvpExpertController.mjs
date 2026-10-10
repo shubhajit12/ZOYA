@@ -1416,6 +1416,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
     };
+    const onTargetStatus=(entity,status)=>{
+      // Minecraft entity status 35 is the server's Totem of Undying activation signal.
+      if(!state.active||Number(status)!==35)return;
+      const target=targetOf(bot,state.targetUsername);
+      if(!target||entity?.id!==target.id)return;
+      state.enemyTotemPopUntil=Date.now()+3500;
+      state.enemyTotemWasEquipped=false;
+      log("[PVP-EXPERT] enemy_totem_pop_confirmed target="+state.targetUsername+" source=entityStatus");
+    };
     const onTargetHurt=(entity,source)=>{
       const target=targetOf(bot,state.targetUsername);
       if(!state.active||!target||entity?.id!==target.id) return;
@@ -1436,6 +1445,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     };
     try{bot.on?.("playerLeft",onTargetGone)}catch{}
     try{bot.on?.("entityHurt",onTargetHurt)}catch{}
+    try{bot.on?.("entityStatus",onTargetStatus)}catch{}
     try{bot.on?.("entityElytraFlew",onElytra)}catch{}
     log("[PVP-EXPERT] brain_version="+brain.version+" difficulty="+combatDifficulty.id+
       " styleLockMs="+combatDifficulty.styleLockMs+" styleSwitchMargin="+combatDifficulty.styleSwitchMargin+
@@ -1682,7 +1692,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "falling_crit": ok=await fallingCrit(t);break;
           case "hit_select": ok=await hitSelect(t);break;
           case "melee_attack": ok=await attack(t,decision.style==="axe"?"axe":decision.style==="mace"?"mace":decision.style==="spear"?"spear":"sword",decision.style==="spear"?5.0:decision.style==="mace"?3.1:3.05);break;
-          case "finish": ok=await attack(t,has(bot,"mace")?"mace":has(bot,"axe")?"axe":"sword",3.1);break;
+          case "finish": ok=await attack(t,has(bot,"sword")?"sword":has(bot,"axe")?"axe":"mace",has(bot,"sword")?3.05:3.1);break;
           case "mace_drop": ok=await attack(t,"mace",3.1);break;
           case "mace_dive": ok=await maceSmash(t);break;
           case "mace_approach": ok=await approach(t,3.0);break;
@@ -1736,6 +1746,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       state.active=false;stop();
       try{bot.removeListener?.("entityElytraFlew",onElytra)}catch{}
       try{bot.removeListener?.("entityHurt",onTargetHurt)}catch{}
+      try{bot.removeListener?.("entityStatus",onTargetStatus)}catch{}
       try{bot.removeListener?.("playerLeft",onTargetGone)}catch{}
     }
   };
