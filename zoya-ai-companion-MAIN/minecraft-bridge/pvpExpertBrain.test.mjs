@@ -392,7 +392,8 @@ console.log("Projectile collision-course regression tests passed.");
 
 // Prefer sustained sword pressure over unnecessary axe swaps when no shield is involved.
 {
-  const d=makeBrain().decide({...base,distance:3.3,enemy:{...base.enemy,shield:false}});
+  const d=makeBrain().decide({...base,distance:3.3,inventory:{...base.inventory,spear:0},
+    capabilities:{...base.capabilities,spear:false},enemy:{...base.enemy,shield:false}});
   assert.equal(d.action,"approach","outside sword reach, close with the sword instead of issuing slow out-of-range axe swings");
   assert.equal(d.style,"sword");
 }
