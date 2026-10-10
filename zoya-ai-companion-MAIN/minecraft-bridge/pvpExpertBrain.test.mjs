@@ -238,8 +238,8 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 
 {
   const d=makeBrain().decide({...base,distance:2.0,enemy:{...base.enemy,shield:true}});
-  assert.equal(d.action,"melee_attack","at close but valid reach, pressure with the sword instead of retreating or trying an out-of-range axe shield break");
-  assert.equal(d.style,"sword");
+  assert.equal(d.action,"melee_attack","at close but valid reach, pressure with an in-range weapon instead of retreating or invoking the shield-break sequence");
+  assert.equal(d.style,"axe","the shield-aware style should keep the axe, but use a normal in-range attack");
 }
 
 {
