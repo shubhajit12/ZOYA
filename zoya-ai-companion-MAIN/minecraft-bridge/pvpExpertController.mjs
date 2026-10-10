@@ -770,7 +770,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!t?.position||!has(bot,"sword")||!has(bot,"mace")||!isAirborne(bot.entity))return false;
     if(!await equip("sword"))return false;
     const deadline=Date.now()+900;
-    let peakY=num(bot.entity?.position?.y);
+    let peakY=Math.max(num(bot.entity?.position?.y),num(state.selfPeakY,bot.entity?.position?.y));
     while(state.active&&taskIsActive()&&Date.now()<deadline){
       const live=targetOf(bot,state.targetUsername)||t;
       if(!live?.position)break;
@@ -1078,12 +1078,24 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         // the target is within real mace hit range and the bot is falling.
         bot.setControlState("forward",true);
         if(d<=3.05&&vy<-.12&&y>num(live.position?.y)+.3){
+          const enemyHeld=lname(live.equipment?.[0]||live.heldItem||"");
+          const enemyShielding=/shield/.test(enemyHeld)&&Boolean(live.isUsingItem||live.metadata?.isUsingItem);
+          if(enemyShielding&&has(bot,"axe")){
+            // Elytra stun-slam: axe tap to interrupt shield use, then switch
+            // back to mace for the same falling impact window.
+            if(!await equip("axe")){await restoreElytra();return false}
+            await lookAtTarget(live,.0);
+            bot.attack(live);
+            await sleep(45);
+            if(!await equip("mace")){await restoreElytra();return false}
+            await lookAtTarget(live,.0);
+          }
           bot.attack(live);
           state.lastAttackAt=Date.now();
           state.lastAttackAttemptAt=state.lastAttackAt;
           state.nextAttackAt=state.lastAttackAt+1667;
           state.attackCount++;
-          log("[PVP-EXPERT] elytra_mace_smash_issued distance="+d.toFixed(2)+"; awaiting server damage confirmation");
+          log("[PVP-EXPERT] elytra_mace_smash_issued distance="+d.toFixed(2)+" shield_stun_attempt="+enemyShielding+"; awaiting server damage confirmation");
           stop();
           await sleep(180);
           await restoreElytra();
