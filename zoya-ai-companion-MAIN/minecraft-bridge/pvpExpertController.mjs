@@ -1673,7 +1673,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(now-state.lastCombatDiagAt>=1000){
           state.lastCombatDiagAt=now;
           log("[PVP-EXPERT] combat_state selfHP="+hp.toFixed(1)+" selfTotemEquipped="+Boolean(state.totemEquipped)+" selfTotemInventory="+count(bot,"totem")+
-            " target="+state.targetUsername+" targetHP="+(Number.isFinite(Number(t.health))?Number(t.health).toFixed(1):"unknown")+
+            " target="+state.targetUsername+" targetHP="+(t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health).toFixed(1):"unknown")+
             " targetHeld="+(enemyHeld||"unknown")+" targetTotemEquipped="+enemyTotemNow+" targetTotemPopWindow="+(Date.now()<state.enemyTotemPopUntil)+
             " maceThreat="+enemyMaceThreat+" maceHeldClose="+Boolean(enemyMaceHeld&&d<=7.5)+" distance="+d.toFixed(2)+
             " attackCooldownMs="+Math.max(0,state.nextAttackAt-Date.now())+" action="+decision.action);
