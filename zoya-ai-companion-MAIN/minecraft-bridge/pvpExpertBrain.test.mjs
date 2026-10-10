@@ -84,6 +84,11 @@ console.log("PvP Expert Brain deterministic tests passed.");
 }
 
 {
+  const d=makeBrain().decide({...base,distance:2.4,attackReadyAt:Date.now()+300,enemy:{...base.enemy,totemPopped:true}});
+  assert.equal(d.action,"finish_wait","a popped totem must not cause Zoya to retreat while her sword cooldown recovers");
+}
+
+{
   const d=makeBrain().decide({...base,health:11,distance:6.5,totemEquipped:false,
     capabilities:{...base.capabilities,totem:false,pearl:false},enemyMaceHeldClose:true,
     enemy:{...base.enemy,held:"mace"}});
