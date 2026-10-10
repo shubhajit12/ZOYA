@@ -30,8 +30,11 @@ function styleScores(c){
   // Elytra setup window; height is a modest opportunity, not a permanent lock.
   if(invHas(c,"mace")) s.mace=12+(c.selfMaceSmashReady?62:0)+(c.windMaceSmashReady?54:0)+(c.elytraMaceReady?58:0)+(c.heightAdvantage?10:0)-(d>8?28:0);
   if(invHas(c,"spear")) s.spear=20+(d>=3&&d<=5?35:0)+(e.retreating?12:0);
-  if(invHas(c,"axe")) s.axe=50+(e.shield?42:0)+(d<=3.5?15:0);
-  if(invHas(c,"sword")) s.sword=48+(d<=3.15?32:0)+(e.airborne?14:0);
+  // Sword is the default combo weapon: its sustained attack speed is more
+  // valuable than an axe's small per-hit advantage. Select axe aggressively
+  // only when a shield counter is actually needed.
+  if(invHas(c,"axe")) s.axe=34+(e.shield?62:0)+(d<=3.5?5:0);
+  if(invHas(c,"sword")) s.sword=56+(d<=3.15?30:0)+(e.airborne?14:0);
   if(invHas(c,"bow")) s.bow=30+(d>=7?35:0)+(e.retreating?18:0);
   if(invHas(c,"crossbow")) s.crossbow=34+(d>=8?35:0)+(e.retreating?18:0);
   if(invHas(c,"crystal")&&invHas(c,"obsidian")) s.crystal=38+(c.crystalArena?38:0)+(d<=6?18:0);
