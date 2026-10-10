@@ -21,6 +21,12 @@ const base={
 }
 
 {
+  const d=makeBrain().decide({...base,distance:2.2});
+  assert.equal(d.action,"melee_attack","in-range sword pressure must attack instead of retreating at 2.2 blocks");
+  assert.equal(d.style,"sword");
+}
+
+{
   const d=makeBrain().decide({...base,distance:8,elytraEquipped:true,elytraMaceReady:true,elytraLaunchReady:true,
     capabilities:{...base.capabilities,elytraMace:true}});
   assert.equal(d.action,"elytra_mace");
