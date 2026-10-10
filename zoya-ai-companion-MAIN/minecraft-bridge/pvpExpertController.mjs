@@ -50,6 +50,10 @@ export function shouldCountHealthDeltaHit(now, pendingEntityHitUntil, lastConfir
   return !(Number(pendingEntityHitUntil)>Number(now)) && isNewHitConfirmation(now,lastConfirmedAt,dedupeWindowMs);
 }
 
+export function shouldApplyFailedActionBackoff(action) {
+  return !new Set(["emergency_disengage","emergency_hold","heal","totem","pearl_escape","pearl_recover","water_clutch","web_escape"]).has(String(action));
+}
+
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
@@ -158,6 +162,26 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     // brain tick immediately turn a retreat into a re-engagement.
     state.emergencyRetreatUntil=Date.now()+3200;
     return true;
+  };
+
+  const emergencyHold=async t=>{
+    if(!t)return false;
+    const deadline=Date.now()+260;
+    try{
+      while(state.active&&taskIsActive()&&Date.now()<deadline){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(live) await lookAtTarget(live,.05);
+        const d=dist(bot.entity,live||t);
+        // "Hold" is a safe-spacing state, not a stationary pause: maintain
+        // a buffer so a moving opponent cannot simply walk back into melee.
+        if(d>=6.25){stop();await sleep(90);return true;}
+        bot.setControlState("back",true);
+        bot.setControlState("sprint",true);
+        bot.setControlState(state.strafe<0?"left":"right",true);
+        await sleep(35);
+      }
+      return true;
+    }finally{stop();}
   };
 
   const spacingRetreat=async t=>{
@@ -948,7 +972,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
         let decision=brain.decide(ctx);
         const blockedUntil=state.failedActions[decision.action]||0;
-        if(blockedUntil>Date.now()){
+        // A stale failure cooldown must never replace survival, healing, or
+        // escape decisions with an approach/attack action at critical health.
+        if(shouldApplyFailedActionBackoff(decision.action)&&blockedUntil>Date.now()){
           decision = d<=3.3
             ? {action:"defensive_strafe",style:state.style||"sword",priority:5000,reason:"failed_action_backoff"}
             : {action:"approach",style:state.style||"sword",priority:5000,reason:"failed_action_backoff"};
@@ -979,13 +1005,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             break;
           }
           case "emergency_disengage": ok=await emergencyDisengage(t);break;
-          case "emergency_hold":
-            // Already at a safe gap with no recovery item: stop issuing retreat
-            // movement every tick and wait for health/target state to change.
-            stop();
-            await sleep(140);
-            ok=true;
-            break;
+          case "emergency_hold": ok=await emergencyHold(t);break;
           case "spacing_retreat": ok=await spacingRetreat(t);break;
           case "spacing_hold": {
             await lookAtTarget(t,.04);
