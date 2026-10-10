@@ -1116,6 +1116,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const enemyClosing=((num(targetVelocity.x)*(num(bot.entity?.position?.x)-num(t.position?.x))+num(targetVelocity.z)*(num(bot.entity?.position?.z)-num(t.position?.z)))/enemyHorizDist)>.018;
         const enemyMeleeWeapon=/sword|axe|spear|mace|trident/.test(enemyHeld);
         const meleeBlockReady=enemyClosing&&enemyMeleeWeapon&&d>=2.65&&d<=4.25&&!enemyMaceThreat;
+        const botDx=num(bot.entity?.position?.x)-num(t.position?.x);
+        const botDz=num(bot.entity?.position?.z)-num(t.position?.z);
+        const botHoriz=Math.hypot(botDx,botDz)||1;
+        const targetYaw=num(t.yaw);
+        const targetFacingDot=(-Math.sin(targetYaw)*botDx+Math.cos(targetYaw)*botDz)/botHoriz;
+        const backstabReady=d>=2.15&&d<=3.05&&targetFacingDot<.35;
         const enemy={
           health:th,shield:eq.shield,usingItem:Boolean(t.isUsingItem||t.metadata?.isUsingItem),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
