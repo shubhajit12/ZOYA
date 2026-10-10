@@ -606,17 +606,81 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
 
-  // Defensive pearl catch: only commit after a safe landing has been found.
+  // Pearl catching is the actual wind-charge/pearl combo: self-launch,
+  // throw a high pearl, then hit the pearl with a second wind charge to teleport
+  // to it and gain a fast aerial mace window. It is not an ordinary escape pearl.
   const pearlCatch=async(t,diagonal=false)=>{
-    if(!bot.entity?.position||!has(bot,"pearl"))return false;
-    const falling=isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.12;
-    const bad=hazard()||Boolean(bot.entity?.position?.y<num(t?.position?.y)-4);
-    if(!falling&&!bad)return false;
-    const mode=diagonal?"diagonal_catch":"escape";
-    if(!pearlDestination(t,mode))return false;
-    const ok=await throwPearl(t,mode);
-    if(ok)log("[PVP-EXPERT] pearl_catch mode="+mode+" safe_landing=validated");
-    return ok;
+    if(!t?.position||!has(bot,"pearl")||count(bot,"wind")<2||!bot.entity?.position)return false;
+    if(Date.now()<num(state.pearlCatchCooldownUntil))return false;
+    const p=bot.entity.position,tp=t.position;
+    const dx=p.x-tp.x,dz=p.z-tp.z,len=Math.hypot(dx,dz)||1;
+    const awayX=dx/len,awayZ=dz/len,sideX=-awayZ,sideZ=awayX;
+    const before=new Set(Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))).map(e=>e.id));
+    const startY=num(p.y);
+    try{
+      // Launch off the ground with the first wind charge.
+      if(bot.entity?.onGround===false)return false;
+      bot.setControlState("jump",true);
+      await sleep(55);
+      bot.setControlState("jump",false);
+      if(!await equip("wind"))return false;
+      await bot.lookAt(p.offset(0,-1.25,0),true);
+      bot.activateItem();await sleep(65);bot.deactivateItem();
+      let launched=false;
+      const launchUntil=Date.now()+650;
+      while(state.active&&taskIsActive()&&Date.now()<launchUntil){
+        if(num(bot.entity?.position?.y)-startY>=.25&&num(bot.entity?.velocity?.y)>.12){launched=true;break}
+        await sleep(20);
+      }
+      if(!launched)return false;
+
+      // Throw high; the diagonal variant adds a lateral vector so the pearl
+      // travels across the opponent's line instead of straight up their axis.
+      if(!await equip("pearl"))return false;
+      const hx=diagonal?(awayX*3.0+sideX*5.0):awayX*2.0;
+      const hz=diagonal?(awayZ*3.0+sideZ*5.0):awayZ*2.0;
+      await bot.lookAt(new Vec3(p.x+hx,p.y+17,p.z+hz),true);
+      bot.activateItem();await sleep(65);bot.deactivateItem();
+      state.lastPearlAt=Date.now();state.pearlCooldownUntil=state.lastPearlAt+1000;state.lastPearlType=diagonal?"diagonal_catch":"catch";
+
+      let pearl=null;
+      const pearlUntil=Date.now()+600;
+      while(state.active&&taskIsActive()&&Date.now()<pearlUntil&&!pearl){
+        pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!before.has(e.id)&&e.position)
+          .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0]||null;
+        if(!pearl)await sleep(20);
+      }
+      if(!pearl)return false;
+
+      // Use the second charge to collide with the live pearl projectile.
+      if(!await equip("wind"))return false;
+      const v=pearl.velocity||{x:0,y:0,z:0};
+      await bot.lookAt(pearl.position.offset(num(v.x)*3,num(v.y)*3,num(v.z)*3),true);
+      const beforePos=bot.entity.position.clone();
+      bot.activateItem();await sleep(65);bot.deactivateItem();
+      const catchUntil=Date.now()+1200;
+      let caught=false;
+      while(state.active&&taskIsActive()&&Date.now()<catchUntil){
+        if(bot.entity.position.distanceTo(beforePos)>3.0){caught=true;break}
+        await sleep(25);
+      }
+      state.pearlCatchCooldownUntil=Date.now()+3500;
+      await equipBestMelee();
+      log("[PVP-EXPERT] pearl_catch mode="+(diagonal?"diagonal":"standard")+" pearl_found=true teleport_confirmed="+caught);
+      if(caught&&has(bot,"mace")){
+        await sleep(80);
+        await maceSmash(t);
+      }
+      return caught;
+    }catch(error){
+      log("[PVP-EXPERT] pearl_catch failed: "+(error?.message||String(error)));
+      try{bot.deactivateItem()}catch{}
+      stop();
+      await equipBestMelee();
+      return false;
+    }finally{
+      try{bot.setControlState("jump",false)}catch{}
+    }
   };
 
   // Opponent-targeted wind charge is separate from the self-launch mace combo.
