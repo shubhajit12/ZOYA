@@ -550,9 +550,6 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const projectileThreat=()=>{
-    try{
-      if(bot.projectiles?.projectileAtMe||bot.projectiles?.isAimedAt)return true;
-    }catch{}
     const p=bot.entity?.position;if(!p)return false;
     const playerVelocity=bot.entity?.velocity||{x:0,y:0,z:0};
     return Object.values(bot.entities||{}).some(e=>{
