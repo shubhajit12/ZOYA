@@ -159,12 +159,16 @@ export function createPvpExpertBrain(options={}){
     if(c.windMaceSmashReady&&has(c,"mace")&&d>=3.5&&d<=6.5&&c.lineOfSight&&c.health>7)
       return {action:"wind_mace_launch",style:"mace",priority:9080,reason:"wind_charge_mace_setup"};
 
+    if(c.elytraStunSlamReady&&has(c,"elytraMace")&&c.elytraLaunchReady&&invHas(c,"mace"))
+      return {action:"elytra_mace",style:"elytra",priority:9120,reason:"elytra_shield_stun_slam"};
+    if(c.rocketMaceReady&&has(c,"elytraMace")&&c.elytraLaunchReady&&invHas(c,"mace")&&d>=7)
+      return {action:"rocket_mace",style:"elytra",priority:9110,reason:"firework_rocket_mace"};
     if(has(c,"elytraMace")&&c.elytraMaceReady&&c.elytraLaunchReady&&invHas(c,"mace")){
       if(d>=7||c.heightAdvantage) return {action:"elytra_mace",style:"elytra",priority:9100,reason:"elytra_mace_setup"};
     }
 
     if(c.maceDTapReady&&has(c,"mace")&&has(c,"sword")&&d<=3.1&&attackReady)
-      return {action:"mace_d_tap",style:"mace",priority:9060,reason:"mace_smash_sword_followup"};
+      return {action:"mace_d_tap",style:"mace",priority:9060,reason:"mace_attribute_swap"};
     if(c.selfMaceSmashReady&&has(c,"mace")&&d<=3.1&&attackReady)
       return {action:"mace_dive",style:"mace",priority:9050,reason:"self_mace_smash_window"};
     if(e.airborne&&e.falling&&has(c,"mace")&&d<=6.2&&attackReady)
