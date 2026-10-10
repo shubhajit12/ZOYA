@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, pressureOrbitMode } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -235,6 +235,12 @@ console.log("Theobald-impossible difficulty regression tests passed.");
 }
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
+
+// Attack attempts are only successful when the server confirms a hit.
+assert.equal(isHitConfirmed(4,5,20,20),true,"an entityHurt hit counter increment confirms a hit");
+assert.equal(isHitConfirmed(4,4,20,18),true,"a target health decrease confirms a hit when entityHurt is unavailable");
+assert.equal(isHitConfirmed(4,4,20,20),false,"a swing with no hit or health change is not a successful attack");
+assert.equal(isHitConfirmed(4,4,20,20.5),false,"target healing must not be counted as attack success");
 
 // Pearl catch must not report a wind-charge knockback as a teleport.
 assert.equal(isConfirmedPearlCatch(false, true), false, "no displacement means no confirmed catch");
