@@ -22,9 +22,12 @@ export const PVP_DIFFICULTIES=Object.freeze({
     attackRange:3.05,critMinRange:2.45,aggression:1.1
   }),
   impossible:Object.freeze({
-    id:"impossible",styleLockMs:950,styleSwitchMargin:18,strafeMs:120,sprintResetMs:82,
-    wTap:true,sTap:true,jumpReset:true,predictLead:.14,
-    attackRange:3.05,critMinRange:2.45,aggression:1.18
+    // Deliberately tighter decision/movement cadence than Hard. This controls
+    // legitimate input timing and tactical switching; it never enlarges
+    // Minecraft's actual hit reach or bypasses server attack cooldowns.
+    id:"impossible",styleLockMs:500,styleSwitchMargin:10,strafeMs:95,sprintResetMs:62,
+    wTap:true,sTap:true,jumpReset:true,predictLead:.18,
+    attackRange:3.05,critMinRange:2.45,aggression:1.25
   })
 });
 
