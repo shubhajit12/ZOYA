@@ -316,8 +316,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const rod=async t=>{
-    if(!has(bot,"fishing_rod"))return false;
-    if(!await equip("fishing_rod","hand"))return false;
+    // Inventory aliases are centralized in ITEMS. The old "fishing_rod" key
+    // did not exist, so this handler always returned false before equipping.
+    if(!has(bot,"rod"))return false;
+    if(!await equip("rod","hand"))return false;
     await lookAtTarget(t,.1);
     try{bot.activateItem();await sleep(180);bot.deactivateItem();return true}catch{return false}
   };
@@ -673,12 +675,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const catchUntil=Date.now()+1200;
       let caught=false;
       while(state.active&&taskIsActive()&&Date.now()<catchUntil){
-        if(bot.entity.position.distanceTo(beforePos)>3.0){caught=true;break}
+        const pearlStillExists=Boolean(bot.entities?.[pearl.id]);
+        const displaced=bot.entity.position.distanceTo(beforePos)>3.0;
+        // A wind-charge blast can move ZOYA several blocks without catching
+        // the pearl. Displacement alone is not teleport evidence: require the
+        // tracked pearl entity to disappear as well before calling this caught.
+        if(displaced&&!pearlStillExists){caught=true;break}
         await sleep(25);
       }
       state.pearlCatchCooldownUntil=Date.now()+3500;
       await equipBestMelee();
-      log("[PVP-EXPERT] pearl_catch mode="+(diagonal?"diagonal":"standard")+" pearl_found=true teleport_confirmed="+caught);
+      log("[PVP-EXPERT] pearl_catch mode="+(diagonal?"diagonal":"standard")+" pearl_found=true pearl_removed="+(!bot.entities?.[pearl.id])+" teleport_confirmed="+caught);
       if(caught&&has(bot,"mace")){
         await sleep(80);
         await maceSmash(t);
@@ -1478,6 +1485,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "wind_charge_cancel": ok=await windChargeCancel(t);break;
           case "wind_charge_reset": ok=await windChargeReset(t);break;
           case "shield_drain": ok=await shieldDrain(t);break;
+          case "rod_control": ok=await rod(t);break;
           case "backstab": ok=await backstab(t);break;
           case "mace_d_tap": ok=await maceDTap(t);break;
           case "mace_attribute_swap": ok=await maceAttributeSwap(t);break;
