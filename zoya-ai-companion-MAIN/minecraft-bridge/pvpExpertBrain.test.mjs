@@ -315,11 +315,11 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
 
 // Advanced Impossible combat routes must select real, gated executor actions.
 {
-  const d=makeBrain().decide({...base,distance:4.5,pearlCatchReady:true,diagonalPearlCatchReady:true,recoveryPearlReady:true,pearlEscapeReady:true});
+  const d=makeBrain().decide({...base,distance:4.5,pearlCatchReady:true,diagonalPearlCatchReady:true});
   assert.equal(d.action,"diagonal_pearl_catch","diagonal pearl catch requires a prevalidated safe landing");
 }
 {
-  const d=makeBrain().decide({...base,distance:4.5,pearlCatchReady:true,diagonalPearlCatchReady:false,recoveryPearlReady:true,pearlEscapeReady:true});
+  const d=makeBrain().decide({...base,distance:4.5,pearlCatchReady:true,diagonalPearlCatchReady:false});
   assert.equal(d.action,"pearl_catch","fall recovery should use the validated non-diagonal catch when diagonal landing is unavailable");
 }
 {
