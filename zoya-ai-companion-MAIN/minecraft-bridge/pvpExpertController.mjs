@@ -129,7 +129,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const emergencyDisengage=async t=>{
     if(!t)return false;
     const start=dist(bot.entity,t);
-    const deadline=Date.now()+850;
+    const deadline=Date.now()+1100;
     try{
       bot.setControlState("back",true);
       bot.setControlState("sprint",true);
@@ -138,7 +138,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const live=targetOf(bot,state.targetUsername)||t;
         if(live) await lookAtTarget(live,.05);
         const d=dist(bot.entity,live||t);
-        if(d>=4.25||d>=start+1.0) break;
+        if(d>=4.75) break;
         await sleep(35);
       }
     }finally{
@@ -792,6 +792,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // entities. Some servers omit source metadata, so the short attack-time
       // + target-identity window is the fallback for PvP players.
       if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;
+      // Health-delta polling and entityHurt may report the same server hit.
+      // Count the first confirmation only; the 450ms attack window is also
+      // the maximum plausible overlap for these two Mineflayer signals.
+      if(Date.now()-state.lastAttackConfirmedAt<=450) return;
       state.hits++;
       state.lastAttackConfirmedAt=Date.now();
       log("[PVP-EXPERT] hit_confirmed source=entityHurt target="+state.targetUsername+" totalHits="+state.hits);
@@ -835,8 +839,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         }
         if(state.lastTargetHealth!=null&&state.lastTargetHealth>th){
           const dealt=state.lastTargetHealth-th;
-          state.hits++;state.damageDealt+=dealt;state.lastAttackConfirmedAt=Date.now();
-          log("[PVP-EXPERT] hit_confirmed damage="+dealt.toFixed(2)+" totalHits="+state.hits);
+          state.damageDealt+=dealt;
+          // Fallback for servers where entityHurt is missing. If the event
+          // already counted this hit, do not count the health delta again.
+          if(Date.now()-state.lastAttackConfirmedAt>450){
+            state.hits++;
+            state.lastAttackConfirmedAt=Date.now();
+            log("[PVP-EXPERT] hit_confirmed source=health_delta damage="+dealt.toFixed(2)+" totalHits="+state.hits);
+          }
         }
         // Combo timing is based on the target's actual landing transition, not
         // merely on seeing an airborne entity at any point during its jump.
