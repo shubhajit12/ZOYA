@@ -573,10 +573,10 @@ function connect(config, { preserveReconnectAttempt = false } = {}) {
         try { minecraftRuntime.cancelCurrentTask("server kicked the bot"); } catch {}
       }
     });
-    bot.once("death", () => {
+    bot.on("death", () => {
       debugLog("[EVENT] Zoya died. Waiting for respawn/state recovery.");
     });
-    bot.once("respawn", () => {
+    bot.on("respawn", () => {
       debugLog("[EVENT] Zoya respawned.");
       collectMinecraftState();
     });
