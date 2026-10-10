@@ -42,6 +42,10 @@ export function estimateObservedFallDistance(entity, peakY) {
   return Math.max(0,num(entity?.fallDistance),num(peakY,y)-y);
 }
 
+export function isNewHitConfirmation(now, lastConfirmedAt, dedupeWindowMs=450) {
+  return !Number.isFinite(Number(lastConfirmedAt)) || Number(now)-Number(lastConfirmedAt)>Math.max(0,Number(dedupeWindowMs)||0);
+}
+
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
@@ -795,7 +799,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // Health-delta polling and entityHurt may report the same server hit.
       // Count the first confirmation only; the 450ms attack window is also
       // the maximum plausible overlap for these two Mineflayer signals.
-      if(Date.now()-state.lastAttackConfirmedAt<=450) return;
+      if(!isNewHitConfirmation(Date.now(),state.lastAttackConfirmedAt,450)) return;
       state.hits++;
       state.lastAttackConfirmedAt=Date.now();
       log("[PVP-EXPERT] hit_confirmed source=entityHurt target="+state.targetUsername+" totalHits="+state.hits);
@@ -842,7 +846,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           state.damageDealt+=dealt;
           // Fallback for servers where entityHurt is missing. If the event
           // already counted this hit, do not count the health delta again.
-          if(Date.now()-state.lastAttackConfirmedAt>450){
+          if(isNewHitConfirmation(Date.now(),state.lastAttackConfirmedAt,450)){
             state.hits++;
             state.lastAttackConfirmedAt=Date.now();
             log("[PVP-EXPERT] hit_confirmed source=health_delta damage="+dealt.toFixed(2)+" totalHits="+state.hits);
