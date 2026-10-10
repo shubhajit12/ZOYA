@@ -83,13 +83,18 @@ export function createPvpExpertBrain(options={}){
         return {action:"totem",style:"utility",priority:9900,reason:"emergency_totem"};
       if(c.recoveryPearlReady&&c.pearlEscapeReady)
         return {action:"pearl_escape",style:"utility",priority:9880,reason:"emergency_pearl_recovery"};
-      // Once critically low, never re-engage simply because the opponent
-      // crossed back inside the combat radius. Stay in survival mode until
-      // healing or a meaningful recovery window exists.
+      // Recovery lock controls movement only; it must never suppress a heal
+      // after ZOYA has already created the safe gap. The old ordering held
+      // position for the entire lock even at safe distance, wasting golden-apple
+      // regeneration time while health was critical.
+      if(has(c,"heal")&&d>=4.75)
+        return {action:"heal",style:"utility",priority:9910,reason:"emergency_heal_safe_gap"};
+      // If close and a validated landing exists, spend a pearl to create the
+      // gap instead of repeatedly running into the same retreat lock.
+      if(c.recoveryPearlReady&&c.pearlEscapeReady&&d<4.75)
+        return {action:"pearl_escape",style:"utility",priority:9900,reason:"emergency_pearl_create_gap"};
       if(c.emergencyRetreatUntil&&now<c.emergencyRetreatUntil)
         return {action:d>=4.75?"emergency_hold":"emergency_disengage",style:"utility",priority:9890,reason:d>=4.75?"emergency_safe_distance_hold":"emergency_retreat_lock"};
-      if(has(c,"heal")&&d>=4.75)
-        return {action:"heal",style:"utility",priority:9750,reason:"emergency_heal"};
       if(has(c,"heal")&&d<4.75)
         return {action:"emergency_disengage",style:"utility",priority:9800,reason:"emergency_heal_distance"};
       if(has(c,"pearl")&&c.pearlEscapeReady)
@@ -108,6 +113,10 @@ export function createPvpExpertBrain(options={}){
       return {action:"totem",style:"utility",priority:9845,reason:"mace_burst_totem"};
     if(c.enemyBurstThreat&&has(c,"totem")&&!c.totemEquipped)
       return {action:"totem",style:"utility",priority:9840,reason:"burst_threat_totem"};
+    // At low health, a validated pearl is a tactical disengage when the
+    // opponent is too close to eat safely. Otherwise preserve the golden apple.
+    if(low&&c.recoveryPearlReady&&c.pearlEscapeReady&&d<num(c.healDistanceMin,4.2))
+      return {action:"pearl_escape",style:"utility",priority:9710,reason:"low_health_pearl_escape"};
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
