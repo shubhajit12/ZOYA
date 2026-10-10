@@ -60,6 +60,19 @@ export function isHitConfirmed(hitsBefore,hitsAfter,healthBefore,healthAfter) {
   return hitCountIncreased||healthDropped;
 }
 
+export function isEnemyMaceDiveThreat({heldItem="",airborne=false,distance=Infinity,targetY=0,selfY=0,targetVelocityY=0,verticalDelta=0}={}) {
+  if(!/mace/i.test(String(heldItem)))return false;
+  const d=Number(distance),vy=Number(targetVelocityY),dy=Number(verticalDelta);
+  const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
+  const targetHeight=finite(targetY)-finite(selfY);
+  // A mace holder already airborne and within 6.5 blocks is a credible dive
+  // threat before the falling-velocity sample arrives. Also react to a visible
+  // drop or a close downward strike. Do not wait until health becomes critical.
+  return (Boolean(airborne)&&((Number.isFinite(d)&&d<=6.5)||targetHeight>.35||finite(vy)<-.08)) ||
+    (Number.isFinite(d)&&d<=8&&finite(dy)<-.18) ||
+    (Number.isFinite(d)&&d<=3.2&&finite(vy)<-.03);
+}
+
 export function shouldCountHealthDeltaHit(now, pendingEntityHitUntil, lastConfirmedAt, dedupeWindowMs=450) {
   return !(Number(pendingEntityHitUntil)>Number(now)) && isNewHitConfirmation(now,lastConfirmedAt,dedupeWindowMs);
 }
@@ -1517,11 +1530,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const enemyHeld=lname(t.equipment?.[0]||t.heldItem||"");
         const enemyMaceHeld=/mace/.test(enemyHeld);
         const enemyWindHeld=/wind_charge/.test(enemyHeld);
-        const enemyMaceThreat=enemyMaceHeld&&(
-          (isAirborne(t)&&(num(targetVelocity.y)<-.08||num(t.position?.y)>num(bot.entity?.position?.y)+.6))||
-          targetVerticalDelta<-.18||
-          (d<=3.2&&num(targetVelocity.y)<-.03)
-        );
+        const enemyMaceThreat=isEnemyMaceDiveThreat({
+          heldItem:enemyHeld,airborne:isAirborne(t),distance:d,
+          targetY:num(t.position?.y),selfY:num(bot.entity?.position?.y),
+          targetVelocityY:num(targetVelocity.y),verticalDelta:targetVerticalDelta
+        });
         const enemyBurstThreat=(enemyMaceThreat||enemyWindHeld&&(isAirborne(t)||d<=4.0));
         const enemyHorizDist=Math.max(.001,Math.hypot(num(bot.entity?.position?.x)-num(t.position?.x),num(bot.entity?.position?.z)-num(t.position?.z)));
         const enemyClosing=((num(targetVelocity.x)*(num(bot.entity?.position?.x)-num(t.position?.x))+num(targetVelocity.z)*(num(bot.entity?.position?.z)-num(t.position?.z)))/enemyHorizDist)>.018;
