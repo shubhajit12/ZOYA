@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, pressureOrbitMode } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isProjectileOnCollisionCourse, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -287,6 +287,13 @@ console.log("Impossible style-selection regression tests passed.");
   const d=makeBrain().decide({...base,distance:3.4,projectileThreat:true,shieldReady:true,enemy:{...base.enemy,shield:false}});
   assert.equal(d.action,"shield","a detected projectile should use a ready shield");
 }
+
+// Projectile defense must predict a collision, not shield against every nearby projectile.
+assert.equal(isProjectileOnCollisionCourse({x:5,y:0,z:0},{x:-0.5,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0}),true,"an incoming projectile on a collision path should trigger defense");
+assert.equal(isProjectileOnCollisionCourse({x:5,y:0,z:0},{x:0.5,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0}),false,"a projectile moving away must not trigger defense");
+assert.equal(isProjectileOnCollisionCourse({x:5,y:0,z:4},{x:-0.5,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0}),false,"a projectile on a clear miss trajectory must not trigger defense");
+assert.equal(isProjectileOnCollisionCourse({x:20,y:0,z:0},{x:-0.1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0}),false,"a projectile outside the prediction horizon must not trigger defense");
+console.log("Projectile collision-course regression tests passed.");
 
 // Respawn-anchor PvP is only eligible where anchors actually explode.
 {
