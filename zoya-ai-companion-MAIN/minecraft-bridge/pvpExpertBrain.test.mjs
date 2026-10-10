@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -212,3 +212,21 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 }
 
 console.log("Theobald-impossible difficulty regression tests passed.");
+
+{
+  const d=makeBrain().decide({...base,health:5,distance:4.2,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:Date.now()+2000});
+  assert.equal(d.action,"emergency_disengage","an active retreat lock must keep moving until the full 4.75-block safety gap is reached");
+}
+
+{
+  const d=makeBrain().decide({...base,health:5,distance:4.8,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:Date.now()+2000});
+  assert.equal(d.action,"emergency_hold","the lock must stop retreat after the 4.75-block safety gap is reached");
+}
+
+{
+  assert.equal(isNewHitConfirmation(1000,0,450),true);
+  assert.equal(isNewHitConfirmation(1100,1000,450),false,"entityHurt + health delta for one attack must count once");
+  assert.equal(isNewHitConfirmation(1501,1000,450),true,"a later attack confirmation should count after the dedupe window");
+}
+
+console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
