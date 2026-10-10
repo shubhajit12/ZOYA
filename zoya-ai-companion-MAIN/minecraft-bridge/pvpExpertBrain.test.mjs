@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, pressureOrbitMode } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, pressureOrbitMode } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -236,6 +236,13 @@ console.log("Theobald-impossible difficulty regression tests passed.");
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
 
+// Pearl catch must not report a wind-charge knockback as a teleport.
+assert.equal(isConfirmedPearlCatch(false, true), false, "no displacement means no confirmed catch");
+assert.equal(isConfirmedPearlCatch(true, true), false, "a blast that moves ZOYA while the pearl still exists is not a confirmed catch");
+assert.equal(isConfirmedPearlCatch(false, false), false, "pearl disappearance alone is not enough");
+assert.equal(isConfirmedPearlCatch(true, false), true, "displacement plus removal of the tracked pearl confirms the catch sequence");
+console.log("Pearl catch confirmation regression tests passed.");
+
 {
   const d=makeBrain().decide({...base,health:7.5,distance:3.2,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:0});
   assert.equal(d.action,"emergency_disengage","at 7.5 HP, ZOYA must remain in survival mode instead of re-engaging while vulnerable");
@@ -279,6 +286,12 @@ console.log("Impossible style-selection regression tests passed.");
 {
   const d=makeBrain().decide({...base,distance:3.4,projectileThreat:true,shieldReady:true,enemy:{...base.enemy,shield:false}});
   assert.equal(d.action,"shield","a detected projectile should use a ready shield");
+}
+
+// Rod control must be reachable only when the controller exposes the rod capability.
+{
+  const d=makeBrain().decide({...base,distance:6,capabilities:{...base.capabilities,rod:true},enemy:{...base.enemy,retreating:true}});
+  assert.equal(d.action,"rod_control","a retreating target at rod range should select the wired rod executor");
 }
 
 // Expert sword pressure keeps real vanilla spacing instead of walking into the target.
