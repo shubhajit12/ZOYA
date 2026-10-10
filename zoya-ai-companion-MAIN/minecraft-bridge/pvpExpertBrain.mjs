@@ -118,8 +118,8 @@ export function createPvpExpertBrain(options={}){
     if(low&&c.recoveryPearlReady&&c.pearlEscapeReady&&d<num(c.healDistanceMin,4.2))
       return {action:"pearl_escape",style:"utility",priority:9710,reason:"low_health_pearl_escape"};
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
-    if(c.pearlCatchReady&&c.recoveryPearlReady&&c.pearlEscapeReady)
-      return {action:c.diagonalPearlCatchReady?"diagonal_pearl_catch":"pearl_catch",style:"utility",priority:9670,reason:c.diagonalPearlCatchReady?"diagonal_fall_recovery":"fall_recovery"};
+    if(c.pearlCatchReady)
+      return {action:c.diagonalPearlCatchReady?"diagonal_pearl_catch":"pearl_catch",style:"utility",priority:9670,reason:c.diagonalPearlCatchReady?"diagonal_pearl_wind_catch":"pearl_wind_catch"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
     if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady&&c.shieldDrainReady)
