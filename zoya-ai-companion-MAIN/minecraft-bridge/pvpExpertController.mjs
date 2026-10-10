@@ -1479,7 +1479,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             debuff:has(bot,"potion"),
             elytraMace:Boolean(elytraEquipped&&has(bot,"mace")),
           },
-          elytraEquipped,elytraLaunchReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&(bot.entity?.elytraFlying===true||(bot.entity?.onGround===false&&num(bot.entity?.velocity?.y)<-.05)||Boolean(bot.entity?.position?.y>t.position?.y+2))),
+          elytraEquipped,
+          // Root-level fields are consumed by the brain; capability flags above
+          // are only for has(ctx, key) gates.
+          anchorArena:["overworld","the_end"].includes(String(bot.game?.dimension||"")),
+          anchorCycleSafe:["overworld","the_end"].includes(String(bot.game?.dimension||""))&&has(bot,"anchor")&&has(bot,"glowstone")&&num(bot.health,20)>=10,
+          elytraLaunchReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&(bot.entity?.elytraFlying===true||(bot.entity?.onGround===false&&num(bot.entity?.velocity?.y)<-.05)||Boolean(bot.entity?.position?.y>t.position?.y+2))),
           elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6&&lineOfSight),
            rocketMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&d>=6&&lineOfSight),
            elytraStunSlamReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"axe")&&eq.shield&&enemy.usingItem&&d>=6&&lineOfSight),
