@@ -440,7 +440,8 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
   const d=makeBrain().decide({...base,distance:4.5,windMaceSmashReady:true,enemyMaceHeldClose:true,
     capabilities:{...base.capabilities,wind:true,mace:true},enemy:{...base.enemy,held:"mace"}});
   assert.notEqual(d.action,"wind_mace_launch","a close mace holder makes self-launching into the air an unsafe opening");
-  assert.equal(d.style,"sword","prefer grounded sword pressure against a nearby mace holder");
+  assert.equal(d.style,"spear","prefer grounded mid-range spear pressure over a risky self-launch when a spear is available");
+  assert.equal(d.action,"spear_pressure");
 }
 
 {
