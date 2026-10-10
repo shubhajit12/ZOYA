@@ -610,8 +610,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // throw a high pearl, then hit the pearl with a second wind charge to teleport
   // to it and gain a fast aerial mace window. It is not an ordinary escape pearl.
   const pearlCatch=async(t,diagonal=false)=>{
-    if(!t?.position||!has(bot,"pearl")||count(bot,"wind")<2||!bot.entity?.position)return false;
+    if(!t?.position||!has(bot,"pearl")||!has(bot,"mace")||count(bot,"wind")<2||!bot.entity?.position)return false;
     if(Date.now()<num(state.pearlCatchCooldownUntil))return false;
+    state.pearlCatchCooldownUntil=Date.now()+1200;
     const p=bot.entity.position,tp=t.position;
     const dx=p.x-tp.x,dz=p.z-tp.z,len=Math.hypot(dx,dz)||1;
     const awayX=dx/len,awayZ=dz/len,sideX=-awayZ,sideZ=awayX;
@@ -642,6 +643,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await bot.lookAt(new Vec3(p.x+hx,p.y+17,p.z+hz),true);
       bot.activateItem();await sleep(65);bot.deactivateItem();
       state.lastPearlAt=Date.now();state.pearlCooldownUntil=state.lastPearlAt+1000;state.lastPearlType=diagonal?"diagonal_catch":"catch";
+      state.pearlCatchCooldownUntil=Date.now()+3500;
 
       let pearl=null;
       const pearlUntil=Date.now()+600;
