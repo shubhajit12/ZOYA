@@ -363,14 +363,26 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const sideX=-awayZ,sideZ=awayX;
     const candidates=[];
     const push=(x,z)=>candidates.push(new Vec3(x,p.y,z));
-    if(mode==="ambush"){
+    if(mode==="ambush"||mode==="grapple"){
       const tx=(tp.x-p.x)/len,tz=(tp.z-p.z)/len;
-      for(const r of [5.5,7,8.5]) push(p.x+tx*r,p.z+tz*r);
+      const ranges=mode==="grapple"?[9,11,13,15]:[5.5,7,8.5];
+      for(const r of ranges){
+        push(p.x+tx*r,p.z+tz*r);
+        if(mode==="grapple"){
+          push(p.x+tx*r+sideX*2.0,p.z+tz*r+sideZ*2.0);
+          push(p.x+tx*r-sideX*2.0,p.z+tz*r-sideZ*2.0);
+        }
+      }
     }else{
       for(const r of [5.5,7,8.5,10]){
-        push(p.x+awayX*r,p.z+awayZ*r);
-        push(p.x+awayX*r+sideX*2.5,p.z+awayZ*r+sideZ*2.5);
-        push(p.x+awayX*r-sideX*2.5,p.z+awayZ*r-sideZ*2.5);
+        if(mode==="diagonal_catch"){
+          push(p.x+awayX*r+sideX*3.25,p.z+awayZ*r+sideZ*3.25);
+          push(p.x+awayX*r-sideX*3.25,p.z+awayZ*r-sideZ*3.25);
+        }else{
+          push(p.x+awayX*r,p.z+awayZ*r);
+          push(p.x+awayX*r+sideX*2.5,p.z+awayZ*r+sideZ*2.5);
+          push(p.x+awayX*r-sideX*2.5,p.z+awayZ*r-sideZ*2.5);
+        }
       }
     }
     for(const c of candidates){
@@ -387,7 +399,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(/lava|fire|magma|cactus|powder_snow/.test(String(below.name||"").toLowerCase()))continue;
         const landing=new Vec3(c.x,y,c.z);
         const d=landing.distanceTo(tp);
-        if(mode==="escape"&&d<3.5)continue;
+        if((mode==="escape"||mode==="diagonal_catch")&&d<3.5)continue;
         return landing.offset(.5,.35,.5);
       }
     }
@@ -591,6 +603,121 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       stop();
       return false;
     }
+  };
+
+
+  // Defensive pearl catch: only commit after a safe landing has been found.
+  const pearlCatch=async(t,diagonal=false)=>{
+    if(!bot.entity?.position||!has(bot,"pearl"))return false;
+    const falling=isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.12;
+    const bad=hazard()||Boolean(bot.entity?.position?.y<num(t?.position?.y)-4);
+    if(!falling&&!bad)return false;
+    const mode=diagonal?"diagonal_catch":"escape";
+    if(!pearlDestination(t,mode))return false;
+    const ok=await throwPearl(t,mode);
+    if(ok)log("[PVP-EXPERT] pearl_catch mode="+mode+" safe_landing=validated");
+    return ok;
+  };
+
+  // Opponent-targeted wind charge is separate from the self-launch mace combo.
+  const windChargeCancel=async t=>{
+    if(!t?.position||!has(bot,"wind")||!isAirborne(t))return false;
+    const d=dist(bot.entity,t);
+    if(d<3.0||d>7.0)return false;
+    if(!await equip("wind"))return false;
+    try{
+      await lookAtTarget(t,.02);
+      bot.activateItem();
+      await sleep(70);
+      bot.deactivateItem();
+      await sleep(90);
+      await equipBestMelee();
+      log("[PVP-EXPERT] wind_charge_cancel issued target_airborne=true distance="+d.toFixed(2));
+      return true;
+    }catch{
+      try{bot.deactivateItem()}catch{}
+      await equipBestMelee();
+      return false;
+    }
+  };
+
+  // Drain a raised shield with bounded axe pressure, then return to sword when
+  // equipment metadata indicates the shield is no longer being used.
+  const shieldDrain=async t=>{
+    if(!t?.position||!has(bot,"axe"))return false;
+    const until=Date.now()+950;
+    let swings=0;
+    while(state.active&&taskIsActive()&&Date.now()<until&&swings<2){
+      const live=targetOf(bot,state.targetUsername)||t;
+      if(!live?.position||dist(bot.entity,live)>3.2)break;
+      const held=lname(live.equipment?.[0]||live.heldItem||"");
+      const using=Boolean(live.isUsingItem||live.metadata?.isUsingItem);
+      if(!/shield/.test(held)&&!using)break;
+      if(Date.now()>=state.nextAttackAt){
+        if(!await attack(live,"axe",3.2))break;
+        swings++;
+      }
+      await sleep(75);
+    }
+    const live=targetOf(bot,state.targetUsername)||t;
+    const held=lname(live?.equipment?.[0]||live?.heldItem||"");
+    if(has(bot,"sword")&&dist(bot.entity,live)<=3.05&&(!/shield/.test(held)||!Boolean(live?.isUsingItem))){
+      await sleep(80);
+      if(Date.now()>=state.nextAttackAt)await attack(live,"sword",3.05);
+    }
+    await equipBestMelee(has(bot,"sword")?"sword":"axe");
+    return swings>0;
+  };
+
+  // Only call this a backstab when the target-facing vector confirms the bot
+  // is behind the opponent; otherwise fail safely after a short flank attempt.
+  const backstab=async t=>{
+    if(!t?.position||!has(bot,"sword")||dist(bot.entity,t)>5.5)return false;
+    const deadline=Date.now()+620;
+    while(state.active&&taskIsActive()&&Date.now()<deadline){
+      const live=targetOf(bot,state.targetUsername)||t;
+      if(!live?.position)break;
+      await lookAtTarget(live,.04);
+      const yaw=num(live.yaw);
+      const fx=-Math.sin(yaw),fz=Math.cos(yaw);
+      const dx=num(bot.entity?.position?.x)-num(live.position.x);
+      const dz=num(bot.entity?.position?.z)-num(live.position.z);
+      const len=Math.hypot(dx,dz)||1;
+      const behind=(fx*dx+fz*dz)/len<-.52;
+      const d=dist(bot.entity,live);
+      if(behind&&d<=3.05&&d>=2.15){
+        stop();
+        return await attack(live,"sword",3.05);
+      }
+      bot.setControlState("forward",false);
+      bot.setControlState("back",false);
+      bot.setControlState(state.strafe<0?"left":"right",true);
+      bot.setControlState("sprint",d>3.2);
+      await sleep(45);
+    }
+    stop();
+    return false;
+  };
+
+  // D-tap sequence: verified mace-smash attempt followed by one sword follow-up
+  // only after landing and only if ordinary sword reach/cooldown permit it.
+  const maceDTap=async t=>{
+    const before=state.hits;
+    const didSmash=await maceSmash(t);
+    if(!didSmash)return false;
+    const deadline=Date.now()+420;
+    while(state.active&&taskIsActive()&&Date.now()<deadline&&isAirborne(bot.entity))await sleep(25);
+    const live=targetOf(bot,state.targetUsername)||t;
+    if(live?.position&&has(bot,"sword")&&dist(bot.entity,live)<=3.05&&Date.now()>=state.nextAttackAt){
+      await equip("sword");
+      await lookAtTarget(live,.02);
+      bot.attack(live);
+      state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
+      state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;
+      await sprintReset("sword");
+    }
+    log("[PVP-EXPERT] mace_d_tap sequence_complete smash_attempted=true hits_delta="+(state.hits-before));
+    return true;
   };
 
   const maceSmash=async(t,priorFallDistance=0)=>{
@@ -1105,6 +1232,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             break;
           case "pearl_ambush": ok=await throwPearl(t,"ambush");break;
           case "pearl_recover": ok=await throwPearl(t,"escape");break;
+          case "pearl_catch": ok=await pearlCatch(t,false);break;
+          case "diagonal_pearl_catch": ok=await pearlCatch(t,true);break;
+          case "pearl_grapple": ok=await throwPearl(t,"grapple");break;
+          case "wind_charge_cancel": ok=await windChargeCancel(t);break;
+          case "shield_drain": ok=await shieldDrain(t);break;
+          case "backstab": ok=await backstab(t);break;
+          case "mace_d_tap": ok=await maceDTap(t);break;
           case "water_clutch": ok=await waterRecover();break;
           case "web_escape": ok=await webEscape();break;
           case "shield_break": ok=await attack(t,"axe",3.2);break;
