@@ -837,6 +837,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{bot.on?.("playerLeft",onTargetGone)}catch{}
     try{bot.on?.("entityHurt",onTargetHurt)}catch{}
     try{bot.on?.("entityElytraFlew",onElytra)}catch{}
+    log("[PVP-EXPERT] brain_version="+brain.version+" difficulty="+combatDifficulty.id+
+      " styleLockMs="+combatDifficulty.styleLockMs+" styleSwitchMargin="+combatDifficulty.styleSwitchMargin+
+      " strafeMs="+combatDifficulty.strafeMs+" sprintResetMs="+combatDifficulty.sprintResetMs);
     log("[PVP-EXPERT] active target="+state.targetUsername);
 
     try{
