@@ -77,6 +77,17 @@ export function shouldCountHealthDeltaHit(now, pendingEntityHitUntil, lastConfir
   return !(Number(pendingEntityHitUntil)>Number(now)) && isNewHitConfirmation(now,lastConfirmedAt,dedupeWindowMs);
 }
 
+export function failedActionBackoffMs(action, attackAttempted=false) {
+  const key=String(action||"");
+  // An attempted swing already advances the vanilla weapon cooldown. A second
+  // 1.6–1.8 s action lock after an unconfirmed hit makes ZOYA stand off and
+  // forfeits combo/landing windows. Let the attack cooldown govern retries.
+  if(attackAttempted&&new Set(["melee_attack","finish","falling_crit","hit_select","shield_break","backstab","mace_dive","mace_drop","spear_pressure","mace_attribute_swap","mace_d_tap","stun_slam","elytra_mace","rocket_mace"]).has(key)) return 0;
+  if(new Set(["melee_attack","finish","falling_crit","hit_select","shield_break","backstab"]).has(key)) return 450;
+  if(new Set(["mace_dive","mace_drop","spear_pressure","mace_attribute_swap","mace_d_tap","stun_slam","elytra_mace","rocket_mace"]).has(key)) return 700;
+  return 1600;
+}
+
 export function shouldApplyFailedActionBackoff(action) {
   return !new Set(["emergency_disengage","emergency_hold","heal","totem","pearl_escape","pearl_recover","water_clutch","web_escape"]).has(String(action));
 }
@@ -1665,6 +1676,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         }
 
         let ok=true;
+        const attackCountBefore=state.attackCount;
         switch(decision.action){
           case "stop": return false;
           case "heal": ok=await heal();break;
@@ -1750,9 +1762,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         }
 
         if(!ok){
-          noteFailure(decision.action,"execution_failed");
-          state.failedActions[decision.action]=Date.now()+1600;
-          state.failedActionUntil=Date.now()+1600;
+          const attemptedStrike=state.attackCount>attackCountBefore;
+          const backoff=failedActionBackoffMs(decision.action,attemptedStrike);
+          noteFailure(decision.action,attemptedStrike?"hit_unconfirmed":"execution_failed");
+          state.failedActions[decision.action]=Date.now()+backoff;
+          state.failedActionUntil=Date.now()+backoff;
+          if(attemptedStrike) log("[PVP-EXPERT] strike_unconfirmed action="+decision.action+" retryPolicy=weapon_cooldown backoffMs="+backoff);
           await sleep(90);
         }else{
           state.failedAction=null;
