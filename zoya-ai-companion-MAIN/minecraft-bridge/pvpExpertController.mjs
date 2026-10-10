@@ -45,7 +45,7 @@ export function estimateObservedFallDistance(entity, peakY) {
 // Pure spacing policy shared with deterministic tests. Never extends hit reach.
 export function pressureOrbitMode(distance) {
   const d=Number(distance);
-  if(!Number.isFinite(d)||d>3.25)return "approach";
+  if(!Number.isFinite(d)||d>3.0)return "approach";
   if(d<2.65)return "retreat";
   return "orbit";
 }
@@ -173,7 +173,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           bot.setControlState("back",true);
           bot.setControlState("sprint",false);
         }else{
-          // Between 2.65 and 3.25 blocks, strafe laterally without closing
+          // Between 2.65 and 3.0 blocks, strafe laterally without closing
           // distance; actual vanilla melee reach remains capped at 3.05 blocks.
           bot.setControlState("forward",false);
           bot.setControlState("back",false);
