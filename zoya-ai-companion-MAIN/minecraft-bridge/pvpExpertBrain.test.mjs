@@ -240,3 +240,23 @@ console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
   const d=makeBrain().decide({...base,health:7.5,distance:3.2,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:0});
   assert.equal(d.action,"emergency_disengage","at 7.5 HP, ZOYA must remain in survival mode instead of re-engaging while vulnerable");
 }
+
+{
+  const d=makeBrain().decide({...base,distance:2.8,windMaceSmashReady:false,selfMaceSmashReady:false,elytraMaceReady:false});
+  assert.equal(d.style,"sword","a mace in inventory must not outrank sword in ordinary close-range combat");
+  assert.equal(d.action,"melee_attack","at valid sword range, Impossible must attack rather than idle in a failed mace setup");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:4.5,windMaceSmashReady:false,selfMaceSmashReady:false,elytraMaceReady:false});
+  assert.equal(d.style,"spear","without a verified mace setup window, choose the weapon with a valid mid-range engagement");
+  assert.equal(d.action,"spear_pressure","mid-range spear engagement should not be replaced by a non-executable mace setup");
+}
+
+{
+  const d=makeBrain().decide({...base,distance:4.5,windMaceSmashReady:true});
+  assert.equal(d.style,"mace","mace is preferred when the controller verifies a real wind-charge setup window");
+  assert.equal(d.action,"wind_mace_launch");
+}
+
+console.log("Impossible style-selection regression tests passed.");
