@@ -28,7 +28,7 @@ function styleScores(c){
   // where the executor could not produce a smash and fell back to strafing.
   // Promote it only when the controller has verified a real launch/smash or
   // Elytra setup window; height is a modest opportunity, not a permanent lock.
-  if(invHas(c,"mace")) s.mace=12+(c.selfMaceSmashReady?62:0)+(c.windMaceSmashReady?54:0)+(c.elytraMaceReady?58:0)+(c.heightAdvantage?10:0)-(d>8?28:0);
+  if(invHas(c,"mace")) s.mace=12+(c.selfMaceSmashReady?62:0)+(c.windMaceSmashReady?54:0)+(c.elytraMaceReady?58:0)+(c.heightAdvantage?10:0)-(d>8?28:0)-(c.enemyMaceHeldClose?35:0)-(c.enemyMaceThreat?45:0);
   if(invHas(c,"spear")) s.spear=20+(d>=3&&d<=5?35:0)+(e.retreating?12:0);
   // Sword is the default combo weapon: its sustained attack speed is more
   // valuable than an axe's small per-hit advantage. Select axe aggressively
@@ -193,7 +193,7 @@ export function createPvpExpertBrain(options={}){
 
     // Genuine Elytra + mace sequence. It outranks ordinary mace only when the
     // controller confirms the flight prerequisites.
-    if(c.windMaceSmashReady&&has(c,"mace")&&d>=3.5&&d<=6.5&&c.lineOfSight&&c.health>7)
+    if(c.windMaceSmashReady&&!c.enemyMaceHeldClose&&!c.enemyMaceThreat&&has(c,"mace")&&d>=3.5&&d<=6.5&&c.lineOfSight&&c.health>7)
       return {action:"wind_mace_launch",style:"mace",priority:9080,reason:"wind_charge_mace_setup"};
 
     if(c.elytraStunSlamReady&&has(c,"elytraMace")&&c.elytraLaunchReady&&invHas(c,"mace"))
