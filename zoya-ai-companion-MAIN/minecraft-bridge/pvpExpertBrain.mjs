@@ -167,10 +167,10 @@ export function createPvpExpertBrain(options={}){
       if(d>=7||c.heightAdvantage) return {action:"elytra_mace",style:"elytra",priority:9100,reason:"elytra_mace_setup"};
     }
 
-    if(c.maceDTapReady&&has(c,"mace")&&has(c,"sword")&&d<=3.1&&attackReady)
-      return {action:"mace_d_tap",style:"mace",priority:9060,reason:"mace_attribute_swap"};
     if(c.windChargeResetReady&&has(c,"wind")&&has(c,"mace")&&d>=2.25&&d<=3.25&&attackReady)
       return {action:"wind_charge_reset",style:"mace",priority:9070,reason:"midair_wind_charge_fall_reset"};
+    if(c.maceDTapReady&&has(c,"mace")&&has(c,"sword")&&d<=3.1&&attackReady)
+      return {action:"mace_d_tap",style:"mace",priority:9060,reason:"mace_attribute_swap"};
     if(c.selfMaceSmashReady&&has(c,"mace")&&d<=3.1&&attackReady)
       return {action:"mace_dive",style:"mace",priority:9050,reason:"self_mace_smash_window"};
     if(e.airborne&&e.falling&&has(c,"mace")&&d<=6.2&&attackReady)
