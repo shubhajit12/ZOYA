@@ -118,8 +118,18 @@ export function createPvpExpertBrain(options={}){
     if(low&&c.recoveryPearlReady&&c.pearlEscapeReady&&d<num(c.healDistanceMin,4.2))
       return {action:"pearl_escape",style:"utility",priority:9710,reason:"low_health_pearl_escape"};
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
+    if(c.pearlCatchReady&&c.recoveryPearlReady&&c.pearlEscapeReady)
+      return {action:c.diagonalPearlCatchReady?"diagonal_pearl_catch":"pearl_catch",style:"utility",priority:9670,reason:c.diagonalPearlCatchReady?"diagonal_fall_recovery":"fall_recovery"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
+    if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady&&c.shieldDrainReady)
+      return {action:"shield_drain",style:"axe",priority:9410,reason:"shield_drain_sequence"};
+    if(c.windCancelReady&&has(c,"wind")&&d>=3&&d<=7)
+      return {action:"wind_charge_cancel",style:"utility",priority:9390,reason:"cancel_airborne_approach"};
+    if(c.backstabReady&&has(c,"sword")&&d>=2.15&&d<=3.05&&attackReady)
+      return {action:"backstab",style:"sword",priority:7380,reason:"verified_rear_arc"};
+    if(c.pearlGrappleReady&&c.recoveryPearlReady&&has(c,"pearl")&&d>=9&&d<=15&&e.retreating)
+      return {action:"pearl_grapple",style:"utility",priority:7520,reason:"far_pearl_intercept"};
     if(c.projectileThreat&&c.shieldReady&&has(c,"shield")&&d>2.2) return {action:"shield",style:"shield",priority:9530,reason:"projectile_defense"};
     // Briefly block an advancing melee opponent when shield is available. Do not
     // raise it at point-blank collision range, during a mace burst escape, or
@@ -151,6 +161,8 @@ export function createPvpExpertBrain(options={}){
       if(d>=7||c.heightAdvantage) return {action:"elytra_mace",style:"elytra",priority:9100,reason:"elytra_mace_setup"};
     }
 
+    if(c.maceDTapReady&&has(c,"mace")&&has(c,"sword")&&d<=3.1&&attackReady)
+      return {action:"mace_d_tap",style:"mace",priority:9060,reason:"mace_smash_sword_followup"};
     if(c.selfMaceSmashReady&&has(c,"mace")&&d<=3.1&&attackReady)
       return {action:"mace_dive",style:"mace",priority:9050,reason:"self_mace_smash_window"};
     if(e.airborne&&e.falling&&has(c,"mace")&&d<=6.2&&attackReady)
