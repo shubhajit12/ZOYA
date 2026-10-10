@@ -37,6 +37,11 @@ function speed(e){return Math.hypot(num(e?.velocity?.x),num(e?.velocity?.z))}
 function isAirborne(e){return e?.onGround===false}
 function isElytraItem(i){return lname(i)==="elytra"}
 
+export function estimateObservedFallDistance(entity, peakY) {
+  const y=num(entity?.position?.y,0);
+  return Math.max(0,num(entity?.fallDistance),num(peakY,y)-y);
+}
+
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
@@ -495,16 +500,18 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
-  const maceSmash=async(t)=>{
+  const maceSmash=async(t,priorFallDistance=0)=>{
     if(!t||!has(bot,"mace"))return false;
     if(!await equip("mace"))return false;
     const until=Date.now()+900;
+    let peakY=num(bot.entity?.position?.y)+Math.max(0,num(priorFallDistance));
     while(state.active&&taskIsActive()&&Date.now()<until){
       const live=targetOf(bot,state.targetUsername)||t;
       if(!live)break;
       const d=dist(bot.entity,live);
+      peakY=Math.max(peakY,num(bot.entity?.position?.y));
       const falling=isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08;
-      const fallDistance=num(bot.entity?.fallDistance);
+      const fallDistance=estimateObservedFallDistance(bot.entity,peakY);
       await lookAtTarget(live,.02);
       if(falling&&fallDistance>1.5&&d>=2.35&&d<=3.1){
         stop();
@@ -547,7 +554,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // Wind Charge has two distinct tactical jobs. This action is ONLY the
       // self-launch half of the mace combo: never aim it at the opponent.
       const startY=num(bot.entity?.position?.y);
-      const startFall=num(bot.entity?.fallDistance);
+      let peakY=startY;
       const launchDeadline=Date.now()+1050;
       await bot.lookAt(bot.entity.position.offset(0,-1.35,0),true);
       bot.activateItem();
@@ -558,6 +565,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       let launched=false;
       while(state.active&&taskIsActive()&&Date.now()<launchDeadline){
         const liveY=num(bot.entity?.position?.y);
+        peakY=Math.max(peakY,liveY);
         const vy=num(bot.entity?.velocity?.y);
         if(liveY-startY>=0.28&&vy>0.22){
           launched=true;
@@ -582,12 +590,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(!live)break;
         const d=dist(bot.entity,live);
         const vy=num(bot.entity?.velocity?.y);
-        const fallDistance=num(bot.entity?.fallDistance);
+        peakY=Math.max(peakY,num(bot.entity?.position?.y));
+        const fallDistance=estimateObservedFallDistance(bot.entity,peakY);
         await lookAtTarget(live,.04);
         if(isAirborne(bot.entity)&&vy<-.08){
           if(fallDistance>1.5&&d>=2.35&&d<=3.1){
             stop();
-            return await maceSmash(live);
+            return await maceSmash(live,fallDistance);
           }
           if(d>3.1){
             bot.setControlState("back",false);
