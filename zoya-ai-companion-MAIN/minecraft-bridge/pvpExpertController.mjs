@@ -1432,6 +1432,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const onTargetStatus=(entity,status)=>{
       // Minecraft entity status 35 is the server's Totem of Undying activation signal.
       if(!state.active||Number(status)!==35)return;
+      if(entity?.id===bot.entity?.id){
+        state.totemEquipped=false;
+        log("[PVP-EXPERT] self_totem_pop_confirmed remainingInventory="+count(bot,"totem"));
+        return;
+      }
       const target=targetOf(bot,state.targetUsername);
       if(!target||entity?.id!==target.id)return;
       state.enemyTotemPopUntil=Date.now()+3500;
@@ -1625,7 +1630,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           emergencyRetreatUntil:state.emergencyRetreatUntil,
 
           badPosition:Boolean(hazard()||d>14||!lineOfSight),
-          totemEquipped:state.totemEquipped||lname(bot.entity?.equipment?.[1])==="totem_of_undying",
+          totemEquipped:state.totemEquipped,
           hardCounter:Boolean((eq.shield&&enemy.usingItem)||(eq.elytra&&isAirborne(t))||enemy.totemPopped),
           spacingLockUntil:state.spacingLockUntil,
           enemyBurstThreat,enemyMaceThreat,
