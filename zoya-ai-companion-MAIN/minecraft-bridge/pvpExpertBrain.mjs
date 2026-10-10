@@ -171,11 +171,10 @@ export function createPvpExpertBrain(options={}){
       return {action:"approach",style:styleMemory||"sword",priority:9550,reason:"totem_pop_pressure"};
     if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
 
-    // Emergency spacing has priority over the post-retreat lateral window.
-    // The previous order let spacing_hold mask a fresh close-range collision
-    // whenever d<2.45, leaving ZOYA strafing at point-blank range until the lock
-    // expired. Always restore melee spacing first; only then apply recovery.
-    if(d<2.45) return {action:"spacing_retreat",style:styleMemory||"sword",priority:8100,reason:"too_close_spacing"};
+    // Retreat only when body overlap makes aim/attack unreliable. The old
+    // 2.45-block cutoff forced ZOYA to back away while still inside sword
+    // reach; that wasted attack windows and made her far too passive.
+    if(d<1.75) return {action:"spacing_retreat",style:styleMemory||"sword",priority:8100,reason:"too_close_spacing"};
     if(c.spacingLockUntil&&now<c.spacingLockUntil&&d<3.05)
       return {action:"spacing_hold",style:styleMemory||"sword",priority:8050,reason:"spacing_recovery_window"};
     if(e.healing&&has(c,"debuff")&&d<=8) return {action:"debuff",style:"utility",priority:9200,reason:"punish_heal"};
@@ -222,9 +221,9 @@ export function createPvpExpertBrain(options={}){
 
     if(styleMemory==="spear"&&has(c,"spear")&&d>=3&&d<=4.75&&attackReady)
       return {action:"spear_pressure",style:"spear",priority:7400,reason:"spear_range"};
-    if(styleMemory==="axe"&&has(c,"axe")&&d>=2.45&&d<=3.2&&attackReady)
+    if(styleMemory==="axe"&&has(c,"axe")&&d>=1.75&&d<=3.2&&attackReady)
       return {action:"melee_attack",style:"axe",priority:7300,reason:"axe_attack"};
-    if(styleMemory==="sword"&&has(c,"sword")&&d>=2.45&&d<=3.05&&attackReady){
+    if(styleMemory==="sword"&&has(c,"sword")&&d>=1.75&&d<=3.05&&attackReady){
       if(falling&&!onGround&&num(c.fallDistance)>=.45&&d>=Number(difficulty.critMinRange||2.45)) return {action:"falling_crit",style:"sword",priority:7800,reason:"falling_crit"};
       if(c.hitSelectReady&&attackReady&&d>=2.35) return {action:"hit_select",style:"sword",priority:7350,reason:"landing_timed_hit_select"};
       return {action:"melee_attack",style:"sword",priority:7200,reason:"sword_attack"};
