@@ -12,7 +12,7 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const has=(c,k)=>c?.capabilities?.[k]===true;
 const invHas=(c,k)=>num(c?.inventory?.[k])>0;
 
-export const PVP_EXPERT_BRAIN_VERSION="pvp-expert-brain-v3-theo-impossible";
+export const PVP_EXPERT_BRAIN_VERSION="pvp-expert-brain-v4-theo-impossible";
 
 const STYLES=Object.freeze([
   "sword","axe","mace","spear","crystal","anchor","bow","crossbow",
