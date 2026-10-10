@@ -62,6 +62,12 @@ export function shouldApplyFailedActionBackoff(action) {
   return !new Set(["emergency_disengage","emergency_hold","heal","totem","pearl_escape","pearl_recover","water_clutch","web_escape"]).has(String(action));
 }
 
+export function isConfirmedPearlCatch(displaced, pearlStillExists) {
+  // Wind-charge knockback is not a pearl catch. Require both meaningful
+  // displacement and removal of the tracked pearl entity.
+  return Boolean(displaced) && !Boolean(pearlStillExists);
+}
+
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
@@ -677,10 +683,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       while(state.active&&taskIsActive()&&Date.now()<catchUntil){
         const pearlStillExists=Boolean(bot.entities?.[pearl.id]);
         const displaced=bot.entity.position.distanceTo(beforePos)>3.0;
-        // A wind-charge blast can move ZOYA several blocks without catching
-        // the pearl. Displacement alone is not teleport evidence: require the
-        // tracked pearl entity to disappear as well before calling this caught.
-        if(displaced&&!pearlStillExists){caught=true;break}
+        if(isConfirmedPearlCatch(displaced,pearlStillExists)){caught=true;break}
         await sleep(25);
       }
       state.pearlCatchCooldownUntil=Date.now()+3500;
