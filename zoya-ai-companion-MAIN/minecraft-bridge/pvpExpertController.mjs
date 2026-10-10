@@ -645,7 +645,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // equipment metadata indicates the shield is no longer being used.
   const shieldDrain=async t=>{
     if(!t?.position||!has(bot,"axe"))return false;
-    const until=Date.now()+950;
+    const until=Date.now()+2300;
     let swings=0;
     while(state.active&&taskIsActive()&&Date.now()<until&&swings<2){
       const live=targetOf(bot,state.targetUsername)||t;
