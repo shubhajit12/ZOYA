@@ -78,7 +78,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     enemyTotemWasEquipped:false,enemyTotemPopUntil:0,
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
-    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,
+    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
     lastAttackConfirmedAt:0,pendingEntityHitUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,
     lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null
@@ -318,9 +318,20 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{await bot.equip(i,"hand");await bot.consume();await equipBestMelee();return true}catch{return false}
   };
 
-  const shield=async()=>{
+  const shield=async t=>{
+    if(!has(bot,"shield")||Date.now()<state.shieldCooldownUntil)return false;
     if(!await equip("shield")) return false;
-    try{bot.activateItem();await sleep(300);bot.deactivateItem();return true}catch{try{bot.deactivateItem()}catch{};return false}
+    try{
+      if(t) await lookAtTarget(t,.02);
+      bot.activateItem();
+      await sleep(260);
+      bot.deactivateItem();
+      state.shieldCooldownUntil=Date.now()+850;
+      // The shield is a timed defensive window, not a new permanent combat style.
+      await equipBestMelee();
+      log("[PVP-EXPERT] shield_block completed; melee weapon restored");
+      return true;
+    }catch{try{bot.deactivateItem()}catch{};state.shieldCooldownUntil=Date.now()+500;await equipBestMelee();return false}
   };
 
   const ranged=async(t,type)=>{
@@ -959,6 +970,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           (d<=3.2&&num(targetVelocity.y)<-.03)
         );
         const enemyBurstThreat=(enemyMaceThreat||enemyWindHeld&&(isAirborne(t)||d<=4.0));
+        const enemyHorizDist=Math.max(.001,Math.hypot(num(bot.entity?.position?.x)-num(t.position?.x),num(bot.entity?.position?.z)-num(t.position?.z)));
+        const enemyClosing=((num(targetVelocity.x)*(num(bot.entity?.position?.x)-num(t.position?.x))+num(targetVelocity.z)*(num(bot.entity?.position?.z)-num(t.position?.z)))/enemyHorizDist)>.018;
+        const enemyMeleeWeapon=/sword|axe|spear|mace|trident/.test(enemyHeld);
+        const meleeBlockReady=enemyClosing&&enemyMeleeWeapon&&d>=2.65&&d<=4.25&&!enemyMaceThreat;
         const enemy={
           health:th,shield:eq.shield,usingItem:Boolean(t.isUsingItem||t.metadata?.isUsingItem),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
@@ -1008,6 +1023,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           pearlAmbushReady:pearlReady("ambush",t),
           maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
+          shieldReady:Boolean(Date.now()>=state.shieldCooldownUntil),
+          meleeBlockReady,
           emergencyRetreatUntil:state.emergencyRetreatUntil,
 
           badPosition:Boolean(hazard()||d>14||!lineOfSight),
@@ -1042,7 +1059,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         switch(decision.action){
           case "stop": return false;
           case "heal": ok=await heal();break;
-          case "shield": ok=await shield();break;
+          case "shield": ok=await shield(t);break;
           case "totem": {
             const equipped=await equip("totem","off-hand");
             if(equipped){
