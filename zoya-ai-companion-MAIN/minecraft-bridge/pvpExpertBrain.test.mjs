@@ -276,3 +276,19 @@ console.log("PvP expert pressure-orbit spacing tests passed.");
 }
 
 console.log("PvP Expert spacing-lock priority regression test passed.");
+
+
+// Survival recovery must use a safe gap immediately instead of waiting for the retreat lock.
+{
+  const d=makeBrain().decide({...base,health:5,distance:5.2,capabilities:{...base.capabilities,heal:true,totem:false},emergencyRetreatUntil:Date.now()+2000});
+  assert.equal(d.action,"heal","a safe gap must permit critical healing even while the movement lock is active");
+}
+{
+  const d=makeBrain().decide({...base,health:5,distance:3.2,capabilities:{...base.capabilities,heal:true,pearl:true,totem:false},recoveryPearlReady:true,pearlEscapeReady:true,emergencyRetreatUntil:Date.now()+2000});
+  assert.equal(d.action,"pearl_escape","at critical health and unsafe distance, a validated pearl should create the gap before repeating retreat");
+}
+{
+  const d=makeBrain().decide({...base,health:9,distance:3.0,capabilities:{...base.capabilities,heal:true,pearl:true},recoveryPearlReady:true,pearlEscapeReady:true});
+  assert.equal(d.action,"pearl_escape","low health in melee range should use a safe pearl to disengage before trying to eat");
+}
+console.log("PvP Expert heal/pearl recovery priority tests passed.");
