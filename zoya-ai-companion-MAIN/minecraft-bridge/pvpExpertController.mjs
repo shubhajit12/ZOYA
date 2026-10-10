@@ -46,6 +46,10 @@ export function isNewHitConfirmation(now, lastConfirmedAt, dedupeWindowMs=450) {
   return !Number.isFinite(Number(lastConfirmedAt)) || Number(now)-Number(lastConfirmedAt)>Math.max(0,Number(dedupeWindowMs)||0);
 }
 
+export function shouldCountHealthDeltaHit(now, pendingEntityHitUntil, lastConfirmedAt, dedupeWindowMs=450) {
+  return !(Number(pendingEntityHitUntil)>Number(now)) && isNewHitConfirmation(now,lastConfirmedAt,dedupeWindowMs);
+}
+
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
   if(!bot) throw new Error("PvP Expert Controller requires bot");
   if(!goals?.GoalFollow) throw new Error("PvP Expert Controller requires verified GoalFollow.");
@@ -63,6 +67,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
     lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,
+    lastAttackConfirmedAt:0,pendingEntityHitUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,
     lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null
   };
@@ -782,7 +787,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.lastTargetOnGround=null;
     state.targetLandedAt=0;
     state.lastAttackAttemptAt=0;
-    state.lastAttackConfirmedAt=0;
+    state.lastAttackConfirmedAt=0;state.pendingEntityHitUntil=0;
     state.selfPeakY=num(bot.entity?.position?.y);
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
@@ -802,6 +807,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       if(!isNewHitConfirmation(Date.now(),state.lastAttackConfirmedAt,450)) return;
       state.hits++;
       state.lastAttackConfirmedAt=Date.now();
+      state.pendingEntityHitUntil=state.lastAttackConfirmedAt+1200;
       log("[PVP-EXPERT] hit_confirmed source=entityHurt target="+state.targetUsername+" totalHits="+state.hits);
     };
     try{bot.on?.("playerLeft",onTargetGone)}catch{}
@@ -846,11 +852,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           state.damageDealt+=dealt;
           // Fallback for servers where entityHurt is missing. If the event
           // already counted this hit, do not count the health delta again.
-          if(isNewHitConfirmation(Date.now(),state.lastAttackConfirmedAt,450)){
+          const hitAt=Date.now();
+          if(shouldCountHealthDeltaHit(hitAt,state.pendingEntityHitUntil,state.lastAttackConfirmedAt,450)){
             state.hits++;
-            state.lastAttackConfirmedAt=Date.now();
+            state.lastAttackConfirmedAt=hitAt;
             log("[PVP-EXPERT] hit_confirmed source=health_delta damage="+dealt.toFixed(2)+" totalHits="+state.hits);
           }
+          state.pendingEntityHitUntil=0;
         }
         // Combo timing is based on the target's actual landing transition, not
         // merely on seeing an airborne entity at any point during its jump.
