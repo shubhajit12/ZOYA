@@ -268,3 +268,11 @@ assert.equal(pressureOrbitMode(3.0),"orbit","circle at the edge of normal sword 
 assert.equal(pressureOrbitMode(2.4),"retreat","rebuild spacing when inside the opponent's hitbox pressure");
 assert.equal(pressureOrbitMode(Infinity),"approach","reacquire a target when distance is unavailable");
 console.log("PvP expert pressure-orbit spacing tests passed.");
+
+
+{
+  const d=makeBrain().decide({...base,distance:1.8,spacingLockUntil:Date.now()+500});
+  assert.equal(d.action,"spacing_retreat","a recovery lock must never mask a new point-blank collision; retreat takes priority");
+}
+
+console.log("PvP Expert spacing-lock priority regression test passed.");
