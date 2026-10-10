@@ -619,6 +619,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const anchorId=bot.registry?.blocksByName?.respawn_anchor?.id;
     if(!Number.isInteger(anchorId))return false;
     const candidates=[];
+    const getAnchorCharges=block=>Number(block?.getProperties?.()?.charges??block?.properties?.charges??0);
     const isSafeAir=block=>Boolean(block&&block.boundingBox==="empty"&&/^(air|cave_air|void_air)$/.test(String(block.name||"")));
     const consider=pos=>{
       const block=bot.blockAt(pos);
@@ -658,13 +659,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       let anchor=bot.blockAt(chosen.pos);
       if(!anchor||anchor.name!=="respawn_anchor")return false;
-      let charges=Number(anchor.properties?.charges||0);
+      let charges=getAnchorCharges(anchor);
       if(charges<1){
         if(!await equip("glowstone"))return false;
         await bot.activateBlock(anchor);
         await sleep(120);
         anchor=bot.blockAt(chosen.pos);
-        charges=Number(anchor?.properties?.charges||0);
+        charges=getAnchorCharges(anchor);
       }
       if(!anchor||anchor.name!=="respawn_anchor"||charges<1)return false;
       // Recheck the live geometry before detonating: target movement or our own
