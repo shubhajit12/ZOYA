@@ -62,10 +62,13 @@ export function shouldApplyFailedActionBackoff(action) {
   return !new Set(["emergency_disengage","emergency_hold","heal","totem","pearl_escape","pearl_recover","water_clutch","web_escape"]).has(String(action));
 }
 
+export function isConfirmedPearlTeleport(displacement, pearlStillExists, minimumDistance=4) {
+  // Item activation or blast knockback alone is not a teleport confirmation.
+  return Number(displacement)>Math.max(0,Number(minimumDistance)||0) && !Boolean(pearlStillExists);
+}
+
 export function isConfirmedPearlCatch(displaced, pearlStillExists) {
-  // Wind-charge knockback is not a pearl catch. Require both meaningful
-  // displacement and removal of the tracked pearl entity.
-  return Boolean(displaced) && !Boolean(pearlStillExists);
+  return isConfirmedPearlTeleport(displaced?3.01:0,pearlStillExists,3);
 }
 
 export function isProjectileOnCollisionCourse(projectilePosition, projectileVelocity, playerPosition, playerVelocity={x:0,y:0,z:0}, radius=1.35, horizonTicks=16) {
@@ -454,18 +457,40 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const destination=pearlDestination(t,mode);
     if(!destination)return false;
     if(!await equip("pearl"))return false;
+    const beforePos=bot.entity.position.clone();
+    const beforePearls=new Set(Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))).map(e=>e.id));
     try{
       await bot.lookAt(destination,true);
       bot.activateItem();
       await sleep(85);
       bot.deactivateItem();
+      let pearl=null;
+      const projectileDeadline=Date.now()+650;
+      while(state.active&&taskIsActive()&&Date.now()<projectileDeadline&&!pearl){
+        pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!beforePearls.has(e.id)&&e.position)
+          .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0]||null;
+        if(!pearl)await sleep(20);
+      }
+      if(!pearl){
+        log("[PVP-EXPERT] pearl_throw mode="+mode+" projectile_spawned=false teleport_confirmed=false");
+        return false;
+      }
       state.lastPearlAt=Date.now();
       state.pearlCooldownUntil=state.lastPearlAt+1000;
       state.lastPearlType=mode;
-      await sleep(260);
-      return true;
-    }catch{
+      const teleportDeadline=Date.now()+2200;
+      let teleported=false;
+      while(state.active&&taskIsActive()&&Date.now()<teleportDeadline){
+        const displacement=bot.entity.position.distanceTo(beforePos);
+        const stillExists=Boolean(bot.entities?.[pearl.id]);
+        if(isConfirmedPearlTeleport(displacement,stillExists,4)){teleported=true;break}
+        await sleep(25);
+      }
+      log("[PVP-EXPERT] pearl_throw mode="+mode+" projectile_spawned=true teleport_confirmed="+teleported);
+      return teleported;
+    }catch(error){
       try{bot.deactivateItem()}catch{}
+      log("[PVP-EXPERT] pearl_throw mode="+mode+" failed: "+(error?.message||String(error)));
       return false;
     }
   };
