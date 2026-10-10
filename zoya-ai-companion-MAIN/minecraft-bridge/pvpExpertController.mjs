@@ -42,6 +42,14 @@ export function estimateObservedFallDistance(entity, peakY) {
   return Math.max(0,num(entity?.fallDistance),num(peakY,y)-y);
 }
 
+// Pure spacing policy shared with deterministic tests. Never extends hit reach.
+export function pressureOrbitMode(distance) {
+  const d=Number(distance);
+  if(!Number.isFinite(d)||d>3.25)return "approach";
+  if(d<2.65)return "retreat";
+  return "orbit";
+}
+
 export function isNewHitConfirmation(now, lastConfirmedAt, dedupeWindowMs=450) {
   return !Number.isFinite(Number(lastConfirmedAt)) || Number(now)-Number(lastConfirmedAt)>Math.max(0,Number(dedupeWindowMs)||0);
 }
@@ -100,10 +108,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     return null;
   };
 
-  const lookAtTarget=async(t,lead=0)=>{
+  // Mineflayer entity velocity is measured per game tick, not per second.
+  // Convert seconds-style lead values to ticks so prediction is meaningful
+  // (0.10 s ~= 2 ticks) without extrapolating too far into the future.
+  const lookAtTarget=async(t,lead=0.10)=>{
     if(!t?.position) return false;
     const v=t.velocity||{x:0,y:0,z:0};
-    const p=t.position.offset(num(v.x)*lead,num(v.y)*lead, num(v.z)*lead);
+    const leadTicks=Math.max(0,Math.min(4,num(lead)*20));
+    const p=t.position.offset(num(v.x)*leadTicks,num(v.y)*leadTicks,num(v.z)*leadTicks);
     try{await bot.lookAt(p.offset(0,Math.max(.9,num(t.height,1.8)*.62),0),true);return true}catch{return false}
   };
 
@@ -130,13 +142,47 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const strafe=async(t,sign,ms=Number(combatDifficulty.strafeMs||120))=>{
-    await lookAtTarget(t,.08);
+    await lookAtTarget(t,.10);
     bot.setControlState("forward",true);
     bot.setControlState(sign<0?"left":"right",true);
     bot.setControlState("sprint",true);
     await sleep(ms);
     stop();
     return true;
+  };
+
+  // Expert pressure orbits at sword spacing instead of blindly holding W.
+  const pressureOrbit=async(t,sign,ms=Number(combatDifficulty.strafeMs||95))=>{
+    if(!t?.position)return false;
+    const until=Date.now()+Math.max(60,Number(ms)||95);
+    try{
+      while(state.active&&taskIsActive()&&Date.now()<until){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(!live?.position)break;
+        const d=dist(bot.entity,live);
+        const mode=pressureOrbitMode(d);
+        await lookAtTarget(live,.10);
+        bot.setControlState("left",sign<0);
+        bot.setControlState("right",sign>0);
+        if(mode==="approach"){
+          bot.setControlState("back",false);
+          bot.setControlState("forward",true);
+          bot.setControlState("sprint",true);
+        }else if(mode==="retreat"){
+          bot.setControlState("forward",false);
+          bot.setControlState("back",true);
+          bot.setControlState("sprint",false);
+        }else{
+          // Between 2.65 and 3.25 blocks, strafe laterally without closing
+          // distance; actual vanilla melee reach remains capped at 3.05 blocks.
+          bot.setControlState("forward",false);
+          bot.setControlState("back",false);
+          bot.setControlState("sprint",false);
+        }
+        await sleep(25);
+      }
+      return true;
+    }finally{stop();}
   };
 
   const emergencyDisengage=async t=>{
@@ -1045,7 +1091,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "wind_mace_launch": ok=await wind(t);break;
           case "dodge_projectile": ok=await projectileDodge(t);break;
           case "approach": ok=await approach(t,2.8);break;
-          case "strafe_pressure": ok=await strafe(t,state.strafe,Number(combatDifficulty.strafeMs||120));state.strafe*=-1;break;
+          case "strafe_pressure": ok=await pressureOrbit(t,state.strafe,Number(combatDifficulty.strafeMs||95));state.strafe*=-1;break;
           case "defensive_strafe": ok=await strafe(t,state.strafe,Number(combatDifficulty.strafeMs||120)+55);state.strafe*=-1;break;
           case "reposition": ok=await strafe(t,state.strafe,Number(combatDifficulty.strafeMs||120)+40);state.strafe*=-1;break;
           case "reacquire": ok=await approach(t,3.2);break;
