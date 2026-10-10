@@ -40,6 +40,25 @@ const base={
 
 console.log("PvP Expert Brain deterministic tests passed.");
 
+// Survival must not assume a totem exists: a detected falling-mace threat still evades.
+{
+  const d=makeBrain().decide({...base,health:16,distance:3.5,hasTotem:false,hasPearl:false,capabilities:{...base.capabilities,totem:false,pearl:false},
+    enemyMaceThreat:true,maceEscapeReady:true,enemy:{...base.enemy,held:"mace",airborne:true,falling:true}});
+  assert.equal(d.action,"emergency_disengage","without pearl or totem, Zoya must still evade a detected mace dive");
+}
+{
+  const d=makeBrain().decide({...base,health:5,distance:3.5,hasTotem:false,hasPearl:false,capabilities:{...base.capabilities,totem:false,pearl:false},
+    enemyMaceThreat:true,maceEscapeReady:true,enemy:{...base.enemy,held:"mace",airborne:true,falling:true}});
+  assert.equal(d.action,"emergency_disengage","critical health without totem/pearl must prioritize evasive movement");
+}
+// A confirmed pop must beat close-spacing retreat and finish with a fast sword hit.
+{
+  const d=makeBrain().decide({...base,distance:2.1,attackReadyAt:0,enemy:{...base.enemy,totemPopped:true}});
+  assert.equal(d.action,"finish","a confirmed totem pop at melee range must trigger immediate finishing pressure");
+  assert.equal(d.style,"sword","finishing pressure should use fast sword attacks when available");
+}
+
+
 
 {
   const d=makeBrain().decide({...base,webbed:true});
