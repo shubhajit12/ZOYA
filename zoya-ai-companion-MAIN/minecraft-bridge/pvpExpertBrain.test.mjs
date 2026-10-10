@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, shouldCountHealthDeltaHit } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -227,6 +227,13 @@ console.log("Theobald-impossible difficulty regression tests passed.");
   assert.equal(isNewHitConfirmation(1000,0,450),true);
   assert.equal(isNewHitConfirmation(1100,1000,450),false,"entityHurt + health delta for one attack must count once");
   assert.equal(isNewHitConfirmation(1501,1000,450),true,"a later attack confirmation should count after the dedupe window");
+  assert.equal(shouldCountHealthDeltaHit(1800,2100,1600,450),false,"a delayed health delta must not double-count a hit already confirmed by entityHurt");
+  assert.equal(shouldCountHealthDeltaHit(2201,2100,1600,450),true,"a health-delta fallback should count when no entityHurt confirmation is pending");
 }
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
+
+{
+  const d=makeBrain().decide({...base,health:7.5,distance:3.2,capabilities:{...base.capabilities,heal:false,totem:false},emergencyRetreatUntil:0});
+  assert.equal(d.action,"emergency_disengage","at 7.5 HP, ZOYA must remain in survival mode instead of re-engaging while vulnerable");
+}
