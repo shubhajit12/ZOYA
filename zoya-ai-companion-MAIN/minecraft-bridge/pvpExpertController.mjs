@@ -1365,7 +1365,6 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "backstab": ok=await backstab(t);break;
           case "mace_d_tap": ok=await maceDTap(t);break;
           case "stun_slam": ok=await stunSlam(t);break;
-          case "elytra_stun_slam": ok=await elytraMace(t);break;
           case "rocket_mace": ok=await elytraMace(t);break;
           case "water_clutch": ok=await waterRecover();break;
           case "web_escape": ok=await webEscape();break;
