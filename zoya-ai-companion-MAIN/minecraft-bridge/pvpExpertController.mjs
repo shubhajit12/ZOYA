@@ -1383,6 +1383,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
             anchorCycleSafe:bot.game?.dimension==="the_nether"&&has(bot,"anchor")&&has(bot,"glowstone"),
             projectileDodge:projectileThreat(),
+            rod:has(bot,"rod"),
              wind:has(bot,"wind"),
              firework:has(bot,"firework"),
             windMace:Boolean(has(bot,"wind")&&has(bot,"mace")),
