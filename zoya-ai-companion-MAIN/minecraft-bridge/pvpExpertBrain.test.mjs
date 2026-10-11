@@ -2,9 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
+
+{
+  const baseStun={hasAxe:true,hasMace:true,hasWind:true,axeHotbar:true,maceHotbar:true,shielding:true,distance:2.8,attackReady:true};
+  assert.equal(canStartStunSlam(baseStun),true,
+    "stun-slam setup must be eligible from the ground when all real prerequisites are present");
+  assert.equal(canStartStunSlam({...baseStun,shielding:false}),false,
+    "stun-slam must not start unless the opponent is actively shield-blocking");
+  assert.equal(canStartStunSlam({...baseStun,distance:4}),false,
+    "stun-slam axe-disable must remain inside verified melee reach");
+  assert.equal(canStartStunSlam({...baseStun,maceHotbar:false}),false,
+    "stun-slam must fail closed if the follow-up mace cannot be selected");
+}
 
 const controllerSource=readFileSync(new URL("./pvpExpertController.mjs",import.meta.url),"utf8");
 const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"utf8");
@@ -151,7 +163,17 @@ const base={
 
 
 {
-  assert.ok(controllerSource.includes("const equipTotemVerified=async()=>"),
+  {
+  const stunStart=controllerSource.indexOf("const stunSlam=async t=>");
+  const windReset=controllerSource.indexOf("const windChargeReset=async t=>",stunStart);
+  const stunBody=controllerSource.slice(stunStart,windReset);
+  assert.ok(stunBody.includes("canStartStunSlam("),
+    "stun-slam executor must share the tested real-prerequisite gate");
+  assert.ok(!stunBody.includes("!isAirborne(bot.entity)"),
+    "stun-slam must initiate the axe-disable before the wind launch, not require the bot to already be falling");
+}
+
+assert.ok(controllerSource.includes("const equipTotemVerified=async()=>"),
     "totem equip must be a verified survival action, not an inventory-transfer success");
   assert.ok(controllerSource.includes('state.totemEquipped=/totem_of_undying/.test(offhandName())'),
     "combat startup must derive totem state from observed offhand equipment");
@@ -709,7 +731,7 @@ console.log("Advanced Impossible tactical routing regression tests passed.");
 {
   const d=makeBrain().decide({...base,distance:2.8,stunSlamReady:true,capabilities:{...base.capabilities,wind:true},
     enemy:{...base.enemy,shield:true,usingItem:true}});
-  assert.equal(d.action,"stun_slam","falling shield target with axe, mace, and wind must select the full multi-phase confirmed slam");
+  assert.equal(d.action,"stun_slam","grounded shield target with axe, mace, and wind must start the full axe-disable → launch → confirmed slam sequence");
 }
 {
   const d=makeBrain().decide({...base,distance:8,rocketMaceReady:true,elytraMaceReady:true,elytraLaunchReady:true,elytraEquipped:true,
