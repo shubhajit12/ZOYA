@@ -169,7 +169,7 @@ const base={
     "a loaded crossbow remains usable even without spare inventory arrows");
   assert.ok(controllerSource.includes("bow_fire_blocked reason=no_arrow_ammunition"),
     "bow executor must refuse to charge without ammunition");
-  assert.ok(controllerSource.includes("crossbow_fire_blocked reason=unloaded_no_arrow_ammunition"),
+  assert.ok(controllerSource.includes("crossbow_fire_blocked reason=unloaded_no_valid_ammunition"),
     "crossbow executor must refuse to load/fire without ammunition");
 }
 
