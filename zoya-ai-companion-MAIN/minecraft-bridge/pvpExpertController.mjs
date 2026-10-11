@@ -1576,7 +1576,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await bot.lookAt(pearl.position.offset(num(v.x)*3,num(v.y)*3,num(v.z)*3),true);
       const beforePos=bot.entity.position.clone();
       bot.activateItem();await sleep(65);bot.deactivateItem();
-      const catchUntil=Date.now()+1200;
+      // This pearl is deliberately thrown high (aim point ~17 blocks above
+      // the player). A 1.2 s confirmation window expires before many valid
+      // flights land, so allow the server-observed teleport time to complete.
+      const catchUntil=Date.now()+2800;
       let caught=false;
       while(state.active&&taskIsActive()&&Date.now()<catchUntil){
         const pearlStillExists=Boolean(bot.entities?.[pearl.id]);
