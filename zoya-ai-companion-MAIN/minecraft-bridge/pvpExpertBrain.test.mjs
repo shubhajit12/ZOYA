@@ -42,7 +42,7 @@ const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"
 
 {
   const potionStart=controllerSource.indexOf('if(type==="potion"){');
-  const potionEnd=controllerSource.indexOf("\n      }\n      return false;",potionStart);
+  const potionEnd=controllerSource.indexOf("\n  const pearlBlockSafe=",potionStart);
   const potionBody=controllerSource.slice(potionStart,potionEnd);
   assert.ok(potionBody.includes("potion_throw_confirmed="),
     "potion execution must log observed throw confirmation");
