@@ -499,16 +499,114 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }catch{try{bot.deactivateItem()}catch{};state.shieldCooldownUntil=Date.now()+500;await equipBestMelee();return false}
   };
 
+  // Read the crossbow's actual item NBT when available. Mineflayer does not
+  // expose a stable high-level "is loaded" property across supported versions.
+  // Unknown NBT is deliberately treated as unknown, never as loaded.
+  const crossbowChargeState=()=>{
+    const cross=item(bot,"crossbow")||bot.heldItem;
+    const root=cross?.nbt;
+    if(!root)return null;
+    const visit=(node,depth=0)=>{
+      if(node==null||depth>10)return null;
+      if(Array.isArray(node)){
+        for(const v of node){const r=visit(v,depth+1);if(r!==null)return r}
+        return null;
+      }
+      if(typeof node!=="object")return null;
+      for(const [key,raw] of Object.entries(node)){
+        const k=key.toLowerCase().replace(/[_-]/g,"");
+        const value=raw&&typeof raw==="object"&&"value" in raw?raw.value:raw;
+        if(k==="charged"&&(typeof value==="boolean"||typeof value==="number"||typeof value==="string"))
+          return value===true||value===1||value==="1";
+        if(k==="chargedprojectiles"||k==="chargedprojectile"){
+          if(Array.isArray(value))return value.length>0;
+          if(value&&Array.isArray(value.value))return value.value.length>0;
+          if(value&&Array.isArray(value.value?.value))return value.value.value.length>0;
+          if(value&&typeof value==="object")return Object.keys(value).length>0;
+          return false;
+        }
+      }
+      for(const raw of Object.values(node)){
+        const r=visit(raw,depth+1);if(r!==null)return r;
+      }
+      return null;
+    };
+    return visit(root);
+  };
+
   const ranged=async(t,type)=>{
-    if(!await equip(type)) return false;
-    await lookAtTarget(t,.15);
+    if(!t?.position||!await equip(type))return false;
+    const liveTarget=()=>targetOf(bot,state.targetUsername)||t;
+    const keepAim=async()=>{
+      const live=liveTarget();
+      if(live?.position)await lookAtTarget(live,.08);
+      return live;
+    };
     try{
-      bot.activateItem();
-      if(type==="bow") await sleep(1050); else await sleep(160);
-      bot.deactivateItem();
-      await sleep(90);
-      return true;
-    }catch{try{bot.deactivateItem()}catch{};return false}
+      if(type==="bow"){
+        await keepAim();
+        bot.activateItem();
+        const deadline=Date.now()+1050;
+        while(state.active&&taskIsActive()&&Date.now()<deadline){
+          await keepAim();
+          await sleep(70);
+        }
+        bot.deactivateItem();
+        await sleep(100);
+        log("[PVP-EXPERT] bow_release_issued charge_ms=1050");
+        return true;
+      }
+      if(type==="crossbow"){
+        // Crossbows must be loaded before the firing click. A short 160 ms
+        // use is not a shot: it usually only starts loading and was a silent
+        // failure mode in the previous executor.
+        let charged=crossbowChargeState();
+        if(charged!==true){
+          await keepAim();
+          bot.activateItem();
+          const deadline=Date.now()+1700;
+          while(state.active&&taskIsActive()&&Date.now()<deadline){
+            await keepAim();
+            charged=crossbowChargeState();
+            if(charged===true)break;
+            await sleep(60);
+          }
+          bot.deactivateItem();
+          await sleep(120);
+          charged=crossbowChargeState();
+          if(charged!==true){
+            log("[PVP-EXPERT] crossbow_load_unconfirmed nbt_state="+String(charged));
+            return false;
+          }
+          log("[PVP-EXPERT] crossbow_load_confirmed");
+        }
+        await keepAim();
+        bot.activateItem();
+        await sleep(90);
+        bot.deactivateItem();
+        await sleep(120);
+        const after=crossbowChargeState();
+        if(after===false){
+          log("[PVP-EXPERT] crossbow_fire_state_changed confirmed=true");
+          return true;
+        }
+        log("[PVP-EXPERT] crossbow_fire_unconfirmed nbt_state="+String(after));
+        return false;
+      }
+      if(type==="potion"){
+        await keepAim();
+        bot.activateItem();
+        await sleep(180);
+        bot.deactivateItem();
+        await sleep(90);
+        return true;
+      }
+      return false;
+    }catch(error){
+      try{bot.deactivateItem()}catch{}
+      log("[PVP-EXPERT] ranged_action_failed type="+type+" error="+(error?.message||String(error)));
+      return false;
+    }
   };
 
   const pearlBlockSafe=(block)=>{
