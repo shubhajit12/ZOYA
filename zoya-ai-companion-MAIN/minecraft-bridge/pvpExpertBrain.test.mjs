@@ -134,13 +134,13 @@ const base={
 
 
 {
-  assert.ok(controllerSource.includes('stun_slam_setup_confirmed=true shield_disabled='),
-    "stun slam setup must report confirmed axe hit and live shield state");
+  assert.ok(controllerSource.includes("const maceConfirmed=await wind(live);"),
+    "stun slam must execute a wind launch and then the real mace-smash executor");
   assert.ok(controllerSource.includes("stun_slam_confirmed=\"+maceConfirmed"),
-    "stun slam must not claim an unverified same-tick axe/mace combo");
-  assert.ok(brainSource.indexOf('reason:"active_shield_disable_before_mace"')<
-    brainSource.indexOf('reason:"falling_shield_disable_setup"'),
-    "active shield must be disabled before the falling mace follow-up is considered");
+    "stun slam success must reflect the confirmed mace follow-up, not only the axe hit");
+  assert.ok(brainSource.indexOf('reason:"confirmed_shield_disable_wind_mace_slam"')<
+    brainSource.indexOf('reason:"shield_drain_sequence"'),
+    "full stun-slam prerequisites must route before the shield-drain fallback");
 }
 
 
