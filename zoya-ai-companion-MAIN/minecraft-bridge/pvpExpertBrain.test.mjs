@@ -65,6 +65,9 @@ const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"
   assert.ok(controllerSource.includes('const recoveryMode=dist(bot.entity,t)>14&&!hazard()?"grapple":"escape"')&&controllerSource.includes("pearl_recover_mode="),
     "far-range recovery must use a target-directed grapple pearl rather than increasing separation");
 
+assert.ok(controllerSource.includes('pearlGrappleReady:Boolean(pearlReady("grapple",t))')&&controllerSource.includes("Date.now()>=Math.max(state.pearlCooldownUntil,state.pearlFailureUntil)"),
+    "grapple and recovery readiness must respect the same pearl failure cooldown as the throw executor");
+
 assert.ok(controllerSource.includes("pearl_retry_backoff mode=")&&controllerSource.includes("Math.min(30000,1800*(2**(state.pearlFailureStreak-1)))"),
     "failed escape/ambush pearls must apply bounded exponential backoff instead of rapidly consuming inventory");
   assert.ok(controllerSource.includes("pearl_catch_retry_backoff reason=")&&controllerSource.includes("Math.min(30000,3500*(2**(state.pearlCatchFailureStreak-1)))"),
