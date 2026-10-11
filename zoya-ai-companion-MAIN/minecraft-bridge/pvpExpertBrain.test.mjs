@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -201,6 +201,28 @@ const base={
   assert.equal(isEntityBlockingWithShield({equipment:[{name:"diamond_sword"},{name:"shield"}],metadata:{8:0}}),false);
   assert.ok(controllerSource.includes("usingItem:isEntityBlockingWithShield(t)"),
     "brain shield logic must receive active-shield state, not generic item-use state");
+}
+
+
+{
+  assert.equal(isCrystalFallbackSafe({health:20,selfDistance:4.2,targetDistance:3.5,totemEquipped:false}),true,
+    "crystal fallback should allow a high-health, favorable-distance trade that is physically placeable");
+  assert.equal(isCrystalFallbackSafe({health:16,selfDistance:4.2,targetDistance:3.5,totemEquipped:false}),false,
+    "crystal fallback must reject low-health trades without a totem");
+  assert.equal(isCrystalFallbackSafe({health:12,selfDistance:3.2,targetDistance:2.6,totemEquipped:true}),true,
+    "a totem-backed crystal trade can use the explicit lower safety margin");
+  assert.equal(isCrystalFallbackSafe({health:12,selfDistance:2.8,targetDistance:2.1,totemEquipped:true}),false,
+    "crystal fallback must reject point-blank self-damage risk");
+  assert.equal(isAnchorFallbackSafe({health:20,selfDistance:4.5,targetDistance:3.5,reachable:true}),true,
+    "anchor placement should be possible within reach when health and geometry are safe");
+  assert.equal(isAnchorFallbackSafe({health:20,selfDistance:4.5,targetDistance:3.5,reachable:false}),false,
+    "anchor placement must reject positions outside actual placement reach");
+  assert.equal(isAnchorFallbackSafe({health:11,selfDistance:3.5,targetDistance:2.5,totemEquipped:true,reachable:true}),false,
+    "anchor placement must reject low-health totem-backed detonations");
+  assert.ok(controllerSource.includes("minSelfDistance:state.totemEquipped?3.25:4.25"),
+    "new anchor placement must use a safety gate that can coexist with actual block reach");
+  assert.ok(controllerSource.includes("await restoreElytra();return false"),
+    "Elytra mace failure paths must restore the chest slot");
 }
 
 console.log("PvP Expert Brain deterministic tests passed.");
