@@ -2581,7 +2581,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             if(ok) state.maceEscapeCooldownUntil=Date.now()+2600;
             break;
           case "pearl_ambush": ok=await throwPearl(t,"ambush");break;
-          case "pearl_recover": ok=await throwPearl(t,"escape");break;
+          case "pearl_recover": {
+            // A recovery pearl used because the opponent is far away must close
+            // distance, not throw farther away from them. Escape only for a
+            // nearby hazard where creating space is the actual goal.
+            const recoveryMode=dist(bot.entity,t)>14&&!hazard()?"grapple":"escape";
+            log("[PVP-EXPERT] pearl_recover_mode="+recoveryMode+" distance="+dist(bot.entity,t).toFixed(2));
+            ok=await throwPearl(t,recoveryMode);
+            break;
+          }
           case "pearl_catch": ok=await pearlCatch(t,false);break;
           case "diagonal_pearl_catch": ok=await pearlCatch(t,true);break;
           case "pearl_grapple": ok=await throwPearl(t,"grapple");break;
