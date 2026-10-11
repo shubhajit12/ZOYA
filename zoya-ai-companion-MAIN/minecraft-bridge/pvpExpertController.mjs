@@ -37,6 +37,20 @@ function speed(e){return Math.hypot(num(e?.velocity?.x),num(e?.velocity?.z))}
 function isAirborne(e){return e?.onGround===false}
 function isElytraItem(i){return lname(i)==="elytra"}
 
+export function isEntityUsingItem(entity) {
+  if(entity?.isUsingItem===true||entity?.metadata?.isUsingItem===true)return true;
+  const metadata=entity?.metadata;
+  // Java 1.21.x LivingEntity metadata index 8 is a hand-state bitmask:
+  // bit 0 means a hand is active; bit 1 selects the offhand.
+  // Mineflayer/protocol versions may expose a raw byte or a typed {value}.
+  let raw=metadata?.[8]??metadata?.metadata?.[8]??metadata?.handStates??metadata?.hand_states;
+  if(raw&&typeof raw==="object"&&"value" in raw)raw=raw.value;
+  if(Array.isArray(raw))raw=raw[0];
+  if(Number.isFinite(Number(raw)))return (Number(raw)&0x01)!==0;
+  if(raw&&typeof raw==="object")return raw.active===true||raw.usingItem===true||raw.isUsingItem===true;
+  return false;
+}
+
 export function estimateObservedFallDistance(entity, peakY) {
   const y=num(entity?.position?.y,0);
   return Math.max(0,num(entity?.fallDistance),num(peakY,y)-y);
@@ -1197,7 +1211,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const live=targetOf(bot,state.targetUsername)||t;
       if(!live?.position||dist(bot.entity,live)>3.2)break;
       const held=lname(live.equipment?.[0]||live.heldItem||"");
-      const using=Boolean(live.isUsingItem||live.metadata?.isUsingItem);
+      const using=isEntityUsingItem(live);
       if(!/shield/.test(held)&&!using)break;
       if(Date.now()>=state.nextAttackAt){
         if(!await attack(live,"axe",3.2))break;
@@ -1207,7 +1221,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
     const live=targetOf(bot,state.targetUsername)||t;
     const held=lname(live?.equipment?.[0]||live?.heldItem||"");
-    if(has(bot,"sword")&&dist(bot.entity,live)<=3.05&&(!/shield/.test(held)||!Boolean(live?.isUsingItem))){
+    if(has(bot,"sword")&&dist(bot.entity,live)<=3.05&&(!/shield/.test(held)||!isEntityUsingItem(live))){
       await sleep(80);
       if(Date.now()>=state.nextAttackAt)await attack(live,"sword",3.05);
     }
@@ -1304,7 +1318,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!t?.position||!isAirborne(bot.entity)||!has(bot,"axe")||!has(bot,"mace"))return false;
     if(hotbarSlot("axe")==null||hotbarSlot("mace")==null)return false;
     const held=lname(t.equipment?.[0]||t.heldItem||"");
-    const shielding=/shield/.test(held)&&Boolean(t.isUsingItem||t.metadata?.isUsingItem);
+    const shielding=/shield/.test(held)&&isEntityUsingItem(t);
     const d=dist(bot.entity,t);
     if(!shielding||d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||
       estimateObservedFallDistance(bot.entity,state.selfPeakY)<=1.5||num(state.nextAttackAt)>Date.now())return false;
@@ -1323,7 +1337,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     await sleep(90);
     const live=targetOf(bot,state.targetUsername)||t;
     const liveHeld=lname(live?.equipment?.[0]||live?.heldItem||"");
-    const stillShielding=/shield/.test(liveHeld)&&Boolean(live?.isUsingItem||live?.metadata?.isUsingItem);
+    const stillShielding=/shield/.test(liveHeld)&&isEntityUsingItem(live);
     const fall=estimateObservedFallDistance(bot.entity,state.selfPeakY);
     const canFollowWithMace=Boolean(live?.position&&isAirborne(bot.entity)&&
       num(bot.entity?.velocity?.y)<-.08&&fall>1.5&&dist(bot.entity,live)>=2.35&&
@@ -1663,7 +1677,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           const hitsBefore=state.hits;
           const targetHealthBefore=live.health!=null&&Number.isFinite(Number(live.health))?Number(live.health):null;
           const enemyHeld=lname(live.equipment?.[0]||live.heldItem||"");
-          const enemyShielding=/shield/.test(enemyHeld)&&Boolean(live.isUsingItem||live.metadata?.isUsingItem);
+          const enemyShielding=/shield/.test(enemyHeld)&&isEntityUsingItem(live);
           // Never send two attacks in the same tick and label that a stun:
           // Minecraft has a shared attack-strength cooldown. The brain must
           // schedule shield-break pressure as its own action before this dive.
@@ -1894,10 +1908,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const projectileIncoming=projectileThreat();
         const crystalCycleReady=has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t));
         const enemy={
-          health:th,shield:eq.shield,usingItem:Boolean(t.isUsingItem||t.metadata?.isUsingItem),
+          health:th,shield:eq.shield,usingItem:isEntityUsingItem(t),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
           retreating:speed(t)>.18,totemPopped:Date.now()<state.enemyTotemPopUntil,
-          healing:Boolean(t.isUsingItem&&/golden_apple|potion/i.test(eq.held||"")),
+          healing:Boolean(isEntityUsingItem(t)&&/golden_apple|potion/i.test(eq.held||"")),
           meleeThreat:d<5,
           elytra:eq.elytra,held:eq.held,offhand:eq.offhand
         };
