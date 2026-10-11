@@ -1062,6 +1062,8 @@ assert.ok(catchTimingBody.includes('pearl_catch_skipped reason=pearl_and_wind_mu
 assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null'),
   "brain readiness must match the combo's hotbar prerequisites");
 console.log("Pearl-catch same-line timing regression tests passed.");
+assert.ok(controllerSource.includes("hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat"),
+  "pearl-catch readiness must be suppressed when a close enemy mace threat makes the setup unsafe");
 
 const throwPearlStart=controllerSource.indexOf("const throwPearl=async(t,mode=\"escape\")=>");
 const throwPearlEnd=controllerSource.indexOf("const webEscape=async()=>",throwPearlStart);
