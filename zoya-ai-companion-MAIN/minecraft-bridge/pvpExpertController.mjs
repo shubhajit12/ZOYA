@@ -125,9 +125,12 @@ export function projectileClosestApproach(projectilePosition,projectileVelocity,
   const r={x:n(projectilePosition.x)-n(playerPosition.x),y:n(projectilePosition.y)-n(playerPosition.y),z:n(projectilePosition.z)-n(playerPosition.z)};
   const v={x:n(projectileVelocity?.x)-n(playerVelocity?.x),y:n(projectileVelocity?.y)-n(playerVelocity?.y),z:n(projectileVelocity?.z)-n(playerVelocity?.z)};
   const speed2=v.x*v.x+v.y*v.y+v.z*v.z;
-  const ticks=speed2<0.0025?0:Math.max(0,Math.min(Math.max(0,Number(horizonTicks)||0),-(r.x*v.x+r.y*v.y+r.z*v.z)/speed2));
+  const horizon=Math.max(0,Number(horizonTicks)||0);
+  const rawTicks=speed2<0.0025?0:-(r.x*v.x+r.y*v.y+r.z*v.z)/speed2;
+  const valid=speed2<0.0025?Math.hypot(r.x,r.y,r.z)<=2.5:rawTicks>=0&&rawTicks<=horizon;
+  const ticks=speed2<0.0025?0:Math.max(0,Math.min(horizon,rawTicks));
   const relative={x:r.x+v.x*ticks,y:r.y+v.y*ticks,z:r.z+v.z*ticks};
-  return {ticks,distance:Math.hypot(relative.x,relative.y,relative.z),relative};
+  return {ticks,distance:Math.hypot(relative.x,relative.y,relative.z),relative,valid};
 }
 
 export function isProjectileOnCollisionCourse(projectilePosition, projectileVelocity, playerPosition, playerVelocity={x:0,y:0,z:0}, radius=1.35, horizonTicks=16) {
@@ -139,8 +142,7 @@ export function isProjectileOnCollisionCourse(projectilePosition, projectileVelo
     Number(projectilePosition.z)-Number(playerPosition.z)
   ):Infinity;
   if(current<=radius)return true;
-  if(approach.ticks<=0)return current<=2.5;
-  return approach.distance<=radius;
+  return approach.valid&&approach.distance<=radius;
 }
 
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
