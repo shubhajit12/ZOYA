@@ -37,6 +37,9 @@ const makeBrain=()=>createPvpExpertBrain();
 }
 
 
+const controllerSource=readFileSync(new URL("./pvpExpertController.mjs",import.meta.url),"utf8");
+const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"utf8");
+
 {
   const potionStart=controllerSource.indexOf('if(type==="potion"){');
   const potionEnd=controllerSource.indexOf("\n      }\n      return false;",potionStart);
@@ -51,8 +54,6 @@ const makeBrain=()=>createPvpExpertBrain();
     "potion action must not return unconditional success after issuing a use packet");
 }
 
-const controllerSource=readFileSync(new URL("./pvpExpertController.mjs",import.meta.url),"utf8");
-const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"utf8");
 const heldCloseDeclaration=controllerSource.indexOf("const enemyMaceHeldClose=Boolean(enemyMaceHeld&&d<=7.5);");
 const windMaceReadiness=controllerSource.indexOf("windMaceSmashReady:Boolean(");
 assert.ok(heldCloseDeclaration>=0,"enemyMaceHeldClose must be explicitly defined in the combat tick");
