@@ -88,6 +88,12 @@ export function isEntityBlockingWithShield(entity) {
   return main==="shield";
 }
 
+export function canStartStunSlam({hasAxe=false,hasMace=false,hasWind=false,axeHotbar=false,maceHotbar=false,shielding=false,distance=Infinity,attackReady=false}={}) {
+  const d=Number(distance);
+  return Boolean(hasAxe&&hasMace&&hasWind&&axeHotbar&&maceHotbar&&shielding&&attackReady&&
+    Number.isFinite(d)&&d>=2.25&&d<=3.2);
+}
+
 export function estimateObservedFallDistance(entity, peakY) {
   const y=num(entity?.position?.y,0);
   return Math.max(0,num(entity?.fallDistance),num(peakY,y)-y);
@@ -1456,12 +1462,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // Stun-slam: only attempts the axe stun + mace impact when already falling
   // through a real smash window and the target is visibly using a shield.
   const stunSlam=async t=>{
-    if(!t?.position||!isAirborne(bot.entity)||!has(bot,"axe")||!has(bot,"mace")||!has(bot,"wind"))return false;
-    if(hotbarSlot("axe")==null||hotbarSlot("mace")==null)return false;
+    if(!t?.position)return false;
     const shielding=isEntityBlockingWithShield(t);
     const d=dist(bot.entity,t);
-    if(!shielding||d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||
-      estimateObservedFallDistance(bot.entity,state.selfPeakY)<=1.5||num(state.nextAttackAt)>Date.now())return false;
+    // Start from the ground: axe-disable first, then create launch spacing,
+    // wind-launch, and only then execute the real falling mace smash. Requiring
+    // an existing fall here made the whole combo miss its intended setup phase.
+    if(!canStartStunSlam({
+      hasAxe:has(bot,"axe"),hasMace:has(bot,"mace"),hasWind:has(bot,"wind"),
+      axeHotbar:hotbarSlot("axe")!=null,maceHotbar:hotbarSlot("mace")!=null,
+      shielding,distance:d,attackReady:num(state.nextAttackAt)<=Date.now()
+    }))return false;
     // Real multi-phase stun-slam: confirm an axe shield-disable first, create
     // enough separation to use a wind charge, then wait for the launch and
     // execute a normal server-confirmed falling mace smash. Never send two
@@ -2127,7 +2138,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            windChargeResetReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.25&&selfFallDistance>1.5&&d>=2.25&&d<=3.25),
            shieldDrainReady:Boolean(eq.shield&&enemy.usingItem),
            backstabReady:Boolean(backstabReady),
-           stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&has(bot,"wind")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
+           stunSlamReady:canStartStunSlam({
+            hasAxe:has(bot,"axe"),hasMace:has(bot,"mace"),hasWind:has(bot,"wind"),
+            axeHotbar:hotbarSlot("axe")!=null,maceHotbar:hotbarSlot("mace")!=null,
+            shielding:eq.shield&&enemy.usingItem,distance:d,attackReady:num(state.nextAttackAt)<=Date.now()
+          }),
           maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
           maceEvasionReady:Boolean(Date.now()>=state.maceEvasionCooldownUntil),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
