@@ -209,6 +209,8 @@ assert.ok(controllerSource.includes('respawn_anchor:has(bot,"anchor"),glowstone:
 }
 assert.ok(controllerSource.includes('elytraMace:Boolean(has(bot,"elytra")&&has(bot,"mace"))'),
   "controller must expose an available Elytra+mace kit before the executor equips the Elytra");
+assert.ok(controllerSource.includes('elytra:count(bot,"elytra"),firework:count(bot,"firework")'),
+  "style scoring must receive Elytra and firework inventory counts, not only the equipped chest-slot state");
 
 
 
