@@ -952,6 +952,8 @@ assert.ok(controllerSource.includes("stunSlamReady=\"+Boolean(ctx.stunSlamReady)
 {
   assert.ok(controllerSource.includes('const leadTicks=Math.max(0,Math.min(12,num(lead)*20));'),
     "aim prediction must support a bounded ranged flight-time lead instead of clamping every shot to four ticks");
+  assert.ok(controllerSource.includes("maxLeadTicks=4") && controllerSource.includes("predictTargetPosition(t.position,v,state.targetAcceleration,leadTicks,12)"),
+    "look targeting must pass the extended bound through to the predictor while other prediction callers keep the conservative default");
   assert.ok(controllerSource.includes('?Math.min(.6,.08+dist(bot.entity,live)*.035):.08'),
     "bow and crossbow aim lead must scale with observed distance while melee aim remains short");
   assert.ok(brainSource.includes('if(invHas(c,"bow")&&c.hasBowAmmo!==false)'),
