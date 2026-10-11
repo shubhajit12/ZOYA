@@ -1032,16 +1032,30 @@ console.log("Falling mace hitbox-window tests passed.");
 }
 console.log("High pearl-catch landing-window tests passed.");
 
-assert.ok(controllerSource.includes("const launchPos=bot.entity.position.clone()"),
-  "pearl-catch aiming must use the actual airborne throw origin");
-assert.ok(controllerSource.includes("const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*7.0") &&
-  controllerSource.includes("const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*7.0") &&
+assert.ok(controllerSource.includes('const p=bot.entity.position.clone()') &&
+  controllerSource.includes('const pearlAim=()=>bot.entity.position.offset(hx,hy,hz)'),
+  "pearl-catch aiming must use the actual airborne position and a repeatable aim ray");
+assert.ok(controllerSource.includes("const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*3.5") &&
+  controllerSource.includes("const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*3.5") &&
   controllerSource.includes("const hy=diagonal?7.5:8.0"),
-  "pearl-catch throws must use meaningful horizontal travel instead of the old near-vertical +17Y aim");
+  "pearl-catch throws must use a defined upward trajectory with meaningful horizontal travel");
 assert.ok(controllerSource.includes("pearl_catch_throw_aim mode=") &&
   controllerSource.includes("elevationDeg="),
   "pearl-catch logs must expose the actual throw geometry for diagnosing trajectory failures");
-console.log("Pearl-catch throw trajectory regression tests passed.");
+const catchStartForTiming=controllerSource.indexOf("const pearlCatch=async(t,diagonal=false)=>");
+const catchEndForTiming=controllerSource.indexOf("const windChargeCancel=async t=>",catchStartForTiming);
+const catchTimingBody=controllerSource.slice(catchStartForTiming,catchEndForTiming);
+const pearlFireAt=catchTimingBody.indexOf('if(!selectHotbarItem("pearl"))');
+const windFireAt=catchTimingBody.indexOf('if(!selectHotbarItem("wind"))',pearlFireAt);
+const observePearlAt=catchTimingBody.indexOf("const pearlUntil=Date.now()+700");
+assert.ok(pearlFireAt>=0&&windFireAt>pearlFireAt&&observePearlAt>windFireAt,
+  "the wind charge must be fired immediately after the pearl, before waiting for projectile observation");
+assert.ok(catchTimingBody.includes('pearl_catch_skipped reason=pearl_and_wind_must_be_in_distinct_hotbar_slots') &&
+  catchTimingBody.includes('hotbarSlot("pearl")!==hotbarSlot("wind")'),
+  "the combo must not claim readiness if the two items cannot be switched quickly from distinct hotbar slots");
+assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null'),
+  "brain readiness must match the combo's hotbar prerequisites");
+console.log("Pearl-catch same-line timing regression tests passed.");
 
 
 // The preflight inventory line must show all major kit prerequisites so a
