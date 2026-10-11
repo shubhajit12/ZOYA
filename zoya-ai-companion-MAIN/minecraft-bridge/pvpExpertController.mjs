@@ -1260,28 +1260,36 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!t?.position||!isAirborne(bot.entity)||!has(bot,"axe")||!has(bot,"mace"))return false;
     if(hotbarSlot("axe")==null||hotbarSlot("mace")==null)return false;
     const held=lname(t.equipment?.[0]||t.heldItem||"");
-    if(!/shield/.test(held)||!Boolean(t.isUsingItem||t.metadata?.isUsingItem))return false;
+    const shielding=/shield/.test(held)&&Boolean(t.isUsingItem||t.metadata?.isUsingItem);
     const d=dist(bot.entity,t);
-    if(d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||estimateObservedFallDistance(bot.entity,state.selfPeakY)<=1.5)return false;
-    if(num(state.nextAttackAt)>Date.now())return false;
-    const originalSlot=Number.isInteger(bot.quickBarSlot)?bot.quickBarSlot:null;
-    const hitsBefore=state.hits,targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
-    // Packet sequence is deliberately synchronous: axe hit, hotbar swap,
-    // mace hit, all within one client tick when both items are already hotbar.
-    if(!selectHotbarItem("axe"))return false;
-    await lookAtTarget(t,.0);
-    bot.attack(t);
-    state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
-    state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
-    if(!selectHotbarItem("mace"))return false;
-    bot.attack(t);
-    state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;
-    state.nextAttackAt=state.lastAttackAt+1667;state.attackCount++;
-    await sleep(40);
-    if(originalSlot!=null)try{bot.setQuickBarSlot(originalSlot)}catch{}
-    const confirmed=await waitForHitConfirmation(t,hitsBefore,targetHealthBefore,280);
-    log("[PVP-EXPERT] stun_slam packet_sequence=axe_then_mace same_tick=true confirmed="+confirmed);
-    return confirmed;
+    if(!shielding||d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||
+      estimateObservedFallDistance(bot.entity,state.selfPeakY)<=1.5||num(state.nextAttackAt)>Date.now())return false;
+    // An axe shield-disable and a mace hit are not two independent attacks
+    // that can safely be emitted in the same tick: Minecraft shares attack
+    // strength cooldown. Execute and confirm the axe strike only; the brain
+    // will reassess the live fall window and schedule a separate mace smash
+    // only if the cooldown and fall geometry still permit it.
+    const hitsBefore=state.hits;
+    const healthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+    const axeHit=await attack(t,"axe",3.2);
+    if(!axeHit){
+      log("[PVP-EXPERT] stun_slam_setup_confirmed=false reason=axe_hit_unconfirmed");
+      return false;
+    }
+    await sleep(90);
+    const live=targetOf(bot,state.targetUsername)||t;
+    const liveHeld=lname(live?.equipment?.[0]||live?.heldItem||"");
+    const stillShielding=/shield/.test(liveHeld)&&Boolean(live?.isUsingItem||live?.metadata?.isUsingItem);
+    const fall=estimateObservedFallDistance(bot.entity,state.selfPeakY);
+    const canFollowWithMace=Boolean(live?.position&&isAirborne(bot.entity)&&
+      num(bot.entity?.velocity?.y)<-.08&&fall>1.5&&dist(bot.entity,live)>=2.35&&
+      dist(bot.entity,live)<=3.05&&Date.now()>=state.nextAttackAt&&!stillShielding);
+    log("[PVP-EXPERT] stun_slam_setup_confirmed=true shield_disabled="+(!stillShielding)+
+      " mace_followup_window="+canFollowWithMace+" prior_hits="+hitsBefore+
+      " target_health_before="+String(healthBefore));
+    // Do not claim a slam occurred here. A later brain decision must issue and
+    // confirm the actual mace impact; no fake same-tick double-attack success.
+    return true;
   };
 
   // Mid-air wind-charge reset: use a downward charge to brake a dangerous
