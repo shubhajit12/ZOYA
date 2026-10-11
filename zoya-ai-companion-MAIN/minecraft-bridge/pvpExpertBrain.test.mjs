@@ -153,8 +153,9 @@ const base={
   ),false,"nearby projectiles moving away must not trigger dodge");
   assert.ok(controllerSource.includes('case "spear_lunge": ok=await spearLunge(t);'),
   "spear lunge brain action must route to a real spear-jab executor");
-  assert.ok(controllerSource.includes("spear_lunge_hit_confirmed="),
-    "spear lunge must report server-confirmed hit and observed displacement");
+  assert.ok(controllerSource.includes("const lungeObserved=confirmed&&displacement>.65")&&
+    controllerSource.includes("spear_lunge_confirmed="+ "lungeObserved"),
+    "spear lunge success must require both a confirmed hit and observed lunge displacement");
   assert.ok(controllerSource.includes("chooseMaceDodgeSide("),
   "mace evasion must select its lateral direction from opponent facing and motion");
   assert.ok(controllerSource.includes("predictive_side="),
