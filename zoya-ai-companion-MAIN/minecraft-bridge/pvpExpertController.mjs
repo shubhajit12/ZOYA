@@ -344,6 +344,24 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
+  const postHitEvasion=async(t)=>{
+    if(!t?.position||!state.active||!taskIsActive())return false;
+    // After a confirmed contact, take a short alternating lateral step rather
+    // than continuing to run straight into the opponent's weapon. This uses
+    // ordinary movement inputs and never changes attack reach or cooldowns.
+    state.strafe*=-1;
+    try{
+      await lookAtTarget(t,.04);
+      bot.setControlState("forward",false);
+      bot.setControlState("back",false);
+      bot.setControlState("sprint",false);
+      bot.setControlState("left",state.strafe<0);
+      bot.setControlState("right",state.strafe>0);
+      await sleep(75);
+      return true;
+    }finally{stop();}
+  };
+
   const attack=async(t,type,maxReach)=>{
     if(!t||!await equip(type)) return false;
     const d=dist(bot.entity,t);
@@ -364,6 +382,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     await sleep(55);
     const confirmed=await waitForHitConfirmation(t,hitsBefore,targetHealthBefore,280);
     if(!confirmed)log("[PVP-EXPERT] swing_unconfirmed weapon="+type+" target="+state.targetUsername+"; action will enter bounded backoff");
+    else await postHitEvasion(t);
     return confirmed;
   };
 
