@@ -119,22 +119,28 @@ export function isConfirmedPearlCatch(displaced, pearlStillExists) {
   return isConfirmedPearlTeleport(displaced?3.01:0,pearlStillExists,3);
 }
 
+export function projectileClosestApproach(projectilePosition,projectileVelocity,playerPosition,playerVelocity={x:0,y:0,z:0},horizonTicks=16){
+  if(!projectilePosition||!playerPosition)return null;
+  const n=v=>Number.isFinite(Number(v))?Number(v):0;
+  const r={x:n(projectilePosition.x)-n(playerPosition.x),y:n(projectilePosition.y)-n(playerPosition.y),z:n(projectilePosition.z)-n(playerPosition.z)};
+  const v={x:n(projectileVelocity?.x)-n(playerVelocity?.x),y:n(projectileVelocity?.y)-n(playerVelocity?.y),z:n(projectileVelocity?.z)-n(playerVelocity?.z)};
+  const speed2=v.x*v.x+v.y*v.y+v.z*v.z;
+  const ticks=speed2<0.0025?0:Math.max(0,Math.min(Math.max(0,Number(horizonTicks)||0),-(r.x*v.x+r.y*v.y+r.z*v.z)/speed2));
+  const relative={x:r.x+v.x*ticks,y:r.y+v.y*ticks,z:r.z+v.z*ticks};
+  return {ticks,distance:Math.hypot(relative.x,relative.y,relative.z),relative};
+}
+
 export function isProjectileOnCollisionCourse(projectilePosition, projectileVelocity, playerPosition, playerVelocity={x:0,y:0,z:0}, radius=1.35, horizonTicks=16) {
-  if(!projectilePosition||!playerPosition)return false;
-  const n=(v)=>Number.isFinite(Number(v))?Number(v):0;
-  const rx=n(projectilePosition.x)-n(playerPosition.x);
-  const ry=n(projectilePosition.y)-n(playerPosition.y);
-  const rz=n(projectilePosition.z)-n(playerPosition.z);
-  const vx=n(projectileVelocity?.x)-n(playerVelocity?.x);
-  const vy=n(projectileVelocity?.y)-n(playerVelocity?.y);
-  const vz=n(projectileVelocity?.z)-n(playerVelocity?.z);
-  const current=Math.hypot(rx,ry,rz);
+  const approach=projectileClosestApproach(projectilePosition,projectileVelocity,playerPosition,playerVelocity,horizonTicks);
+  if(!approach)return false;
+  const current=projectilePosition&&playerPosition?Math.hypot(
+    Number(projectilePosition.x)-Number(playerPosition.x),
+    Number(projectilePosition.y)-Number(playerPosition.y),
+    Number(projectilePosition.z)-Number(playerPosition.z)
+  ):Infinity;
   if(current<=radius)return true;
-  const speed2=vx*vx+vy*vy+vz*vz;
-  if(speed2<0.0025)return current<=2.5;
-  const closestTick=-(rx*vx+ry*vy+rz*vz)/speed2;
-  if(closestTick<0||closestTick>horizonTicks)return false;
-  return Math.hypot(rx+vx*closestTick,ry+vy*closestTick,rz+vz*closestTick)<=radius;
+  if(approach.ticks<=0)return current<=2.5;
+  return approach.distance<=radius;
 }
 
 export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=()=>{},difficulty=THEO_PVP_DIFFICULTY}={}){
@@ -777,7 +783,19 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const projectileDodge=async t=>{
     if(!t)return false;
-    state.strafe*=-1;
+    const threat=incomingProjectile();
+    if(threat){
+      // Pick the lateral direction that moves away from the projectile's
+      // predicted closest-approach point, rather than blindly alternating.
+      const rel=threat.approach.relative;
+      const yaw=num(bot.entity?.yaw);
+      const rightX=Math.cos(yaw),rightZ=Math.sin(yaw);
+      const awayDot=(-rel.x)*rightX+(-rel.z)*rightZ;
+      state.strafe=awayDot>=0?1:-1;
+      log("[PVP-EXPERT] projectile_dodge predictive_side="+(state.strafe>0?"right":"left")+
+        " projectile="+String(threat.entity.name||"unknown")+
+        " miss_distance="+threat.approach.distance.toFixed(2));
+    }else state.strafe*=-1;
     await lookAtTarget(t,.12);
     bot.setControlState(state.strafe<0?"left":"right",true);
     bot.setControlState("forward",true);
@@ -810,18 +828,21 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     };
   };
 
-  const projectileThreat=()=>{
-    const p=bot.entity?.position;if(!p)return false;
+  const incomingProjectile=()=>{
+    const p=bot.entity?.position;if(!p)return null;
     const playerVelocity=bot.entity?.velocity||{x:0,y:0,z:0};
-    return Object.values(bot.entities||{}).some(e=>{
-      if(!e?.position||e===bot.entity)return false;
+    let best=null;
+    for(const e of Object.values(bot.entities||{})){
+      if(!e?.position||e===bot.entity)continue;
       const n=String(e.name||"").toLowerCase();
-      if(!/arrow|spectral_arrow|trident|fireball|small_fireball|wind_charge|snowball|egg/.test(n))return false;
-      // Distance alone creates false alarms for projectiles flying away or
-      // passing beside ZOYA. Predict relative-motion closest approach instead.
-      return isProjectileOnCollisionCourse(e.position,e.velocity,p,playerVelocity,1.35,16);
-    });
+      if(!/arrow|spectral_arrow|trident|fireball|small_fireball|wind_charge|snowball|egg/.test(n))continue;
+      const approach=projectileClosestApproach(e.position,e.velocity,p,playerVelocity,16);
+      if(!approach||!isProjectileOnCollisionCourse(e.position,e.velocity,p,playerVelocity,1.35,16))continue;
+      if(!best||approach.distance<best.approach.distance)best={entity:e,approach};
+    }
+    return best;
   };
+  const projectileThreat=()=>Boolean(incomingProjectile());
 
   const hazard=()=>{
     const p=bot.entity?.position;if(!p)return false;
