@@ -158,8 +158,13 @@ export function createPvpExpertBrain(options={}){
     // Do not waste a weapon cooldown on attacks through walls or around
     // corners. Survival/escape decisions above remain higher priority.
     if(!c.lineOfSight) return {action:"reacquire",style:styleMemory||"sword",priority:9580,reason:"lost_los_before_attack"};
+    // Disable an actively raised shield before considering a falling mace
+    // follow-up. The old ordering selected a same-tick axe+mace sequence that
+    // bypassed attack cooldown and falsely reported a stun slam.
+    if(e.shield&&e.usingItem&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady)
+      return {action:"shield_break",style:"axe",priority:9430,reason:"active_shield_disable_before_mace"};
     if(c.stunSlamReady&&has(c,"axe")&&has(c,"mace"))
-      return {action:"stun_slam",style:"mace",priority:9420,reason:"falling_shield_stun_slam"};
+      return {action:"stun_slam",style:"mace",priority:9420,reason:"falling_shield_disable_setup"};
     if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady&&c.shieldDrainReady)
       return {action:"shield_drain",style:"axe",priority:9410,reason:"shield_drain_sequence"};
     if(c.windCancelReady&&has(c,"wind")&&d>=3&&d<=7)
