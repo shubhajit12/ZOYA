@@ -2366,7 +2366,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       log("[PVP-EXPERT] combat_loadout totem_equipped="+Boolean(state.totemEquipped)+
         " offhand="+(offhandName()||"empty")+" inventoryCount="+count(bot,"totem"));
     }
-    log("[PVP-EXPERT] skill_inventory shield="+count(bot,"shield")+" pearls="+count(bot,"pearl")+" wind="+count(bot,"wind")+" mace="+count(bot,"mace")+" axe="+count(bot,"axe")+"; missing items are not synthesized");
+    log("[PVP-EXPERT] skill_inventory sword="+count(bot,"sword")+" axe="+count(bot,"axe")+" spear="+count(bot,"spear")+" mace="+count(bot,"mace")+" shield="+count(bot,"shield")+" totem="+count(bot,"totem")+" pearls="+count(bot,"pearl")+" wind="+count(bot,"wind")+" bow="+count(bot,"bow")+" arrows="+count(bot,"arrow")+" crossbow="+count(bot,"crossbow")+" crystals="+count(bot,"crystal")+" obsidian="+count(bot,"obsidian")+" anchors="+count(bot,"anchor")+" glowstone="+count(bot,"glowstone")+" potions="+count(bot,"potion")+" goldenApples="+count(bot,"heal")+" elytra="+count(bot,"elytra")+" fireworks="+count(bot,"firework")+" waterBuckets="+count(bot,"water")+" cobwebs="+count(bot,"web")+"; missing items are not synthesized");
     log("[PVP-EXPERT] active target="+state.targetUsername);
 
     try{
