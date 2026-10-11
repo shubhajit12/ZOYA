@@ -636,6 +636,9 @@ console.log("Theobald-impossible difficulty regression tests passed.");
   assert.equal(shouldApplyFailedActionBackoff("emergency_disengage"),false,"failed-action cooldowns must never override emergency retreat");
   assert.equal(shouldApplyFailedActionBackoff("emergency_hold"),false,"failed-action cooldowns must never override emergency safe spacing");
   assert.equal(shouldApplyFailedActionBackoff("approach"),true,"ordinary navigation actions may still use failure cooldowns");
+assert.ok(controllerSource.includes('const navigationAction=new Set(["approach","reacquire","mace_approach"]).has(decision.action)') &&
+  controllerSource.includes('reason:"failed_navigation_reposition"'),
+  "a blocked navigation action must reposition instead of immediately retrying the same failed path");
 }
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
