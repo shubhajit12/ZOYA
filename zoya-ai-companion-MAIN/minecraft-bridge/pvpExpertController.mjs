@@ -145,7 +145,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
     lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,pearlCatchCooldownUntil:0,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
     lastAttackConfirmedAt:0,pendingEntityHitUntil:0,
-    maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,
+    maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,maceEvasionCooldownUntil:0,
     lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null,lastCombatDiagAt:0
   };
 
@@ -342,6 +342,35 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }finally{
       stop();
     }
+  };
+
+  const maceEvasion=async(t)=>{
+    if(!t?.position||!state.active||!taskIsActive())return false;
+    // Avoid jumping into a mace user's burst. Break their straight-line aim with
+    // a short lateral + backward sprint burst, then punish only if sword reach
+    // and the normal vanilla cooldown still permit a real hit.
+    state.maceEvasionCooldownUntil=Date.now()+650;
+    const side=state.strafe<0?"left":"right";
+    try{
+      await lookAtTarget(t,.02);
+      bot.setControlState("forward",false);
+      bot.setControlState("jump",false);
+      bot.setControlState("back",true);
+      bot.setControlState("sprint",true);
+      bot.setControlState(side,true);
+      await sleep(135);
+    }finally{
+      stop();
+      state.strafe*=-1;
+    }
+    const live=targetOf(bot,state.targetUsername)||t;
+    if(live?.position&&dist(bot.entity,live)<=3.05&&Date.now()>=state.nextAttackAt&&has(bot,"sword")){
+      const confirmed=await attack(live,"sword",3.05);
+      log("[PVP-EXPERT] mace_evasion_counter confirmed="+confirmed);
+      return confirmed;
+    }
+    log("[PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown");
+    return true;
   };
 
   const postHitEvasion=async(t)=>{
@@ -1460,6 +1489,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.pearlCooldownUntil=0;
       state.pearlCatchCooldownUntil=0;
     state.maceEscapeCooldownUntil=0;
+    state.maceEvasionCooldownUntil=0;
     state.emergencyRetreatUntil=0;
     state.spacingLockUntil=0;
     state.lastJumpResetAt=0;
@@ -1685,6 +1715,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            backstabReady:Boolean(backstabReady),
            stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
           maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
+          maceEvasionReady:Boolean(Date.now()>=state.maceEvasionCooldownUntil),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
           shieldReady:Boolean(Date.now()>=state.shieldCooldownUntil),
           meleeBlockReady,
@@ -1744,6 +1775,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             break;
           }
           case "emergency_disengage": ok=await emergencyDisengage(t);break;
+          case "mace_evasion": ok=await maceEvasion(t);break;
           case "emergency_hold": ok=await emergencyHold(t);break;
           case "spacing_retreat": ok=await spacingRetreat(t);break;
           case "spacing_hold": {
