@@ -73,6 +73,10 @@ assert.ok(controllerSource.includes("pearl_retry_backoff mode=")&&controllerSour
   assert.ok(controllerSource.includes("pearl_catch_retry_backoff reason=")&&controllerSource.includes("Math.min(30000,3500*(2**(state.pearlCatchFailureStreak-1)))"),
     "failed pearl-catch combos must cool down progressively after repeated unconfirmed teleports");
 
+assert.ok(controllerSource.includes("strafe_movement_confirmed=")&&controllerSource.includes("pressure_orbit_confirmed="),"strafe/orbit must confirm displacement");
+assert.ok(controllerSource.includes("projectile_dodge_confirmed=")&&controllerSource.includes("emergency_hold_confirmed="),"dodge/hold must confirm movement");
+assert.ok(controllerSource.includes('case "spacing_hold": ok=await pressureOrbit(t,state.strafe,140);break;'),"spacing hold must use verified orbit executor");
+
 assert.ok(controllerSource.includes("emergency_disengage_confirmed=")&&controllerSource.includes("return reachedGap||progressed;"),
     "emergency disengage must not report success if it neither reaches a safe gap nor gains distance");
   assert.ok(controllerSource.includes("mace_evasion_confirmed=")&&controllerSource.includes("return evasionConfirmed;"),
