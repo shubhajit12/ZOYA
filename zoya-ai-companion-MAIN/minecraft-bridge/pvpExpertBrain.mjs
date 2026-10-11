@@ -191,8 +191,6 @@ export function createPvpExpertBrain(options={}){
     if(low&&c.recoveryPearlReady&&c.pearlEscapeReady&&d<num(c.healDistanceMin,4.2))
       return {action:"pearl_escape",style:"utility",priority:9710,reason:"low_health_pearl_escape"};
     if(low&&has(c,"heal")&&d>=num(c.healDistanceMin,4.2)) return {action:"heal",style:"utility",priority:9700,reason:"safe_heal_window"};
-    if(c.pearlCatchReady)
-      return {action:c.diagonalPearlCatchReady?"diagonal_pearl_catch":"pearl_catch",style:"utility",priority:9670,reason:c.diagonalPearlCatchReady?"diagonal_pearl_wind_catch":"pearl_wind_catch"};
     if(c.webbed) return {action:"web_escape",style:"utility",priority:9650,reason:"cobweb_escape"};
     if(c.hazard&&has(c,"water")) return {action:"water_clutch",style:"utility",priority:9600,reason:"hazard_recovery"};
     // Do not waste a weapon cooldown on attacks through walls or around
@@ -231,6 +229,11 @@ export function createPvpExpertBrain(options={}){
     if(e.totemPopped&&d>3.05&&d<=5&&has(c,"melee"))
       return {action:"approach",style:styleMemory||"sword",priority:9550,reason:"totem_pop_pressure"};
     if(e.totemPopped&&d>5&&d<=12&&has(c,"pearl")) return {action:"pearl_ambush",style:"utility",priority:9250,reason:"punish_totem_pop"};
+
+    // Do not sacrifice a confirmed totem-pop pressure window to a speculative
+    // pearl-catch combo; the catch remains available immediately afterward.
+    if(c.pearlCatchReady)
+      return {action:c.diagonalPearlCatchReady?"diagonal_pearl_catch":"pearl_catch",style:"utility",priority:9670,reason:c.diagonalPearlCatchReady?"diagonal_pearl_wind_catch":"pearl_wind_catch"};
 
     // Retreat only when body overlap makes aim/attack unreliable. The old
     // 2.45-block cutoff forced ZOYA to back away while still inside sword
