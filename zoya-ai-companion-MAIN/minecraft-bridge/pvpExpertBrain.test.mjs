@@ -236,6 +236,16 @@ const base={
     "Elytra mace failure paths must restore the chest slot");
 }
 
+
+{
+  assert.ok(controllerSource.includes("wind_charge_cancel_confirmed="),
+    "wind-charge interruption must confirm impact, not just item activation");
+  assert.ok(controllerSource.includes("projectile_spawned=false"),
+    "wind-charge interruption must fail closed when no projectile launches");
+  assert.ok(controllerSource.includes("water_clutch_confirmed="),
+    "water clutch must verify that a water block was actually placed");
+}
+
 console.log("PvP Expert Brain deterministic tests passed.");
 
 // Survival must not assume a totem exists: a detected falling-mace threat still evades.
