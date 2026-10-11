@@ -2283,17 +2283,18 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       if(!state.active||!target||entity?.id!==target.id) return;
       // Record all observed target damage for explosion/utility confirmation,
       // even when it was not caused by a direct attack from ZOYA.
-      state.lastTargetHurtAt=Date.now();
-      const age=Date.now()-state.lastAttackAttemptAt;
-      if(age<0||age>450) return;
+      const now=Date.now();
+      state.lastTargetHurtAt=now;
+      const age=now-state.lastAttackAttemptAt;
       // When Mineflayer identifies the source, reject damage from other
       // entities. Some servers omit source metadata, so the short attack-time
       // + target-identity window is the fallback for PvP players.
       if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;
-      // Keep a separate self-attributed hit signal for ranged attacks. The
-      // general timestamp above intentionally includes environmental/other-player
-      // damage for explosion and utility telemetry, but must not prove our arrow hit.
-      state.lastSelfTargetHurtAt=Date.now();
+      // A server-attributed hit from ZOYA may arrive after a projectile flight;
+      // if source metadata is missing, require the short melee timing window.
+      if(source&&(source.id===bot.entity?.id||source.username===bot.username)||age>=0&&age<=450)
+        state.lastSelfTargetHurtAt=now;
+      if(age<0||age>450) return;
       // Health-delta polling and entityHurt may report the same server hit.
       // Count the first confirmation only; the 450ms attack window is also
       // the maximum plausible overlap for these two Mineflayer signals.
