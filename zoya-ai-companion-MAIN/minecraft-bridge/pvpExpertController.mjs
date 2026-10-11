@@ -2315,7 +2315,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const enemy={
           health:th,shield:eq.shield,usingItem:isEntityBlockingWithShield(t),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
-          retreating:speed(t)>.18,totemPopped:Date.now()<state.enemyTotemPopUntil,
+          // Speed alone is not retreating: require movement away from ZOYA.
+          retreating:speed(t)>.18&&!enemyClosing,totemPopped:Date.now()<state.enemyTotemPopUntil,
           healing:Boolean(isEntityUsingItem(t)&&/golden_apple|potion/i.test(eq.held||"")),
           meleeThreat:d<5,
           elytra:eq.elytra,held:eq.held,offhand:eq.offhand
