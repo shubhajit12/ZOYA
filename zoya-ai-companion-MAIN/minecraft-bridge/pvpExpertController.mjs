@@ -536,32 +536,39 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const cross=item(bot,"crossbow")||bot.heldItem;
     const root=cross?.nbt;
     if(!root)return null;
-    const visit=(node,depth=0)=>{
-      if(node==null||depth>10)return null;
+    const unwrap=v=>v&&typeof v==="object"&&"value" in v?v.value:v;
+    const findKey=(node,wanted,depth=0)=>{
+      if(node==null||depth>10)return undefined;
       if(Array.isArray(node)){
-        for(const v of node){const r=visit(v,depth+1);if(r!==null)return r}
-        return null;
+        for(const v of node){const r=findKey(v,wanted,depth+1);if(r!==undefined)return r}
+        return undefined;
       }
-      if(typeof node!=="object")return null;
+      if(typeof node!=="object")return undefined;
       for(const [key,raw] of Object.entries(node)){
-        const k=key.toLowerCase().replace(/[_-]/g,"");
-        const value=raw&&typeof raw==="object"&&"value" in raw?raw.value:raw;
-        if(k==="charged"&&(typeof value==="boolean"||typeof value==="number"||typeof value==="string"))
-          return value===true||value===1||value==="1";
-        if(k==="chargedprojectiles"||k==="chargedprojectile"){
-          if(Array.isArray(value))return value.length>0;
-          if(value&&Array.isArray(value.value))return value.value.length>0;
-          if(value&&Array.isArray(value.value?.value))return value.value.value.length>0;
-          if(value&&typeof value==="object")return Object.keys(value).length>0;
-          return false;
-        }
+        if(key.toLowerCase().replace(/[_-]/g,"")===wanted)return raw;
       }
       for(const raw of Object.values(node)){
-        const r=visit(raw,depth+1);if(r!==null)return r;
+        const r=findKey(raw,wanted,depth+1);if(r!==undefined)return r;
       }
-      return null;
+      return undefined;
     };
-    return visit(root);
+    // Prefer the projectile list over the legacy Charged boolean because some
+    // protocol/item serializers expose a stale boolean alongside the real list.
+    const projectiles=findKey(root,"chargedprojectiles");
+    if(projectiles!==undefined){
+      const v=unwrap(projectiles);
+      if(Array.isArray(v))return v.length>0;
+      if(v&&Array.isArray(v.value))return v.value.length>0;
+      if(v&&Array.isArray(v.value?.value))return v.value.value.length>0;
+      if(v&&typeof v==="object")return Object.keys(v).length>0;
+      return false;
+    }
+    const charged=findKey(root,"charged");
+    if(charged===undefined)return null;
+    const value=unwrap(charged);
+    if(typeof value==="boolean"||typeof value==="number"||typeof value==="string")
+      return value===true||value===1||value==="1";
+    return null;
   };
 
   const ranged=async(t,type)=>{
