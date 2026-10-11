@@ -2785,12 +2785,26 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "hit_select": ok=await hitSelect(t);break;
           case "melee_attack": ok=await attack(t,decision.style==="axe"?"axe":decision.style==="mace"?"mace":decision.style==="spear"?"spear":"sword",decision.style==="spear"?5.0:decision.style==="mace"?3.1:3.05);break;
           case "finish_wait": {
-            // A totem pop is a short, high-value window. If weapon cooldown
-            // has not recovered, keep facing and strafe in range instead of
-            // retreating or switching styles; the next brain tick may finish.
+            // A totem pop is a short, high-value window. Preserve the finish,
+            // but do not run through the target while waiting for attack cooldown:
+            // the live log showed finish_wait at 0.64 blocks, an unnecessarily
+            // compressed spacing that can ruin the next swing/aim.
             await lookAtTarget(t,.02);
-            bot.setControlState(state.strafe<0?"left":"right",true);
-            await sleep(85);
+            const finishDistance=dist(bot.entity,t);
+            if(finishDistance<2.05){
+              bot.setControlState("forward",false);
+              bot.setControlState("sprint",false);
+              bot.setControlState("back",true);
+              await sleep(70);
+            }else if(finishDistance>2.85){
+              bot.setControlState("back",false);
+              bot.setControlState("forward",true);
+              bot.setControlState("sprint",true);
+              await sleep(45);
+            }else{
+              bot.setControlState(state.strafe<0?"left":"right",true);
+              await sleep(70);
+            }
             stop();
             ok=true;
             break;
