@@ -38,12 +38,12 @@ export function isHostilePotionItem(i){
   if(!i||!ITEMS.potion.includes(lname(i)))return false;
   let metadata="";
   try{
+    // Only inspect actual effect-bearing item data. Display/custom names
+    // are user-controlled labels and must never turn a healing potion into a
+    // supposed debuff just because it was renamed "Poison".
     metadata=JSON.stringify({
       nbt:i.nbt??null,
-      components:i.components??null,
-      customName:i.customName??null,
-      displayName:i.displayName??null,
-      name:i.name??null
+      components:i.components??null
     }).toLowerCase();
   }catch{return false}
   return /(?:minecraft:)?(?:poison|slowness|weakness|instant_damage|harming|wither|blindness|mining_fatigue|nausea|levitation|infested|oozing|weaving)(?:\b|[_-])/i.test(metadata);
