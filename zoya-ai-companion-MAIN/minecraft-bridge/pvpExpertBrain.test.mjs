@@ -150,6 +150,20 @@ const base={
     "logs must distinguish a requested equip from an observed offhand totem");
 }
 
+
+{
+  const rangedCtx={...baseContext(),distance:9,lineOfSight:true,hasBowAmmo:false,hasCrossbowAmmo:false};
+  assert.notEqual(createPvpExpertBrain().decide(rangedCtx).action,"ranged_attack",
+    "brain must not repeatedly choose bow/crossbow firing without ammunition");
+  const loadedCrossbowCtx={...rangedCtx,hasCrossbowAmmo:true};
+  assert.equal(createPvpExpertBrain().decide(loadedCrossbowCtx).action,"ranged_attack",
+    "a loaded crossbow remains usable even without spare inventory arrows");
+  assert.ok(controllerSource.includes("bow_fire_blocked reason=no_arrow_ammunition"),
+    "bow executor must refuse to charge without ammunition");
+  assert.ok(controllerSource.includes("crossbow_fire_blocked reason=unloaded_no_arrow_ammunition"),
+    "crossbow executor must refuse to load/fire without ammunition");
+}
+
 console.log("PvP Expert Brain deterministic tests passed.");
 
 // Survival must not assume a totem exists: a detected falling-mace threat still evades.
