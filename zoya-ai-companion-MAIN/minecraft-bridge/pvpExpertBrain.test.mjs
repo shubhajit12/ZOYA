@@ -198,6 +198,19 @@ const base={
 assert.ok(controllerSource.includes('respawn_anchor:has(bot,"anchor"),glowstone:has(bot,"glowstone")'),
   "controller context must expose anchor and glowstone capabilities consumed by urgent kit selection");
 
+{
+  const brain=makeBrain();
+  const d=brain.decide({...base,distance:8,elytraEquipped:false,elytraLaunchReady:false,
+    inventory:{...base.inventory,elytra:1,mace:1,firework:8},
+    capabilities:{...base.capabilities,elytraMace:true,firework:true}});
+  assert.equal(d.action,"rocket_mace",
+    "Elytra mace must start from an inventory loadout instead of requiring Elytra to already be equipped or airborne");
+  assert.equal(d.style,"elytra");
+}
+assert.ok(controllerSource.includes('elytraMace:Boolean(has(bot,"elytra")&&has(bot,"mace"))'),
+  "controller must expose an available Elytra+mace kit before the executor equips the Elytra");
+
+
 
 {
   const d=makeBrain().decide({...base,health:5,hasTotem:true});
