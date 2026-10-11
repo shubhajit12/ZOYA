@@ -8,7 +8,7 @@ import { Vec3 } from "vec3";
 import { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";
 
 const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,Number(ms)||0)));
-const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
+const num=(v,d=0)=>v==null||v===""?d:Number.isFinite(Number(v))?Number(v):d;
 const lname=v=>String(v?.name||v?.displayName||"").toLowerCase();
 
 const ITEMS=Object.freeze({
@@ -1612,7 +1612,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             log("[PVP-EXPERT] jump_reset triggered after observed damage at distance="+d.toFixed(2));
           }
         }
-        if(state.lastTargetHealth!=null&&state.lastTargetHealth>th){
+        if(t.health!=null&&state.lastTargetHealth!=null&&state.lastTargetHealth>th){
           const dealt=state.lastTargetHealth-th;
           state.damageDealt+=dealt;
           // Fallback for servers where entityHurt is missing. If the event
