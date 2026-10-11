@@ -186,7 +186,7 @@ const base={
   assert.equal(isEntityUsingItem({metadata:{8:0}}),false);
   assert.equal(isEntityUsingItem({isUsingItem:true}),true,
     "explicit high-level use state takes precedence when available");
-  assert.ok(controllerSource.includes("usingItem:isEntityUsingItem(t)"),
+  assert.ok(controllerSource.includes("usingItem:isEntityBlockingWithShield(t)"),
     "combat brain must use protocol-aware active-hand detection for enemy counterplay");
 }
 
