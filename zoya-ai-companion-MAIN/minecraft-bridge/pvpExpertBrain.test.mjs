@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { getEnchantmentLevel, chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, distanceToEntityHitbox, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { getEnchantmentLevel, chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, distanceToEntityHitbox, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop, isHostilePotionItem } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -39,6 +39,18 @@ const makeBrain=()=>createPvpExpertBrain();
 
 const controllerSource=readFileSync(new URL("./pvpExpertController.mjs",import.meta.url),"utf8");
 const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"utf8");
+
+{
+  assert.equal(isHostilePotionItem({name:"splash_potion",nbt:{Potion:"minecraft:strong_poison"}}),true,
+    "legacy potion metadata with a hostile effect must be eligible for debuff");
+  assert.equal(isHostilePotionItem({name:"splash_potion",components:{"minecraft:potion_contents":{potion:"minecraft:strong_harming"}}}),true,
+    "modern potion components with a hostile effect must be eligible for debuff");
+  assert.equal(isHostilePotionItem({name:"splash_potion",components:{"minecraft:potion_contents":{potion:"minecraft:healing"}}}),false,
+    "beneficial healing potions must not be thrown at an opponent as debuffs");
+  assert.equal(isHostilePotionItem({name:"splash_potion"}),false,
+    "unknown potion metadata must fail closed instead of guessing its effect");
+}
+
 
 {
   const potionStart=controllerSource.indexOf('if(type==="potion"){');
