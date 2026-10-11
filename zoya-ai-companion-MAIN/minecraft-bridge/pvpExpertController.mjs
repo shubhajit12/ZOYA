@@ -2202,6 +2202,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       log("[PVP-EXPERT] combat_loadout totem_equipped="+Boolean(state.totemEquipped)+
         " offhand="+(offhandName()||"empty")+" inventoryCount="+count(bot,"totem"));
     }
+    log("[PVP-EXPERT] skill_inventory shield="+count(bot,"shield")+" pearls="+count(bot,"pearl")+" wind="+count(bot,"wind")+" mace="+count(bot,"mace")+" axe="+count(bot,"axe")+"; missing items are not synthesized");
     log("[PVP-EXPERT] active target="+state.targetUsername);
 
     try{
@@ -2434,7 +2435,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             " target="+state.targetUsername+" targetHP="+(t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health).toFixed(1):"unknown")+
             " targetHeld="+(enemyHeld||"unknown")+" targetTotemEquipped="+enemyTotemNow+" targetTotemPopWindow="+(Date.now()<state.enemyTotemPopUntil)+
             " maceThreat="+enemyMaceThreat+" maceHeldClose="+Boolean(enemyMaceHeld&&d<=7.5)+" distance="+d.toFixed(2)+
-            " attackCooldownMs="+Math.max(0,state.nextAttackAt-Date.now())+" action="+decision.action);
+            " attackCooldownMs="+Math.max(0,state.nextAttackAt-Date.now())+" action="+decision.action+
+            " shieldCount="+count(bot,"shield")+" shieldReady="+Boolean(ctx.shieldReady&&ctx.meleeBlockReady)+" pearlCount="+count(bot,"pearl")+
+            " pearlEscapeReady="+Boolean(ctx.pearlEscapeReady&&ctx.recoveryPearlReady)+" pearlCatchReady="+Boolean(ctx.pearlCatchReady)+
+            " stunSlamReady="+Boolean(ctx.stunSlamReady)+" pearlAmbushReady="+Boolean(ctx.pearlAmbushReady));
         }
         const changed=state.style!==state.lastLoggedStyle||state.action!==state.lastLoggedAction;
         if(changed||now-state.lastDecisionLogAt>=750){
