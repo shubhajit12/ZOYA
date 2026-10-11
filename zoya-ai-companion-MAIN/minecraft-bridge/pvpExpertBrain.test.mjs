@@ -140,6 +140,16 @@ const base={
     "active shield must be disabled before the falling mace follow-up is considered");
 }
 
+
+{
+  assert.ok(controllerSource.includes("const equipTotemVerified=async()=>"),
+    "totem equip must be a verified survival action, not an inventory-transfer success");
+  assert.ok(controllerSource.includes('state.totemEquipped=/totem_of_undying/.test(offhandName())'),
+    "combat startup must derive totem state from observed offhand equipment");
+  assert.ok(controllerSource.includes("offhand_totem_verified="),
+    "logs must distinguish a requested equip from an observed offhand totem");
+}
+
 console.log("PvP Expert Brain deterministic tests passed.");
 
 // Survival must not assume a totem exists: a detected falling-mace threat still evades.
