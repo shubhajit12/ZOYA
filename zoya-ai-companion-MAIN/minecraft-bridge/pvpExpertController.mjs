@@ -37,6 +37,24 @@ function speed(e){return Math.hypot(num(e?.velocity?.x),num(e?.velocity?.z))}
 function isAirborne(e){return e?.onGround===false}
 function isElytraItem(i){return lname(i)==="elytra"}
 
+export function isCrystalFallbackSafe({health=null,selfDistance=0,targetDistance=Infinity,totemEquipped=false}={}) {
+  const hp=health==null?NaN:Number(health),self=Number(selfDistance),target=Number(targetDistance);
+  if(!Number.isFinite(hp)||!Number.isFinite(self)||!Number.isFinite(target)||hp<=0)return false;
+  // Without an explosion-exposure/armor estimator, only take a crystal trade
+  // when the target is closer to the blast and our survival margin is explicit.
+  if(target+0.35>=self)return false;
+  if(totemEquipped)return hp>=10&&self>=3.0;
+  return hp>=18&&self>=4.0;
+}
+
+export function isAnchorFallbackSafe({health=null,selfDistance=0,targetDistance=Infinity,totemEquipped=false,reachable=false}={}) {
+  const hp=health==null?NaN:Number(health),self=Number(selfDistance),target=Number(targetDistance);
+  if(!Number.isFinite(hp)||!Number.isFinite(self)||!Number.isFinite(target)||hp<=0||!reachable)return false;
+  if(target+0.35>=self||target>4.5||target<1.5)return false;
+  if(totemEquipped)return hp>=12&&self>=3.25;
+  return hp>=18&&self>=4.25;
+}
+
 export function isEntityUsingItem(entity) {
   if(entity?.isUsingItem===true||entity?.metadata?.isUsingItem===true)return true;
   const metadata=entity?.metadata;
@@ -946,11 +964,19 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(selfDamage!=null&&enemyDamage!=null){
       if(selfDamage>Math.max(6,enemyDamage*.8))return false;
     }else{
-      // Vanilla Mineflayer has no standard explosion-damage estimator. When
-      // one is not installed, use a conservative geometry/health fallback
-      // instead of silently treating unknown self-damage as safe.
+      // Standard Mineflayer has no built-in explosion exposure estimator.
+      // The previous 5.5-block self-distance gate was unreachable: crystal
+      // placement is already limited to 4.5 blocks from the base. Use a
+      // conservative, testable trade gate instead of permanently disabling
+      // crystal PvP when the optional estimator is absent.
       const selfDistance=bot.entity.position.distanceTo(crystalPos);
-      if(selfDistance<5.5||(num(bot.health,20)<18&&!state.totemEquipped))return false;
+      const targetDistance=t.position.distanceTo(crystalPos);
+      if(!isCrystalFallbackSafe({
+        health:bot.health,
+        selfDistance,
+        targetDistance,
+        totemEquipped:state.totemEquipped
+      }))return false;
     }
     if(!await equip("crystal"))return false;
     try{
@@ -1005,7 +1031,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const blast=pos.offset(.5,.5,.5);
       const selfDistance=blast.distanceTo(bot.entity.position);
       const targetDistance=blast.distanceTo(target);
-      if(selfDistance>=7.5&&targetDistance<=4.5)candidates.push({pos,block,selfDistance,targetDistance,existing:true});
+      if(selfDistance>=7.5&&targetDistance<=4.5)candidates.push({pos,block,selfDistance,targetDistance,existing:true,minSelfDistance:7.5});
     };
     if(typeof bot.findBlocks==="function"){
       for(const pos of bot.findBlocks({matching:anchorId,maxDistance:12,count:30}))consider(pos);
@@ -1022,8 +1048,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(!support||support.boundingBox!=="block"||!isSafeAir(cell)||!isSafeAir(head))continue;
         const blast=anchorPos.offset(.5,.5,.5);
         const selfDistance=blast.distanceTo(bot.entity.position),targetDistance=blast.distanceTo(target);
-        if(selfDistance<7.5||targetDistance>4.5||targetDistance<1.5)continue;
-        candidates.push({pos:anchorPos,block:support,support,selfDistance,targetDistance,existing:false});
+        const placementReach=blast.distanceTo(bot.entity.position)<=4.5;
+        if(!isAnchorFallbackSafe({
+          health:bot.health,selfDistance,targetDistance,
+          totemEquipped:state.totemEquipped,reachable:placementReach
+        }))continue;
+        candidates.push({
+          pos:anchorPos,block:support,support,selfDistance,targetDistance,
+          existing:false,minSelfDistance:state.totemEquipped?3.25:4.25
+        });
       }
     }
     candidates.sort((a,b)=>a.targetDistance-b.targetDistance||b.selfDistance-a.selfDistance);
@@ -1049,7 +1082,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // Recheck the live geometry before detonating: target movement or our own
       // movement during placement can invalidate the original safe-distance gate.
       const blast=chosen.pos.offset(.5,.5,.5);
-      if(blast.distanceTo(bot.entity.position)<7.5||blast.distanceTo((targetOf(bot,state.targetUsername)||t).position)>4.5)return false;
+      const liveTargetForBlast=targetOf(bot,state.targetUsername)||t;
+      const liveSelfDistance=blast.distanceTo(bot.entity.position);
+      const liveTargetDistance=blast.distanceTo(liveTargetForBlast.position);
+      if(chosen.existing){
+        if(liveSelfDistance<7.5||liveTargetDistance>4.5)return false;
+      }else if(!isAnchorFallbackSafe({
+        health:bot.health,selfDistance:liveSelfDistance,targetDistance:liveTargetDistance,
+        totemEquipped:state.totemEquipped,reachable:true
+      })||liveSelfDistance<chosen.minSelfDistance)return false;
       const liveTarget=targetOf(bot,state.targetUsername)||t;
       const targetHealthBefore=liveTarget.health!=null&&Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
       const targetHurtBefore=state.lastTargetHurtAt;
@@ -1678,9 +1719,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // Actually swap the torso slot (the previous code only changed the hand,
       // leaving Elytra equipped and making the advertised swap a no-op).
       if(has(bot,"chestplate")){
-        if(!await equip("chestplate","torso"))return false;
+        if(!await equip("chestplate","torso")){await restoreElytra();return false}
       }else{
-        try{await bot.unequip("torso")}catch{return false}
+        try{await bot.unequip("torso")}catch{await restoreElytra();return false}
       }
       if(!await equip("mace","hand")){await restoreElytra();return false}
 
