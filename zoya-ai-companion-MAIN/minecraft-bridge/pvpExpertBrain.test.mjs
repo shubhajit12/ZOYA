@@ -995,5 +995,7 @@ console.log("Sprint-free critical-hit timing tests passed.");
     "shielding must hold for the configured impact window after the block animation begins");
   assert.ok(controllerSource.includes('case "shield": ok=await shield(t,ctx.projectileThreat?550:320);break;'),
     "projectile defense must use a longer shield hold than a brief melee block");
+  assert.ok(controllerSource.includes("shield_raised_observed=") && controllerSource.includes("projectile_block_confirmed=false"),
+    "shield telemetry must not mistake observing the raised pose for confirming that a projectile was actually blocked");
 }
 console.log("Projectile shield impact-window tests passed.");
