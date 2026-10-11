@@ -60,6 +60,14 @@ export function isHitConfirmed(hitsBefore,hitsAfter,healthBefore,healthAfter) {
   return hitCountIncreased||healthDropped;
 }
 
+export function isLikelyTotemPop({wasEquipped=false,nowEquipped=false,targetHealth=null,recentConfirmedHit=false}={}) {
+  // Equipment disappearance alone can be a manual swap. Infer a pop only when
+  // the totem disappeared immediately after ZOYA confirmed a hit, or health
+  // data independently shows the target at lethal-range health.
+  const lowHealth=targetHealth!=null&&Number.isFinite(Number(targetHealth))&&Number(targetHealth)<=4;
+  return Boolean(wasEquipped&&!nowEquipped&&(lowHealth||recentConfirmedHit));
+}
+
 export function isEnemyMaceDiveThreat({heldItem="",airborne=false,distance=Infinity,targetY=0,selfY=0,targetVelocityY=0,verticalDelta=0}={}) {
   if(!/mace/i.test(String(heldItem)))return false;
   const d=Number(distance),vy=Number(targetVelocityY),dy=Number(verticalDelta);
@@ -1483,6 +1491,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     log("[PVP-EXPERT] brain_version="+brain.version+" difficulty="+combatDifficulty.id+
       " styleLockMs="+combatDifficulty.styleLockMs+" styleSwitchMargin="+combatDifficulty.styleSwitchMargin+
       " strafeMs="+combatDifficulty.strafeMs+" sprintResetMs="+combatDifficulty.sprintResetMs);
+    // Prepare the offhand before combat if a totem is actually available.
+    // This avoids losing the first burst while waiting for a low-health tick.
+    if(!state.totemEquipped&&has(bot,"totem")){
+      const preflightTotem=await equip("totem","off-hand");
+      state.totemEquipped=Boolean(preflightTotem);
+      log("[PVP-EXPERT] combat_loadout totem_equipped="+state.totemEquipped+" source=preflight");
+    }else{
+      log("[PVP-EXPERT] combat_loadout totem_equipped="+Boolean(state.totemEquipped)+" inventoryCount="+count(bot,"totem"));
+    }
     log("[PVP-EXPERT] active target="+state.targetUsername);
 
     try{
@@ -1541,8 +1558,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(enemyTotemNow!==state.enemyTotemWasEquipped){
           log("[PVP-EXPERT] enemy_totem_equipment="+(enemyTotemNow?"equipped":"not_equipped")+" target="+state.targetUsername);
         }
-        const enemyTotemPopped=state.enemyTotemWasEquipped && !enemyTotemNow && th<=4;
-        if(enemyTotemPopped) state.enemyTotemPopUntil=Date.now()+2600;
+        const recentConfirmedHit=state.lastAttackConfirmedAt>0&&Date.now()-state.lastAttackConfirmedAt<=1200;
+        const enemyTotemPopped=isLikelyTotemPop({wasEquipped:state.enemyTotemWasEquipped,nowEquipped:enemyTotemNow,targetHealth:t.health,recentConfirmedHit});
+        if(enemyTotemPopped){
+          state.enemyTotemPopUntil=Date.now()+2600;
+          if(!recentConfirmedHit&&!(t.health!=null&&Number.isFinite(Number(t.health))&&Number(t.health)<=4))
+            log("[PVP-EXPERT] enemy_totem_pop_inferred target="+state.targetUsername+" source=equipment_transition_after_confirmed_hit");
+        }
         state.enemyTotemWasEquipped=enemyTotemNow;
         const lineOfSight=typeof bot.canSeeEntity==="function"?bot.canSeeEntity(t):true;
         const equippedChest=bot.entity?.equipment?.[4]||null;
