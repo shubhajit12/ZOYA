@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -95,6 +95,23 @@ const base={
     "rod control must cast and retract with two use actions, not merely release item use");
   assert.ok(controllerSource.includes("bot.activateItem();\n      await sleep(90);"),
     "rod must issue a second click to reel before switching back to melee");
+}
+
+
+{
+  const approach=projectileClosestApproach(
+    {x:4,y:0,z:0},{x:-1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},8
+  );
+  assert.ok(approach && approach.ticks===4 && approach.distance===0,
+    "projectile defense must calculate the future closest-approach point");
+  assert.equal(isProjectileOnCollisionCourse(
+    {x:4,y:0,z:0},{x:-1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},1.35,8
+  ),true);
+  assert.equal(isProjectileOnCollisionCourse(
+    {x:4,y:0,z:4},{x:-1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},1.35,8
+  ),false,"projectiles passing beside the player must not trigger dodge");
+  assert.ok(controllerSource.includes("predictive_side="),
+    "projectile dodging must choose a trajectory-aware lateral side");
 }
 
 console.log("PvP Expert Brain deterministic tests passed.");
