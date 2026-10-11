@@ -1712,19 +1712,45 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const fireworkBoost=async()=>{
     if(!has(bot,"firework"))return false;
-    // Never replace an off-hand totem with a firework during Elytra combat.
-    // Fireworks can be launched from the main hand; restore the melee weapon
-    // immediately after the short boost input.
+    // A rocket is only a valid Elytra boost while gliding. Rate-limit attempts
+    // even when the server rejects the boost, so an unconfirmed packet cannot
+    // consume the entire inventory in one combat loop.
+    const flying=()=>Boolean(bot.entity?.elytraFlying||state.elytraFlying);
+    if(!flying()){
+      log("[PVP-EXPERT] firework_boost_blocked reason=elytra_not_flying");
+      return false;
+    }
+    if(Date.now()-num(state.lastFireworkAt)>900)state.lastFireworkAt=Date.now();
+    const velocityMagnitude=()=>{
+      const v=bot.entity?.velocity;
+      return v?Math.hypot(num(v.x),num(v.y),num(v.z)):null;
+    };
     if(!await equip("firework","hand"))return false;
+    const before=velocityMagnitude();
     try{
       bot.activateItem();
       await sleep(90);
       bot.deactivateItem();
+      // Keep the cooldown on the attempt, not just success, to avoid a rapid
+      // rocket-drain loop when the server does not apply the boost.
+      state.lastFireworkAt=Date.now();
+      const deadline=Date.now()+360;
+      let observed=false,after=before;
+      while(state.active&&taskIsActive()&&Date.now()<deadline){
+        await sleep(30);
+        after=velocityMagnitude();
+        if(flying()&&before!=null&&after!=null&&after-before>=.08){observed=true;break}
+      }
       await equipBestMelee();
-      return true;
-    }catch{
+      log("[PVP-EXPERT] firework_boost_confirmed="+observed+
+        " velocity_before="+(before==null?"unknown":before.toFixed(3))+
+        " velocity_after="+(after==null?"unknown":after.toFixed(3)));
+      return observed;
+    }catch(error){
+      state.lastFireworkAt=Date.now();
       try{bot.deactivateItem()}catch{}
       await equipBestMelee();
+      log("[PVP-EXPERT] firework_boost_failed error="+(error?.message||String(error)));
       return false;
     }
   };
