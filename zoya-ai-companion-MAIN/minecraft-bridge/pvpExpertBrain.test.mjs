@@ -1032,6 +1032,18 @@ console.log("Falling mace hitbox-window tests passed.");
 }
 console.log("High pearl-catch landing-window tests passed.");
 
+assert.ok(controllerSource.includes("const launchPos=bot.entity.position.clone()"),
+  "pearl-catch aiming must use the actual airborne throw origin");
+assert.ok(controllerSource.includes("const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*7.0") &&
+  controllerSource.includes("const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*7.0") &&
+  controllerSource.includes("const hy=diagonal?7.5:8.0"),
+  "pearl-catch throws must use meaningful horizontal travel instead of the old near-vertical +17Y aim");
+assert.ok(controllerSource.includes("pearl_catch_throw_aim mode=") &&
+  controllerSource.includes("elevationDeg="),
+  "pearl-catch logs must expose the actual throw geometry for diagnosing trajectory failures");
+console.log("Pearl-catch throw trajectory regression tests passed.");
+
+
 // The preflight inventory line must show all major kit prerequisites so a
 // missing bow/crystal/anchor/elytra is distinguishable from broken execution.
 assert.ok(controllerSource.includes('skill_inventory sword=') &&
