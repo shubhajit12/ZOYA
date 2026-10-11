@@ -91,8 +91,8 @@ assert.ok(controllerSource.includes("emergency_disengage_confirmed=")&&controlle
   assert.ok(controllerSource.includes("mace_evasion_confirmed=")&&controllerSource.includes("return evasionConfirmed;"),
     "mace evasion must confirm observed displacement instead of succeeding from issued movement inputs alone");
 
-assert.ok(controllerSource.includes("shield_block_confirmed=")&&controllerSource.includes("isEntityBlockingWithShield(bot.entity)"),
-    "shield execution must observe an active shield raise instead of reporting success from a use packet alone");
+assert.ok(controllerSource.includes("shield_raised_observed=")&&controllerSource.includes("isEntityBlockingWithShield(bot.entity)")&&controllerSource.includes("projectile_block_confirmed=false"),
+    "shield execution must observe an active shield raise and must not mislabel the pose as a confirmed projectile block");
 
 assert.ok(controllerSource.includes('" shieldReady="+Boolean(ctx.shieldReady)+" meleeBlockReady="+Boolean(ctx.meleeBlockReady)+" projectileThreat="+Boolean(ctx.projectileThreat)'),
   "combat diagnostics must not conflate shield cooldown readiness with melee-block eligibility");
