@@ -906,6 +906,11 @@ console.log("Mace-crystal D-tap and attribute-swap separation tests passed.");
   assert.ok(controllerSource.includes('mace_d_tap sequence_complete=true mace_confirmed=true crystal_followup_confirmed=') &&
     /return true;\r?\n\s*};\r?\n\r?\n\s*const maceSmash=async/.test(controllerSource),
     "a confirmed mace hit must not be reclassified as failure merely because the optional crystal follow-up is unsafe or unconfirmed");
+  assert.ok(controllerSource.includes('const jumpSynced=bot.entity?.onGround===true;') &&
+    controllerSource.includes('if(jumpSynced)bot.setControlState("jump",true);') &&
+    controllerSource.includes('if(jumpSynced)bot.setControlState("jump",false);') &&
+    controllerSource.includes('wind_mace_launch_input jump_synchronized='),
+    "ground wind-charge mace setup must synchronize a jump input and always release it before validating actual launch");
 }
 
 
