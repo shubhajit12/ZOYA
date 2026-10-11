@@ -136,7 +136,7 @@ const base={
 {
   assert.ok(controllerSource.includes('stun_slam_setup_confirmed=true shield_disabled='),
     "stun slam setup must report confirmed axe hit and live shield state");
-  assert.ok(controllerSource.includes("no fake same-tick double-attack success"),
+  assert.ok(controllerSource.includes("stun_slam_confirmed=\"+maceConfirmed"),
     "stun slam must not claim an unverified same-tick axe/mace combo");
   assert.ok(brainSource.indexOf('reason:"active_shield_disable_before_mace"')<
     brainSource.indexOf('reason:"falling_shield_disable_setup"'),
@@ -664,8 +664,9 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
 console.log("Advanced Impossible tactical routing regression tests passed.");
 
 {
-  const d=makeBrain().decide({...base,distance:2.8,stunSlamReady:true,enemy:{...base.enemy,shield:true,usingItem:true}});
-  assert.equal(d.action,"shield_break","actively raised shield must be disabled first instead of issuing an unverified same-tick axe/mace combo");
+  const d=makeBrain().decide({...base,distance:2.8,stunSlamReady:true,capabilities:{...base.capabilities,wind:true},
+    enemy:{...base.enemy,shield:true,usingItem:true}});
+  assert.equal(d.action,"stun_slam","falling shield target with axe, mace, and wind must select the full multi-phase confirmed slam");
 }
 {
   const d=makeBrain().decide({...base,distance:8,rocketMaceReady:true,elytraMaceReady:true,elytraLaunchReady:true,elytraEquipped:true,
