@@ -351,6 +351,8 @@ assert.ok(controllerSource.includes('const num=(v,d=0)=>v==null||v===""?d:Number
   "missing player-health metadata must remain unknown instead of coercing null to zero");
 assert.ok(controllerSource.includes("if(t.health!=null&&state.lastTargetHealth!=null&&state.lastTargetHealth>th){"),
   "health-delta hit confirmation must never infer a hit from an unavailable target-health field");
+assert.ok(controllerSource.includes("state.lastHealth=hp;state.lastTargetHealth=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;"),
+  "unknown health samples must break the damage-delta chain instead of poisoning the next sample");
 
 // Predict a credible airborne mace threat before the damage lands.
 assert.equal(isEnemyMaceDiveThreat({heldItem:"mace",airborne:true,distance:5.8,targetY:65,selfY:64,targetVelocityY:0,verticalDelta:0}),true,"an airborne mace holder in dive range is a threat before downward velocity is observed");
