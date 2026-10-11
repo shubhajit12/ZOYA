@@ -1035,9 +1035,9 @@ console.log("High pearl-catch landing-window tests passed.");
 assert.ok(controllerSource.includes('const p=bot.entity.position.clone()') &&
   controllerSource.includes('const pearlAim=()=>bot.entity.position.offset(hx,hy,hz)'),
   "pearl-catch aiming must use the actual airborne position and a repeatable aim ray");
-assert.ok(controllerSource.includes("const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*3.5") &&
-  controllerSource.includes("const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*3.5") &&
-  controllerSource.includes("const hy=diagonal?7.5:8.0"),
+assert.ok(controllerSource.includes("const hx=diagonal?(awayX*3.0+sideX*2.5):awayX*4.5") &&
+  controllerSource.includes("const hz=diagonal?(awayZ*3.0+sideZ*2.5):awayZ*4.5") &&
+  controllerSource.includes("const hy=diagonal?7.0:8.0"),
   "pearl-catch throws must use a defined upward trajectory with meaningful horizontal travel");
 assert.ok(controllerSource.includes("pearl_catch_throw_aim mode=") &&
   controllerSource.includes("elevationDeg="),
@@ -1056,6 +1056,12 @@ assert.ok(catchTimingBody.includes('pearl_catch_skipped reason=pearl_and_wind_mu
 assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null'),
   "brain readiness must match the combo's hotbar prerequisites");
 console.log("Pearl-catch same-line timing regression tests passed.");
+
+assert.ok(catchTimingBody.includes("const firstWindAt=Date.now()") &&
+  catchTimingBody.includes("const windReadyAt=firstWindAt+525") &&
+  catchTimingBody.includes("pearl_catch_first_wind_cooldown_elapsed_ms="),
+  "pearl catch must respect the first wind charge's half-second cooldown before firing the immediate follow-up");
+
 
 
 // The preflight inventory line must show all major kit prerequisites so a
