@@ -833,7 +833,7 @@ console.log("Mace-crystal D-tap and attribute-swap separation tests passed.");
 
 {
   assert.ok(controllerSource.includes('mace_d_tap sequence_complete=true mace_confirmed=true crystal_followup_confirmed=') &&
-    controllerSource.includes('return true;\n  };\n\n  const maceSmash=async'),
+    /return true;\r?\n\s*};\r?\n\r?\n\s*const maceSmash=async/.test(controllerSource),
     "a confirmed mace hit must not be reclassified as failure merely because the optional crystal follow-up is unsafe or unconfirmed");
 }
 
