@@ -945,3 +945,22 @@ assert.ok(brainSource.includes('has(c,"pearl")&&c.recoveryPearlReady&&c.pearlAmb
 
 assert.ok(controllerSource.includes('skill_inventory shield="+count(bot,"shield")+" pearls="+count(bot,"pearl")'),"combat startup must report whether shield/pearls are actually available");
 assert.ok(controllerSource.includes("stunSlamReady=\"+Boolean(ctx.stunSlamReady)") && controllerSource.includes("pearlCatchReady=\"+Boolean(ctx.pearlCatchReady)"),"combat telemetry must expose pearl-catch and stun-slam readiness instead of hiding skipped prerequisites");
+
+
+// Ranged aim uses bounded flight-time lead, while kit scoring avoids committing
+// to a bow/crossbow that cannot currently fire.
+{
+  assert.ok(controllerSource.includes('const leadTicks=Math.max(0,Math.min(12,num(lead)*20));'),
+    "aim prediction must support a bounded ranged flight-time lead instead of clamping every shot to four ticks");
+  assert.ok(controllerSource.includes('?Math.min(.6,.08+dist(bot.entity,live)*.035):.08'),
+    "bow and crossbow aim lead must scale with observed distance while melee aim remains short");
+  assert.ok(brainSource.includes('if(invHas(c,"bow")&&c.hasBowAmmo!==false)'),
+    "unavailable bows must not win style selection and trap the bot in ranged mode");
+  assert.ok(brainSource.includes('if(invHas(c,"crossbow")&&c.hasCrossbowAmmo!==false)'),
+    "unloaded crossbows without ammunition must not win style selection");
+  const noRangedAmmo=makeBrain().decide({...base,distance:9,lineOfSight:true,hasBowAmmo:false,hasCrossbowAmmo:false,
+    inventory:{...base.inventory,bow:1,crossbow:1}});
+  assert.notEqual(noRangedAmmo.style,"bow","no-ammo bow must not be selected as the preferred combat style");
+  assert.notEqual(noRangedAmmo.style,"crossbow","unloaded no-ammo crossbow must not be selected as the preferred combat style");
+}
+console.log("Predictive ranged aim and ammo-aware kit selection tests passed.");
