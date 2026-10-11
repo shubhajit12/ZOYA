@@ -1079,6 +1079,9 @@ assert.ok(controllerSource.includes("crystal_cycle_skipped reason=") &&
   controllerSource.includes("anchor_cycle_skipped reason=no_safe_reachable_anchor_candidate") &&
   controllerSource.includes("anchor_cycle_skipped reason=dimension_or_item_or_api_prerequisite"),
   "crystal and anchor skill failures must report concrete skip reasons instead of silently disappearing");
+assert.ok(controllerSource.includes("const survivalMargin=state.totemEquipped?2:4") &&
+  controllerSource.includes("Number(selfDamage)>=health-survivalMargin"),
+  "crystal execution must reject predicted lethal self-damage even when the explosion estimator is available");
 assert.ok(controllerSource.includes("hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat"),
   "pearl-catch readiness must be suppressed when a close enemy mace threat makes the setup unsafe");
 
