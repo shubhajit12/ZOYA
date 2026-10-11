@@ -1293,30 +1293,23 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     return best;
   };
 
-  const crystalCycle=async t=>{
-    if(!has(bot,"crystal")||!has(bot,"obsidian")||!bot.placeEntity||!t?.position)return false;
-    const base=crystalBase(t);
-    if(!base||dist(bot.entity,{position:base.position})>4.5)return false;
+  const crystalCycleSafeForTarget=(t,base=crystalBase(t))=>{
+    if(!has(bot,"crystal")||!has(bot,"obsidian")||!base||!t?.position||!bot.entity?.position||
+      dist(bot.entity,{position:base.position})>4.5)return false;
     const crystalPos=base.position.offset(.5,1,.5);
     const enemyDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(t,crystalPos,6,false):null;
     const selfDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(bot.entity,crystalPos,6,false):null;
-    if(selfDamage!=null&&enemyDamage!=null){
-      if(selfDamage>Math.max(6,enemyDamage*.8))return false;
-    }else{
-      // Standard Mineflayer has no built-in explosion exposure estimator.
-      // The previous 5.5-block self-distance gate was unreachable: crystal
-      // placement is already limited to 4.5 blocks from the base. Use a
-      // conservative, testable trade gate instead of permanently disabling
-      // crystal PvP when the optional estimator is absent.
-      const selfDistance=bot.entity.position.distanceTo(crystalPos);
-      const targetDistance=t.position.distanceTo(crystalPos);
-      if(!isCrystalFallbackSafe({
-        health:bot.health,
-        selfDistance,
-        targetDistance,
-        totemEquipped:state.totemEquipped
-      }))return false;
-    }
+    if(selfDamage!=null&&enemyDamage!=null)return selfDamage<=Math.max(6,enemyDamage*.8);
+    const selfDistance=bot.entity.position.distanceTo(crystalPos);
+    const targetDistance=t.position.distanceTo(crystalPos);
+    return isCrystalFallbackSafe({health:bot.health,selfDistance,targetDistance,totemEquipped:state.totemEquipped});
+  };
+
+  const crystalCycle=async t=>{
+    if(!has(bot,"crystal")||!has(bot,"obsidian")||!bot.placeEntity||!t?.position)return false;
+    const base=crystalBase(t);
+    if(!base||!crystalCycleSafeForTarget(t,base))return false;
+    const crystalPos=base.position.offset(.5,1,.5);
     if(!await equip("crystal"))return false;
     try{
       await bot.placeEntity(base,new Vec3(0,1,0));
@@ -2548,7 +2541,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const targetFacingDot=(-Math.sin(targetYaw)*botDx+Math.cos(targetYaw)*botDz)/botHoriz;
         const backstabReady=d>=2.15&&d<=3.05&&targetFacingDot<.35;
         const projectileIncoming=projectileThreat();
-        const crystalCycleReady=has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t));
+        const crystalCycleReady=crystalCycleSafeForTarget(t);
         const enemy={
           health:th,shield:eq.shield,usingItem:isEntityBlockingWithShield(t),
           airborne:isAirborne(t),falling:num(targetVelocity.y)<-.08,velocityY:num(targetVelocity.y),
