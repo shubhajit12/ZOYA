@@ -821,7 +821,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       bot.deactivateItem();
       state.shieldCooldownUntil=Date.now()+850;
       await equipBestMelee();
-      log("[PVP-EXPERT] shield_block_confirmed="+blockObserved+" melee_weapon_restored=true");
+      log("[PVP-EXPERT] shield_raised_observed="+blockObserved+" projectile_block_confirmed=false melee_weapon_restored=true");
       return blockObserved;
     }catch{try{bot.deactivateItem()}catch{};state.shieldCooldownUntil=Date.now()+500;await equipBestMelee();return false}
   };
