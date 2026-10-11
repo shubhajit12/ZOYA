@@ -837,3 +837,19 @@ console.log("Mace-crystal D-tap and attribute-swap separation tests passed.");
     "a confirmed mace hit must not be reclassified as failure merely because the optional crystal follow-up is unsafe or unconfirmed");
 }
 
+
+
+// Opponent model must learn from repeated observed behavior without assuming
+// hidden inventory or changing decisions from a single noisy snapshot.
+{
+  const brain=makeBrain();
+  for(let i=0;i<12;i++){
+    brain.decide({...base,distance:4,enemy:{...base.enemy,shield:true,usingItem:true,retreating:i%2===0,held:"shield"}});
+  }
+  const model=brain.inspect(base).opponentModel;
+  assert.equal(model.samples,12,"opponent profile must count observed combat decisions");
+  assert.ok(model.shieldRate>0.9,"repeated active shield use must be reflected in the learned profile");
+  assert.ok(model.retreatRate>0.4&&model.retreatRate<0.6,"retreat frequency must be measured from observations");
+  assert.ok(model.weaponChanges.some(([name])=>name==="shield"),"observed held-item changes must be recorded");
+}
+console.log("Evidence-based opponent adaptation regression tests passed.");
