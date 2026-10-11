@@ -17,7 +17,12 @@ const ITEMS=Object.freeze({
   mace:["mace"],
   spear:["netherite_spear","diamond_spear","iron_spear","stone_spear","golden_spear","wooden_spear","spear"],
   bow:["bow"], crossbow:["crossbow"], shield:["shield"], pearl:["ender_pearl"],
-  totem:["totem_of_undying"], chestplate:["netherite_chestplate","diamond_chestplate","iron_chestplate","chainmail_chestplate","golden_chestplate","leather_chestplate","turtle_shell"], heal:["enchanted_golden_apple","golden_apple"],
+  totem:["totem_of_undying"],
+  helmet:["netherite_helmet","diamond_helmet","iron_helmet","chainmail_helmet","golden_helmet","leather_helmet","turtle_shell"],
+  chestplate:["netherite_chestplate","diamond_chestplate","iron_chestplate","chainmail_chestplate","golden_chestplate","leather_chestplate"],
+  leggings:["netherite_leggings","diamond_leggings","iron_leggings","chainmail_leggings","golden_leggings","leather_leggings"],
+  boots:["netherite_boots","diamond_boots","iron_boots","chainmail_boots","golden_boots","leather_boots"],
+  heal:["enchanted_golden_apple","golden_apple"],
   water:["water_bucket"], lava:["lava_bucket"], crystal:["end_crystal"], anchor:["respawn_anchor"],
   glowstone:["glowstone"], obsidian:["obsidian"], web:["cobweb"], shears:["shears"], wind:["wind_charge"],
   rod:["fishing_rod"], arrow:["arrow","spectral_arrow","tipped_arrow"], firework:["firework_rocket"], elytra:["elytra"],
@@ -371,6 +376,42 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const order=preferred?[preferred,"sword","axe","spear","mace"]:["sword","axe","spear","mace"];
     for(const type of [...new Set(order)]) if(has(bot,type)&&await equip(type)) return type;
     return null;
+  };
+
+  const armorSlotInfo=[
+    {type:"helmet",destination:"head",equipmentIndex:5},
+    {type:"chestplate",destination:"torso",equipmentIndex:4},
+    {type:"leggings",destination:"legs",equipmentIndex:3},
+    {type:"boots",destination:"feet",equipmentIndex:2}
+  ];
+  const armorTier=name=>{
+    const n=String(name||"");
+    if(/netherite/.test(n))return 6;
+    if(/diamond/.test(n))return 5;
+    if(/iron/.test(n))return 4;
+    if(/chainmail/.test(n))return 3;
+    if(/golden/.test(n))return 2;
+    if(/leather/.test(n))return 1;
+    if(/turtle_shell/.test(n))return 4;
+    return 0;
+  };
+  const equipCombatArmor=async()=>{
+    const results=[];
+    for(const slot of armorSlotInfo){
+      const best=item(bot,slot.type);
+      if(!best)continue;
+      const current=lname(bot.entity?.equipment?.[slot.equipmentIndex]||"");
+      if(armorTier(lname(best))<=armorTier(current))continue;
+      try{
+        await bot.equip(best,slot.destination);
+        results.push(slot.type+":"+lname(best));
+      }catch(error){
+        log("[PVP-EXPERT] armor_equip_failed slot="+slot.type+" error="+(error?.message||String(error)));
+      }
+    }
+    log("[PVP-EXPERT] combat_armor_preflight equipped="+(results.join(",")||"none_needed")+
+      " slots=head,torso,legs,feet");
+    return results.length;
   };
 
   // Mineflayer entity velocity is measured per game tick, not per second.
@@ -1930,10 +1971,36 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const elytraMace=async t=>{
     if(!has(bot,"elytra")||!has(bot,"mace"))return false;
-    // Always restore the flight chest item on every exit path, including exceptions.
+    // Preserve the pre-combo torso loadout. Re-equipping Elytra unconditionally
+    // left ZOYA wearing Elytra after a dive even when she entered in netherite
+    // or diamond armor, making the next melee exchange unnecessarily lethal.
+    const originalChestName=lname(bot.entity?.equipment?.[4]||"");
     const restoreElytra=async()=>{
-      if(has(bot,"elytra")&&num(bot.health,20)>0){
-        try{await equip("elytra","torso");log("[PVP-EXPERT] elytra_preserved_and_restored")}catch{}
+      if(num(bot.health,20)<=0)return;
+      try{
+        if(!originalChestName){
+          await bot.unequip("torso");
+          log("[PVP-EXPERT] torso_loadout_restored=empty");
+          return;
+        }
+        const original=inv(bot).find(i=>lname(i)===originalChestName);
+        if(original){
+          await bot.equip(original,"torso");
+          log("[PVP-EXPERT] torso_loadout_restored="+originalChestName);
+          return;
+        }
+        if(/elytra/.test(originalChestName)&&has(bot,"elytra")){
+          await equip("elytra","torso");
+          log("[PVP-EXPERT] torso_loadout_restored=elytra");
+          return;
+        }
+        const fallback=item(bot,"chestplate");
+        if(fallback){
+          await bot.equip(fallback,"torso");
+          log("[PVP-EXPERT] torso_loadout_restored_fallback="+lname(fallback));
+        }
+      }catch(error){
+        log("[PVP-EXPERT] torso_restore_failed error="+(error?.message||String(error)));
       }
     };
     // Vanilla does not allow gliding down onto a target with an Elytra.
@@ -2115,6 +2182,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     log("[PVP-EXPERT] brain_version="+brain.version+" difficulty="+combatDifficulty.id+
       " styleLockMs="+combatDifficulty.styleLockMs+" styleSwitchMargin="+combatDifficulty.styleSwitchMargin+
       " strafeMs="+combatDifficulty.strafeMs+" sprintResetMs="+combatDifficulty.sprintResetMs);
+    // Equip upgrades before the first exchange. Armor preflight only replaces
+    // an empty/weaker material tier and never changes the protected combat mode.
+    await equipCombatArmor();
     // Prepare the offhand before combat if a totem is actually available.
     // This avoids losing the first burst while waiting for a low-health tick.
     state.totemEquipped=/totem_of_undying/.test(offhandName());
