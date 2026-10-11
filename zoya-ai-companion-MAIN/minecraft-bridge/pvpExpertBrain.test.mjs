@@ -999,3 +999,21 @@ console.log("Sprint-free critical-hit timing tests passed.");
     "shield telemetry must not mistake observing the raised pose for confirming that a projectile was actually blocked");
 }
 console.log("Projectile shield impact-window tests passed.");
+
+
+// Mace smash windows use entity hitbox geometry rather than center distance,
+// which includes vertical separation during the falling strike.
+{
+  const smashStart=controllerSource.indexOf("const maceSmash=async(t,priorFallDistance=0,settleMs=180)=>");
+  const smashEnd=controllerSource.indexOf("const wind=async t=>",smashStart);
+  const smashBody=controllerSource.slice(smashStart,smashEnd);
+  assert.ok(smashBody.includes("const smashHitboxDistance=distanceToEntityHitbox(bot.entity,live)") &&
+    smashBody.includes("if(falling&&fallDistance>1.5&&smashHitboxDistance<=3.05)"),
+    "mace smash must use target hitbox distance during descent instead of an overly restrictive center-distance band");
+  const windStart=controllerSource.indexOf("const wind=async t=>");
+  const windEnd=controllerSource.indexOf("const dodge=async t=>",windStart);
+  const windBody=controllerSource.slice(windStart,windEnd);
+  assert.ok(windBody.includes("if(fallDistance>1.5&&smashHitboxDistance<=3.05)"),
+    "wind-charge mace combo must call the smash executor when the falling hitbox enters real reach");
+}
+console.log("Falling mace hitbox-window tests passed.");
