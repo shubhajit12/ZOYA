@@ -1073,7 +1073,7 @@ assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&h
 console.log("Pearl-catch same-line timing regression tests passed.");
 assert.ok(controllerSource.includes("const crystalCycleSafeForTarget=(t,base=crystalBase(t))=>") &&
   controllerSource.includes("const crystalCycleReady=crystalCycleSafeForTarget(t);") &&
-  controllerSource.includes("if(!base||!crystalCycleSafeForTarget(t,base)){"),
+  controllerSource.includes("if(!crystalCycleSafeForTarget(t,base)){"),
   "crystal style selection and crystal execution must share the same live self-damage safety gate");
 assert.ok(controllerSource.includes("crystal_cycle_skipped reason=") &&
   controllerSource.includes("anchor_cycle_skipped reason=no_safe_reachable_anchor_candidate") &&
