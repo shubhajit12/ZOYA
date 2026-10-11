@@ -167,6 +167,11 @@ const base={
   const loadedCrossbowCtx={...rangedCtx,styleMemory:"crossbow",hasCrossbowAmmo:true};
   assert.equal(makeBrain().decide(loadedCrossbowCtx).action,"ranged_attack",
     "a loaded crossbow remains usable even without spare inventory arrows");
+  const rocketCrossbowCtx={...rangedCtx,styleMemory:"crossbow",hasCrossbowAmmo:true,hasFireworkAmmo:true};
+  assert.equal(makeBrain().decide(rocketCrossbowCtx).action,"ranged_attack",
+    "a crossbow loaded with a firework rocket remains a valid ranged style");
+  assert.ok(controllerSource.includes('count(bot,"firework")>0||crossbowChargeState()===true'),
+    "crossbow style feasibility must include firework-rocket ammunition");
   assert.ok(controllerSource.includes("bow_fire_blocked reason=no_arrow_ammunition"),
     "bow executor must refuse to charge without ammunition");
   assert.ok(controllerSource.includes("crossbow_fire_blocked reason=unloaded_no_valid_ammunition"),
