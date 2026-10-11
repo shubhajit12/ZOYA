@@ -1563,7 +1563,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // Player-thrown wind charges have a 0.5 s use cooldown. Wait for that
       // cooldown after the self-launch, then keep the pearl->wind follow-up
       // itself immediate so the second charge is not silently rejected.
-      const windReadyAt=firstWindAt+525;
+      const windReadyAt=firstWindAt+650;
       while(state.active&&taskIsActive()&&Date.now()<windReadyAt)await sleep(10);
       if(!state.active||!taskIsActive()){catchFailureReason="task_cancelled_during_wind_cooldown";return false}
       log("[PVP-EXPERT] pearl_catch_first_wind_cooldown_elapsed_ms="+(Date.now()-firstWindAt));
@@ -1590,8 +1590,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // Switch directly between already-selected hotbar items and fire along
       // the same ray within a few ticks; no projectile-observation wait here.
       if(!selectHotbarItem("wind")){catchFailureReason="wind_hotbar_select_failed";return false}
+      const beforeWindCharges=new Set(Object.values(bot.entities||{}).filter(e=>/wind_charge/.test(lname(e))).map(e=>e.id));
       await bot.lookAt(pearlAim(),true);
       bot.activateItem();await sleep(45);bot.deactivateItem();
+      let windProjectileObserved=false;
+      const windProjectileUntil=Date.now()+300;
+      while(state.active&&taskIsActive()&&Date.now()<windProjectileUntil&&!windProjectileObserved){
+        windProjectileObserved=Object.values(bot.entities||{}).some(e=>/wind_charge/.test(lname(e))&&!beforeWindCharges.has(e.id));
+        if(!windProjectileObserved)await sleep(15);
+      }
+      log("[PVP-EXPERT] pearl_catch_wind_followup_projectile_observed="+windProjectileObserved);
 
       let pearl=null;
       const pearlUntil=Date.now()+700;
