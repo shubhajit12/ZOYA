@@ -773,13 +773,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{
       if(t) await lookAtTarget(t,.02);
       bot.activateItem();
-      await sleep(260);
+      const deadline=Date.now()+260;
+      let blockObserved=false;
+      while(state.active&&taskIsActive()&&Date.now()<deadline){
+        if(isEntityBlockingWithShield(bot.entity)){blockObserved=true;break}
+        await sleep(20);
+      }
       bot.deactivateItem();
       state.shieldCooldownUntil=Date.now()+850;
-      // The shield is a timed defensive window, not a new permanent combat style.
       await equipBestMelee();
-      log("[PVP-EXPERT] shield_block completed; melee weapon restored");
-      return true;
+      log("[PVP-EXPERT] shield_block_confirmed="+blockObserved+" melee_weapon_restored=true");
+      return blockObserved;
     }catch{try{bot.deactivateItem()}catch{};state.shieldCooldownUntil=Date.now()+500;await equipBestMelee();return false}
   };
 
