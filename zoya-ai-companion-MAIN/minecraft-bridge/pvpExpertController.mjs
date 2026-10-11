@@ -802,16 +802,20 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{await bot.equip(i,"hand");await bot.consume();await equipBestMelee();return true}catch{return false}
   };
 
-  const shield=async t=>{
+  const shield=async(t,holdMs=260)=>{
     if(!has(bot,"shield")||Date.now()<state.shieldCooldownUntil)return false;
     if(!await equip("shield")) return false;
     try{
       if(t) await lookAtTarget(t,.02);
       bot.activateItem();
-      const deadline=Date.now()+260;
+      // Raising the shield is not the same as blocking the incoming hit.
+      // Keep it raised through the estimated impact window instead of dropping
+      // it immediately after observing the blocking pose.
+      const holdDuration=Math.max(260,Math.min(650,num(holdMs,260)));
+      const deadline=Date.now()+holdDuration;
       let blockObserved=false;
       while(state.active&&taskIsActive()&&Date.now()<deadline){
-        if(isEntityBlockingWithShield(bot.entity)){blockObserved=true;break}
+        if(isEntityBlockingWithShield(bot.entity))blockObserved=true;
         await sleep(20);
       }
       bot.deactivateItem();
@@ -2602,7 +2606,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         switch(decision.action){
           case "stop": return false;
           case "heal": ok=await heal();break;
-          case "shield": ok=await shield(t);break;
+          case "shield": ok=await shield(t,ctx.projectileThreat?550:320);break;
           case "totem": {
             const equipped=await equipTotemVerified();
             if(equipped){
