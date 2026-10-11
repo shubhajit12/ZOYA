@@ -47,6 +47,7 @@ const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"
     "modern potion components with a hostile effect must be eligible for debuff");
   assert.equal(isHostilePotionItem({name:"splash_potion",components:{"minecraft:potion_contents":{potion:"minecraft:healing"}}}),false,
     "beneficial healing potions must not be thrown at an opponent as debuffs");
+  assert.equal(isHostilePotionItem({name:"splash_potion",customName:"Poison",components:{"minecraft:potion_contents":{potion:"minecraft:healing"}}}),false,"a user-controlled display name must not override beneficial potion effects");
   assert.equal(isHostilePotionItem({name:"splash_potion"}),false,
     "unknown potion metadata must fail closed instead of guessing its effect");
 }
