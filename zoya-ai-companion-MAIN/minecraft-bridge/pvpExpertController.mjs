@@ -2261,6 +2261,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            elytraStunSlamReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"axe")&&eq.shield&&enemy.usingItem&&d>=6&&lineOfSight),
           spearLungeReady:Boolean(getEnchantmentLevel(item(bot,"spear"),"lunge")>0&&num(bot.food,20)>=6&&
             !/^(water|bubble_column)$/.test(String(bot.blockAt(bot.entity?.position)?.name||""))&&
+            !/^(water|bubble_column)$/.test(String(bot.blockAt(bot.entity?.position?.offset(0,1,0))?.name||""))&&
             !bot.entity?.elytraFlying&&!state.elytraFlying&&d>=2.0&&d<=3.2&&lineOfSight&&num(state.nextAttackAt)<=Date.now()),
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:crystalCycleReady,nether:bot.game?.dimension==="the_nether",
