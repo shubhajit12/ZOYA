@@ -110,6 +110,9 @@ const base={
   assert.equal(isProjectileOnCollisionCourse(
     {x:4,y:0,z:4},{x:-1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},1.35,8
   ),false,"projectiles passing beside the player must not trigger dodge");
+  assert.equal(isProjectileOnCollisionCourse(
+    {x:2,y:0,z:0},{x:1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},1.35,8
+  ),false,"nearby projectiles moving away must not trigger dodge");
   assert.ok(controllerSource.includes("predictive_side="),
     "projectile dodging must choose a trajectory-aware lateral side");
 }
