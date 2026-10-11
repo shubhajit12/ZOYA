@@ -1912,7 +1912,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const falling=isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08;
       const fallDistance=estimateObservedFallDistance(bot.entity,peakY);
       await lookAtTarget(live,.02);
-      if(falling&&fallDistance>1.5&&d>=2.35&&d<=3.1){
+      const smashHitboxDistance=distanceToEntityHitbox(bot.entity,live);
+      if(falling&&fallDistance>1.5&&smashHitboxDistance<=3.05){
         stop();
         const hitsBefore=state.hits;
         const targetHealthBefore=live.health!=null&&Number.isFinite(Number(live.health))?Number(live.health):null;
@@ -2009,7 +2010,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const fallDistance=estimateObservedFallDistance(bot.entity,peakY);
         await lookAtTarget(live,.04);
         if(isAirborne(bot.entity)&&vy<-.08){
-          if(fallDistance>1.5&&d>=2.35&&d<=3.1){
+          const smashHitboxDistance=distanceToEntityHitbox(bot.entity,live);
+          // Center-to-center distance includes the vertical gap between the
+          // falling bot and target. Gate the smash on the actual entity hitbox
+          // instead, or the controller can pass through a valid hit window
+          // without ever issuing the mace strike.
+          if(fallDistance>1.5&&smashHitboxDistance<=3.05){
             stop();
             return await maceSmash(live,fallDistance);
           }
