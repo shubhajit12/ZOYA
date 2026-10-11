@@ -1351,7 +1351,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const anchorCycle=async t=>{
     const dimension=String(bot.game?.dimension||"");
     // Respawn anchors explode in the Overworld and End, not in the Nether.
-    if(!["overworld","the_end"].includes(dimension)||!has(bot,"anchor")||!has(bot,"glowstone")||!t?.position||typeof bot.placeBlock!=="function")return false;
+    if(!["overworld","the_end"].includes(dimension)||!has(bot,"anchor")||!has(bot,"glowstone")||!t?.position||typeof bot.placeBlock!=="function"){
+      log("[PVP-EXPERT] anchor_cycle_skipped reason=dimension_or_item_or_api_prerequisite dimension="+dimension+
+        " anchorCount="+count(bot,"anchor")+" glowstoneCount="+count(bot,"glowstone"));
+      return false;
+    }
     const target=t.position;
     if(typeof bot.canSeeEntity==="function"&&!bot.canSeeEntity(t)){
       log("[PVP-EXPERT] anchor_cycle_skipped reason=target_not_visible");
