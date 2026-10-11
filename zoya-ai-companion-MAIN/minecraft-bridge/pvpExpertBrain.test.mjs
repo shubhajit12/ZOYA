@@ -864,3 +864,7 @@ assert.ok(controllerSource.includes("retreating:speed(t)>.18&&!enemyClosing"),
 assert.ok(controllerSource.includes("d>=2.25&&d<=5.2&&!enemyMaceThreat"),"shield readiness covers an approaching melee threat before point-blank range");
 assert.ok(brainSource.includes('d>=2.25&&d<=5.2&&!e.shield'),"shield decision uses widened block window");
 assert.ok(brainSource.includes('has(c,"pearl")&&c.recoveryPearlReady&&c.pearlAmbushReady'),"pearl intercept does not depend on unrelated burst capability flag");
+
+
+assert.ok(controllerSource.includes('skill_inventory shield="+count(bot,"shield")+" pearls="+count(bot,"pearl")'),"combat startup must report whether shield/pearls are actually available");
+assert.ok(controllerSource.includes("stunSlamReady=\"+Boolean(ctx.stunSlamReady)") && controllerSource.includes("pearlCatchReady=\"+Boolean(ctx.pearlCatchReady)"),"combat telemetry must expose pearl-catch and stun-slam readiness instead of hiding skipped prerequisites");
