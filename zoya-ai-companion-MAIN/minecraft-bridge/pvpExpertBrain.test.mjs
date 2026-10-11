@@ -1042,7 +1042,7 @@ assert.ok(controllerSource.includes('onGround:bot.entity?.onGround===true||(bot.
   const catchBody=controllerSource.slice(catchStart,catchEnd);
   assert.ok(catchBody.includes("const catchUntil=Date.now()+2800"),
     "high pearl-catch throws must wait long enough for the pearl to land and the teleport to be observed");
-  assert.ok(catchBody.includes("isConfirmedPearlCatch(displaced,pearlStillExists)"),
+  assert.ok(catchBody.includes("isConfirmedPearlCatch(movementStep>3.0,pearlStillExists)"),
     "longer pearl-catch waiting must still require real displacement and projectile disappearance, not just time elapsed");
 }
 console.log("High pearl-catch landing-window tests passed.");
