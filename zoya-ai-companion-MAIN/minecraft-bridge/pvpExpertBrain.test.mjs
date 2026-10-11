@@ -129,6 +129,17 @@ const base={
     "Elytra mace must not claim an unverified same-tick axe/mace stun");
 }
 
+
+{
+  assert.ok(controllerSource.includes('stun_slam_setup_confirmed=true shield_disabled='),
+    "stun slam setup must report confirmed axe hit and live shield state");
+  assert.ok(controllerSource.includes("no fake same-tick double-attack success"),
+    "stun slam must not claim an unverified same-tick axe/mace combo");
+  assert.ok(brainSource.indexOf('reason:"active_shield_disable_before_mace"')<
+    brainSource.indexOf('reason:"falling_shield_disable_setup"'),
+    "active shield must be disabled before the falling mace follow-up is considered");
+}
+
 console.log("PvP Expert Brain deterministic tests passed.");
 
 // Survival must not assume a totem exists: a detected falling-mace threat still evades.
