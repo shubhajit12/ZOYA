@@ -78,7 +78,10 @@ assert.ok(controllerSource.includes("strafe_movement_confirmed=")&&controllerSou
 assert.ok((controllerSource.match(/const targetHurtBefore=state\.lastSelfTargetHurtAt;/g)||[]).length>=2,"bow and crossbow must use self-attributed target damage, not unrelated damage");
 assert.ok((controllerSource.match(/state\.lastSelfTargetHurtAt>targetHurtBefore/g)||[]).length>=4,"bow/crossbow confirmation comparisons must use the same self-attributed damage signal as their baseline");
 
-assert.ok(controllerSource.includes("state.lastSelfTargetHurtAt=now;")&&controllerSource.indexOf("if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;")<controllerSource.indexOf("state.lastSelfTargetHurtAt=now;"),"self-hit telemetry must be assigned only after rejecting known foreign damage sources");
+assert.ok(controllerSource.includes("state.lastSelfTargetHurtAt=now;")&&
+  controllerSource.indexOf("if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;")<controllerSource.indexOf("const sourceIsSelf=Boolean(source&&")&&
+  controllerSource.includes("if(!sourceIsSelf&&(age<0||age>450))return;"),
+  "known foreign damage must be rejected, while explicitly self-attributed delayed projectile hits bypass only the missing-source melee timing fallback");
 
 assert.ok(controllerSource.includes("projectile_dodge_confirmed=")&&controllerSource.includes("emergency_hold_confirmed="),"dodge/hold must confirm movement");
 assert.ok(controllerSource.includes('case "spacing_hold": ok=await pressureOrbit(t,state.strafe,140);break;'),"spacing hold must use verified orbit executor");
