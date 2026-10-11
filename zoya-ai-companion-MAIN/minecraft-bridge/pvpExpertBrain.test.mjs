@@ -265,14 +265,20 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
 }
 
 {
-  const d=makeBrain().decide({...base,distance:2.0,enemy:{...base.enemy,shield:true}});
-  assert.equal(d.action,"melee_attack","at close but valid reach, pressure with an in-range weapon instead of retreating or invoking the shield-break sequence");
-  assert.equal(d.style,"axe","the shield-aware style should keep the axe, but use a normal in-range attack");
+  const d=makeBrain().decide({...base,distance:2.0,enemy:{...base.enemy,shield:true,usingItem:false}});
+  assert.equal(d.action,"melee_attack","a carried but inactive shield must not trigger shield-break logic");
+  assert.equal(d.style,"sword","use fast sword pressure until the target actually raises its shield");
 }
 
 {
-  const d=makeBrain().decide({...base,distance:2.6,enemy:{...base.enemy,shield:true}});
-  assert.equal(d.action,"shield_break","shield break remains available at valid melee spacing");
+  const d=makeBrain().decide({...base,distance:2.6,enemy:{...base.enemy,shield:true,usingItem:false}});
+  assert.equal(d.action,"melee_attack","do not waste the axe cooldown while a carried shield is not actively blocking");
+  assert.equal(d.style,"sword");
+}
+{
+  const d=makeBrain().decide({...base,distance:2.6,enemy:{...base.enemy,shield:true,usingItem:true}});
+  assert.equal(d.action,"shield_break","an actively used shield should trigger an axe counter at valid melee spacing");
+  assert.equal(d.style,"axe");
 }
 
 
@@ -444,8 +450,8 @@ console.log("Projectile collision-course regression tests passed.");
   assert.equal(d.style,"sword");
 }
 {
-  const d=makeBrain().decide({...base,distance:3.0,enemy:{...base.enemy,shield:true}});
-  assert.equal(d.style,"axe","an observed shield should still promote axe counterplay");
+  const d=makeBrain().decide({...base,distance:3.0,enemy:{...base.enemy,shield:true,usingItem:true}});
+  assert.equal(d.style,"axe","an actively used shield should promote axe counterplay");
 }
 
 // Expert sword pressure keeps real vanilla spacing instead of walking into the target.
