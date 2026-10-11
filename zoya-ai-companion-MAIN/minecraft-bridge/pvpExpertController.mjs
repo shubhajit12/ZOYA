@@ -1630,7 +1630,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const targetGrounded=t.onGround===true;
         if(state.lastTargetOnGround===false&&targetGrounded) state.targetLandedAt=Date.now();
         state.lastTargetOnGround=targetGrounded;
-        state.lastHealth=hp;state.lastTargetHealth=th;
+        state.lastHealth=hp;state.lastTargetHealth=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
         const eq=detectEquipment(t);
         const enemyTotemNow=eq.totem;
         if(enemyTotemNow!==state.enemyTotemWasEquipped){
