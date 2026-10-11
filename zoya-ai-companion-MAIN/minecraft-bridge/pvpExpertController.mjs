@@ -2463,7 +2463,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             " targetHeld="+(enemyHeld||"unknown")+" targetTotemEquipped="+enemyTotemNow+" targetTotemPopWindow="+(Date.now()<state.enemyTotemPopUntil)+
             " maceThreat="+enemyMaceThreat+" maceHeldClose="+Boolean(enemyMaceHeld&&d<=7.5)+" distance="+d.toFixed(2)+
             " attackCooldownMs="+Math.max(0,state.nextAttackAt-Date.now())+" action="+decision.action+
-            " shieldCount="+count(bot,"shield")+" shieldReady="+Boolean(ctx.shieldReady&&ctx.meleeBlockReady)+" pearlCount="+count(bot,"pearl")+
+            " shieldCount="+count(bot,"shield")+" shieldReady="+Boolean(ctx.shieldReady)+" meleeBlockReady="+Boolean(ctx.meleeBlockReady)+" projectileThreat="+Boolean(ctx.projectileThreat)+" pearlCount="+count(bot,"pearl")+
             " pearlEscapeReady="+Boolean(ctx.pearlEscapeReady&&ctx.recoveryPearlReady)+" pearlCatchReady="+Boolean(ctx.pearlCatchReady)+
             " stunSlamReady="+Boolean(ctx.stunSlamReady)+" pearlAmbushReady="+Boolean(ctx.pearlAmbushReady));
         }
