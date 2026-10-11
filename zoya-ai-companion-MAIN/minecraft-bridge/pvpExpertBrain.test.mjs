@@ -62,7 +62,10 @@ const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"
     "potion throw must be confirmed from a new projectile/cloud or inventory decrement");
   assert.ok(potionBody.includes("effect_confirmed=false"),
     "potion projectile spawn must not be mislabeled as a confirmed useful effect");
-  assert.ok(controllerSource.includes("pearl_retry_backoff mode=")&&controllerSource.includes("Math.min(30000,1800*(2**(state.pearlFailureStreak-1)))"),
+  assert.ok(controllerSource.includes('const recoveryMode=dist(bot.entity,t)>14&&!hazard()?"grapple":"escape"')&&controllerSource.includes("pearl_recover_mode="),
+    "far-range recovery must use a target-directed grapple pearl rather than increasing separation");
+
+assert.ok(controllerSource.includes("pearl_retry_backoff mode=")&&controllerSource.includes("Math.min(30000,1800*(2**(state.pearlFailureStreak-1)))"),
     "failed escape/ambush pearls must apply bounded exponential backoff instead of rapidly consuming inventory");
   assert.ok(controllerSource.includes("pearl_catch_retry_backoff reason=")&&controllerSource.includes("Math.min(30000,3500*(2**(state.pearlCatchFailureStreak-1)))"),
     "failed pearl-catch combos must cool down progressively after repeated unconfirmed teleports");
