@@ -398,7 +398,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const equipCombatArmor=async()=>{
     const results=[];
     for(const slot of armorSlotInfo){
-      const best=item(bot,slot.type);
+      // Inventory order is arbitrary; explicitly select the strongest available
+      // material instead of equipping whichever armor piece happens to be first.
+      const candidates=inv(bot).filter(i=>ITEMS[slot.type]?.includes(lname(i)));
+      const best=candidates.sort((a,b)=>armorTier(lname(b))-armorTier(lname(a)))[0];
       if(!best)continue;
       const current=lname(bot.entity?.equipment?.[slot.equipmentIndex]||"");
       if(armorTier(lname(best))<=armorTier(current))continue;
