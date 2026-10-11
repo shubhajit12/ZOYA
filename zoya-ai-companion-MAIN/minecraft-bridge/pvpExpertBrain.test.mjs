@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { getEnchantmentLevel, chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { getEnchantmentLevel, chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, distanceToEntityHitbox, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -765,6 +765,20 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
   const d=makeBrain().decide({...base,distance:2.8,maceAttributeSwapReady:true,selfMaceSmashReady:true,attackReadyAt:0});
   assert.equal(d.action,"mace_attribute_swap","falling mace hit should use a last-tick sword-to-mace attribute swap when both weapons are hotbar-ready");
 }
+
+{
+  assert.equal(distanceToEntityHitbox(
+    {position:{x:0,y:64,z:0},height:1.8},
+    {position:{x:3.3,y:64,z:0},height:1.8,width:0.6}
+  ),3.0,"melee reach should measure from eye to nearest target hitbox point, not feet-to-feet distance");
+  assert.equal(distanceToEntityHitbox(
+    {position:{x:0,y:64,z:0},height:1.8},
+    {position:{x:4,y:64,z:0},height:1.8,width:0.6}
+  ),3.7,"target hitbox geometry must still reject genuinely out-of-reach attacks");
+  assert.equal(distanceToEntityHitbox(null,{position:{x:0,y:0,z:0}}),Infinity,
+    "unknown attacker geometry must fail closed");
+}
+
 console.log("Advanced Impossible tactical routing regression tests passed.");
 
 {
