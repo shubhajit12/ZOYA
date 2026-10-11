@@ -2,9 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { getEnchantmentLevel, chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, distanceToEntityHitbox, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop, isHostilePotionItem } from "./pvpExpertController.mjs";
+import { getEnchantmentLevel, chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, distanceToEntityHitbox, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, isGroundedEntity, pressureOrbitMode, isLikelyTotemPop, isHostilePotionItem } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
+
+assert.equal(isGroundedEntity({onGround:true,velocity:{y:0}}),true);
+assert.equal(isGroundedEntity({onGround:false,velocity:{y:0}}),false);
+assert.equal(isGroundedEntity({onGround:null,velocity:{y:0.24}}),false,
+  "unknown onGround metadata must not make a rising bot look grounded");
+assert.equal(isGroundedEntity({onGround:null,velocity:{y:-0.24}}),false,
+  "unknown onGround metadata must not make a falling bot look grounded");
+assert.equal(isGroundedEntity({onGround:null,velocity:{y:0.01}}),true,
+  "unknown onGround metadata may fall back to near-zero vertical velocity");
+
 
 {
   assert.equal(getEnchantmentLevel({nbt:{Enchantments:[{id:"minecraft:lunge",lvl:{type:"short",value:2}}]}},"lunge"),2,
