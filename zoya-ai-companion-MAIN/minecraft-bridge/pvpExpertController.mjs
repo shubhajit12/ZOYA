@@ -2630,7 +2630,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           inventory:{
             sword:count(bot,"sword"),axe:count(bot,"axe"),mace:count(bot,"mace"),spear:count(bot,"spear"),
             bow:count(bot,"bow"),crossbow:count(bot,"crossbow"),crystal:count(bot,"crystal"),
-            obsidian:count(bot,"obsidian"),respawn_anchor:count(bot,"anchor"),glowstone:count(bot,"glowstone")
+            obsidian:count(bot,"obsidian"),respawn_anchor:count(bot,"anchor"),glowstone:count(bot,"glowstone"),
+             elytra:count(bot,"elytra"),firework:count(bot,"firework")
           },
           capabilities:{
             melee:has(bot,"sword")||has(bot,"axe")||has(bot,"mace")||has(bot,"spear"),
