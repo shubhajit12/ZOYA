@@ -2,9 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { getEnchantmentLevel, chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
+
+{
+  assert.equal(getEnchantmentLevel({nbt:{Enchantments:[{id:"minecraft:lunge",lvl:{type:"short",value:2}}]}},"lunge"),2,
+    "Lunge enchantment level must be read from legacy-style NBT");
+  assert.equal(getEnchantmentLevel({components:{"minecraft:enchantments":{levels:{"minecraft:lunge":3}}}},"lunge"),3,
+    "Lunge enchantment level must be read from modern component-style data");
+  assert.equal(getEnchantmentLevel({nbt:{Enchantments:[{id:"minecraft:sharpness",lvl:5}]}},"lunge"),0,
+    "missing Lunge enchantment must not trigger a lunge action");
+}
 
 {
   const botPosition={x:0,y:64,z:0},targetPosition={x:0,y:64,z:3};
@@ -142,6 +151,10 @@ const base={
   assert.equal(isProjectileOnCollisionCourse(
     {x:2,y:0,z:0},{x:1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},1.35,8
   ),false,"nearby projectiles moving away must not trigger dodge");
+  assert.ok(controllerSource.includes('case "spear_lunge": ok=await spearLunge(t);'),
+  "spear lunge brain action must route to a real spear-jab executor");
+  assert.ok(controllerSource.includes("spear_lunge_hit_confirmed="),
+    "spear lunge must report server-confirmed hit and observed displacement");
   assert.ok(controllerSource.includes("chooseMaceDodgeSide("),
   "mace evasion must select its lateral direction from opponent facing and motion");
   assert.ok(controllerSource.includes("predictive_side="),
@@ -752,6 +765,10 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
 console.log("Advanced Impossible tactical routing regression tests passed.");
 
 {
+{
+  const d=makeBrain().decide({...base,distance:2.7,spearLungeReady:true,capabilities:{...base.capabilities,spear:true}});
+  assert.equal(d.action,"spear_lunge","an enchanted spear should use its jab-lunge in valid close range");
+}
   const d=makeBrain().decide({...base,distance:2.8,stunSlamReady:true,capabilities:{...base.capabilities,wind:true},
     enemy:{...base.enemy,shield:true,usingItem:true}});
   assert.equal(d.action,"stun_slam","grounded shield target with axe, mace, and wind must start the full axe-disable → launch → confirmed slam sequence");
