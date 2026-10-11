@@ -7,6 +7,8 @@ import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { Vec3 } from "vec3";
 import { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";
 
+const PVP_EXPERT_BUILD_MARKER="2026-10-11-pearl-catch-hotbar-same-line-v3";
+
 const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,Number(ms)||0)));
 const num=(v,d=0)=>v==null||v===""?d:Number.isFinite(Number(v))?Number(v):d;
 const lname=v=>String(v?.name||v?.displayName||"").toLowerCase();
@@ -2463,7 +2465,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     try{bot.on?.("entityHurt",onTargetHurt)}catch{}
     try{bot.on?.("entityStatus",onTargetStatus)}catch{}
     try{bot.on?.("entityElytraFlew",onElytra)}catch{}
-    log("[PVP-EXPERT] brain_version="+brain.version+" difficulty="+combatDifficulty.id+
+    log("[PVP-EXPERT] controller_build="+PVP_EXPERT_BUILD_MARKER+" brain_version="+brain.version+" difficulty="+combatDifficulty.id+
       " styleLockMs="+combatDifficulty.styleLockMs+" styleSwitchMargin="+combatDifficulty.styleSwitchMargin+
       " strafeMs="+combatDifficulty.strafeMs+" sprintResetMs="+combatDifficulty.sprintResetMs);
     // Equip upgrades before the first exchange. Armor preflight only replaces
