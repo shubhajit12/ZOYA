@@ -154,7 +154,7 @@ const base={
 
 
 {
-  const rangedCtx={...base,distance:9,lineOfSight:true,styleMemory:"bow",hasBowAmmo:false,hasCrossbowAmmo:false};
+  const rangedCtx={...base,distance:9,lineOfSight:true,hasBowAmmo:false,hasCrossbowAmmo:false,inventory:{...base.inventory,bow:1,crossbow:1}};
   assert.notEqual(makeBrain().decide(rangedCtx).action,"ranged_attack",
     "brain must not repeatedly choose bow firing without ammunition");
   const loadedCrossbowCtx={...rangedCtx,styleMemory:"crossbow",hasCrossbowAmmo:true};
