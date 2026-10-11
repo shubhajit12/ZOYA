@@ -475,18 +475,25 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const strafe=async(t,sign,ms=Number(combatDifficulty.strafeMs||120))=>{
-    await lookAtTarget(t,.10);
-    bot.setControlState("forward",true);
-    bot.setControlState(sign<0?"left":"right",true);
-    bot.setControlState("sprint",true);
-    await sleep(ms);
-    stop();
-    return true;
+    if(!t?.position||!bot.entity?.position)return false;
+    const before=bot.entity.position.clone();
+    try{
+      await lookAtTarget(t,.10);
+      bot.setControlState("forward",true);
+      bot.setControlState(sign<0?"left":"right",true);
+      bot.setControlState("sprint",true);
+      await sleep(ms);
+    }finally{stop();}
+    const moved=bot.entity?.position?before.distanceTo(bot.entity.position):0;
+    const confirmed=moved>=.08;
+    log("[PVP-EXPERT] strafe_movement_confirmed="+confirmed+" moved="+Number(moved||0).toFixed(2));
+    return confirmed;
   };
 
   // Expert pressure orbits at sword spacing instead of blindly holding W.
   const pressureOrbit=async(t,sign,ms=Number(combatDifficulty.strafeMs||95))=>{
-    if(!t?.position)return false;
+    if(!t?.position||!bot.entity?.position)return false;
+    const before=bot.entity.position.clone();
     const until=Date.now()+Math.max(60,Number(ms)||95);
     try{
       while(state.active&&taskIsActive()&&Date.now()<until){
@@ -506,16 +513,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           bot.setControlState("back",true);
           bot.setControlState("sprint",false);
         }else{
-          // Between 2.65 and 3.0 blocks, strafe laterally without closing
-          // distance; actual vanilla melee reach remains capped at 3.05 blocks.
           bot.setControlState("forward",false);
           bot.setControlState("back",false);
           bot.setControlState("sprint",false);
         }
         await sleep(25);
       }
-      return true;
     }finally{stop();}
+    const moved=bot.entity?.position?before.distanceTo(bot.entity.position):0;
+    const confirmed=moved>=.08;
+    log("[PVP-EXPERT] pressure_orbit_confirmed="+confirmed+" moved="+Number(moved||0).toFixed(2));
+    return confirmed;
   };
 
   const emergencyDisengage=async t=>{
@@ -555,23 +563,27 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const emergencyHold=async t=>{
-    if(!t)return false;
+    if(!t?.position||!bot.entity?.position)return false;
+    const start=dist(bot.entity,t);
+    if(start>=6.25)return true;
     const deadline=Date.now()+260;
     try{
       while(state.active&&taskIsActive()&&Date.now()<deadline){
         const live=targetOf(bot,state.targetUsername)||t;
         if(live) await lookAtTarget(live,.05);
         const d=dist(bot.entity,live||t);
-        // "Hold" is a safe-spacing state, not a stationary pause: maintain
-        // a buffer so a moving opponent cannot simply walk back into melee.
-        if(d>=6.25){stop();await sleep(90);return true;}
+        if(d>=6.25)break;
         bot.setControlState("back",true);
         bot.setControlState("sprint",true);
         bot.setControlState(state.strafe<0?"left":"right",true);
         await sleep(35);
       }
-      return true;
     }finally{stop();}
+    const finish=dist(bot.entity,targetOf(bot,state.targetUsername)||t);
+    const confirmed=finish>=6.25||finish>=start+.2;
+    log("[PVP-EXPERT] emergency_hold_confirmed="+confirmed+" distance_before="+start.toFixed(2)+
+      " distance_after="+(Number.isFinite(finish)?finish.toFixed(2):"unknown"));
+    return confirmed;
   };
 
   const spacingRetreat=async t=>{
@@ -1133,7 +1145,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const projectileDodge=async t=>{
-    if(!t)return false;
+    if(!t||!bot.entity?.position)return false;
+    const before=bot.entity.position.clone();
     const threat=incomingProjectile();
     if(threat){
       // Pick the lateral direction that moves away from the projectile's
@@ -1153,7 +1166,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     bot.setControlState("sprint",true);
     await sleep(210);
     stop();
-    return true;
+    const moved=bot.entity?.position?before.distanceTo(bot.entity.position):0;
+    const confirmed=moved>=.1;
+    log("[PVP-EXPERT] projectile_dodge_confirmed="+confirmed+" moved="+Number(moved||0).toFixed(2)+
+      " threat_observed="+Boolean(threat));
+    return confirmed;
   };
 
   const useWaterClutch=async()=>{
@@ -2565,17 +2582,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "mace_evasion": ok=await maceEvasion(t);break;
           case "emergency_hold": ok=await emergencyHold(t);break;
           case "spacing_retreat": ok=await spacingRetreat(t);break;
-          case "spacing_hold": {
-            await lookAtTarget(t,.04);
-            bot.setControlState("forward",false);
-            bot.setControlState("back",false);
-            bot.setControlState("sprint",false);
-            bot.setControlState(state.strafe<0?"left":"right",true);
-            await sleep(140);
-            stop();
-            ok=true;
-            break;
-          }
+          case "spacing_hold": ok=await pressureOrbit(t,state.strafe,140);break;
           case "pearl_escape":
             ok=await throwPearl(t,"escape");
             if(ok) state.maceEscapeCooldownUntil=Date.now()+2600;
