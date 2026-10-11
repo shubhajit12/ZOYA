@@ -63,6 +63,7 @@ function targetOf(bot,u){
   return Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===w)?.entity||null;
 }
 function speed(e){return Math.hypot(num(e?.velocity?.x),num(e?.velocity?.z))}
+export function isGroundedEntity(e){return e?.onGround===true||(e?.onGround==null&&Math.abs(num(e?.velocity?.y))<.08)}
 function isAirborne(e){return e?.onGround===false||(e?.onGround==null&&num(e?.velocity?.y)<-.08)}
 function isElytraItem(i){return lname(i)==="elytra"}
 
@@ -1609,7 +1610,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const startY=num(p.y);
     let spawnedPearl=null, pearlSpawnListener=null, catchBaseline=null;
     try{
-      if(bot.entity?.onGround===false){catchFailureReason="already_airborne";return false}
+      if(!isGroundedEntity(bot.entity)){catchFailureReason="not_grounded";return false}
       // Launch upward with the first charge, then confirm that server physics
       // actually gave ZOYA upward velocity before committing the pearl.
       bot.setControlState("jump",true);
@@ -2519,7 +2520,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
         const hp=num(bot.health,20),th=num(t.health,20),d=dist(bot.entity,t);
         const selfY=num(bot.entity?.position?.y);
-        if(bot.entity?.onGround!==false||!Number.isFinite(state.selfPeakY)) state.selfPeakY=selfY;
+        if(isGroundedEntity(bot.entity)||!Number.isFinite(state.selfPeakY)) state.selfPeakY=selfY;
         else state.selfPeakY=Math.max(num(state.selfPeakY,selfY),selfY);
         const selfFallDistance=estimateObservedFallDistance(bot.entity,state.selfPeakY);
         const tookDamage=state.lastHealth>hp+0.05;
@@ -2612,7 +2613,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         };
         const ctx={
           distance:d,health:hp,maxHealth:num(bot.maxHealth,20),food:num(bot.food,20),
-          onGround:bot.entity?.onGround===true||(bot.entity?.onGround==null&&Math.abs(num(bot.entity?.velocity?.y))<.08),falling:num(bot.entity?.velocity?.y)<-.08,
+          onGround:isGroundedEntity(bot.entity),falling:num(bot.entity?.velocity?.y)<-.08,
           fallDistance:selfFallDistance,heightAdvantage:num(bot.entity?.position?.y)>num(t.position?.y)+1.5,
           knockbacked:speed(bot.entity)>.84,lineOfSight,enemy,
           projectileThreat:projectileIncoming,projectileDodge:projectileIncoming,
@@ -2674,7 +2675,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            maceAttributeSwapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&hotbarSlot("mace")!=null&&hotbarSlot("sword")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
            maceCrystalDTapReady:Boolean(has(bot,"mace")&&has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t))&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.35&&d<=3.1),
           windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat),
-          pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null&&hotbarSlot("pearl")!==hotbarSlot("wind")&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat),
+          pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null&&hotbarSlot("pearl")!==hotbarSlot("wind")&&isGroundedEntity(bot.entity)&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat),
            diagonalPearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null&&hotbarSlot("pearl")!==hotbarSlot("wind")&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat&&enemy.retreating),
            pearlEscapeReady:pearlReady("escape",t),
           pearlAmbushReady:pearlReady("ambush",t),
