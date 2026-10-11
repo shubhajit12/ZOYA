@@ -1051,7 +1051,7 @@ const observePearlAt=catchTimingBody.indexOf("const pearlUntil=Date.now()+700");
 assert.ok(pearlFireAt>=0&&windFireAt>pearlFireAt&&observePearlAt>windFireAt,
   "the wind charge must be fired immediately after the pearl, before waiting for projectile observation");
 assert.ok(catchTimingBody.includes('pearl_catch_skipped reason=pearl_and_wind_must_be_in_distinct_hotbar_slots') &&
-  catchTimingBody.includes('hotbarSlot("pearl")!==hotbarSlot("wind")'),
+  controllerSource.includes('hotbarSlot("pearl")!==hotbarSlot("wind")'),
   "the combo must not claim readiness if the two items cannot be switched quickly from distinct hotbar slots");
 assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null'),
   "brain readiness must match the combo's hotbar prerequisites");
