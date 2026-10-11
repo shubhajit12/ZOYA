@@ -74,6 +74,9 @@ assert.ok(controllerSource.includes("pearl_retry_backoff mode=")&&controllerSour
     "failed pearl-catch combos must cool down progressively after repeated unconfirmed teleports");
 
 assert.ok(controllerSource.includes("strafe_movement_confirmed=")&&controllerSource.includes("pressure_orbit_confirmed="),"strafe/orbit must confirm displacement");
+assert.ok((controllerSource.match(/const targetHurtBefore=state\.lastSelfTargetHurtAt;/g)||[]).length>=2,"bow and crossbow must use self-attributed target damage, not unrelated damage");
+assert.ok(controllerSource.includes("state.lastSelfTargetHurtAt=Date.now();")&&controllerSource.indexOf("if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;")<controllerSource.indexOf("state.lastSelfTargetHurtAt=Date.now();"),"self-hit telemetry must be assigned only after rejecting known foreign damage sources");
+
 assert.ok(controllerSource.includes("projectile_dodge_confirmed=")&&controllerSource.includes("emergency_hold_confirmed="),"dodge/hold must confirm movement");
 assert.ok(controllerSource.includes('case "spacing_hold": ok=await pressureOrbit(t,state.strafe,140);break;'),"spacing hold must use verified orbit executor");
 
