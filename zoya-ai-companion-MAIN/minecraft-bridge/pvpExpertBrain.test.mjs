@@ -1018,6 +1018,12 @@ console.log("Projectile shield impact-window tests passed.");
 }
 console.log("Falling mace hitbox-window tests passed.");
 
+assert.ok(controllerSource.includes('function isAirborne(e){return e?.onGround===false||(e?.onGround==null&&num(e?.velocity?.y)<-.08)}'),
+  "airborne combat windows must still be recognized from downward velocity when a server omits onGround metadata");
+assert.ok(controllerSource.includes('onGround:bot.entity?.onGround===true||(bot.entity?.onGround==null&&Math.abs(num(bot.entity?.velocity?.y))<.08),falling:num(bot.entity?.velocity?.y)<-.08'),
+  "brain context must not misclassify an unknown onGround state as grounded while the bot is falling");
+
+
 
 // High pearl-catch throws need enough time for a real server-side landing;
 // a short timeout incorrectly labels a still-flying pearl as a failed catch.
