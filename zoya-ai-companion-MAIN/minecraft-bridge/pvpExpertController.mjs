@@ -1551,13 +1551,26 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       if(!launched){catchFailureReason="self_launch_unconfirmed";return false}
 
-      // Throw high; the diagonal variant adds a lateral vector so the pearl
-      // travels across the opponent's line instead of straight up their axis.
+      // Throw from the bot's *current airborne position*, not its ground
+      // launch point. The old +17Y / ~2-block horizontal aim was nearly
+      // vertical, so the pearl could rise almost straight up instead of
+      // following a controllable arc that the second wind charge can meet.
+      // Use a deliberate ~45-55 degree upward throw with meaningful horizontal
+      // travel; the diagonal variant adds lateral travel across the target line.
       if(!await equip("pearl"))return false;
-      const hx=diagonal?(awayX*3.0+sideX*5.0):awayX*2.0;
-      const hz=diagonal?(awayZ*3.0+sideZ*5.0):awayZ*2.0;
-      await bot.lookAt(new Vec3(p.x+hx,p.y+17,p.z+hz),true);
-      bot.activateItem();await sleep(65);bot.deactivateItem();
+      const launchPos=bot.entity.position.clone();
+      const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*7.0;
+      const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*7.0;
+      const hy=diagonal?7.5:8.0;
+      const horizontal=Math.hypot(hx,hz);
+      const pitchDeg=Math.atan2(hy,horizontal)*180/Math.PI;
+      const pearlAim=launchPos.offset(hx,hy,hz);
+      await bot.lookAt(pearlAim,true);
+      log("[PVP-EXPERT] pearl_catch_throw_aim mode="+(diagonal?"diagonal":"standard")+
+        " horizontal="+horizontal.toFixed(2)+" vertical="+hy.toFixed(2)+
+        " elevationDeg="+pitchDeg.toFixed(1)+" originY="+num(launchPos.y).toFixed(2)+
+        " aimY="+num(pearlAim.y).toFixed(2));
+      bot.activateItem();await sleep(85);bot.deactivateItem();
       state.lastPearlAt=Date.now();state.pearlCooldownUntil=state.lastPearlAt+1000;state.lastPearlType=diagonal?"diagonal_catch":"catch";
       state.pearlCatchCooldownUntil=Date.now()+3500;
 
