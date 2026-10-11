@@ -26,6 +26,11 @@ assert.ok(controllerSource.includes('combat_loadout totem_equipped='),"PvP start
 }
 
 
+{
+  const d=makeBrain().decide({health:20,distance:null,lineOfSight:true,capabilities:{sword:true},inventory:{sword:1},enemy:{}});
+  assert.equal(d.action,"approach","missing range data must be treated as unknown distance, never as point-blank melee range");
+}
+
 const base={
   health:20,maxHealth:20,food:20,distance:4,onGround:true,falling:false,fallDistance:0,
   heightAdvantage:false,lineOfSight:true,projectileThreat:false,hazard:false,
