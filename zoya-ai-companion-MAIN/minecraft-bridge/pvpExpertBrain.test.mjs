@@ -964,3 +964,18 @@ assert.ok(controllerSource.includes("stunSlamReady=\"+Boolean(ctx.stunSlamReady)
   assert.notEqual(noRangedAmmo.style,"crossbow","unloaded no-ammo crossbow must not be selected as the preferred combat style");
 }
 console.log("Predictive ranged aim and ammo-aware kit selection tests passed.");
+
+
+// A real Java critical cannot be delivered while sprinting; the controller
+// must release sprint and revalidate the falling window before attacking.
+{
+  const critStart=controllerSource.indexOf("const fallingCrit=async t=>");
+  const critEnd=controllerSource.indexOf("const hitSelect=async t=>",critStart);
+  const critBody=controllerSource.slice(critStart,critEnd);
+  assert.ok(critBody.includes('bot.setControlState("sprint",false);') &&
+    critBody.includes("const critWindowStillValid=") &&
+    critBody.indexOf('bot.setControlState("sprint",false);')<critBody.indexOf("const critWindowStillValid=") &&
+    critBody.indexOf("const critWindowStillValid=")<critBody.indexOf("bot.attack(t);"),
+    "falling sword critical must release sprint and revalidate the falling hit window before the swing");
+}
+console.log("Sprint-free critical-hit timing tests passed.");
