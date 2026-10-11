@@ -77,6 +77,18 @@ const base={
   assert.equal(d.action,"totem");
 }
 
+
+{
+  assert.ok(controllerSource.includes("const crossbowChargeState=() =>") || controllerSource.includes("const crossbowChargeState=()=>"),
+    "crossbow combat must inspect charged state instead of treating a short use as a shot");
+  assert.ok(controllerSource.includes("crossbow_load_unconfirmed"),
+    "crossbow must fail closed when loading cannot be confirmed");
+  assert.ok(controllerSource.includes("crossbow_fire_state_changed confirmed=true"),
+    "crossbow fire must be confirmed by a charged-state transition");
+  assert.ok(controllerSource.includes("const deadline=Date.now()+1700"),
+    "crossbow must allow a real load interval before firing");
+}
+
 console.log("PvP Expert Brain deterministic tests passed.");
 
 // Survival must not assume a totem exists: a detected falling-mace threat still evades.
