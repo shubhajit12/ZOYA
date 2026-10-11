@@ -170,6 +170,25 @@ export function predictTargetPosition(position,velocity={},acceleration={},leadT
   return {x:axis("x"),y:axis("y"),z:axis("z")};
 }
 
+// Approximate Java melee reach from the attacker's eye to the nearest point of
+// the target's bounding box. This is more useful than measuring feet-to-feet
+// distance, especially against jumping/falling players and tall entities.
+// It is a conservative geometry check, not a substitute for server LOS checks.
+export function distanceToEntityHitbox(attacker,target,eyeHeight=null) {
+  const a=attacker?.position||attacker;
+  const p=target?.position||target;
+  if(!a||!p||![a.x,a.y,a.z,p.x,p.y,p.z].every(v=>Number.isFinite(Number(v))))return Infinity;
+  const targetHeight=Number.isFinite(Number(target?.height))&&Number(target.height)>0?Number(target.height):1.8;
+  const targetWidth=Number.isFinite(Number(target?.width))&&Number(target.width)>0?Number(target.width):0.6;
+  const attackerHeight=Number.isFinite(Number(attacker?.height))&&Number(attacker.height)>0?Number(attacker.height):1.8;
+  const eyeY=Number.isFinite(Number(eyeHeight))&&eyeHeight!=null?Number(a.y)+Number(eyeHeight):Number(a.y)+attackerHeight*0.9;
+  const half=targetWidth/2;
+  const closestX=Math.max(Number(p.x)-half,Math.min(Number(p.x)+half,Number(a.x)));
+  const closestY=Math.max(Number(p.y),Math.min(Number(p.y)+targetHeight,eyeY));
+  const closestZ=Math.max(Number(p.z)-half,Math.min(Number(p.z)+half,Number(a.z)));
+  return Math.hypot(Number(a.x)-closestX,eyeY-closestY,Number(a.z)-closestZ);
+}
+
 // Pure spacing policy shared with deterministic tests. Never extends hit reach.
 export function pressureOrbitMode(distance) {
   const d=Number(distance);
@@ -560,7 +579,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const attack=async(t,type,maxReach)=>{
     if(!t||!await equip(type)) return false;
     const d=dist(bot.entity,t);
-    if(d>maxReach){state.failedAction="attack_out_of_range";state.failedActionAt=Date.now();return false}
+    const hitboxDistance=distanceToEntityHitbox(bot.entity,t);
+    // Keep the controller's configured reach cap; the AABB metric improves
+    // hit validation but never grants extra reach beyond the chosen cap.
+    if(hitboxDistance>Math.min(Number(maxReach)||3.05,3.05)){
+      state.failedAction="attack_out_of_range";state.failedActionAt=Date.now();
+      log("[PVP-EXPERT] attack_rejected out_of_reach weapon="+type+
+        " feet_distance="+d.toFixed(2)+" eye_hitbox_distance="+hitboxDistance.toFixed(2));
+      return false;
+    }
     await lookAtTarget(t,.05);
     const hitsBefore=state.hits;
     const targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
@@ -572,7 +599,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.lastAttackAttemptAt=state.lastAttackAt;
     state.nextAttackAt=state.lastAttackAt+cooldown;
     state.attackCount++;
-    log("[PVP-EXPERT] swing_issued weapon="+type+" distance="+d.toFixed(2)+"; awaiting server damage confirmation");
+    log("[PVP-EXPERT] swing_issued weapon="+type+" distance="+d.toFixed(2)+" eye_hitbox_distance="+hitboxDistance.toFixed(2)+"; awaiting server damage confirmation");
     await sprintReset(type);
     await sleep(55);
     const confirmed=await waitForHitConfirmation(t,hitsBefore,targetHealthBefore,280);
