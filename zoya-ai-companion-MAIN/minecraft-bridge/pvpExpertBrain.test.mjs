@@ -311,7 +311,7 @@ assert.ok(controllerSource.includes("const equipTotemVerified=async()=>"),
 
 
 {
-  assert.ok(controllerSource.includes("state.lastTargetHurtAt=Date.now();"),
+  assert.ok(controllerSource.includes("state.lastTargetHurtAt=now;"),
     "target hurt events must be observable independently of direct melee attack confirmation");
   assert.ok(controllerSource.includes("targetHurtObserved=state.lastTargetHurtAt>targetHurtBefore"),
     "crystal and anchor detonation must accept observed target damage when player health is unavailable");
