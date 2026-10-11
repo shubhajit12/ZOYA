@@ -165,6 +165,14 @@ const base={
     "crossbow executor must refuse to load/fire without ammunition");
 }
 
+
+{
+  assert.ok(controllerSource.includes("state.lastTargetHurtAt=Date.now();"),
+    "target hurt events must be observable independently of direct melee attack confirmation");
+  assert.ok(controllerSource.includes("targetHurtObserved=state.lastTargetHurtAt>targetHurtBefore"),
+    "crystal and anchor detonation must accept observed target damage when player health is unavailable");
+}
+
 console.log("PvP Expert Brain deterministic tests passed.");
 
 // Survival must not assume a totem exists: a detected falling-mace threat still evades.
