@@ -1056,6 +1056,18 @@ assert.ok(catchTimingBody.includes('pearl_catch_skipped reason=pearl_and_wind_mu
 assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null'),
   "brain readiness must match the combo's hotbar prerequisites");
 console.log("Pearl-catch same-line timing regression tests passed.");
+
+const throwPearlStart=controllerSource.indexOf("const throwPearl=async(t,mode=\"escape\")=>");
+const throwPearlEnd=controllerSource.indexOf("const webEscape=async()=>",throwPearlStart);
+const throwPearlBody=controllerSource.slice(throwPearlStart,throwPearlEnd);
+assert.ok(throwPearlBody.includes("const estimatedFlightTicks=horizontalDistance/1.35") &&
+  throwPearlBody.includes("const dropCompensation=Math.max(0.15,Math.min(3.5,0.03*estimatedFlightTicks*(estimatedFlightTicks+1)/2))") &&
+  throwPearlBody.includes("await bot.lookAt(aimPoint,true)"),
+  "ordinary pearl throws must compensate for gravity instead of aiming directly at the landing block");
+assert.ok(throwPearlBody.includes("const teleportDeadline=Date.now()+3500") &&
+  throwPearlBody.includes("pearl_throw_aim mode="),
+  "pearl throws must expose aim geometry and allow a bounded landing/teleport confirmation window");
+
 assert.ok(catchTimingBody.includes("pearl_catch_wind_followup_projectile_observed="),
   "pearl catch telemetry must distinguish an unobserved wind-charge follow-up from a failed teleport");
 
