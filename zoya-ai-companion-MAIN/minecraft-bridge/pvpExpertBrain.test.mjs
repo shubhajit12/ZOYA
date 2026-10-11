@@ -815,8 +815,9 @@ console.log("PvP failed-strike cooldown regression tests passed.");
     controllerSource.includes('boots:["netherite_boots","diamond_boots","iron_boots","chainmail_boots","golden_boots","leather_boots"]'),
     "preflight must recognize leggings and boots armor upgrades");
   assert.ok(controllerSource.includes("const equipCombatArmor=async()=>") &&
-    controllerSource.includes("await equipCombatArmor();"),
-    "combat must equip available stronger armor before the first exchange");
+    controllerSource.includes("await equipCombatArmor();") &&
+    controllerSource.includes("candidates.sort((a,b)=>armorTier(lname(b))-armorTier(lname(a)))"),
+    "combat must select the strongest available armor instead of relying on inventory order");
   assert.ok(controllerSource.includes('const originalChestName=lname(bot.entity?.equipment?.[4]||"");') &&
     controllerSource.includes("torso_loadout_restored="),
     "Elytra-mace must restore the original torso item instead of always leaving Elytra equipped");
