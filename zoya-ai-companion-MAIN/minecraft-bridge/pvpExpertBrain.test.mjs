@@ -123,6 +123,15 @@ const base={
 };
 
 {
+  const popDecision=makeBrain().decide({...base,distance:4.52,pearlCatchReady:true,
+    enemy:{...base.enemy,totemPopped:true}});
+  assert.equal(popDecision.action,"approach",
+    "a confirmed totem-pop window at mid-range must take priority over a speculative pearl catch");
+  assert.ok(brainSource.indexOf("if(e.totemPopped&&d<=3.05")<brainSource.indexOf("if(c.pearlCatchReady)"),
+    "totem-pop finishing logic must precede pearl-catch selection");
+}
+
+{
   const d=makeBrain().decide({...base,distance:5.5});
   assert.notEqual(d.action,"spear_pressure","spear pressure must never be selected beyond the executor's 5.0m contract");
 }
