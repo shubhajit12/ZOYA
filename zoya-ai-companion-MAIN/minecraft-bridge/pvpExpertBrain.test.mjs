@@ -1155,3 +1155,13 @@ assert.ok(controllerSource.includes('skill_inventory sword=') &&
   controllerSource.includes('fireworks="+count(bot,"firework")'),
   "combat preflight must log the item counts needed to explain why kit-specific skills are unavailable");
 console.log("Full combat-kit inventory telemetry tests passed.");
+
+const hotbarStart=controllerSource.indexOf("const hotbarSlot=type=>");
+const hotbarEnd=controllerSource.indexOf("const selectHotbarItem=",hotbarStart);
+const hotbarBody=controllerSource.slice(hotbarStart,hotbarEnd);
+assert.ok(hotbarBody.includes("inv(bot).filter") &&
+  hotbarBody.includes("i.slot>=36&&i.slot<=44") &&
+  !hotbarBody.includes("const i=item(bot,type)"),
+  "hotbar readiness must search every matching stack so an earlier main-inventory stack cannot hide a usable hotbar stack");
+console.log("Hotbar item-selection regression test passed.");
+
