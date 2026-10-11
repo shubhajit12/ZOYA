@@ -526,6 +526,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     // reliable safety gap. Evade far enough to break immediate melee/burst.
     const safeDistance=/mace/.test(targetHeld)?8.0:4.75;
     const deadline=Date.now()+1500;
+    let reachedGap=false;
     try{
       bot.setControlState("back",true);
       bot.setControlState("sprint",true);
@@ -534,17 +535,23 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const live=targetOf(bot,state.targetUsername)||t;
         if(live) await lookAtTarget(live,.05);
         const d=dist(bot.entity,live||t);
-        if(d>=safeDistance) break;
+        if(d>=safeDistance){reachedGap=true;break}
         await sleep(35);
       }
     }finally{
       stop();
     }
     state.strafe*=-1;
+    const live=targetOf(bot,state.targetUsername)||t;
+    const finish=dist(bot.entity,live);
+    const progressed=Number.isFinite(start)&&Number.isFinite(finish)&&finish>start+.25;
+    log("[PVP-EXPERT] emergency_disengage_confirmed="+(reachedGap||progressed)+
+      " safe_gap_reached="+reachedGap+" distance_before="+start.toFixed(2)+
+      " distance_after="+(Number.isFinite(finish)?finish.toFixed(2):"unknown"));
     // Keep the emergency lock long enough to heal/escape; never let the next
     // brain tick immediately turn a retreat into a re-engagement.
     state.emergencyRetreatUntil=Date.now()+3200;
-    return true;
+    return reachedGap||progressed;
   };
 
   const emergencyHold=async t=>{
@@ -597,6 +604,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     // a short lateral + backward sprint burst, then punish only if sword reach
     // and the normal vanilla cooldown still permit a real hit.
     state.maceEvasionCooldownUntil=Date.now()+650;
+    const startPos=bot.entity?.position?.clone?.();
+    const startDistance=dist(bot.entity,t);
     const dodgeSide=chooseMaceDodgeSide({
       botYaw:bot.entity?.yaw,botPosition:bot.entity?.position,
       targetPosition:t.position,targetYaw:t.yaw,targetVelocity:t.velocity
@@ -616,13 +625,19 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       state.strafe*=-1;
     }
     const live=targetOf(bot,state.targetUsername)||t;
-    if(live?.position&&dist(bot.entity,live)<=3.05&&Date.now()>=state.nextAttackAt&&has(bot,"sword")){
+    const endPos=bot.entity?.position;
+    const moved=startPos&&endPos?startPos.distanceTo(endPos):0;
+    const endDistance=dist(bot.entity,live);
+    const evasionConfirmed=moved>=.12||(Number.isFinite(startDistance)&&Number.isFinite(endDistance)&&endDistance>startDistance+.12);
+    log("[PVP-EXPERT] mace_evasion_confirmed="+evasionConfirmed+" moved="+Number(moved||0).toFixed(2)+
+      " distance_before="+startDistance.toFixed(2)+" distance_after="+(Number.isFinite(endDistance)?endDistance.toFixed(2):"unknown"));
+    if(live?.position&&endDistance<=3.05&&Date.now()>=state.nextAttackAt&&has(bot,"sword")){
       const confirmed=await attack(live,"sword",3.05);
       log("[PVP-EXPERT] mace_evasion_counter confirmed="+confirmed);
-      return true; // the evasive movement succeeded even if the follow-up swing did not land
+      return evasionConfirmed||confirmed;
     }
     log("[PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown");
-    return true;
+    return evasionConfirmed;
   };
 
   const postHitEvasion=async(t)=>{
