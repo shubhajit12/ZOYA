@@ -1490,7 +1490,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const pearlCatch=async(t,diagonal=false)=>{
     if(!t?.position||!has(bot,"pearl")||!has(bot,"mace")||count(bot,"wind")<2||!bot.entity?.position)return false;
     if(Date.now()<num(state.pearlCatchCooldownUntil))return false;
-    state.pearlCatchCooldownUntil=Date.now()+1200;
+    state.pearlCatchCooldownUntil=Date.now()+3500;
+    let catchSucceeded=false;
+    let catchFailureReason="execution_failed";
     const p=bot.entity.position,tp=t.position;
     const dx=p.x-tp.x,dz=p.z-tp.z,len=Math.hypot(dx,dz)||1;
     const awayX=dx/len,awayZ=dz/len,sideX=-awayZ,sideZ=awayX;
@@ -1498,7 +1500,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const startY=num(p.y);
     try{
       // Launch off the ground with the first wind charge.
-      if(bot.entity?.onGround===false)return false;
+      if(bot.entity?.onGround===false){catchFailureReason="already_airborne";return false}
       bot.setControlState("jump",true);
       await sleep(55);
       bot.setControlState("jump",false);
@@ -1511,7 +1513,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(num(bot.entity?.position?.y)-startY>=.25&&num(bot.entity?.velocity?.y)>.12){launched=true;break}
         await sleep(20);
       }
-      if(!launched)return false;
+      if(!launched){catchFailureReason="self_launch_unconfirmed";return false}
 
       // Throw high; the diagonal variant adds a lateral vector so the pearl
       // travels across the opponent's line instead of straight up their axis.
@@ -1530,7 +1532,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0]||null;
         if(!pearl)await sleep(20);
       }
-      if(!pearl)return false;
+      if(!pearl){catchFailureReason="pearl_projectile_not_observed";return false}
 
       // Use the second charge to collide with the live pearl projectile.
       if(!await equip("wind"))return false;
@@ -1548,6 +1550,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       state.pearlCatchCooldownUntil=Date.now()+3500;
       await equipBestMelee();
+      catchSucceeded=caught;
+      if(!caught)catchFailureReason="teleport_unconfirmed";
       log("[PVP-EXPERT] pearl_catch mode="+(diagonal?"diagonal":"standard")+" pearl_found=true pearl_removed="+(!bot.entities?.[pearl.id])+" teleport_confirmed="+caught);
       if(caught&&has(bot,"mace")){
         await sleep(80);
@@ -1555,6 +1559,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       return caught;
     }catch(error){
+      catchFailureReason="exception";
       log("[PVP-EXPERT] pearl_catch failed: "+(error?.message||String(error)));
       try{bot.deactivateItem()}catch{}
       stop();
@@ -1562,6 +1567,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       return false;
     }finally{
       try{bot.setControlState("jump",false)}catch{}
+      if(catchSucceeded){
+        state.pearlCatchFailureStreak=0;
+        state.pearlCatchCooldownUntil=Date.now()+3500;
+      }else{
+        state.pearlCatchFailureStreak=Math.min(5,Number(state.pearlCatchFailureStreak||0)+1);
+        const cooldown=Math.min(30000,3500*(2**(state.pearlCatchFailureStreak-1)));
+        state.pearlCatchCooldownUntil=Date.now()+cooldown;
+        log("[PVP-EXPERT] pearl_catch_retry_backoff reason="+catchFailureReason+
+          " streak="+state.pearlCatchFailureStreak+" cooldownMs="+cooldown);
+      }
     }
   };
 
