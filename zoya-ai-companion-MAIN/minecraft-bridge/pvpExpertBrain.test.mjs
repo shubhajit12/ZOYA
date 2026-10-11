@@ -853,3 +853,6 @@ console.log("Mace-crystal D-tap and attribute-swap separation tests passed.");
   assert.ok(model.weaponChanges.some(([name])=>name==="shield"),"observed held-item changes must be recorded");
 }
 console.log("Evidence-based opponent adaptation regression tests passed.");
+
+assert.ok(controllerSource.includes("retreating:speed(t)>.18&&!enemyClosing"),
+  "retreat adaptation must distinguish movement away from ZOYA from generic target movement");
