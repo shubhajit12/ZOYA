@@ -30,7 +30,29 @@ const ITEMS=Object.freeze({
 });
 
 function inv(bot){return bot.inventory?.items?.()||[]}
-function item(bot,type){return inv(bot).find(i=>ITEMS[type]?.includes(lname(i)))||null}
+
+// A generic splash/lingering potion is not necessarily a debuff: it may heal,
+// buff, or have an unknown custom effect. Only route a debuff when item metadata
+// actually identifies a hostile effect; unknown metadata fails closed.
+export function isHostilePotionItem(i){
+  if(!i||!ITEMS.potion.includes(lname(i)))return false;
+  let metadata="";
+  try{
+    metadata=JSON.stringify({
+      nbt:i.nbt??null,
+      components:i.components??null,
+      customName:i.customName??null,
+      displayName:i.displayName??null,
+      name:i.name??null
+    }).toLowerCase();
+  }catch{return false}
+  return /(?:minecraft:)?(?:poison|slowness|weakness|instant_damage|harming|wither|blindness|mining_fatigue|nausea|levitation|infested|oozing|weaving)(?:\\b|[_-])/i.test(metadata);
+}
+function item(bot,type){
+  const candidates=inv(bot).filter(i=>ITEMS[type]?.includes(lname(i)));
+  if(type==="potion")return candidates.find(isHostilePotionItem)||null;
+  return candidates[0]||null;
+}
 function count(bot,type){return inv(bot).filter(i=>ITEMS[type]?.includes(lname(i))).reduce((n,i)=>n+num(i.count),0)}
 function has(bot,type){return Boolean(item(bot,type))}
 function dist(a,b){return a?.position&&b?.position?a.position.distanceTo(b.position):Infinity}
