@@ -117,6 +117,18 @@ const base={
     "projectile dodging must choose a trajectory-aware lateral side");
 }
 
+
+{
+  assert.ok(controllerSource.includes('noteFailure?.("elytra_mace","flight_not_started");\n        await restoreElytra();'),
+    "failed Elytra takeoff must restore the flight chest item");
+  assert.ok(controllerSource.includes("const fallDistance=estimateObservedFallDistance(bot.entity,divePeakY)"),
+    "Elytra mace must require a measured downward fall, not merely being above the target");
+  assert.ok(controllerSource.includes("const confirmed=await waitForHitConfirmation(live,hitsBefore,targetHealthBefore,280);"),
+    "Elytra mace action must return server-confirmed hit status rather than issued-input status");
+  assert.ok(controllerSource.includes("Never send two attacks in the same tick and label that a stun"),
+    "Elytra mace must not claim an unverified same-tick axe/mace stun");
+}
+
 console.log("PvP Expert Brain deterministic tests passed.");
 
 // Survival must not assume a totem exists: a detected falling-mace threat still evades.
