@@ -1071,6 +1071,10 @@ assert.ok(catchTimingBody.includes('pearl_catch_skipped reason=pearl_and_wind_mu
 assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null'),
   "brain readiness must match the combo's hotbar prerequisites");
 console.log("Pearl-catch same-line timing regression tests passed.");
+assert.ok(controllerSource.includes("const crystalCycleSafeForTarget=(t,base=crystalBase(t))=>") &&
+  controllerSource.includes("const crystalCycleReady=crystalCycleSafeForTarget(t);") &&
+  controllerSource.includes("if(!base||!crystalCycleSafeForTarget(t,base))return false"),
+  "crystal style selection and crystal execution must share the same live self-damage safety gate");
 assert.ok(controllerSource.includes("hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat"),
   "pearl-catch readiness must be suppressed when a close enemy mace threat makes the setup unsafe");
 
