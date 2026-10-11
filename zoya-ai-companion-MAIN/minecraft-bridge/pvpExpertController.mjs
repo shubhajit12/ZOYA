@@ -1550,6 +1550,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       bot.setControlState("jump",false);
       if(!selectHotbarItem("wind")){catchFailureReason="wind_hotbar_select_failed";return false}
       await bot.lookAt(bot.entity.position.offset(0,-1.25,0),true);
+      const firstWindAt=Date.now();
       bot.activateItem();await sleep(55);bot.deactivateItem();
       let launched=false;
       const launchUntil=Date.now()+650;
@@ -1559,13 +1560,21 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       if(!launched){catchFailureReason="self_launch_unconfirmed";return false}
 
+      // Player-thrown wind charges have a 0.5 s use cooldown. Wait for that
+      // cooldown after the self-launch, then keep the pearl->wind follow-up
+      // itself immediate so the second charge is not silently rejected.
+      const windReadyAt=firstWindAt+525;
+      while(state.active&&taskIsActive()&&Date.now()<windReadyAt)await sleep(10);
+      if(!state.active||!taskIsActive()){catchFailureReason="task_cancelled_during_wind_cooldown";return false}
+      log("[PVP-EXPERT] pearl_catch_first_wind_cooldown_elapsed_ms="+(Date.now()-firstWindAt));
+
       // Vanilla pearl catching depends on the wind charge intersecting the
       // pearl's flight path. Throw the pearl and immediately fire a wind charge
       // along the same upward ray; waiting to find the pearl and aiming at its
       // later position lets it travel past the charge's collision window.
-      const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*3.5;
-      const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*3.5;
-      const hy=diagonal?7.5:8.0;
+      const hx=diagonal?(awayX*3.0+sideX*2.5):awayX*4.5;
+      const hz=diagonal?(awayZ*3.0+sideZ*2.5):awayZ*4.5;
+      const hy=diagonal?7.0:8.0;
       const horizontal=Math.hypot(hx,hz);
       const pitchDeg=Math.atan2(hy,horizontal)*180/Math.PI;
       if(!selectHotbarItem("pearl")){catchFailureReason="pearl_hotbar_select_failed";return false}
