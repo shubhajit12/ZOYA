@@ -152,11 +152,11 @@ const base={
 
 
 {
-  const rangedCtx={...baseContext(),distance:9,lineOfSight:true,hasBowAmmo:false,hasCrossbowAmmo:false};
-  assert.notEqual(createPvpExpertBrain().decide(rangedCtx).action,"ranged_attack",
-    "brain must not repeatedly choose bow/crossbow firing without ammunition");
-  const loadedCrossbowCtx={...rangedCtx,hasCrossbowAmmo:true};
-  assert.equal(createPvpExpertBrain().decide(loadedCrossbowCtx).action,"ranged_attack",
+  const rangedCtx={...base,distance:9,lineOfSight:true,styleMemory:"bow",hasBowAmmo:false,hasCrossbowAmmo:false};
+  assert.notEqual(makeBrain().decide(rangedCtx).action,"ranged_attack",
+    "brain must not repeatedly choose bow firing without ammunition");
+  const loadedCrossbowCtx={...rangedCtx,styleMemory:"crossbow",hasCrossbowAmmo:true};
+  assert.equal(makeBrain().decide(loadedCrossbowCtx).action,"ranged_attack",
     "a loaded crossbow remains usable even without spare inventory arrows");
   assert.ok(controllerSource.includes("bow_fire_blocked reason=no_arrow_ammunition"),
     "bow executor must refuse to charge without ammunition");
