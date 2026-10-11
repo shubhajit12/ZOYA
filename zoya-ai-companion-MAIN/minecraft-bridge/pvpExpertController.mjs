@@ -927,10 +927,30 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const p=bot.entity?.position;if(!p)return false;
     try{
       const below=bot.blockAt(p.offset(0,-1,0));
-      if(below&&!/air|water|lava/.test(String(below.name))) await bot.look(0,Math.PI/2,true);
+      if(!below||/air|water|lava/.test(String(below.name)))return false;
+      await bot.look(0,Math.PI/2,true);
       bot.activateItem();await sleep(100);bot.deactivateItem();
-      return true;
-    }catch{return false}
+      const waterDeadline=Date.now()+220;
+      let placed=false;
+      while(state.active&&taskIsActive()&&Date.now()<waterDeadline){
+        const livePos=bot.entity?.position;
+        if(!livePos)break;
+        const cells=[
+          bot.blockAt(livePos),
+          bot.blockAt(livePos.offset(0,1,0)),
+          bot.blockAt(p)
+        ].filter(Boolean);
+        placed=cells.some(b=>String(b.name||"").toLowerCase()==="water");
+        if(placed)break;
+        await sleep(20);
+      }
+      log("[PVP-EXPERT] water_clutch_confirmed="+placed+" water_block_observed="+placed);
+      return placed;
+    }catch(error){
+      try{bot.deactivateItem()}catch{}
+      log("[PVP-EXPERT] water_clutch_failed error="+(error?.message||String(error)));
+      return false;
+    }
   };
 
   const detectEquipment=t=>{
@@ -1272,18 +1292,52 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const d=dist(bot.entity,t);
     if(d<3.0||d>7.0)return false;
     if(!await equip("wind"))return false;
+    const beforeProjectiles=new Set(Object.values(bot.entities||{}).filter(e=>/wind_charge/.test(lname(e))).map(e=>e.id));
+    const targetHurtBefore=state.lastTargetHurtAt;
+    const targetPosBefore=t.position.clone();
+    const targetVelBefore={x:num(t.velocity?.x),y:num(t.velocity?.y),z:num(t.velocity?.z)};
     try{
       await lookAtTarget(t,.02);
       bot.activateItem();
       await sleep(70);
       bot.deactivateItem();
-      await sleep(90);
+      const launchDeadline=Date.now()+250;
+      let projectileSpawned=false;
+      while(state.active&&taskIsActive()&&Date.now()<launchDeadline){
+        projectileSpawned=Object.values(bot.entities||{}).some(e=>
+          e?.position&&/wind_charge/.test(lname(e))&&!beforeProjectiles.has(e.id)
+        );
+        if(projectileSpawned)break;
+        await sleep(20);
+      }
       await equipBestMelee();
-      log("[PVP-EXPERT] wind_charge_cancel issued target_airborne=true distance="+d.toFixed(2));
-      return true;
-    }catch{
+      if(!projectileSpawned){
+        log("[PVP-EXPERT] wind_charge_cancel_confirmed=false projectile_spawned=false");
+        return false;
+      }
+      const impactDeadline=Date.now()+420;
+      let impactConfirmed=false;
+      while(state.active&&taskIsActive()&&Date.now()<impactDeadline){
+        const live=targetOf(bot,state.targetUsername)||t;
+        if(!live?.position)break;
+        const dv=Math.hypot(
+          num(live.velocity?.x)-targetVelBefore.x,
+          num(live.velocity?.y)-targetVelBefore.y,
+          num(live.velocity?.z)-targetVelBefore.z
+        );
+        const moved=live.position.distanceTo(targetPosBefore);
+        if(state.lastTargetHurtAt>targetHurtBefore||(d<=5.5&&(dv>.24||moved>.85))){
+          impactConfirmed=true;break;
+        }
+        await sleep(25);
+      }
+      log("[PVP-EXPERT] wind_charge_cancel_confirmed="+impactConfirmed+
+        " projectile_spawned=true target_hurt_observed="+(state.lastTargetHurtAt>targetHurtBefore));
+      return impactConfirmed;
+    }catch(error){
       try{bot.deactivateItem()}catch{}
       await equipBestMelee();
+      log("[PVP-EXPERT] wind_charge_cancel_failed error="+(error?.message||String(error)));
       return false;
     }
   };
