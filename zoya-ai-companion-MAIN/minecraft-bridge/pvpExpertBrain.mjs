@@ -242,6 +242,8 @@ export function createPvpExpertBrain(options={}){
     if(d>=6&&d<=12&&e.retreating&&has(c,"pearl")&&has(c,"burst")&&c.pearlAmbushReady)
       return {action:"pearl_ambush",style:"utility",priority:7500,reason:"close_retreat"};
 
+    if(c.spearLungeReady&&has(c,"spear")&&d>=2.0&&d<=3.2&&attackReady)
+      return {action:"spear_lunge",style:"spear",priority:7420,reason:"enchanted_spear_jab_lunge"};
     if(styleMemory==="spear"&&has(c,"spear")&&d>=3&&d<=4.75&&attackReady)
       return {action:"spear_pressure",style:"spear",priority:7400,reason:"spear_range"};
     if(styleMemory==="axe"&&has(c,"axe")&&d>=1.75&&d<=3.2&&attackReady)
