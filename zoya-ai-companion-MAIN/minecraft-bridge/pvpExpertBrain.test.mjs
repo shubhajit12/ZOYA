@@ -36,6 +36,21 @@ const makeBrain=()=>createPvpExpertBrain();
     "stun-slam must fail closed if the follow-up mace cannot be selected");
 }
 
+
+{
+  const potionStart=controllerSource.indexOf('if(type==="potion"){');
+  const potionEnd=controllerSource.indexOf("\n      }\n      return false;",potionStart);
+  const potionBody=controllerSource.slice(potionStart,potionEnd);
+  assert.ok(potionBody.includes("potion_throw_confirmed="),
+    "potion execution must log observed throw confirmation");
+  assert.ok(potionBody.includes("projectile_spawned")&&potionBody.includes("inventory_decreased"),
+    "potion throw must be confirmed from a new projectile/cloud or inventory decrement");
+  assert.ok(potionBody.includes("effect_confirmed=false"),
+    "potion projectile spawn must not be mislabeled as a confirmed useful effect");
+  assert.ok(!/return true;/.test(potionBody),
+    "potion action must not return unconditional success after issuing a use packet");
+}
+
 const controllerSource=readFileSync(new URL("./pvpExpertController.mjs",import.meta.url),"utf8");
 const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"utf8");
 const heldCloseDeclaration=controllerSource.indexOf("const enemyMaceHeldClose=Boolean(enemyMaceHeld&&d<=7.5);");
