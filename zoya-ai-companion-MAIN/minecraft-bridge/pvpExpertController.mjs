@@ -469,12 +469,42 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const rod=async t=>{
-    // Inventory aliases are centralized in ITEMS. The old "fishing_rod" key
-    // did not exist, so this handler always returned false before equipping.
-    if(!has(bot,"rod"))return false;
-    if(!await equip("rod","hand"))return false;
-    await lookAtTarget(t,.1);
-    try{bot.activateItem();await sleep(180);bot.deactivateItem();return true}catch{return false}
+    // A fishing rod is a click-to-cast / click-to-reel item, not a held-use
+    // item. deactivateItem() only releases use and does not reliably retract
+    // the line, so the old handler could leave the bobber out and never create
+    // a follow-up window. Cast at the live predicted target, then reel once.
+    if(!t?.position||!has(bot,"rod")||!await equip("rod","hand"))return false;
+    try{
+      const live=targetOf(bot,state.targetUsername)||t;
+      await lookAtTarget(live,.04);
+      bot.activateItem();
+      const castAt=Date.now();
+      let bobberSeen=false;
+      const castDeadline=castAt+420;
+      while(state.active&&taskIsActive()&&Date.now()<castDeadline){
+        bobberSeen=Object.values(bot.entities||{}).some(e=>
+          e&&/fishing_bobber|fishing_hook/.test(String(e.name||"").toLowerCase())&&
+          e.position&&e.position.distanceTo(bot.entity.position)<32
+        );
+        if(bobberSeen)break;
+        await sleep(35);
+      }
+      // Retract regardless of whether the server exposes the bobber entity;
+      // this keeps the rod from remaining in a stale cast state.
+      await sleep(80);
+      bot.activateItem();
+      await sleep(90);
+      await equipBestMelee();
+      const current=targetOf(bot,state.targetUsername)||t;
+      if(current?.position)await lookAtTarget(current,.04);
+      log("[PVP-EXPERT] rod_cast_reel issued bobber_observed="+bobberSeen+"; melee_followup_ready=true");
+      return true;
+    }catch(error){
+      log("[PVP-EXPERT] rod_control_failed error="+(error?.message||String(error)));
+      try{bot.deactivateItem()}catch{}
+      await equipBestMelee();
+      return false;
+    }
   };
 
   const heal=async()=>{
