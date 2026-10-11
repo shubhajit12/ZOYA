@@ -809,6 +809,21 @@ assert.equal(failedActionBackoffMs("wind_mace_launch",false),1600,"complex launc
 console.log("PvP failed-strike cooldown regression tests passed.");
 
 {
+  assert.ok(controllerSource.includes('helmet:["netherite_helmet","diamond_helmet","iron_helmet","chainmail_helmet","golden_helmet","leather_helmet","turtle_shell"]'),
+    "helmet slot must include turtle shell instead of treating it as a chestplate");
+  assert.ok(controllerSource.includes('leggings:["netherite_leggings","diamond_leggings","iron_leggings","chainmail_leggings","golden_leggings","leather_leggings"]') &&
+    controllerSource.includes('boots:["netherite_boots","diamond_boots","iron_boots","chainmail_boots","golden_boots","leather_boots"]'),
+    "preflight must recognize leggings and boots armor upgrades");
+  assert.ok(controllerSource.includes("const equipCombatArmor=async()=>") &&
+    controllerSource.includes("await equipCombatArmor();"),
+    "combat must equip available stronger armor before the first exchange");
+  assert.ok(controllerSource.includes('const originalChestName=lname(bot.entity?.equipment?.[4]||"");') &&
+    controllerSource.includes("torso_loadout_restored="),
+    "Elytra-mace must restore the original torso item instead of always leaving Elytra equipped");
+}
+
+
+{
   const d=makeBrain().decide({...base,distance:2.8,maceCrystalDTapReady:true,selfMaceSmashReady:true,attackReadyAt:0,
     capabilities:{...base.capabilities,crystal:true},inventory:{...base.inventory,crystal:2,obsidian:8}});
   assert.equal(d.action,"mace_d_tap","validated mace smash window with a safe crystal base should select mace-crystal D-tap");
