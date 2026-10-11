@@ -610,7 +610,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const fallingCrit=async t=>{
     if(!await equip("sword")) return false;
-    if(dist(bot.entity,t)>3.05) return false;
+    if(distanceToEntityHitbox(bot.entity,t)>3.05) return false;
     bot.setControlState("forward",true);
     bot.setControlState("sprint",true);
     bot.setControlState("jump",true);
@@ -624,7 +624,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await sleep(20);
     }
     peakY=Math.max(peakY,num(bot.entity?.position?.y));
-    const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&estimateObservedFallDistance(bot.entity,peakY)>=.45&&dist(bot.entity,t)<=3.05;
+    const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&estimateObservedFallDistance(bot.entity,peakY)>=.45&&distanceToEntityHitbox(bot.entity,t)<=3.05;
     if(!valid){stop();return false}
     await lookAtTarget(t,.02);
     const hitsBefore=state.hits,targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
@@ -638,7 +638,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     bot.setControlState("sprint",true);
     bot.setControlState("forward",true);
     await sleep(45);
-    if(dist(bot.entity,t)>3.05){await sprintReset();stop();return false}
+    if(distanceToEntityHitbox(bot.entity,t)>3.05){await sprintReset();stop();return false}
     await lookAtTarget(t,.02);
     const hitsBefore=state.hits,targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
     bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;
