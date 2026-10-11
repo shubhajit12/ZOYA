@@ -2024,7 +2024,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           hasWaterBucket:has(bot,"water"),hasBurst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
           hasDebuff:has(bot,"potion"),hasRod:has(bot,"rod"),
           hasBowAmmo:count(bot,"arrow")>0,
-          hasCrossbowAmmo:count(bot,"arrow")>0||crossbowChargeState()===true,
+          hasCrossbowAmmo:count(bot,"arrow")>0||count(bot,"firework")>0||crossbowChargeState()===true,
           webbed:Boolean(bot.blockAt?.(bot.entity.position)?.name==="cobweb"||bot.blockAt?.(bot.entity.position.offset(0,1,0))?.name==="cobweb"),
           attackReadyAt:state.nextAttackAt,healDistanceMin:4.2,
           inventory:{
