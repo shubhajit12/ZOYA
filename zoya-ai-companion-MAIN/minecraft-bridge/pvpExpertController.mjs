@@ -46,7 +46,7 @@ export function isHostilePotionItem(i){
       name:i.name??null
     }).toLowerCase();
   }catch{return false}
-  return /(?:minecraft:)?(?:poison|slowness|weakness|instant_damage|harming|wither|blindness|mining_fatigue|nausea|levitation|infested|oozing|weaving)(?:\\b|[_-])/i.test(metadata);
+  return /(?:minecraft:)?(?:poison|slowness|weakness|instant_damage|harming|wither|blindness|mining_fatigue|nausea|levitation|infested|oozing|weaving)(?:\b|[_-])/i.test(metadata);
 }
 function item(bot,type){
   const candidates=inv(bot).filter(i=>ITEMS[type]?.includes(lname(i)));
