@@ -1105,7 +1105,18 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const beforePos=bot.entity.position.clone();
     const beforePearls=new Set(Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))).map(e=>e.id));
     try{
-      await bot.lookAt(destination,true);
+      // A pearl follows a ballistic arc; looking directly at the landing block
+      // points below the needed trajectory and often makes the pearl hit short.
+      // Compensate for gravity using approximate flight ticks (1.35 blocks/tick
+      // horizontal after launch angle/drag) and keep the correction bounded.
+      const horizontalDistance=Math.hypot(destination.x-beforePos.x,destination.z-beforePos.z);
+      const estimatedFlightTicks=horizontalDistance/1.35;
+      const dropCompensation=Math.max(0.15,Math.min(3.5,0.03*estimatedFlightTicks*(estimatedFlightTicks+1)/2));
+      const aimPoint=destination.offset(0,dropCompensation,0);
+      await bot.lookAt(aimPoint,true);
+      log("[PVP-EXPERT] pearl_throw_aim mode="+mode+" horizontal="+horizontalDistance.toFixed(2)+
+        " dropCompensation="+dropCompensation.toFixed(2)+" destinationY="+num(destination.y).toFixed(2)+
+        " aimY="+num(aimPoint.y).toFixed(2));
       bot.activateItem();
       await sleep(85);
       bot.deactivateItem();
@@ -1124,7 +1135,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       state.lastPearlAt=Date.now();
       state.pearlCooldownUntil=state.lastPearlAt+1000;
       state.lastPearlType=mode;
-      const teleportDeadline=Date.now()+2200;
+      const teleportDeadline=Date.now()+3500;
       let teleported=false;
       while(state.active&&taskIsActive()&&Date.now()<teleportDeadline){
         const displacement=bot.entity.position.distanceTo(beforePos);
