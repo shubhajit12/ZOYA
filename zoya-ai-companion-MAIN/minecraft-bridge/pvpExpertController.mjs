@@ -2651,7 +2651,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
              firework:has(bot,"firework"),
             windMace:Boolean(has(bot,"wind")&&has(bot,"mace")),
             debuff:has(bot,"potion"),
-            elytraMace:Boolean(elytraEquipped&&has(bot,"mace")),
+            elytraMace:Boolean(has(bot,"elytra")&&has(bot,"mace")),
           },
           elytraEquipped,
           // Root-level fields are consumed by the brain; capability flags above
