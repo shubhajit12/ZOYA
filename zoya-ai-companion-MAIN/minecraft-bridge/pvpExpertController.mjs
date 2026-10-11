@@ -2631,6 +2631,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             totem:has(bot,"totem"),pearl:has(bot,"pearl"),heal:has(bot,"heal"),water:has(bot,"water"),
             shield:has(bot,"shield"),burst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
             spear:has(bot,"spear"),mace:has(bot,"mace"),axe:has(bot,"axe"),sword:has(bot,"sword"),
+            // Keep every item capability consumed by brain.has(ctx, key) explicit.
+            // Missing these flags silently disabled crystal D-tap and prevented
+            // observed retreat patterns from boosting ranged style scores.
+            bow:has(bot,"bow"),crossbow:has(bot,"crossbow"),crystal:has(bot,"crystal"),obsidian:has(bot,"obsidian"),
             crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
             anchorArena:["overworld","the_end"].includes(String(bot.game?.dimension||"")),
             anchorCycleSafe:["overworld","the_end"].includes(String(bot.game?.dimension||""))&&has(bot,"anchor")&&has(bot,"glowstone")&&num(bot.health,20)>=10,
