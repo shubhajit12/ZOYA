@@ -626,7 +626,7 @@ console.log("Advanced Impossible tactical routing regression tests passed.");
 
 {
   const d=makeBrain().decide({...base,distance:2.8,stunSlamReady:true,enemy:{...base.enemy,shield:true,usingItem:true}});
-  assert.equal(d.action,"stun_slam","falling shield target should trigger the bounded axe-stun then mace sequence");
+  assert.equal(d.action,"shield_break","actively raised shield must be disabled first instead of issuing an unverified same-tick axe/mace combo");
 }
 {
   const d=makeBrain().decide({...base,distance:8,rocketMaceReady:true,elytraMaceReady:true,elytraLaunchReady:true,elytraEquipped:true,
