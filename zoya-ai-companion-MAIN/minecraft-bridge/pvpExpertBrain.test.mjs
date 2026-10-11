@@ -944,6 +944,10 @@ assert.ok(controllerSource.includes("retreating:speed(t)>.18&&!enemyClosing"),
 
 
 assert.ok(controllerSource.includes('const PVP_EXPERT_BUILD_MARKER="2026-10-11-pearl-catch-hotbar-same-line-v3"') && controllerSource.includes('"controller_build="+PVP_EXPERT_BUILD_MARKER'), "runtime logs must identify the exact PvP controller build so stale executables are detectable");
+assert.ok(controllerSource.includes("const finishDistance=dist(bot.entity,t)") &&
+  controllerSource.includes("if(finishDistance<2.05)") &&
+  controllerSource.includes("else if(finishDistance>2.85)"),
+  "totem-pop finish waiting must preserve attack spacing instead of crowding inside 1 block");
 
 // Defensive shield should trigger before collision range; pearl pursuit must not depend on an unrelated burst flag.
 assert.ok(controllerSource.includes("d>=2.25&&d<=5.2&&!enemyMaceThreat"),"shield readiness covers an approaching melee threat before point-blank range");
