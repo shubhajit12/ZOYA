@@ -7,6 +7,7 @@ import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmati
 const makeBrain=()=>createPvpExpertBrain();
 
 const controllerSource=readFileSync(new URL("./pvpExpertController.mjs",import.meta.url),"utf8");
+const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"utf8");
 const heldCloseDeclaration=controllerSource.indexOf("const enemyMaceHeldClose=Boolean(enemyMaceHeld&&d<=7.5);");
 const windMaceReadiness=controllerSource.indexOf("windMaceSmashReady:Boolean(");
 assert.ok(heldCloseDeclaration>=0,"enemyMaceHeldClose must be explicitly defined in the combat tick");
