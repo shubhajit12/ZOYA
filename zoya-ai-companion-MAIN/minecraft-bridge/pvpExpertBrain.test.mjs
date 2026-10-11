@@ -44,6 +44,8 @@ assert.ok(heldCloseDeclaration>=0,"enemyMaceHeldClose must be explicitly defined
 assert.ok(windMaceReadiness>heldCloseDeclaration,"enemyMaceHeldClose must be defined before wind-mace readiness reads it");
 
 assert.ok(controllerSource.includes('combat_loadout totem_equipped='),"PvP startup must log and prepare an available offhand totem");
+assert.ok(controllerSource.includes("Date.now()-state.lastAttackConfirmedAt<=2500"),"delayed target equipment updates must not erase a recent confirmed totem-pop inference window");
+assert.ok(controllerSource.includes("current="+ "currentArmor"),"PvP armor preflight must report the actual equipped armor slots instead of an ambiguous none-needed result");
 
 {
   assert.equal(isLikelyTotemPop({wasEquipped:true,nowEquipped:false,targetHealth:null,recentConfirmedHit:true}),true,
