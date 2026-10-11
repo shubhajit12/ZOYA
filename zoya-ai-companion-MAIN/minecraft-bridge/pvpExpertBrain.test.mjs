@@ -771,10 +771,10 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
     {position:{x:0,y:64,z:0},height:1.8},
     {position:{x:3.3,y:64,z:0},height:1.8,width:0.6}
   ),3.0,"melee reach should measure from eye to nearest target hitbox point, not feet-to-feet distance");
-  assert.equal(distanceToEntityHitbox(
+  assert.ok(Math.abs(distanceToEntityHitbox(
     {position:{x:0,y:64,z:0},height:1.8},
     {position:{x:4,y:64,z:0},height:1.8,width:0.6}
-  ),3.7,"target hitbox geometry must still reject genuinely out-of-reach attacks");
+  )-3.7)<1e-9,"target hitbox geometry must still reject genuinely out-of-reach attacks");
   assert.equal(distanceToEntityHitbox(null,{position:{x:0,y:0,z:0}}),Infinity,
     "unknown attacker geometry must fail closed");
 }
