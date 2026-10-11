@@ -446,7 +446,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   const lookAtTarget=async(t,lead=0.10)=>{
     if(!t?.position) return false;
     const v=t.velocity||{x:0,y:0,z:0};
-    const leadTicks=Math.max(0,Math.min(4,num(lead)*20));
+    const leadTicks=Math.max(0,Math.min(12,num(lead)*20));
     const predicted=predictTargetPosition(t.position,v,state.targetAcceleration,leadTicks);
     const p=t.position.offset(predicted.x-num(t.position.x),predicted.y-num(t.position.y),predicted.z-num(t.position.z));
     try{await bot.lookAt(p.offset(0,Math.max(.9,num(t.height,1.8)*.62),0),true);return true}catch{return false}
@@ -861,7 +861,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const liveTarget=()=>targetOf(bot,state.targetUsername)||t;
     const keepAim=async()=>{
       const live=liveTarget();
-      if(live?.position)await lookAtTarget(live,.08);
+      if(live?.position){
+        // Lead arrows farther than melee attacks: at range, server flight time
+        // matters more than a fixed 1-2 tick aim offset. Keep the lead bounded
+        // and feed observed velocity/acceleration through lookAtTarget.
+        const leadSeconds=(type==="bow"||type==="crossbow")
+          ?Math.min(.6,.08+dist(bot.entity,live)*.035):.08;
+        await lookAtTarget(live,leadSeconds);
+      }
       return live;
     };
     try{
