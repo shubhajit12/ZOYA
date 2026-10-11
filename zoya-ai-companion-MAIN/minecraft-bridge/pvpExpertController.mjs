@@ -197,6 +197,29 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
   };
 
+  const offhandName=()=>{
+    const entityItem=bot.entity?.equipment?.[1];
+    const inventoryItem=bot.inventory?.slots?.[45];
+    return lname(entityItem||inventoryItem||"");
+  };
+  const equipTotemVerified=async()=>{
+    if(!has(bot,"totem"))return false;
+    if(!await equip("totem","off-hand"))return false;
+    const deadline=Date.now()+300;
+    while(state.active&&taskIsActive()&&Date.now()<deadline){
+      if(/totem_of_undying/.test(offhandName())){
+        state.totemEquipped=true;
+        log("[PVP-EXPERT] offhand_totem_verified=true");
+        return true;
+      }
+      await sleep(25);
+    }
+    state.totemEquipped=/totem_of_undying/.test(offhandName());
+    log("[PVP-EXPERT] offhand_totem_verified="+state.totemEquipped+
+      " observed="+(offhandName()||"empty"));
+    return state.totemEquipped;
+  };
+
   const hotbarSlot=type=>{
     const i=item(bot,type);
     return i&&Number.isInteger(i.slot)&&i.slot>=36&&i.slot<=44?i.slot-36:null;
@@ -1727,12 +1750,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       " strafeMs="+combatDifficulty.strafeMs+" sprintResetMs="+combatDifficulty.sprintResetMs);
     // Prepare the offhand before combat if a totem is actually available.
     // This avoids losing the first burst while waiting for a low-health tick.
+    state.totemEquipped=/totem_of_undying/.test(offhandName());
     if(!state.totemEquipped&&has(bot,"totem")){
-      const preflightTotem=await equip("totem","off-hand");
-      state.totemEquipped=Boolean(preflightTotem);
+      state.totemEquipped=await equipTotemVerified();
       log("[PVP-EXPERT] combat_loadout totem_equipped="+state.totemEquipped+" source=preflight");
     }else{
-      log("[PVP-EXPERT] combat_loadout totem_equipped="+Boolean(state.totemEquipped)+" inventoryCount="+count(bot,"totem"));
+      log("[PVP-EXPERT] combat_loadout totem_equipped="+Boolean(state.totemEquipped)+
+        " offhand="+(offhandName()||"empty")+" inventoryCount="+count(bot,"totem"));
     }
     log("[PVP-EXPERT] active target="+state.targetUsername);
 
@@ -1966,9 +1990,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "heal": ok=await heal();break;
           case "shield": ok=await shield(t);break;
           case "totem": {
-            const equipped=await equip("totem","off-hand");
+            const equipped=await equipTotemVerified();
             if(equipped){
-              state.totemEquipped=true;
               await emergencyDisengage(t);
               state.failedAction=null;
             }
