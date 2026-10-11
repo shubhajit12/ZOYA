@@ -1306,17 +1306,24 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const crystalCycle=async t=>{
-    if(!has(bot,"crystal")||!has(bot,"obsidian")||!bot.placeEntity||!t?.position)return false;
+    if(!has(bot,"crystal")||!has(bot,"obsidian")||!bot.placeEntity||!t?.position){
+      log("[PVP-EXPERT] crystal_cycle_skipped reason=missing_prerequisite");
+      return false;
+    }
     const base=crystalBase(t);
-    if(!base||!crystalCycleSafeForTarget(t,base))return false;
+    if(!base){log("[PVP-EXPERT] crystal_cycle_skipped reason=no_visible_obsidian_or_bedrock_base");return false}
+    if(!crystalCycleSafeForTarget(t,base)){
+      log("[PVP-EXPERT] crystal_cycle_skipped reason=self_damage_or_trade_safety_gate");
+      return false;
+    }
     const crystalPos=base.position.offset(.5,1,.5);
-    if(!await equip("crystal"))return false;
+    if(!await equip("crystal")){log("[PVP-EXPERT] crystal_cycle_skipped reason=crystal_equip_failed");return false}
     try{
       await bot.placeEntity(base,new Vec3(0,1,0));
       await sleep(180);
       const crystals=Object.values(bot.entities||{}).filter(e=>String(e.name||"").toLowerCase()==="end_crystal"&&e.position.distanceTo(crystalPos)<1.4);
       const crystal=crystals.sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0];
-      if(!crystal)return false;
+      if(!crystal){log("[PVP-EXPERT] crystal_cycle_skipped reason=placed_crystal_not_observed");return false}
       await equipBestMelee();
       await lookAtTarget(crystal,.0);
       const targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
@@ -1346,14 +1353,23 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     // Respawn anchors explode in the Overworld and End, not in the Nether.
     if(!["overworld","the_end"].includes(dimension)||!has(bot,"anchor")||!has(bot,"glowstone")||!t?.position||typeof bot.placeBlock!=="function")return false;
     const target=t.position;
-    if(typeof bot.canSeeEntity==="function"&&!bot.canSeeEntity(t))return false;
+    if(typeof bot.canSeeEntity==="function"&&!bot.canSeeEntity(t)){
+      log("[PVP-EXPERT] anchor_cycle_skipped reason=target_not_visible");
+      return false;
+    }
     // Treat exposure as 100% when checking our own safety: select only a
     // placement at least 7.5 blocks away, and only engage above safe HP.
     // This is deliberately conservative because vanilla Mineflayer does not
     // expose a dependable built-in explosion-damage estimator.
-    if(num(bot.health,20)<10&&!state.totemEquipped)return false;
+    if(num(bot.health,20)<10&&!state.totemEquipped){
+      log("[PVP-EXPERT] anchor_cycle_skipped reason=low_health_without_totem");
+      return false;
+    }
     const anchorId=bot.registry?.blocksByName?.respawn_anchor?.id;
-    if(!Number.isInteger(anchorId))return false;
+    if(!Number.isInteger(anchorId)){
+      log("[PVP-EXPERT] anchor_cycle_skipped reason=respawn_anchor_registry_missing");
+      return false;
+    }
     const candidates=[];
     const getAnchorCharges=block=>Number(block?.getProperties?.()?.charges??block?.properties?.charges??0);
     const isSafeAir=block=>Boolean(block&&block.boundingBox==="empty"&&/^(air|cave_air|void_air)$/.test(String(block.name||"")));
@@ -1393,24 +1409,33 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     }
     candidates.sort((a,b)=>a.targetDistance-b.targetDistance||b.selfDistance-a.selfDistance);
     const chosen=candidates[0];
-    if(!chosen)return false;
+    if(!chosen){
+      log("[PVP-EXPERT] anchor_cycle_skipped reason=no_safe_reachable_anchor_candidate");
+      return false;
+    }
     try{
       if(!chosen.existing){
-        if(!await equip("anchor"))return false;
+        if(!await equip("anchor")){log("[PVP-EXPERT] anchor_cycle_skipped reason=anchor_equip_failed");return false}
         await bot.placeBlock(chosen.support,new Vec3(0,1,0));
         await sleep(120);
       }
       let anchor=bot.blockAt(chosen.pos);
-      if(!anchor||anchor.name!=="respawn_anchor")return false;
+      if(!anchor||anchor.name!=="respawn_anchor"){
+        log("[PVP-EXPERT] anchor_cycle_skipped reason=anchor_placement_not_observed");
+        return false;
+      }
       let charges=getAnchorCharges(anchor);
       if(charges<1){
-        if(!await equip("glowstone"))return false;
+        if(!await equip("glowstone")){log("[PVP-EXPERT] anchor_cycle_skipped reason=glowstone_equip_failed");return false}
         await bot.activateBlock(anchor);
         await sleep(120);
         anchor=bot.blockAt(chosen.pos);
         charges=getAnchorCharges(anchor);
       }
-      if(!anchor||anchor.name!=="respawn_anchor"||charges<1)return false;
+      if(!anchor||anchor.name!=="respawn_anchor"||charges<1){
+        log("[PVP-EXPERT] anchor_cycle_skipped reason=charge_not_confirmed");
+        return false;
+      }
       // Recheck the live geometry before detonating: target movement or our own
       // movement during placement can invalidate the original safe-distance gate.
       const blast=chosen.pos.offset(.5,.5,.5);
@@ -1418,11 +1443,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const liveSelfDistance=blast.distanceTo(bot.entity.position);
       const liveTargetDistance=blast.distanceTo(liveTargetForBlast.position);
       if(chosen.existing){
-        if(liveSelfDistance<7.5||liveTargetDistance>4.5)return false;
+        if(liveSelfDistance<7.5||liveTargetDistance>4.5){
+          log("[PVP-EXPERT] anchor_cycle_skipped reason=live_geometry_safety_gate selfDistance="+liveSelfDistance.toFixed(2)+" targetDistance="+liveTargetDistance.toFixed(2));
+          return false;
+        }
       }else if(!isAnchorFallbackSafe({
         health:bot.health,selfDistance:liveSelfDistance,targetDistance:liveTargetDistance,
         totemEquipped:state.totemEquipped,reachable:true
-      })||liveSelfDistance<chosen.minSelfDistance)return false;
+      })||liveSelfDistance<chosen.minSelfDistance){
+        log("[PVP-EXPERT] anchor_cycle_skipped reason=live_geometry_safety_gate selfDistance="+liveSelfDistance.toFixed(2)+" targetDistance="+liveTargetDistance.toFixed(2));
+        return false;
+      }
       const liveTarget=targetOf(bot,state.targetUsername)||t;
       const targetHealthBefore=liveTarget.health!=null&&Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
       const targetHurtBefore=state.lastTargetHurtAt;
