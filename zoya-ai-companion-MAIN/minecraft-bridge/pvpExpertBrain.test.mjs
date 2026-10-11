@@ -347,6 +347,10 @@ assert.ok(controllerSource.includes('case "mace_evasion": ok=await maceEvasion(t
   "the proactive mace-evasion decision must be connected to a real controller executor");
 assert.ok(controllerSource.includes("maceEvasionCooldownUntil=Date.now()+650"),
   "mace evasion must have a bounded cooldown so it can counterattack instead of retreating forever");
+assert.ok(controllerSource.includes('const num=(v,d=0)=>v==null||v===""?d:Number.isFinite(Number(v))?Number(v):d;'),
+  "missing player-health metadata must remain unknown instead of coercing null to zero");
+assert.ok(controllerSource.includes("if(t.health!=null&&state.lastTargetHealth!=null&&state.lastTargetHealth>th){"),
+  "health-delta hit confirmation must never infer a hit from an unavailable target-health field");
 
 // Predict a credible airborne mace threat before the damage lands.
 assert.equal(isEnemyMaceDiveThreat({heldItem:"mace",airborne:true,distance:5.8,targetY:65,selfY:64,targetVelocityY:0,verticalDelta:0}),true,"an airborne mace holder in dive range is a threat before downward velocity is observed");
