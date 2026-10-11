@@ -946,6 +946,14 @@ assert.ok(controllerSource.includes("retreating:speed(t)>.18&&!enemyClosing"),
 assert.ok(controllerSource.includes('const PVP_EXPERT_BUILD_MARKER="2026-10-11-pearl-catch-hotbar-same-line-v3"') && controllerSource.includes('controller_build="+PVP_EXPERT_BUILD_MARKER'), "runtime logs must identify the exact PvP controller build so stale executables are detectable");
 assert.ok(controllerSource.includes('bow:has(bot,"bow"),crossbow:has(bot,"crossbow"),crystal:has(bot,"crystal"),obsidian:has(bot,"obsidian")'),
   "brain capability flags must expose bow/crossbow/crystal items consumed by has(ctx,key), so ranged adaptation and mace crystal D-tap are reachable");
+{
+  const capabilityMatch=controllerSource.match(/capabilities:\\s*\\{([\\s\\S]*?)\\n\\s*\\},\\s*\\n\\s*elytraEquipped/);
+  assert.ok(capabilityMatch,"controller must expose a parseable combat capability map");
+  const exposed=new Set([...capabilityMatch[1].matchAll(/\\b([A-Za-z_]\\w*)\\s*:/g)].map(m=>m[1]));
+  const consumed=new Set([...brainSource.matchAll(/has\\(c,"([^"]+)"\\)/g)].map(m=>m[1]));
+  for(const key of consumed) assert.ok(exposed.has(key),`brain asks for capability "${key}" but controller does not expose it`);
+}
+
 assert.ok(controllerSource.includes("const finishDistance=dist(bot.entity,t)") &&
   controllerSource.includes("if(finishDistance<2.05)") &&
   controllerSource.includes("else if(finishDistance>2.85)"),
