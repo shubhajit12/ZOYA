@@ -639,6 +639,9 @@ console.log("Theobald-impossible difficulty regression tests passed.");
 assert.ok(controllerSource.includes('const navigationAction=new Set(["approach","reacquire","mace_approach"]).has(decision.action)') &&
   controllerSource.includes('reason:"failed_navigation_reposition"'),
   "a blocked navigation action must reposition instead of immediately retrying the same failed path");
+assert.ok(controllerSource.includes("const botMoved=startPos&&bot.entity?.position?bot.entity.position.distanceTo(startPos):0") &&
+  controllerSource.includes("|| botMoved>=0.35"),
+  "approach must recognize real bot movement even if the target moves away faster");
 }
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
