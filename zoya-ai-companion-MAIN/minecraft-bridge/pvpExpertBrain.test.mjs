@@ -981,3 +981,19 @@ console.log("Predictive ranged aim and ammo-aware kit selection tests passed.");
     "falling sword critical must release sprint and revalidate the falling hit window before the swing");
 }
 console.log("Sprint-free critical-hit timing tests passed.");
+
+
+// A shield must remain raised across the incoming projectile's impact window,
+// not be dropped the moment the blocking pose is first observed.
+{
+  const shieldStart=controllerSource.indexOf("const shield=async(t,holdMs=260)=>");
+  const shieldEnd=controllerSource.indexOf("const crossbowChargeState=",shieldStart);
+  const shieldBody=controllerSource.slice(shieldStart,shieldEnd);
+  assert.ok(shieldBody.includes("Math.max(260,Math.min(650,num(holdMs,260)))") &&
+    shieldBody.includes("if(isEntityBlockingWithShield(bot.entity))blockObserved=true") &&
+    !shieldBody.includes("if(isEntityBlockingWithShield(bot.entity)){blockObserved=true;break}"),
+    "shielding must hold for the configured impact window after the block animation begins");
+  assert.ok(controllerSource.includes('case "shield": ok=await shield(t,ctx.projectileThreat?550:320);break;'),
+    "projectile defense must use a longer shield hold than a brief melee block");
+}
+console.log("Projectile shield impact-window tests passed.");
