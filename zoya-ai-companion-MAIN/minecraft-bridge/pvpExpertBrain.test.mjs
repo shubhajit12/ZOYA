@@ -139,6 +139,18 @@ const base={
 
 
 {
+  const boostStart=controllerSource.indexOf("const fireworkBoost=async()=>");
+  const sprintResetStart=controllerSource.indexOf("const sprintReset=async",boostStart);
+  const boostBody=controllerSource.slice(boostStart,sprintResetStart);
+  assert.ok(boostBody.includes("if(!flying())"),
+    "Elytra rockets must not be fired when glide is not active");
+  assert.ok(boostBody.includes("firework_boost_confirmed=")&&boostBody.includes("after-before>=.08"),
+    "firework boost success must require observed velocity increase, not just an issued use packet");
+  assert.ok(boostBody.includes("state.lastFireworkAt=Date.now()"),
+    "unconfirmed firework attempts must still be rate-limited to prevent rocket drain");
+}
+
+{
   assert.ok(controllerSource.includes('noteFailure?.("elytra_mace","flight_not_started");')&&
     controllerSource.includes("await restoreElytra();"),
     "failed Elytra takeoff must restore the flight chest item");
