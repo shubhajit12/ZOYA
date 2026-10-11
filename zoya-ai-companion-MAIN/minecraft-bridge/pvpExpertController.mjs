@@ -325,7 +325,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     enemyTotemWasEquipped:false,enemyTotemPopUntil:0,
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
-    lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,pearlCatchCooldownUntil:0,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
+    lastPearlAt:0,pearlCooldownUntil:0,pearlFailureUntil:0,pearlFailureStreak:0,lastPearlType:null,pearlCatchCooldownUntil:0,pearlCatchFailureStreak:0,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
     lastAttackConfirmedAt:0,pendingEntityHitUntil:0,lastTargetHurtAt:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,maceEvasionCooldownUntil:0,
     lastTargetVelocity:null,lastTargetVelocityAt:0,targetAcceleration:{x:0,y:0,z:0},
@@ -1048,13 +1048,26 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
 
   const pearlReady=(mode,t)=>{
     if(!has(bot,"pearl"))return false;
-    if(Date.now()<state.pearlCooldownUntil)return false;
+    if(Date.now()<Math.max(state.pearlCooldownUntil,state.pearlFailureUntil))return false;
     return Boolean(pearlDestination(t,mode));
+  };
+
+  const notePearlFailure=(mode,reason)=>{
+    state.pearlFailureStreak=Math.min(5,Number(state.pearlFailureStreak||0)+1);
+    const cooldown=Math.min(30000,1800*(2**(state.pearlFailureStreak-1)));
+    state.pearlFailureUntil=Date.now()+cooldown;
+    state.pearlCooldownUntil=Math.max(state.pearlCooldownUntil,state.pearlFailureUntil);
+    log("[PVP-EXPERT] pearl_retry_backoff mode="+mode+" reason="+reason+
+      " streak="+state.pearlFailureStreak+" cooldownMs="+cooldown);
+  };
+  const notePearlSuccess=()=>{
+    state.pearlFailureStreak=0;
+    state.pearlFailureUntil=0;
   };
 
   const throwPearl=async(t,mode="escape")=>{
     if(!t?.position||!bot.entity?.position)return false;
-    if(Date.now()<state.pearlCooldownUntil)return false;
+    if(Date.now()<Math.max(state.pearlCooldownUntil,state.pearlFailureUntil))return false;
     const destination=pearlDestination(t,mode);
     if(!destination)return false;
     if(!await equip("pearl"))return false;
@@ -1074,6 +1087,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       if(!pearl){
         log("[PVP-EXPERT] pearl_throw mode="+mode+" projectile_spawned=false teleport_confirmed=false");
+        notePearlFailure(mode,"projectile_not_observed");
         return false;
       }
       state.lastPearlAt=Date.now();
@@ -1088,10 +1102,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         await sleep(25);
       }
       log("[PVP-EXPERT] pearl_throw mode="+mode+" projectile_spawned=true teleport_confirmed="+teleported);
+      if(teleported)notePearlSuccess();
+      else notePearlFailure(mode,"teleport_unconfirmed");
       return teleported;
     }catch(error){
       try{bot.deactivateItem()}catch{}
       log("[PVP-EXPERT] pearl_throw mode="+mode+" failed: "+(error?.message||String(error)));
+      notePearlFailure(mode,"exception");
       return false;
     }
   };
