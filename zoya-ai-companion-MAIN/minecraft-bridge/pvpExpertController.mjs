@@ -88,6 +88,42 @@ export function isEntityBlockingWithShield(entity) {
   return main==="shield";
 }
 
+export function getEnchantmentLevel(item,enchantment) {
+  const wanted=String(enchantment||"").toLowerCase().replace(/^minecraft:/,"").replace(/[^a-z0-9]/g,"");
+  if(!wanted||!item)return 0;
+  const unwrap=v=>v&&typeof v==="object"&&"value" in v?v.value:v;
+  const levelOf=v=>{
+    v=unwrap(v);
+    if(Number.isFinite(Number(v))&&v!=="")return Math.max(0,Number(v));
+    if(v&&typeof v==="object"){
+      for(const key of ["level","lvl","value","value"])if(key in v){const n=levelOf(v[key]);if(n>0)return n}
+    }
+    return 0;
+  };
+  let found=0;
+  const visit=(node,depth=0)=>{
+    if(node==null||depth>12)return;
+    if(Array.isArray(node)){
+      for(const entry of node){
+        if(entry&&typeof entry==="object"){
+          const id=String(unwrap(entry.id??entry.name??entry.enchantment??"")).toLowerCase().replace(/^minecraft:/,"").replace(/[^a-z0-9]/g,"");
+          if(id===wanted)found=Math.max(found,levelOf(entry.lvl??entry.level??entry.value??1));
+        }
+        visit(entry,depth+1);
+      }
+      return;
+    }
+    if(typeof node!=="object")return;
+    for(const [key,value] of Object.entries(node)){
+      const normalized=key.toLowerCase().replace(/^minecraft:/,"").replace(/[^a-z0-9]/g,"");
+      if(normalized===wanted)found=Math.max(found,levelOf(value));
+      visit(value,depth+1);
+    }
+  };
+  visit(item.nbt??item.components??item);
+  return found;
+}
+
 export function chooseMaceDodgeSide({botYaw=0,botPosition=null,targetPosition=null,targetYaw=0,targetVelocity={x:0,y:0,z:0}}={}) {
   if(!botPosition||!targetPosition)return 1;
   const n=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -1194,6 +1230,49 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       return false;
     }
   };
+  const spearLunge=async t=>{
+    const spear=item(bot,"spear");
+    const waterAt=bot.entity?.position&&(
+      /^(water|bubble_column)$/.test(String(bot.blockAt(bot.entity.position)?.name||""))||
+      /^(water|bubble_column)$/.test(String(bot.blockAt(bot.entity.position.offset(0,1,0))?.name||""))
+    );
+    if(!t?.position||!spear||getEnchantmentLevel(spear,"lunge")<=0||num(bot.food,20)<6||
+      waterAt||bot.entity?.elytraFlying||state.elytraFlying||dist(bot.entity,t)<2.0||dist(bot.entity,t)>3.2)return false;
+    if(!await equip("spear"))return false;
+    const live=targetOf(bot,state.targetUsername)||t;
+    if(!live?.position||dist(bot.entity,live)<2.0||dist(bot.entity,live)>3.2)return false;
+    const before=bot.entity.position.clone();
+    const hitsBefore=state.hits;
+    const healthBefore=live.health!=null&&Number.isFinite(Number(live.health))?Number(live.health):null;
+    try{
+      await lookAtTarget(live,.01);
+      // Lunge is a spear Jab enchantment: send one real primary attack, not a
+      // held secondary-charge sequence. The server owns the actual impulse.
+      bot.attack(live);
+      state.lastAttackAt=Date.now();
+      state.lastAttackAttemptAt=state.lastAttackAt;
+      state.nextAttackAt=state.lastAttackAt+900;
+      state.attackCount++;
+      await sleep(80);
+      const confirmed=await waitForHitConfirmation(live,hitsBefore,healthBefore,280);
+      const impulseDeadline=Date.now()+180;
+      while(confirmed&&state.active&&taskIsActive()&&Date.now()<impulseDeadline){
+        if(bot.entity.position.distanceTo(before)>.65)break;
+        await sleep(20);
+      }
+      const displacement=bot.entity.position.distanceTo(before);
+      log("[PVP-EXPERT] spear_lunge_hit_confirmed="+confirmed+
+        " enchant_level="+getEnchantmentLevel(spear,"lunge")+
+        " observed_displacement="+displacement.toFixed(2));
+      return confirmed;
+    }catch(error){
+      log("[PVP-EXPERT] spear_lunge_failed error="+(error?.message||String(error)));
+      return false;
+    }finally{
+      try{bot.setControlState("jump",false)}catch{}
+    }
+  };
+
   const spearCharge=async t=>{
     if(!await equip("spear"))return false;
     const d=dist(bot.entity,t);
@@ -2174,6 +2253,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           elytraMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&d>=6&&lineOfSight),
            rocketMaceReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"firework")&&d>=6&&lineOfSight),
            elytraStunSlamReady:Boolean(elytraEquipped&&has(bot,"mace")&&has(bot,"axe")&&eq.shield&&enemy.usingItem&&d>=6&&lineOfSight),
+          spearLungeReady:Boolean(getEnchantmentLevel(item(bot,"spear"),"lunge")>0&&num(bot.food,20)>=6&&
+            !/^(water|bubble_column)$/.test(String(bot.blockAt(bot.entity?.position)?.name||""))&&
+            !bot.entity?.elytraFlying&&!state.elytraFlying&&d>=2.0&&d<=3.2&&lineOfSight&&num(state.nextAttackAt)<=Date.now()),
           windMaceReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d<=7),
           crystalArena:crystalCycleReady,nether:bot.game?.dimension==="the_nether",
           hitSelectReady:Boolean(state.targetLandedAt>0&&Date.now()-state.targetLandedAt<=150&&d<=3.2),
@@ -2308,6 +2390,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           case "mace_drop": ok=await attack(t,"mace",3.1);break;
           case "mace_dive": ok=await maceSmash(t);break;
           case "mace_approach": ok=await approach(t,3.0);break;
+          case "spear_lunge": ok=await spearLunge(t);break;
           case "spear_pressure": ok=await spearCharge(t);break;
           case "ranged_attack": ok=await ranged(t,decision.style==="crossbow"?"crossbow":"bow");break;
           case "crystal_cycle": ok=await crystalCycle(t);break;
