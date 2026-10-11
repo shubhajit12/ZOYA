@@ -1755,8 +1755,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!live?.position||dist(bot.entity,live)>5||!crystalBase(live))return true;
     await sleep(35);
     const crystalHit=await crystalCycle(live);
-    log("[PVP-EXPERT] mace_d_tap mace_attempt=true crystal_followup="+crystalHit);
-    return crystalHit;
+    // The mace hit is already server-confirmed. A rejected/unsafe crystal
+    // follow-up must not mark the whole action failed and cause the brain to
+    // repeat the expensive falling-mace sequence.
+    log("[PVP-EXPERT] mace_d_tap sequence_complete=true mace_confirmed=true crystal_followup_confirmed="+crystalHit);
+    return true;
   };
 
   const maceSmash=async(t,priorFallDistance=0,settleMs=180)=>{
