@@ -130,8 +130,8 @@ const base={
 {
   assert.ok(controllerSource.includes("rod_cast_reel_confirmed="),
     "rod control must cast and retract with two use actions, not merely release item use");
-  assert.ok(controllerSource.includes("bot.deactivateItem();\n      await sleep(50);\n      bot.activateItem();\n      await sleep(90);\n      bot.deactivateItem();"),
-    "rod must release the cast state, issue a fresh reel click, and release again before melee follow-up");
+  assert.match(controllerSource,/bot\.deactivateItem\(\);\r?\n\s*await sleep\(50\);\r?\n\s*bot\.activateItem\(\);\r?\n\s*await sleep\(90\);\r?\n\s*bot\.deactivateItem\(\);/,
+    "rod must release the cast state, issue a fresh reel click, and release again before melee follow-up on Windows and Unix line endings");
 }
 
 
