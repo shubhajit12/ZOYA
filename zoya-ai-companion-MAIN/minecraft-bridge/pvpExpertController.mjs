@@ -412,8 +412,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         log("[PVP-EXPERT] armor_equip_failed slot="+slot.type+" error="+(error?.message||String(error)));
       }
     }
-    log("[PVP-EXPERT] combat_armor_preflight equipped="+(results.join(",")||"none_needed")+
-      " slots=head,torso,legs,feet");
+    const currentArmor=armorSlotInfo.map(slot=>slot.type+":"+(lname(bot.entity?.equipment?.[slot.equipmentIndex])||"empty")).join(",");
+    log("[PVP-EXPERT] combat_armor_preflight upgrades="+(results.join(",")||"none")+
+      " current="+currentArmor+" slots=head,torso,legs,feet");
     return results.length;
   };
 
@@ -2275,7 +2276,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(enemyTotemNow!==state.enemyTotemWasEquipped){
           log("[PVP-EXPERT] enemy_totem_equipment="+(enemyTotemNow?"equipped":"not_equipped")+" target="+state.targetUsername);
         }
-        const recentConfirmedHit=state.lastAttackConfirmedAt>0&&Date.now()-state.lastAttackConfirmedAt<=1200;
+        // Equipment snapshots can arrive after a longer controller action (e.g. wind/mace setup).
+        // Keep the inference window bounded, but wide enough not to miss a delayed totem swap/pop update.
+        const recentConfirmedHit=state.lastAttackConfirmedAt>0&&Date.now()-state.lastAttackConfirmedAt<=2500;
         const enemyTotemPopped=isLikelyTotemPop({wasEquipped:state.enemyTotemWasEquipped,nowEquipped:enemyTotemNow,targetHealth:t.health,recentConfirmedHit});
         if(enemyTotemPopped){
           state.enemyTotemPopUntil=Date.now()+2600;
