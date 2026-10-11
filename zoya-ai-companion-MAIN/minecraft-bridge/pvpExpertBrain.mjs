@@ -45,7 +45,7 @@ function styleScores(c){
   // a close-range sword selection can make crystal/anchor cycles unreachable.
   if(invHas(c,"crystal")&&invHas(c,"obsidian")) s.crystal=38+(c.crystalArena?68:0)+(d<=6?18:0);
   if(invHas(c,"respawn_anchor")&&invHas(c,"glowstone")&&c.anchorCycleSafe) s.anchor=70+(d<=7?40:0);
-  if(c.elytraEquipped&&invHas(c,"mace")) s.elytra=60+(c.elytraMaceReady?70:0)+(d>7?15:0);
+  if(invHas(c,"elytra")&&invHas(c,"mace")&&invHas(c,"firework")) s.elytra=60+(c.elytraEquipped?20:0)+(c.elytraMaceReady?70:0)+(d>7?35:0);
   if(invHas(c,"shield")) s.shield=18+(e.meleeThreat?30:0)+(c.projectileThreat?35:0);
   s.utility=15+(c.projectileThreat?30:0)+(c.hazard?30:0);
   return s;
@@ -125,7 +125,8 @@ export function createPvpExpertBrain(options={}){
        (preferred==="crossbow"&&d>=8&&invHas(c,"crossbow")&&c.hasCrossbowAmmo!==false));
     const urgentCrystalFallback=c.crystalArena&&d<=6&&has(c,"crystal")&&has(c,"obsidian")&&styleMemory!=="crystal";
     const urgentAnchorFallback=c.anchorCycleSafe&&d<=7&&has(c,"respawn_anchor")&&has(c,"glowstone")&&styleMemory!=="anchor";
-    const urgentKitFallback=urgentCrystalFallback||urgentAnchorFallback;
+    const urgentElytraFallback=c.lineOfSight&&d>=7&&invHas(c,"elytra")&&invHas(c,"mace")&&invHas(c,"firework")&&styleMemory!=="elytra"&&!c.enemyMaceThreat;
+    const urgentKitFallback=urgentCrystalFallback||urgentAnchorFallback||urgentElytraFallback;
     if(!styleMemory||(!c.hardCounter&&(now>=styleLockUntil||urgentMeleeFallback||urgentRangedFallback||urgentKitFallback)&&
       (urgentMeleeFallback||urgentRangedFallback||urgentKitFallback||scores[preferred]>scores[styleMemory]+Number(difficulty.styleSwitchMargin||18)))){
       styleMemory=preferred;
@@ -260,6 +261,12 @@ export function createPvpExpertBrain(options={}){
     // controller confirms the flight prerequisites.
     if(c.windMaceSmashReady&&!c.enemyMaceHeldClose&&!c.enemyMaceThreat&&has(c,"mace")&&d>=3.5&&d<=6.5&&c.lineOfSight&&c.health>7)
       return {action:"wind_mace_launch",style:"mace",priority:9080,reason:"wind_charge_mace_setup"};
+
+    // The executor equips Elytra itself. Do not require Elytra to already be
+    // on the chest slot, or the style can never start from a normal armor kit.
+    if(styleMemory==="elytra"&&!c.elytraLaunchReady&&has(c,"elytraMace")&&
+      invHas(c,"elytra")&&invHas(c,"mace")&&invHas(c,"firework")&&d>=7&&c.lineOfSight)
+      return {action:"rocket_mace",style:"elytra",priority:9110,reason:"elytra_mace_loadout_and_launch_setup"};
 
     if(c.elytraStunSlamReady&&has(c,"elytraMace")&&c.elytraLaunchReady&&invHas(c,"mace"))
       return {action:"elytra_mace",style:"elytra",priority:9120,reason:"elytra_shield_stun_slam"};
