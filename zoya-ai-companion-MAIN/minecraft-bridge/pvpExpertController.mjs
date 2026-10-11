@@ -2404,7 +2404,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           hardCounter:Boolean((eq.shield&&enemy.usingItem)||(eq.elytra&&isAirborne(t))||enemy.totemPopped),
           spacingLockUntil:state.spacingLockUntil,
           enemyBurstThreat,enemyMaceThreat,
-          enemyMaceHeldClose,
+          // Inline this context flag rather than relying on a transient local;
+          // this is the exact identifier that previously crashed live PvP.
+          enemyMaceHeldClose:Boolean(/mace/.test(lname(t.equipment?.[0]||t.heldItem||""))&&d<=7.5),
           strafeDirection:state.strafe>0?"right":"left"
         };
 
