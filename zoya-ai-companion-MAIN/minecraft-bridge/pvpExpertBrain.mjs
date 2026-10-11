@@ -56,6 +56,36 @@ export function createPvpExpertBrain(options={}){
   let styleLockUntil=0;
   let lastAction=null;
   let lastActionAt=0;
+  // Bounded opponent adaptation based only on observable Mineflayer state.
+  const opponentModel={
+    samples:0,lastHeld:"",shieldSamples:0,retreatSamples:0,
+    airborneMaceSamples:0,healingSamples:0,projectileSamples:0,
+    lastSeenAt:0,counters:Object.create(null)
+  };
+
+  function observeOpponent(e={},c={},now=Date.now()){
+    const held=String(e.held||e.heldItem||"").toLowerCase();
+    if(held&&held!==opponentModel.lastHeld){
+      opponentModel.counters[held]=(opponentModel.counters[held]||0)+1;
+      opponentModel.lastHeld=held;
+    }
+    opponentModel.samples=Math.min(100000,opponentModel.samples+1);
+    if(e.shield&&e.usingItem) opponentModel.shieldSamples++;
+    if(e.retreating) opponentModel.retreatSamples++;
+    if(e.airborne&&(/mace|wind_charge/.test(held)||c.enemyMaceThreat)) opponentModel.airborneMaceSamples++;
+    if(e.healing) opponentModel.healingSamples++;
+    if(c.projectileThreat) opponentModel.projectileSamples++;
+    opponentModel.lastSeenAt=now;
+    const n=Math.max(1,opponentModel.samples);
+    return {
+      samples:opponentModel.samples,
+      shieldRate:opponentModel.shieldSamples/n,
+      retreatRate:opponentModel.retreatSamples/n,
+      aerialMaceRate:opponentModel.airborneMaceSamples/n,
+      healingRate:opponentModel.healingSamples/n,
+      projectileRate:opponentModel.projectileSamples/n
+    };
+  }
 
   function decide(ctx={}){
     const c=ctx||{}, e=c.enemy||{}, d=num(c.distance,Infinity);
@@ -67,7 +97,17 @@ export function createPvpExpertBrain(options={}){
     const low=hp<=Math.min(12,maxHp*.6), emergency=hp<=Math.min(10,maxHp*.5);
     const falling=Boolean(c.falling), onGround=c.onGround!==false;
     const attackReady=num(c.attackReadyAt,0)<=Date.now();
-    const scores=styleScores(c), preferred=bestStyle(c);
+    const opponent=observeOpponent(e,c,now);
+    const scores=styleScores(c);
+    // Counter repeated observed tendencies; ignore one-off/noisy snapshots.
+    if(opponent.samples>=8&&opponent.shieldRate>=0.22&&has(c,"axe")) scores.axe+=18;
+    if(opponent.samples>=8&&opponent.aerialMaceRate>=0.10){scores.sword+=8;scores.mace-=12;}
+    if(opponent.samples>=10&&opponent.retreatRate>=0.30){
+      if(has(c,"bow")) scores.bow+=10;
+      if(has(c,"crossbow")) scores.crossbow+=8;
+    }
+    if(opponent.samples>=10&&opponent.healingRate>=0.08&&has(c,"debuff")) scores.utility+=4;
+    const preferred=Object.keys(scores).reduce((a,b)=>scores[b]>scores[a]?b:a,"utility");
     // Keep a deliberate style lock to avoid weapon thrashing, but never let
     // that lock suppress the basic sword combo when the duel has collapsed
     // into ordinary melee range. Previously a mace/spear selected at 4-5m
@@ -270,7 +310,15 @@ export function createPvpExpertBrain(options={}){
     version:PVP_EXPERT_BRAIN_VERSION,
     styles:STYLES,
     decide,
-    inspect:ctx=>({style:styleMemory||bestStyle(ctx),scores:styleScores(ctx),lastAction,lastActionAt}),
+    inspect:ctx=>({style:styleMemory||bestStyle(ctx),scores:styleScores(ctx),lastAction,lastActionAt,opponentModel:{
+      samples:opponentModel.samples,lastSeenAt:opponentModel.lastSeenAt,
+      weaponChanges:Object.entries(opponentModel.counters).sort((a,b)=>b[1]-a[1]).slice(0,6),
+      shieldRate:opponentModel.shieldSamples/Math.max(1,opponentModel.samples),
+      retreatRate:opponentModel.retreatSamples/Math.max(1,opponentModel.samples),
+      aerialMaceRate:opponentModel.airborneMaceSamples/Math.max(1,opponentModel.samples),
+      healingRate:opponentModel.healingSamples/Math.max(1,opponentModel.samples),
+      projectileRate:opponentModel.projectileSamples/Math.max(1,opponentModel.samples)
+    }}),
     noteAction:a=>{lastAction=a;lastActionAt=Date.now()}
   };
 }
