@@ -1056,9 +1056,11 @@ assert.ok(catchTimingBody.includes('pearl_catch_skipped reason=pearl_and_wind_mu
 assert.ok(controllerSource.includes('pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null'),
   "brain readiness must match the combo's hotbar prerequisites");
 console.log("Pearl-catch same-line timing regression tests passed.");
+assert.ok(catchTimingBody.includes("pearl_catch_wind_followup_projectile_observed="),
+  "pearl catch telemetry must distinguish an unobserved wind-charge follow-up from a failed teleport");
 
 assert.ok(catchTimingBody.includes("const firstWindAt=Date.now()") &&
-  catchTimingBody.includes("const windReadyAt=firstWindAt+525") &&
+  catchTimingBody.includes("const windReadyAt=firstWindAt+650") &&
   catchTimingBody.includes("pearl_catch_first_wind_cooldown_elapsed_ms="),
   "pearl catch must respect the first wind charge's half-second cooldown before firing the immediate follow-up");
 
