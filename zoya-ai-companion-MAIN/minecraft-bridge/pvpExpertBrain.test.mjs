@@ -951,6 +951,9 @@ assert.ok(brainSource.includes('has(c,"pearl")&&c.recoveryPearlReady&&c.pearlAmb
 
 assert.ok(controllerSource.includes('" shield="+count(bot,"shield")+" pearls="+count(bot,"pearl")'),"combat startup must report whether shield/pearls are actually available within the expanded inventory line");
 assert.ok(controllerSource.includes("stunSlamReady=\"+Boolean(ctx.stunSlamReady)") && controllerSource.includes("pearlCatchReady=\"+Boolean(ctx.pearlCatchReady)"),"combat telemetry must expose pearl-catch and stun-slam readiness instead of hiding skipped prerequisites");
+assert.ok(controllerSource.includes('pearlHotbar="+(hotbarSlot("pearl")??"none")') &&
+  controllerSource.includes('windHotbar="+(hotbarSlot("wind")??"none")'),
+  "combat inventory telemetry must reveal why same-line pearl catch is unavailable");
 
 
 // Ranged aim uses bounded flight-time lead, while kit scoring avoids committing
