@@ -295,6 +295,15 @@ assert.ok(controllerSource.includes("const equipTotemVerified=async()=>"),
 
 
 {
+  const rangedBrain=makeBrain();
+  rangedBrain.decide({...base,distance:2,inventory:{...base.inventory,bow:1,crossbow:1},hasBowAmmo:true,hasCrossbowAmmo:true});
+  const rangedSwitch=rangedBrain.decide({...base,distance:9,lineOfSight:true,hasBowAmmo:true,hasCrossbowAmmo:true,
+    inventory:{...base.inventory,bow:1,crossbow:1}});
+  assert.equal(rangedSwitch.action,"ranged_attack",
+    "when the fight opens beyond melee reach, ranged style must overcome the old style lock without requiring the opponent to retreat");
+}
+
+{
   const rangedCtx={...base,distance:9,lineOfSight:true,hasBowAmmo:false,hasCrossbowAmmo:false,inventory:{...base.inventory,bow:1,crossbow:1}};
   assert.notEqual(makeBrain().decide(rangedCtx).action,"ranged_attack",
     "brain must not repeatedly choose bow firing without ammunition");
