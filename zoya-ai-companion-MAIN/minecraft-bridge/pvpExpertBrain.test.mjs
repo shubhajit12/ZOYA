@@ -1031,3 +1031,14 @@ console.log("Falling mace hitbox-window tests passed.");
     "longer pearl-catch waiting must still require real displacement and projectile disappearance, not just time elapsed");
 }
 console.log("High pearl-catch landing-window tests passed.");
+
+// The preflight inventory line must show all major kit prerequisites so a
+// missing bow/crystal/anchor/elytra is distinguishable from broken execution.
+assert.ok(controllerSource.includes('skill_inventory sword=') &&
+  controllerSource.includes('bow="+count(bot,"bow")') &&
+  controllerSource.includes('crystals="+count(bot,"crystal")') &&
+  controllerSource.includes('anchors="+count(bot,"anchor")') &&
+  controllerSource.includes('elytra="+count(bot,"elytra")') &&
+  controllerSource.includes('fireworks="+count(bot,"firework")'),
+  "combat preflight must log the item counts needed to explain why kit-specific skills are unavailable");
+console.log("Full combat-kit inventory telemetry tests passed.");
