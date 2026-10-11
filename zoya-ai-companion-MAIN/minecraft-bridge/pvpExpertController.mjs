@@ -120,7 +120,11 @@ export function getEnchantmentLevel(item,enchantment) {
       visit(value,depth+1);
     }
   };
-  visit(item.nbt??item.components??item);
+  visit(item.nbt);
+  visit(item.components);
+  // Some protocol adapters expose normalized component data directly on the
+  // item wrapper instead of under .components.
+  visit(item);
   return found;
 }
 
