@@ -90,6 +90,11 @@ export function createPvpExpertBrain(options={}){
         return {action:"pearl_escape",style:"utility",priority:9980,reason:"mace_burst_escape"};
       return {action:"emergency_disengage",style:"utility",priority:9970,reason:"mace_burst_evade"};
     }
+    // A grounded mace user can still begin a burst before the first health drop.
+    // At close range, use a short lateral/backstep window proactively instead of
+    // waiting for the low-health emergency branch to trigger after a hit lands.
+    if(c.enemyMaceHeldClose&&d<=3.8&&c.maceEvasionReady)
+      return {action:"mace_evasion",style:"utility",priority:9960,reason:"preemptive_close_mace_evasion"};
     // Emergency survival is a sequence, not a repeated single action:
     // equip the totem once, immediately create distance, then heal/re-engage.
     if(emergency){
