@@ -386,8 +386,8 @@ console.log("PvP Expert expanded deterministic tests passed.");
 }
 
 {
-  const d=makeBrain().decide({...base,distance:8,enemy:{...base.enemy,retreating:true},pearlAmbushReady:true,capabilities:{...base.capabilities,pearl:true,burst:true}});
-  assert.equal(d.action,"pearl_ambush");
+  const d=makeBrain().decide({...base,distance:8,enemy:{...base.enemy,retreating:true},recoveryPearlReady:true,pearlAmbushReady:true,capabilities:{...base.capabilities,pearl:true,burst:false}});
+  assert.equal(d.action,"pearl_ambush","a validated pearl intercept must not require the unrelated burst capability flag");
 }
 
 {
