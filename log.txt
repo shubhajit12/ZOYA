@@ -6,554 +6,1269 @@ Bridge script: A:\whitehat-jr\Downloads\ZOYA\TEST-EXE\Zoya\minecraft-bridge\inde
 Config: C:\Users\tapan\AppData\Roaming\com.zoya.aicompanion\minecraft\config.json
 Starting Mineflayer bridge...
 
-[2026-10-10T15:50:29.959Z] [ZOYA Minecraft Bridge] Listening on http://127.0.0.1:32123
-[2026-10-10T15:50:29.992Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
-[2026-10-10T15:50:29.996Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
-[2026-10-10T15:50:48.599Z] [STATE] Position: X=-6.5 Y=66 Z=4.5
-[2026-10-10T15:50:48.600Z] [STATE] Health: ? | Hunger: ? | XP: Lv.0 (0%)
-[2026-10-10T15:50:48.600Z] [STATE] Dimension: overworld | Time: 9417 | Day: 0 | Rain=NO | Thunder=0
-[2026-10-10T15:50:48.600Z] [STATE] Held: Wind Charge | Nearby: 0
-[2026-10-10T15:50:48.600Z] [STATE] Below: unknown | Light=? | Sky Light=?
-[2026-10-10T15:50:48.608Z] [EVENT] Zoya spawned into the Minecraft world.
-[2026-10-10T15:50:48.608Z] [ZOYA Minecraft Bridge] Mineflayer login: Zoya
-[2026-10-10T15:50:48.609Z] [PROTOCOL] negotiatedVersion=1.21.11 protocol=774 configuredVersion=1.21.11 elytra=ENABLED action=start_elytra_flying
-[2026-10-10T15:50:48.609Z] [PHYSICS] Mineflayer physics enabled for movement and knockback.
-[2026-10-10T15:50:48.609Z] [PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.
-[2026-10-10T15:50:48.609Z] [MOVEMENT] Autonomous movement enabled.
-[2026-10-10T15:50:48.633Z] [BRAIN] Zoya Minecraft brain started (Groq planner, 168 capabilities).
-[2026-10-10T15:50:49.146Z] [EVENT] Health changed: null -> 20
-[2026-10-10T15:50:49.146Z] [EVENT] Hunger changed: null -> 20
-[2026-10-10T15:50:49.146Z] [EVENT] XP changed: Lv.0 (0 pts) -> Lv.9 (142 pts)
-[2026-10-10T15:50:49.146Z] [EVENT] Block below changed: unknown -> grass_block
-[2026-10-10T15:50:52.668Z] [BRAIN] Thinking (startup)...
-[2026-10-10T15:50:53.831Z] [BRAIN] Plan: Idle on startup | actions=.
-[2026-10-10T15:51:18.728Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-6.5,66,4.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:51:48.844Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-6.5,66,4.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:52:18.902Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-6.5,66,4.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:52:20.957Z] [EVENT] Entity detected: ShubhTheGOAT (distance 4.32m)
-[2026-10-10T15:52:37.581Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
-[2026-10-10T15:52:41.772Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:52:41.788Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
-[2026-10-10T15:52:41.791Z] [BRAIN] Plan: Fight the requester | actions=pvp.
-[2026-10-10T15:52:41.842Z] [TASK] Started #1 pvp -> ShubhTheGOAT.
-[2026-10-10T15:52:41.895Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
-[2026-10-10T15:52:41.901Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-10T15:52:41.928Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=12.33 attackCooldownMs=0 action=approach
-[2026-10-10T15:52:41.929Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=12.33
-[2026-10-10T15:52:42.222Z] [EVENT] Position changed → X=-6.159 Y=67.249 Z=3.274
-[2026-10-10T15:52:42.225Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-10T15:52:42.736Z] [EVENT] Position changed → X=-4.429 Y=66.922 Z=2.44
-[2026-10-10T15:52:42.739Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-10T15:52:43.286Z] [PVP-EXPERT] ERROR controller_error: enemyMaceHeldClose is not defined
-[2026-10-10T15:52:43.389Z] [TASK] Finished #1 pvp -> failed (controller_error: enemyMaceHeldClose is not defined).
-[2026-10-10T15:52:43.392Z] [BRAIN] Action failed: pvp
-[2026-10-10T15:52:43.408Z] [EVENT] Position changed → X=-3.305 Y=66 Z=1.216
-[2026-10-10T15:52:49.047Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-3.286,66,1.201) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:52:53.133Z] [EVENT] Entity left nearby range: 249
-[2026-10-10T15:53:01.777Z] [BRAIN] Thinking (event)...
-[2026-10-10T15:53:03.381Z] [BRAIN] Plan: Respond to owner request | actions=chat.
-[2026-10-10T15:53:03.382Z] [TASK] Started #2 manual:clean:chat.
-[2026-10-10T15:53:03.389Z] [TASK] Finished #2 manual:clean:chat -> completed.
-[2026-10-10T15:53:04.463Z] [EVENT] Entity detected: ShubhTheGOAT (distance 4.04m)
-[2026-10-10T15:53:14.502Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Set the time to 1000]
-[2026-10-10T15:53:16.914Z] [PHYSICS] Server knockback velocity: x=-0.0748 y=0.4000 z=0.4131
-[2026-10-10T15:53:16.956Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (-0.0748, 0.4000, 0.4131).
-[2026-10-10T15:53:16.957Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:53:17.065Z] [EVENT] Health changed: 20 -> 18.859519958496094
-[2026-10-10T15:53:17.534Z] [PHYSICS] Server knockback velocity: x=-0.0403 y=0.2008 z=0.2366
-[2026-10-10T15:53:17.553Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (-0.0403, 0.2008, 0.2366).
-[2026-10-10T15:53:17.554Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:53:17.581Z] [EVENT] Health changed: 18.859519958496094 -> 18.5523738861084
-[2026-10-10T15:53:18.092Z] [EVENT] Health changed: 18.5523738861084 -> 19.219039916992188
-[2026-10-10T15:53:18.605Z] [EVENT] Health changed: 19.219039916992188 -> 19.359039306640625
-[2026-10-10T15:53:18.611Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:53:19.108Z] [EVENT] Health changed: 19.359039306640625 -> 19.692373275756836
-[2026-10-10T15:53:19.108Z] [HEARTBEAT] Zoya online | Health=19.692373275756836 | Pos=(-3.286,66,1.201) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:53:19.580Z] [PHYSICS] Server knockback velocity: x=-0.0022 y=-0.0784 z=0.0034
-[2026-10-10T15:53:19.621Z] [EVENT] Health changed: 19.692373275756836 -> 19.639999389648438
-[2026-10-10T15:53:20.123Z] [EVENT] Health changed: 19.639999389648438 -> 19.806665420532227
-[2026-10-10T15:53:20.581Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:53:20.631Z] [EVENT] Health changed: 19.806665420532227 -> 19.613330841064453
-[2026-10-10T15:53:21.134Z] [EVENT] Health changed: 19.613330841064453 -> 19.779996871948242
-[2026-10-10T15:53:21.606Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:53:21.697Z] [EVENT] Health changed: 19.779996871948242 -> 19.58666229248047
-[2026-10-10T15:53:22.416Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:53:22.730Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:53:22.996Z] [EVENT] Health changed: 19.58666229248047 -> 19.226661682128906
-[2026-10-10T15:53:23.541Z] [BRAIN] Plan: Set server time to 1000 | actions=op_command.
-[2026-10-10T15:53:23.542Z] [TASK] Started #3 manual:clean:op_command.
-[2026-10-10T15:53:23.546Z] [TASK] Finished #3 manual:clean:op_command -> completed.
-[2026-10-10T15:53:23.582Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:53:24.015Z] [EVENT] Health changed: 19.226661682128906 -> 18.866661071777344
-[2026-10-10T15:53:24.531Z] [EVENT] Health changed: 18.866661071777344 -> 18.50666046142578
-[2026-10-10T15:53:24.587Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:53:25.555Z] [EVENT] Health changed: 18.50666046142578 -> 19.50666046142578
-[2026-10-10T15:53:25.555Z] [EVENT] Hunger changed: 20 -> 19
-[2026-10-10T15:53:29.597Z] [EVENT] Health changed: 19.50666046142578 -> 20
-[2026-10-10T15:53:29.599Z] [EVENT] Hunger changed: 19 -> 17
-[2026-10-10T15:53:36.216Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:53:37.227Z] [EVENT] Entity detected: ShubhTheGOAT (distance 15.5m)
-[2026-10-10T15:53:41.195Z] [PHYSICS] Server knockback velocity: x=0.0233 y=0.2008 z=0.2388
-[2026-10-10T15:53:41.280Z] [EVENT] Health changed: 20 -> 19.925119400024414
-[2026-10-10T15:53:42.430Z] [BRAIN] Thinking (event)...
-[2026-10-10T15:53:43.267Z] [BRAIN] Plan: No action required | actions=.
-[2026-10-10T15:53:48.745Z] [PHYSICS] Server knockback velocity: x=0.2020 y=0.2008 z=0.1296
-[2026-10-10T15:53:48.891Z] [EVENT] Health changed: 19.925119400024414 -> 19.850238800048828
-[2026-10-10T15:53:49.402Z] [HEARTBEAT] Zoya online | Health=19.850238800048828 | Pos=(-3.286,66,1.201) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:53:51.738Z] [PHYSICS] Server knockback velocity: x=-0.0392 y=0.2008 z=-0.2368
-[2026-10-10T15:53:51.954Z] [EVENT] Health changed: 19.850238800048828 -> 19.775358200073242
-[2026-10-10T15:53:52.598Z] [PHYSICS] Server knockback velocity: x=0.0081 y=0.2008 z=-0.2399
-[2026-10-10T15:53:52.976Z] [EVENT] Health changed: 19.775358200073242 -> 19.700477600097656
-[2026-10-10T15:53:53.205Z] [PHYSICS] Server knockback velocity: x=0.1967 y=0.2008 z=-0.1375
-[2026-10-10T15:53:53.476Z] [EVENT] Health changed: 19.700477600097656 -> 19.62559700012207
-[2026-10-10T15:54:03.081Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:54:11.179Z] [EVENT] Entity detected: ShubhTheGOAT (distance 8.6m)
-[2026-10-10T15:54:19.856Z] [HEARTBEAT] Zoya online | Health=19.62559700012207 | Pos=(-3.286,66,1.201) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:54:43.497Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
-[2026-10-10T15:54:47.520Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:54:47.532Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
-[2026-10-10T15:54:47.533Z] [BRAIN] Plan: Fight the requester | actions=pvp.
-[2026-10-10T15:54:47.541Z] [TASK] Started #4 pvp -> ShubhTheGOAT.
-[2026-10-10T15:54:47.545Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
-[2026-10-10T15:54:47.545Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-10T15:54:47.556Z] [PVP-EXPERT] combat_state selfHP=19.6 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=10.78 attackCooldownMs=0 action=approach
-[2026-10-10T15:54:47.557Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=10.78
-[2026-10-10T15:54:48.180Z] [EVENT] Position changed → X=-1.216 Y=65 Z=-0.483
-[2026-10-10T15:54:48.673Z] [PVP-EXPERT] ERROR controller_error: enemyMaceHeldClose is not defined
-[2026-10-10T15:54:48.677Z] [TASK] Finished #4 pvp -> failed (controller_error: enemyMaceHeldClose is not defined).
-[2026-10-10T15:54:48.677Z] [BRAIN] Action failed: pvp
-[2026-10-10T15:54:48.687Z] [EVENT] Position changed → X=0.948 Y=65 Z=-1.916
-[2026-10-10T15:54:50.211Z] [HEARTBEAT] Zoya online | Health=19.62559700012207 | Pos=(1.01,65,-1.983) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:55:00.803Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
-[2026-10-10T15:55:07.525Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:55:07.528Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
-[2026-10-10T15:55:07.530Z] [BRAIN] Plan: Fight the requester | actions=pvp.
-[2026-10-10T15:55:07.535Z] [TASK] Started #5 pvp -> ShubhTheGOAT.
-[2026-10-10T15:55:07.536Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
-[2026-10-10T15:55:07.536Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-10T15:55:07.540Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
-[2026-10-10T15:55:07.563Z] [PVP-EXPERT] ERROR controller_error: enemyMaceHeldClose is not defined
-[2026-10-10T15:55:07.578Z] [TASK] Finished #5 pvp -> failed (controller_error: enemyMaceHeldClose is not defined).
-[2026-10-10T15:55:07.580Z] [BRAIN] Action failed: pvp
-[2026-10-10T15:55:09.176Z] [PHYSICS] Server knockback velocity: x=0.1533 y=0.2008 z=0.1846
-[2026-10-10T15:55:09.181Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (0.1533, 0.2008, 0.1846).
-[2026-10-10T15:55:09.182Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:55:09.625Z] [EVENT] Health changed: 19.62559700012207 -> 18.485116958618164
-[2026-10-10T15:55:10.224Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:10.627Z] [EVENT] Health changed: 18.485116958618164 -> 18.1251163482666
-[2026-10-10T15:55:11.228Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:11.634Z] [EVENT] Health changed: 18.1251163482666 -> 17.76511573791504
-[2026-10-10T15:55:12.224Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:12.663Z] [EVENT] Health changed: 17.76511573791504 -> 17.405115127563477
-[2026-10-10T15:55:13.182Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
-[2026-10-10T15:55:13.187Z] [EVENT] Health changed: 17.405115127563477 -> 17.045114517211914
-[2026-10-10T15:55:13.245Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:14.204Z] [EVENT] Health changed: 17.045114517211914 -> 16.68511390686035
-[2026-10-10T15:55:14.247Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:15.221Z] [EVENT] Health changed: 16.68511390686035 -> 16.32511329650879
-[2026-10-10T15:55:15.225Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:16.224Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:16.225Z] [EVENT] Health changed: 16.32511329650879 -> 15.965113639831543
-[2026-10-10T15:55:16.953Z] [PHYSICS] Server knockback velocity: x=0.2485 y=0.2008 z=0.1269
-[2026-10-10T15:55:16.993Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (0.2485, 0.2008, 0.1269).
-[2026-10-10T15:55:16.994Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:55:17.239Z] [EVENT] Health changed: 15.965113639831543 -> 14.824633598327637
-[2026-10-10T15:55:18.036Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:18.262Z] [EVENT] Health changed: 14.824633598327637 -> 14.46463394165039
-[2026-10-10T15:55:18.436Z] [PHYSICS] Damage 1.0079994201660156 health; observed server velocity = (0.0000, -0.0784, 0.0000).
-[2026-10-10T15:55:18.439Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:55:18.473Z] [SURVIVAL] Eating cooked_beef (health=13.456634521484375, food=17, trigger=health event).
-[2026-10-10T15:55:18.628Z] [SURVIVAL] Finished eating cooked_beef (health=13.456634521484375, food=17).
-[2026-10-10T15:55:18.761Z] [EVENT] Health changed: 14.46463394165039 -> 13.456634521484375
-[2026-10-10T15:55:18.762Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:19.484Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:19.776Z] [EVENT] Health changed: 13.456634521484375 -> 13.096634864807129
-[2026-10-10T15:55:20.291Z] [HEARTBEAT] Zoya online | Health=13.096634864807129 | Pos=(1.01,65,-1.983) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:55:20.474Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:20.543Z] [PHYSICS] Damage 1.5724802017211914 health; observed server velocity = (0.0000, -0.0784, 0.0000).
-[2026-10-10T15:55:20.543Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:55:20.802Z] [EVENT] Health changed: 13.096634864807129 -> 11.164155006408691
-[2026-10-10T15:55:21.141Z] [PHYSICS] Server knockback velocity: x=0.1805 y=0.2008 z=0.1582
-[2026-10-10T15:55:21.193Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (0.1805, 0.2008, 0.1582).
-[2026-10-10T15:55:21.194Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:55:21.304Z] [EVENT] Health changed: 11.164155006408691 -> 10.023674964904785
-[2026-10-10T15:55:22.022Z] [SURVIVAL] Eating cooked_beef (health=10.023674964904785, food=17, trigger=periodic monitor).
-[2026-10-10T15:55:22.229Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:22.320Z] [EVENT] Health changed: 10.023674964904785 -> 9.663675308227539
-[2026-10-10T15:55:22.321Z] [EVENT] Held item changed: wind_charge -> cooked_beef
-[2026-10-10T15:55:22.683Z] [PHYSICS] Damage 1.9324803352355957 health; observed server velocity = (0.0000, -0.0784, 0.0000).
-[2026-10-10T15:55:22.684Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:55:22.728Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:22.829Z] [EVENT] Health changed: 9.663675308227539 -> 7.731194972991943
-[2026-10-10T15:55:23.727Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:23.739Z] [SURVIVAL] Finished eating cooked_beef (health=7.371194839477539, food=20).
-[2026-10-10T15:55:23.832Z] [EVENT] Health changed: 7.731194972991943 -> 7.371194839477539
-[2026-10-10T15:55:23.834Z] [EVENT] Hunger changed: 17 -> 20
-[2026-10-10T15:55:23.837Z] [EVENT] Held item changed: cooked_beef -> wind_charge
-[2026-10-10T15:55:23.837Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:24.340Z] [EVENT] Health changed: 7.371194839477539 -> 8.371194839477539
-[2026-10-10T15:55:24.722Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:24.851Z] [EVENT] Health changed: 8.371194839477539 -> 9.011195182800293
-[2026-10-10T15:55:25.362Z] [EVENT] Health changed: 9.011195182800293 -> 10.011195182800293
-[2026-10-10T15:55:25.724Z] [PHYSICS] Server knockback velocity: x=0.0183 y=-0.0784 z=-0.0148
-[2026-10-10T15:55:25.864Z] [EVENT] Health changed: 10.011195182800293 -> 10.651195526123047
-[2026-10-10T15:55:26.376Z] [EVENT] Health changed: 10.651195526123047 -> 11.651195526123047
-[2026-10-10T15:55:26.723Z] [PHYSICS] Server knockback velocity: x=0.0072 y=-0.0784 z=-0.0003
-[2026-10-10T15:55:26.890Z] [EVENT] Health changed: 11.651195526123047 -> 12.257862091064453
-[2026-10-10T15:55:27.402Z] [EVENT] Health changed: 12.257862091064453 -> 12.891195297241211
-[2026-10-10T15:55:27.528Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:55:27.533Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
-[2026-10-10T15:55:27.534Z] [BRAIN] Plan: Fight the requester | actions=pvp.
-[2026-10-10T15:55:27.539Z] [TASK] Started #6 pvp -> ShubhTheGOAT.
-[2026-10-10T15:55:27.540Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
-[2026-10-10T15:55:27.540Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-10T15:55:27.542Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
-[2026-10-10T15:55:27.552Z] [PVP-EXPERT] combat_state selfHP=12.9 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.19 attackCooldownMs=0 action=spacing_retreat
-[2026-10-10T15:55:27.570Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.19
-[2026-10-10T15:55:27.719Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.00
-[2026-10-10T15:55:27.724Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:27.904Z] [EVENT] Position changed → X=1.197 Y=65 Z=-2.836
-[2026-10-10T15:55:27.905Z] [EVENT] Health changed: 12.891195297241211 -> 12.997861862182617
-[2026-10-10T15:55:28.170Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.72
-[2026-10-10T15:55:28.185Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.72; awaiting server damage confirmation
-[2026-10-10T15:55:28.285Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=1
-[2026-10-10T15:55:28.315Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.54
-[2026-10-10T15:55:28.416Z] [EVENT] Position changed → X=0.067 Y=65 Z=-2.852
-[2026-10-10T15:55:28.417Z] [EVENT] Health changed: 12.997861862182617 -> 13.464529037475586
-[2026-10-10T15:55:28.417Z] [EVENT] Held item changed: wind_charge -> netherite_sword
-[2026-10-10T15:55:28.652Z] [PVP-EXPERT] combat_state selfHP=13.5 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.87 attackCooldownMs=159 action=strafe_pressure
-[2026-10-10T15:55:28.723Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:28.781Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.64
-[2026-10-10T15:55:28.930Z] [EVENT] Position changed → X=0.863 Y=65 Z=-2.495
-[2026-10-10T15:55:28.932Z] [EVENT] Health changed: 13.464529037475586 -> 13.404529571533203
-[2026-10-10T15:55:29.431Z] [EVENT] Position changed → X=0.631 Y=65 Z=-1.5
-[2026-10-10T15:55:29.447Z] [EVENT] Health changed: 13.404529571533203 -> 13.537862777709961
-[2026-10-10T15:55:29.514Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.64
-[2026-10-10T15:55:29.522Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.64; awaiting server damage confirmation
-[2026-10-10T15:55:29.617Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=2
-[2026-10-10T15:55:29.641Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.71
-[2026-10-10T15:55:29.735Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:29.769Z] [PVP-EXPERT] combat_state selfHP=13.3 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.68 attackCooldownMs=378 action=strafe_pressure
-[2026-10-10T15:55:29.932Z] [EVENT] Position changed → X=0.076 Y=65 Z=-1.531
-[2026-10-10T15:55:29.934Z] [EVENT] Health changed: 13.537862777709961 -> 13.311196327209473
-[2026-10-10T15:55:29.935Z] [EVENT] Entity detected: ender_pearl (distance 2.84m)
-[2026-10-10T15:55:30.114Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.94
-[2026-10-10T15:55:30.534Z] [EVENT] Health changed: 13.311196327209473 -> 13.44452953338623
-[2026-10-10T15:55:30.535Z] [EVENT] Held item changed: netherite_sword -> golden_apple
-[2026-10-10T15:55:30.537Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:30.537Z] [EVENT] Entity left nearby range: 574
-[2026-10-10T15:55:31.298Z] [EVENT] Position changed → X=2.335 Y=65 Z=-1.472
-[2026-10-10T15:55:31.298Z] [EVENT] Health changed: 13.44452953338623 -> 13.711195945739746
-[2026-10-10T15:55:31.300Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:31.301Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-10T15:55:31.302Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:55:31.597Z] [PVP-EXPERT] combat_state selfHP=13.7 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=27.75 attackCooldownMs=0 action=approach
-[2026-10-10T15:55:31.600Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=27.75
-[2026-10-10T15:55:31.918Z] [EVENT] Position changed → X=2.7 Y=64 Z=-1.682
-[2026-10-10T15:55:31.943Z] [EVENT] Held item changed: golden_apple -> netherite_sword
-[2026-10-10T15:55:31.947Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:31.948Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-10T15:55:32.546Z] [EVENT] Held item changed: netherite_sword -> elytra
-[2026-10-10T15:55:32.546Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:32.940Z] [PVP-EXPERT] combat_state selfHP=13.7 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=28.12 attackCooldownMs=0 action=approach
-[2026-10-10T15:55:32.947Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=28.12
-[2026-10-10T15:55:33.051Z] [EVENT] Held item changed: elytra -> mace
-[2026-10-10T15:55:33.052Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:33.053Z] [EVENT] Entity detected: ender_pearl (distance 14.25m)
-[2026-10-10T15:55:33.558Z] [EVENT] Held item changed: mace -> wind_charge
-[2026-10-10T15:55:33.561Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:33.563Z] [EVENT] Entity left nearby range: 577
-[2026-10-10T15:55:34.070Z] [EVENT] Held item changed: wind_charge -> golden_apple
-[2026-10-10T15:55:34.079Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:34.081Z] [EVENT] Entity detected: ShubhTheGOAT (distance 5.64m)
-[2026-10-10T15:55:34.104Z] [PVP-EXPERT] ERROR controller_error: enemyMaceHeldClose is not defined
-[2026-10-10T15:55:34.132Z] [TASK] Finished #6 pvp -> failed (controller_error: enemyMaceHeldClose is not defined).
-[2026-10-10T15:55:34.134Z] [BRAIN] Action failed: pvp
-[2026-10-10T15:55:35.094Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:55:35.606Z] [EVENT] Health changed: 13.711195945739746 -> 14.711195945739746
-[2026-10-10T15:55:35.606Z] [EVENT] Hunger changed: 20 -> 19
-[2026-10-10T15:55:35.607Z] [EVENT] Entity detected: ender_pearl (distance 14.58m)
-[2026-10-10T15:55:37.641Z] [EVENT] Entity detected: ShubhTheGOAT (distance 2.89m)
-[2026-10-10T15:55:37.642Z] [EVENT] Entity left nearby range: 582
-[2026-10-10T15:55:38.657Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:55:39.671Z] [EVENT] Health changed: 14.711195945739746 -> 15.711195945739746
-[2026-10-10T15:55:39.671Z] [EVENT] Hunger changed: 19 -> 17
-[2026-10-10T15:55:42.236Z] [EVENT] Entity detected: ender_pearl (distance 14.87m)
-[2026-10-10T15:55:42.247Z] [EVENT] Entity detected: wind_charge (distance 12.45m)
-[2026-10-10T15:55:43.248Z] [EVENT] Entity left nearby range: 593
-[2026-10-10T15:55:43.758Z] [EVENT] Entity detected: ShubhTheGOAT (distance 1.67m)
-[2026-10-10T15:55:43.759Z] [EVENT] Entity left nearby range: 592
-[2026-10-10T15:55:44.779Z] [EVENT] Entity detected: ender_pearl (distance 1.92m)
-[2026-10-10T15:55:45.288Z] [EVENT] Entity left nearby range: 598
-[2026-10-10T15:55:47.537Z] [BRAIN] Thinking (event)...
-[2026-10-10T15:55:48.542Z] [BRAIN] Plan: Respond to player request | actions=chat.
-[2026-10-10T15:55:48.543Z] [TASK] Started #7 manual:clean:chat.
-[2026-10-10T15:55:48.546Z] [TASK] Finished #7 manual:clean:chat -> completed.
-[2026-10-10T15:55:49.363Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
-[2026-10-10T15:55:50.376Z] [HEARTBEAT] Zoya online | Health=15.711195945739746 | Pos=(2.7,64,-1.682) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:55:52.195Z] [PHYSICS] Server knockback velocity: x=0.0039 y=0.2008 z=-0.2399
-[2026-10-10T15:55:52.228Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (0.0039, 0.2008, -0.2399).
-[2026-10-10T15:55:52.228Z] [SAFETY] Damage observed; preserving active task ownership.
-[2026-10-10T15:55:52.423Z] [EVENT] Health changed: 15.711195945739746 -> 14.57071590423584
-[2026-10-10T15:55:53.275Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:53.439Z] [EVENT] Health changed: 14.57071590423584 -> 14.210716247558594
-[2026-10-10T15:55:54.228Z] [SURVIVAL] Eating cooked_beef (health=13.850716590881348, food=17, trigger=health event).
-[2026-10-10T15:55:54.288Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:55:54.462Z] [EVENT] Health changed: 14.210716247558594 -> 13.850716590881348
-[2026-10-10T15:55:54.465Z] [EVENT] Held item changed: golden_apple -> cooked_beef
-[2026-10-10T15:55:55.274Z] [PHYSICS] Server knockback velocity: x=0.0632 y=-0.0784 z=-0.0076
-[2026-10-10T15:55:55.478Z] [EVENT] Health changed: 13.850716590881348 -> 13.490716934204102
-[2026-10-10T15:55:55.937Z] [SURVIVAL] Finished eating cooked_beef (health=13.490716934204102, food=20).
-[2026-10-10T15:55:55.986Z] [EVENT] Hunger changed: 17 -> 20
-[2026-10-10T15:55:55.987Z] [EVENT] Held item changed: cooked_beef -> golden_apple
-[2026-10-10T15:55:55.987Z] [EVENT] Inventory changed.
-[2026-10-10T15:55:56.274Z] [PHYSICS] Server knockback velocity: x=0.0632 y=-0.0784 z=0.0075
-[2026-10-10T15:55:56.501Z] [EVENT] Health changed: 13.490716934204102 -> 14.130717277526855
-[2026-10-10T15:55:57.013Z] [EVENT] Health changed: 14.130717277526855 -> 15.130717277526855
-[2026-10-10T15:55:57.272Z] [PHYSICS] Server knockback velocity: x=0.0632 y=-0.0784 z=0.0075
-[2026-10-10T15:55:57.527Z] [EVENT] Health changed: 15.130717277526855 -> 15.77071762084961
-[2026-10-10T15:55:58.035Z] [EVENT] Health changed: 15.77071762084961 -> 16.77071762084961
-[2026-10-10T15:55:58.281Z] [PHYSICS] Server knockback velocity: x=0.0632 y=-0.0784 z=0.0075
-[2026-10-10T15:55:58.548Z] [EVENT] Health changed: 16.77071762084961 -> 17.410717010498047
-[2026-10-10T15:55:59.068Z] [EVENT] Health changed: 17.410717010498047 -> 18.377384185791016
-[2026-10-10T15:55:59.336Z] [PHYSICS] Server knockback velocity: x=0.0632 y=-0.0784 z=0.0083
-[2026-10-10T15:55:59.574Z] [EVENT] Health changed: 18.377384185791016 -> 18.65071678161621
-[2026-10-10T15:56:00.085Z] [EVENT] Health changed: 18.65071678161621 -> 19.11738395690918
-[2026-10-10T15:56:00.599Z] [EVENT] Health changed: 19.11738395690918 -> 19.58405113220215
-[2026-10-10T15:56:01.112Z] [EVENT] Health changed: 19.58405113220215 -> 19.884050369262695
-[2026-10-10T15:56:01.624Z] [EVENT] Health changed: 19.884050369262695 -> 20
-[2026-10-10T15:56:02.137Z] [EVENT] Entity detected: item (distance 1.04m)
-[2026-10-10T15:56:02.635Z] [EVENT] Inventory changed.
-[2026-10-10T15:56:02.635Z] [EVENT] Entity left nearby range: 629
-[2026-10-10T15:56:03.647Z] [EVENT] Entity detected: item (distance 1.11m)
-[2026-10-10T15:56:04.154Z] [EVENT] Inventory changed.
-[2026-10-10T15:56:04.154Z] [EVENT] Entity left nearby range: 636
-[2026-10-10T15:56:04.917Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
-[2026-10-10T15:56:07.552Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:56:07.556Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
-[2026-10-10T15:56:07.558Z] [BRAIN] Plan: Fight the requester | actions=pvp.
-[2026-10-10T15:56:07.561Z] [TASK] Started #8 pvp -> ShubhTheGOAT.
-[2026-10-10T15:56:07.564Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
-[2026-10-10T15:56:07.565Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-10T15:56:07.566Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
-[2026-10-10T15:56:07.578Z] [PVP-EXPERT] ERROR controller_error: enemyMaceHeldClose is not defined
-[2026-10-10T15:56:07.586Z] [TASK] Finished #8 pvp -> failed (controller_error: enemyMaceHeldClose is not defined).
-[2026-10-10T15:56:07.586Z] [BRAIN] Action failed: pvp
-[2026-10-10T15:56:12.290Z] [EVENT] Entity detected: wind_charge (distance 3.51m)
-[2026-10-10T15:56:12.822Z] [EVENT] Entity left nearby range: 645
-[2026-10-10T15:56:15.554Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:56:15.557Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
-[2026-10-10T15:56:15.557Z] [BRAIN] Plan: Fight the requester | actions=pvp.
-[2026-10-10T15:56:15.561Z] [TASK] Started #9 pvp -> ShubhTheGOAT.
-[2026-10-10T15:56:15.561Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
-[2026-10-10T15:56:15.562Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-10T15:56:15.563Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
-[2026-10-10T15:56:15.567Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=wind_charge targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.79 attackCooldownMs=0 action=approach
-[2026-10-10T15:56:15.567Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.79
-[2026-10-10T15:56:15.912Z] [EVENT] Position changed → X=2.068 Y=65.252 Z=-1.483
-[2026-10-10T15:56:15.915Z] [EVENT] Block below changed: grass_block -> air
-[2026-10-10T15:56:16.423Z] [EVENT] Position changed → X=-0.192 Y=65 Z=-1.506
-[2026-10-10T15:56:16.427Z] [EVENT] Block below changed: air -> grass_block
-[2026-10-10T15:56:16.702Z] [PVP-EXPERT] ERROR controller_error: enemyMaceHeldClose is not defined
-[2026-10-10T15:56:16.710Z] [TASK] Finished #9 pvp -> failed (controller_error: enemyMaceHeldClose is not defined).
-[2026-10-10T15:56:16.712Z] [BRAIN] Action failed: pvp
-[2026-10-10T15:56:16.933Z] [EVENT] Position changed → X=-1.591 Y=65 Z=-2.471
-[2026-10-10T15:56:20.493Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-1.6,65,-2.492) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:56:25.060Z] [EVENT] Entity detected: ender_pearl (distance 2.93m)
-[2026-10-10T15:56:25.062Z] [EVENT] Entity detected: wind_charge (distance 2.99m)
-[2026-10-10T15:56:25.572Z] [EVENT] Entity left nearby range: 669
-[2026-10-10T15:56:25.573Z] [EVENT] Entity left nearby range: 670
-[2026-10-10T15:56:26.074Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:56:26.574Z] [EVENT] Entity detected: ShubhTheGOAT (distance 9.57m)
-[2026-10-10T15:56:26.575Z] [EVENT] Entity detected: ender_pearl (distance 13.1m)
-[2026-10-10T15:56:27.090Z] [EVENT] Entity left nearby range: 672
-[2026-10-10T15:56:28.104Z] [EVENT] Entity detected: ender_pearl (distance 11.12m)
-[2026-10-10T15:56:28.105Z] [EVENT] Entity detected: wind_charge (distance 11.14m)
-[2026-10-10T15:56:28.604Z] [EVENT] Entity left nearby range: 677
-[2026-10-10T15:56:28.604Z] [EVENT] Entity left nearby range: 678
-[2026-10-10T15:56:29.104Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:56:30.129Z] [EVENT] Entity detected: ShubhTheGOAT (distance 11.07m)
-[2026-10-10T15:56:30.133Z] [EVENT] Entity detected: ender_pearl (distance 9.89m)
-[2026-10-10T15:56:30.632Z] [EVENT] Entity left nearby range: 679
-[2026-10-10T15:56:31.139Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:56:35.564Z] [BRAIN] Thinking (event)...
-[2026-10-10T15:56:35.704Z] [EVENT] Entity detected: ShubhTheGOAT (distance 11.22m)
-[2026-10-10T15:56:35.705Z] [EVENT] Entity detected: endermite (distance 13.62m)
-[2026-10-10T15:56:36.954Z] [BRAIN] Plan: Respond to player request | actions=chat.
-[2026-10-10T15:56:36.968Z] [TASK] Started #10 manual:clean:chat.
-[2026-10-10T15:56:36.980Z] [TASK] Finished #10 manual:clean:chat -> completed.
-[2026-10-10T15:56:37.224Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:56:45.855Z] [SAFETY] Hostile mob entered Zoya's danger range; cancelling active task and waking brain.
-[2026-10-10T15:56:50.723Z] [PHYSICS] Server knockback velocity: x=-0.1129 y=0.1184 z=0.0665
-[2026-10-10T15:56:50.907Z] [EVENT] Health changed: 20 -> 19.844480514526367
-[2026-10-10T15:56:50.909Z] [HEARTBEAT] Zoya online | Health=19.844480514526367 | Pos=(-1.6,65,-2.492) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:56:51.420Z] [EVENT] Health changed: 19.844480514526367 -> 19.977813720703125
-[2026-10-10T15:56:51.932Z] [EVENT] Health changed: 19.977813720703125 -> 20
-[2026-10-10T15:56:52.123Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:52.432Z] [EVENT] Health changed: 20 -> 19.844480514526367
-[2026-10-10T15:56:52.942Z] [EVENT] Health changed: 19.844480514526367 -> 19.977813720703125
-[2026-10-10T15:56:53.140Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:53.454Z] [EVENT] Health changed: 19.977813720703125 -> 19.822294235229492
-[2026-10-10T15:56:54.132Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:54.465Z] [EVENT] Health changed: 19.822294235229492 -> 19.66677474975586
-[2026-10-10T15:56:55.124Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:55.491Z] [EVENT] Health changed: 19.66677474975586 -> 19.511255264282227
-[2026-10-10T15:56:55.569Z] [BRAIN] Thinking (event)...
-[2026-10-10T15:56:56.123Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:56.517Z] [EVENT] Health changed: 19.511255264282227 -> 19.355735778808594
-[2026-10-10T15:56:56.811Z] [BRAIN] Plan: Respond to player request | actions=chat.
-[2026-10-10T15:56:56.811Z] [TASK] Started #11 manual:clean:chat.
-[2026-10-10T15:56:56.814Z] [TASK] Finished #11 manual:clean:chat -> completed.
-[2026-10-10T15:56:57.028Z] [EVENT] Health changed: 19.355735778808594 -> 20
-[2026-10-10T15:56:57.028Z] [EVENT] Hunger changed: 20 -> 19
-[2026-10-10T15:56:57.125Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:57.540Z] [EVENT] Health changed: 20 -> 19.844480514526367
-[2026-10-10T15:56:58.124Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:58.566Z] [EVENT] Health changed: 19.844480514526367 -> 19.688961029052734
-[2026-10-10T15:56:59.287Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:56:59.583Z] [EVENT] Health changed: 19.688961029052734 -> 19.5334415435791
-[2026-10-10T15:57:00.093Z] [EVENT] Health changed: 19.5334415435791 -> 19.37792205810547
-[2026-10-10T15:57:00.125Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:01.121Z] [EVENT] Health changed: 19.37792205810547 -> 19.844480514526367
-[2026-10-10T15:57:01.121Z] [EVENT] Hunger changed: 19 -> 18
-[2026-10-10T15:57:01.122Z] [EVENT] Entity detected: ShubhTheGOAT (distance 15.44m)
-[2026-10-10T15:57:01.151Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:01.633Z] [EVENT] Hunger changed: 18 -> 17
-[2026-10-10T15:57:02.146Z] [EVENT] Health changed: 19.844480514526367 -> 19.688961029052734
-[2026-10-10T15:57:02.151Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:03.137Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:03.177Z] [EVENT] Health changed: 19.688961029052734 -> 19.5334415435791
-[2026-10-10T15:57:04.134Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:04.200Z] [EVENT] Health changed: 19.5334415435791 -> 19.37792205810547
-[2026-10-10T15:57:05.130Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:05.211Z] [EVENT] Health changed: 19.37792205810547 -> 19.222402572631836
-[2026-10-10T15:57:05.711Z] [EVENT] Entity detected: ender_pearl (distance 8.08m)
-[2026-10-10T15:57:05.713Z] [EVENT] Entity detected: wind_charge (distance 8.09m)
-[2026-10-10T15:57:06.124Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:06.218Z] [EVENT] Health changed: 19.222402572631836 -> 19.066883087158203
-[2026-10-10T15:57:06.236Z] [EVENT] Entity left nearby range: 782
-[2026-10-10T15:57:06.323Z] [EVENT] Entity left nearby range: 783
-[2026-10-10T15:57:07.133Z] [PHYSICS] Server knockback velocity: x=-0.1167 y=0.1184 z=0.0596
-[2026-10-10T15:57:07.235Z] [EVENT] Health changed: 19.066883087158203 -> 18.91136360168457
-[2026-10-10T15:57:08.324Z] [PHYSICS] Server knockback velocity: x=-0.0938 y=0.1184 z=-0.0916
-[2026-10-10T15:57:08.772Z] [EVENT] Health changed: 18.91136360168457 -> 18.755844116210938
-[2026-10-10T15:57:09.134Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:09.280Z] [EVENT] Health changed: 18.755844116210938 -> 18.600324630737305
-[2026-10-10T15:57:10.277Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:10.457Z] [EVENT] Health changed: 18.600324630737305 -> 17.563526153564453
-[2026-10-10T15:57:10.470Z] [EVENT] Entity left nearby range: 320
-[2026-10-10T15:57:11.132Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:12.166Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:12.186Z] [EVENT] Health changed: 17.563526153564453 -> 17.252487182617188
-[2026-10-10T15:57:13.132Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:13.199Z] [EVENT] Health changed: 17.252487182617188 -> 17.096967697143555
-[2026-10-10T15:57:14.142Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:14.222Z] [EVENT] Health changed: 17.096967697143555 -> 16.941448211669922
-[2026-10-10T15:57:15.129Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:15.230Z] [EVENT] Health changed: 16.941448211669922 -> 16.78592872619629
-[2026-10-10T15:57:15.579Z] [BRAIN] Thinking (event)...
-[2026-10-10T15:57:16.125Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:16.425Z] [EVENT] Health changed: 16.78592872619629 -> 16.630409240722656
-[2026-10-10T15:57:16.502Z] [BRAIN] Plan: Respond to player request | actions=chat.
-[2026-10-10T15:57:16.504Z] [TASK] Started #12 manual:clean:chat.
-[2026-10-10T15:57:16.510Z] [TASK] Finished #12 manual:clean:chat -> completed.
-[2026-10-10T15:57:17.124Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:17.350Z] [EVENT] Health changed: 16.630409240722656 -> 16.474889755249023
-[2026-10-10T15:57:18.131Z] [PHYSICS] Server knockback velocity: x=-0.1014 y=0.1184 z=-0.0830
-[2026-10-10T15:57:18.364Z] [EVENT] Health changed: 16.474889755249023 -> 16.31937026977539
-[2026-10-10T15:57:19.233Z] [PHYSICS] Server knockback velocity: x=-0.0175 y=0.1184 z=0.1318
-[2026-10-10T15:57:19.375Z] [EVENT] Health changed: 16.31937026977539 -> 16.163850784301758
-[2026-10-10T15:57:20.141Z] [PHYSICS] Server knockback velocity: x=0.0025 y=0.1184 z=0.1310
-[2026-10-10T15:57:20.595Z] [EVENT] Health changed: 16.163850784301758 -> 16.008331298828125
-[2026-10-10T15:57:21.101Z] [EVENT] Health changed: 16.008331298828125 -> 15.852811813354492
-[2026-10-10T15:57:21.104Z] [HEARTBEAT] Zoya online | Health=15.852811813354492 | Pos=(-1.6,65,-2.492) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:57:21.126Z] [PHYSICS] Server knockback velocity: x=-0.0036 y=0.1184 z=0.1310
-[2026-10-10T15:57:22.124Z] [PHYSICS] Server knockback velocity: x=-0.0090 y=0.1184 z=0.1307
-[2026-10-10T15:57:22.126Z] [EVENT] Health changed: 15.852811813354492 -> 15.69729232788086
-[2026-10-10T15:57:23.575Z] [PHYSICS] Server knockback velocity: x=0.0915 y=0.1184 z=0.0938
-[2026-10-10T15:57:23.630Z] [EVENT] Health changed: 15.69729232788086 -> 15.541772842407227
-[2026-10-10T15:57:24.129Z] [PHYSICS] Server knockback velocity: x=0.0895 y=0.1184 z=0.1170
-[2026-10-10T15:57:24.131Z] [EVENT] Health changed: 15.541772842407227 -> 15.386253356933594
-[2026-10-10T15:57:24.330Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya hit me
-[2026-10-10T15:57:25.126Z] [PHYSICS] Server knockback velocity: x=0.0787 y=0.1184 z=0.1048
-[2026-10-10T15:57:25.152Z] [EVENT] Health changed: 15.386253356933594 -> 15.230733871459961
-[2026-10-10T15:57:26.124Z] [PHYSICS] Server knockback velocity: x=0.0729 y=0.1184 z=0.1089
-[2026-10-10T15:57:26.165Z] [EVENT] Health changed: 15.230733871459961 -> 15.075214385986328
-[2026-10-10T15:57:27.125Z] [PHYSICS] Server knockback velocity: x=0.0812 y=0.1184 z=0.1301
-[2026-10-10T15:57:27.175Z] [EVENT] Health changed: 15.075214385986328 -> 14.919694900512695
-[2026-10-10T15:57:28.124Z] [PHYSICS] Server knockback velocity: x=0.0660 y=0.1184 z=0.1132
-[2026-10-10T15:57:28.188Z] [EVENT] Health changed: 14.919694900512695 -> 14.764175415039062
-[2026-10-10T15:57:29.128Z] [PHYSICS] Server knockback velocity: x=0.0721 y=0.1184 z=0.1345
-[2026-10-10T15:57:29.194Z] [EVENT] Health changed: 14.764175415039062 -> 14.60865592956543
-[2026-10-10T15:57:30.129Z] [PHYSICS] Server knockback velocity: x=0.0593 y=0.1184 z=0.1169
-[2026-10-10T15:57:30.217Z] [EVENT] Health changed: 14.60865592956543 -> 14.453136444091797
-[2026-10-10T15:57:30.218Z] [EVENT] Hunger changed: 17 -> 16
-[2026-10-10T15:57:30.724Z] [EVENT] Entity detected: ShubhTheGOAT (distance 7.78m)
-[2026-10-10T15:57:31.123Z] [PHYSICS] Server knockback velocity: x=0.0593 y=0.1184 z=0.1169
-[2026-10-10T15:57:31.227Z] [EVENT] Health changed: 14.453136444091797 -> 14.297616958618164
-[2026-10-10T15:57:32.124Z] [PHYSICS] Server knockback velocity: x=0.0593 y=0.1184 z=0.1169
-[2026-10-10T15:57:32.251Z] [EVENT] Health changed: 14.297616958618164 -> 14.142097473144531
-[2026-10-10T15:57:33.108Z] [SURVIVAL] Eating cooked_beef (health=13.986577987670898, food=16, trigger=health event).
-[2026-10-10T15:57:33.136Z] [PHYSICS] Server knockback velocity: x=0.0593 y=0.1184 z=0.1169
-[2026-10-10T15:57:33.264Z] [EVENT] Health changed: 14.142097473144531 -> 13.986577987670898
-[2026-10-10T15:57:33.266Z] [EVENT] Held item changed: golden_apple -> cooked_beef
-[2026-10-10T15:57:34.124Z] [PHYSICS] Server knockback velocity: x=0.0593 y=0.1184 z=0.1169
-[2026-10-10T15:57:34.278Z] [EVENT] Health changed: 13.986577987670898 -> 13.831058502197266
-[2026-10-10T15:57:34.854Z] [SURVIVAL] Finished eating cooked_beef (health=13.831058502197266, food=20).
-[2026-10-10T15:57:35.126Z] [PHYSICS] Server knockback velocity: x=-0.0900 y=0.1184 z=0.0953
-[2026-10-10T15:57:35.287Z] [EVENT] Health changed: 13.831058502197266 -> 14.675539016723633
-[2026-10-10T15:57:35.287Z] [EVENT] Hunger changed: 16 -> 20
-[2026-10-10T15:57:35.287Z] [EVENT] Held item changed: cooked_beef -> golden_apple
-[2026-10-10T15:57:35.288Z] [EVENT] Inventory changed.
-[2026-10-10T15:57:35.581Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:57:35.798Z] [EVENT] Health changed: 14.675539016723633 -> 15.675539016723633
-[2026-10-10T15:57:36.123Z] [PHYSICS] Server knockback velocity: x=-0.1049 y=0.1184 z=0.0786
-[2026-10-10T15:57:36.313Z] [EVENT] Health changed: 15.675539016723633 -> 16.52001953125
-[2026-10-10T15:57:36.508Z] [BRAIN] Plan: Hit owner | actions=pvp.
-[2026-10-10T15:57:36.513Z] [SAFETY] Refusing pvp: health=15.785892486572266, hostileMobs=1.
-[2026-10-10T15:57:36.513Z] [BRAIN] Action failed: pvp
-[2026-10-10T15:57:36.823Z] [EVENT] Health changed: 16.52001953125 -> 16.785892486572266
-[2026-10-10T15:57:37.325Z] [EVENT] Health changed: 16.785892486572266 -> 17.785892486572266
-[2026-10-10T15:57:37.533Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:57:37.836Z] [EVENT] Health changed: 17.785892486572266 -> 18.392559051513672
-[2026-10-10T15:57:38.352Z] [EVENT] Health changed: 18.392559051513672 -> 19.02589225769043
-[2026-10-10T15:57:38.536Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:57:38.851Z] [EVENT] Health changed: 19.02589225769043 -> 19.132558822631836
-[2026-10-10T15:57:39.365Z] [EVENT] Health changed: 19.132558822631836 -> 19.599225997924805
-[2026-10-10T15:57:39.540Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:57:39.876Z] [EVENT] Health changed: 19.599225997924805 -> 19.53922462463379
-[2026-10-10T15:57:40.387Z] [EVENT] Health changed: 19.53922462463379 -> 19.839223861694336
-[2026-10-10T15:57:40.552Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:57:40.896Z] [EVENT] Health changed: 19.839223861694336 -> 19.61255645751953
-[2026-10-10T15:57:41.400Z] [EVENT] Health changed: 19.61255645751953 -> 19.74588966369629
-[2026-10-10T15:57:41.526Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:57:41.900Z] [EVENT] Health changed: 19.74588966369629 -> 19.519222259521484
-[2026-10-10T15:57:42.420Z] [EVENT] Health changed: 19.519222259521484 -> 19.652555465698242
-[2026-10-10T15:57:42.524Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:57:42.883Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya hit me
-[2026-10-10T15:57:42.921Z] [EVENT] Health changed: 19.652555465698242 -> 19.29255485534668
-[2026-10-10T15:57:42.921Z] [EVENT] Entity left nearby range: 700
-[2026-10-10T15:57:43.538Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
-[2026-10-10T15:57:43.934Z] [EVENT] Health changed: 19.29255485534668 -> 18.932554244995117
-[2026-10-10T15:57:46.474Z] [EVENT] Health changed: 18.932554244995117 -> 19.932554244995117
-[2026-10-10T15:57:46.474Z] [EVENT] Hunger changed: 20 -> 19
-[2026-10-10T15:57:48.212Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya hit me
-[2026-10-10T15:57:50.516Z] [EVENT] Health changed: 19.932554244995117 -> 20
-[2026-10-10T15:57:50.516Z] [EVENT] Hunger changed: 19 -> 17
-[2026-10-10T15:57:51.529Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-1.6,65,-2.492) | Nearby=1 | Rain=NO | AutonomousMovement=ON
-[2026-10-10T15:57:55.585Z] [BRAIN] Thinking (player_message)...
-[2026-10-10T15:57:57.064Z] [BRAIN] Plan: Respond to owner request to hit them | actions=pvp.
-[2026-10-10T15:57:57.065Z] [TASK] Started #13 pvp -> ShubhTheGOAT.
-[2026-10-10T15:57:57.067Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
-[2026-10-10T15:57:57.075Z] [PVP-EXPERT] active target=ShubhTheGOAT
-[2026-10-10T15:57:57.078Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.32 attackCooldownMs=0 action=backstab
-[2026-10-10T15:57:57.091Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.32
-[2026-10-10T15:57:57.103Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.32; awaiting server damage confirmation
-[2026-10-10T15:57:57.124Z] [EVENT] Held item changed: golden_apple -> netherite_sword
-[2026-10-10T15:57:57.194Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=3
-[2026-10-10T15:57:57.222Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.21
-[2026-10-10T15:57:57.429Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.56
-[2026-10-10T15:57:58.135Z] [EVENT] Position changed → X=-2.313 Y=65 Z=-3.5
-[2026-10-10T15:57:58.636Z] [PVP-EXPERT] ERROR controller_error: enemyMaceHeldClose is not defined
-[2026-10-10T15:57:58.646Z] [TASK] Finished #13 pvp -> failed (controller_error: enemyMaceHeldClose is not defined).
-[2026-10-10T15:57:58.647Z] [BRAIN] Action failed: pvp
+[2026-10-11T07:33:40.037Z] [ZOYA Minecraft Bridge] Listening on http://127.0.0.1:32123
+[2026-10-11T07:33:40.085Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
+[2026-10-11T07:33:40.086Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
+[2026-10-11T07:33:58.944Z] [EVENT] Zoya spawned into the Minecraft world.
+[2026-10-11T07:33:58.944Z] [ZOYA Minecraft Bridge] Mineflayer login: Zoya
+[2026-10-11T07:33:58.944Z] [PROTOCOL] negotiatedVersion=1.21.11 protocol=774 configuredVersion=1.21.11 elytra=ENABLED action=start_elytra_flying
+[2026-10-11T07:33:58.945Z] [PHYSICS] Mineflayer physics enabled for movement and knockback.
+[2026-10-11T07:33:58.945Z] [PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.
+[2026-10-11T07:33:58.945Z] [MOVEMENT] Autonomous movement enabled.
+[2026-10-11T07:33:58.996Z] [BRAIN] Zoya Minecraft brain started (Groq planner, 168 capabilities).
+Error: write ECONNRESET
+    at afterWriteDispatched (node:internal/stream_base_commons:159:15)
+    at writeGeneric (node:internal/stream_base_commons:150:3)
+    at Socket._writeGeneric (node:net:1262:11)
+    at Socket._write (node:net:1274:8)
+    at writeOrBuffer (node:internal/streams/writable:574:12)
+    at _write (node:internal/streams/writable:503:10)
+    at Writable.write (node:internal/streams/writable:512:10)
+    at Framer.ondata (A:\whitehat-jr\Downloads\ZOYA\TEST-EXE\Zoya\minecraft-bridge\node_modules\readable-stream\lib\internal\streams\readable.js:707:22)
+    at Framer.emit (node:events:514:28)
+    at addChunk (A:\whitehat-jr\Downloads\ZOYA\TEST-EXE\Zoya\minecraft-bridge\node_modules\readable-stream\lib\internal\streams\readable.js:323:12) {
+  errno: -4077,
+  code: 'ECONNRESET',
+  syscall: 'write'
+}
+[2026-10-11T07:33:59.221Z] [ZOYA Minecraft Bridge] Mineflayer connection error: write ECONNRESET
+[2026-10-11T07:33:59.222Z] [ZOYA Minecraft Bridge] Connection ended. reason=socketClosed | previousStatus=CONNECTING | activeTask=none
+[2026-10-11T07:33:59.223Z] [RECONNECT] Minecraft connection ended (socketClosed); retrying in 2s (attempt 1).
+[2026-10-11T07:34:01.230Z] [ZOYA Minecraft Bridge] Mode: Groq brain controller.
+[2026-10-11T07:34:01.230Z] [ZOYA Minecraft Bridge] Owner: ShubhTheGOAT.
+[2026-10-11T07:34:02.650Z] [EVENT] Zoya spawned into the Minecraft world.
+[2026-10-11T07:34:02.650Z] [ZOYA Minecraft Bridge] Mineflayer login: Zoya
+[2026-10-11T07:34:02.651Z] [PROTOCOL] negotiatedVersion=1.21.11 protocol=774 configuredVersion=1.21.11 elytra=ENABLED action=start_elytra_flying
+[2026-10-11T07:34:02.652Z] [PHYSICS] Mineflayer physics enabled for movement and knockback.
+[2026-10-11T07:34:02.653Z] [PHYSICS] Applied 1.21.x step-collision workaround: playerHalfWidth=0.30001, playerHeight=1.80001.
+[2026-10-11T07:34:02.653Z] [MOVEMENT] Autonomous movement enabled.
+[2026-10-11T07:34:02.673Z] [BRAIN] Zoya Minecraft brain started (Groq planner, 168 capabilities).
+[2026-10-11T07:34:02.862Z] [STATE] Position: X=-2.313 Y=65 Z=-3.5
+[2026-10-11T07:34:02.862Z] [STATE] Health: 20 | Hunger: 17 | XP: Lv.9 (28%)
+[2026-10-11T07:34:02.863Z] [STATE] Dimension: overworld | Time: 7255 | Day: 0 | Rain=NO | Thunder=0
+[2026-10-11T07:34:02.864Z] [STATE] Held: Netherite Sword | Nearby: 0
+[2026-10-11T07:34:02.866Z] [STATE] Below: Grass Block | Light=0 | Sky Light=0
+[2026-10-11T07:34:06.674Z] [BRAIN] Thinking (startup)...
+[2026-10-11T07:34:07.867Z] [BRAIN] Plan: Respond to player | actions=chat.
+[2026-10-11T07:34:07.869Z] [TASK] Started #1 manual:clean:chat.
+[2026-10-11T07:34:07.871Z] [TASK] Finished #1 manual:clean:chat -> completed.
+[2026-10-11T07:34:26.681Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:34:27.595Z] [BRAIN] Plan: Respond to owner chat | actions=chat.
+[2026-10-11T07:34:27.596Z] [TASK] Started #2 manual:clean:chat.
+[2026-10-11T07:34:27.598Z] [TASK] Finished #2 manual:clean:chat -> completed.
+[2026-10-11T07:34:32.865Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-2.313,65,-3.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:34:46.682Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:34:47.775Z] [BRAIN] Plan: Respond to owner | actions=chat.
+[2026-10-11T07:34:47.775Z] [TASK] Started #3 manual:clean:chat.
+[2026-10-11T07:34:47.777Z] [TASK] Finished #3 manual:clean:chat -> completed.
+[2026-10-11T07:35:03.284Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-2.313,65,-3.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:35:06.684Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:35:07.638Z] [BRAIN] Plan: Respond to owner chat | actions=chat.
+[2026-10-11T07:35:07.640Z] [TASK] Started #4 manual:clean:chat.
+[2026-10-11T07:35:07.641Z] [TASK] Finished #4 manual:clean:chat -> completed.
+[2026-10-11T07:35:26.689Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:35:27.378Z] [BRAIN] Plan: Respond to owner chat | actions=chat.
+[2026-10-11T07:35:27.378Z] [TASK] Started #5 manual:clean:chat.
+[2026-10-11T07:35:27.380Z] [TASK] Finished #5 manual:clean:chat -> completed.
+[2026-10-11T07:35:33.673Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-2.313,65,-3.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:35:46.701Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:35:48.717Z] [BRAIN] Plan: Respond to owner | actions=chat.
+[2026-10-11T07:35:48.719Z] [TASK] Started #6 manual:clean:chat.
+[2026-10-11T07:35:48.827Z] [TASK] Finished #6 manual:clean:chat -> completed.
+[2026-10-11T07:36:04.111Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-2.313,65,-3.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:36:06.715Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:36:07.754Z] [BRAIN] Plan: Respond to owner chat | actions=chat.
+[2026-10-11T07:36:07.755Z] [TASK] Started #7 manual:clean:chat.
+[2026-10-11T07:36:07.757Z] [TASK] Finished #7 manual:clean:chat -> completed.
+[2026-10-11T07:36:26.729Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:36:27.766Z] [BRAIN] Plan: Respond to owner | actions=chat.
+[2026-10-11T07:36:27.769Z] [TASK] Started #8 manual:clean:chat.
+[2026-10-11T07:36:27.773Z] [TASK] Finished #8 manual:clean:chat -> completed.
+[2026-10-11T07:36:29.789Z] [EVENT] Entity detected: ShubhTheGOAT (distance 2.22m)
+[2026-10-11T07:36:34.352Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-2.313,65,-3.5) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:36:39.300Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya pvp me
+[2026-10-11T07:36:47.361Z] [BRAIN] Thinking (player_message)...
+[2026-10-11T07:36:47.384Z] [BRAIN] Local intent match: pvp. Groq intent selection bypassed.
+[2026-10-11T07:36:47.872Z] [BRAIN] Plan: Fight the requester | actions=pvp.
+[2026-10-11T07:36:48.084Z] [TASK] Started #9 pvp -> ShubhTheGOAT.
+[2026-10-11T07:36:48.650Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
+[2026-10-11T07:36:48.687Z] [PVP-EXPERT] combat_armor_preflight equipped=none_needed slots=head,torso,legs,feet
+[2026-10-11T07:36:48.789Z] [PVP-EXPERT] combat_loadout totem_equipped=false offhand=empty inventoryCount=0
+[2026-10-11T07:36:48.791Z] [PVP-EXPERT] active target=ShubhTheGOAT
+[2026-10-11T07:36:48.880Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.22 attackCooldownMs=0 action=backstab
+[2026-10-11T07:36:48.880Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.22
+[2026-10-11T07:36:48.953Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.22 eye_hitbox_distance=1.80; awaiting server damage confirmation
+[2026-10-11T07:36:49.070Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=1
+[2026-10-11T07:36:49.202Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=0.75
+[2026-10-11T07:36:49.312Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.89
+[2026-10-11T07:36:49.511Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.55
+[2026-10-11T07:36:50.536Z] [EVENT] Position changed → X=-0.527 Y=65 Z=-7.962
+[2026-10-11T07:36:51.481Z] [EVENT] Position changed → X=-0.085 Y=65 Z=-7.046
+[2026-10-11T07:36:51.784Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.82 attackCooldownMs=0 action=approach
+[2026-10-11T07:36:51.784Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=8.82
+[2026-10-11T07:36:51.991Z] [EVENT] Position changed → X=2.476 Y=64 Z=-6.471
+[2026-10-11T07:36:52.763Z] [EVENT] Position changed → X=4.384 Y=64 Z=-5.71
+[2026-10-11T07:36:53.009Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.59 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:36:53.012Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=3.59
+[2026-10-11T07:36:53.028Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:36:53.214Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:36:53.352Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=5.97
+[2026-10-11T07:36:53.832Z] [EVENT] Position changed → X=5.354 Y=64 Z=-6.44
+[2026-10-11T07:36:54.342Z] [EVENT] Position changed → X=7.316 Y=64 Z=-5.456
+[2026-10-11T07:36:54.482Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=4.39 attackCooldownMs=0 action=approach
+[2026-10-11T07:36:54.483Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.39
+[2026-10-11T07:36:55.124Z] [EVENT] Position changed → X=10.315 Y=64 Z=-4.494
+[2026-10-11T07:36:55.125Z] [EVENT] Held item changed: netherite_sword -> dirt
+[2026-10-11T07:36:55.127Z] [EVENT] Inventory changed.
+[2026-10-11T07:36:55.747Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.41 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:36:55.748Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=3.41
+[2026-10-11T07:36:55.750Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:36:55.764Z] [PHYSICS] Server knockback velocity: x=0.2518 y=0.2008 z=0.0432
+[2026-10-11T07:36:55.781Z] [PHYSICS] Damage 5.540168762207031 health; observed server velocity = (0.2518, 0.2008, 0.0432).
+[2026-10-11T07:36:55.781Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:36:55.802Z] [EVENT] Position changed → X=11.81 Y=64 Z=-5.016
+[2026-10-11T07:36:55.816Z] [EVENT] Health changed: 20 -> 14.459831237792969
+[2026-10-11T07:36:55.900Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:36:55.961Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=3.16
+[2026-10-11T07:36:55.962Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=3.16
+[2026-10-11T07:36:56.306Z] [EVENT] Position changed → X=13.7 Y=64 Z=-4.3
+[2026-10-11T07:36:56.400Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.43
+[2026-10-11T07:36:56.961Z] [EVENT] Position changed → X=11.446 Y=64 Z=-5.553
+[2026-10-11T07:36:57.189Z] [PHYSICS] Server knockback velocity: x=0.4115 y=0.4000 z=-0.0655
+[2026-10-11T07:36:57.213Z] [PVP-EXPERT] combat_state selfHP=14.5 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=1.68 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:36:57.242Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=1.68
+[2026-10-11T07:36:57.280Z] [PHYSICS] Damage 8.458983421325684 health; observed server velocity = (0.4115, 0.4000, -0.0655).
+[2026-10-11T07:36:57.280Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:36:57.464Z] [EVENT] Position changed → X=15.7 Y=64 Z=-8.287
+[2026-10-11T07:36:57.464Z] [EVENT] Health changed: 14.459831237792969 -> 6.000847816467285
+[2026-10-11T07:36:57.465Z] [EVENT] Entity detected: wind_charge (distance 6.55m)
+[2026-10-11T07:36:57.683Z] [PVP-EXPERT] style=utility action=heal reason=emergency_heal_safe_gap dist=8.31
+[2026-10-11T07:36:57.968Z] [EVENT] Held item changed: dirt -> golden_apple
+[2026-10-11T07:36:58.471Z] [EVENT] Entity left nearby range: 428
+[2026-10-11T07:36:59.506Z] [PVP-EXPERT] combat_state selfHP=6.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=10.07 attackCooldownMs=0 action=heal
+[2026-10-11T07:36:59.508Z] [PVP-EXPERT] style=utility action=heal reason=emergency_heal_safe_gap dist=10.07
+[2026-10-11T07:36:59.528Z] [EVENT] Health changed: 6.000847816467285 -> 7.000847816467285
+[2026-10-11T07:36:59.540Z] [EVENT] Hunger changed: 17 -> 20
+[2026-10-11T07:36:59.540Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:00.045Z] [EVENT] Health changed: 7.000847816467285 -> 8.000847816467285
+[2026-10-11T07:37:00.422Z] [PHYSICS] Server knockback velocity: x=0.3268 y=0.4000 z=-0.2630
+[2026-10-11T07:37:00.462Z] [PHYSICS] Damage 6.121715545654297 health; observed server velocity = (0.3268, 0.4000, -0.2630).
+[2026-10-11T07:37:00.463Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:37:00.556Z] [EVENT] Position changed → X=15.7 Y=64 Z=-8.881
+[2026-10-11T07:37:00.560Z] [EVENT] Health changed: 8.000847816467285 -> 2.8791322708129883
+[2026-10-11T07:37:01.055Z] [EVENT] Health changed: 2.8791322708129883 -> 4.879132270812988
+[2026-10-11T07:37:01.214Z] [PVP-EXPERT] combat_state selfHP=4.9 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=9.21 attackCooldownMs=0 action=heal
+[2026-10-11T07:37:01.219Z] [PVP-EXPERT] style=utility action=heal reason=emergency_heal_safe_gap dist=9.21
+[2026-10-11T07:37:01.559Z] [EVENT] Health changed: 4.879132270812988 -> 6.879132270812988
+[2026-10-11T07:37:01.559Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:02.060Z] [EVENT] Health changed: 6.879132270812988 -> 7.879132270812988
+[2026-10-11T07:37:02.562Z] [EVENT] Health changed: 7.879132270812988 -> 9.879132270812988
+[2026-10-11T07:37:02.572Z] [EVENT] Entity detected: wind_charge (distance 1.79m)
+[2026-10-11T07:37:02.962Z] [PVP-EXPERT] combat_state selfHP=10.9 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=1.98 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:37:02.964Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=1.98
+[2026-10-11T07:37:03.062Z] [EVENT] Position changed → X=15.19 Y=66.545 Z=-10.713
+[2026-10-11T07:37:03.064Z] [EVENT] Health changed: 9.879132270812988 -> 11.879132270812988
+[2026-10-11T07:37:03.074Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:37:03.075Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:03.076Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:03.082Z] [EVENT] Entity left nearby range: 438
+[2026-10-11T07:37:03.562Z] [EVENT] Position changed → X=15.76 Y=64 Z=-12.831
+[2026-10-11T07:37:03.563Z] [EVENT] Health changed: 11.879132270812988 -> 12.879132270812988
+[2026-10-11T07:37:03.563Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:03.812Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.21
+[2026-10-11T07:37:04.854Z] [EVENT] Position changed → X=16.333 Y=64 Z=-13.742
+[2026-10-11T07:37:04.904Z] [EVENT] Health changed: 12.879132270812988 -> 15.879132270812988
+[2026-10-11T07:37:04.913Z] [HEARTBEAT] Zoya online | Health=15.879132270812988 | Pos=(16.333,64,-13.742) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:37:05.283Z] [PVP-EXPERT] combat_state selfHP=16.9 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=2.78 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:37:05.305Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=2.78
+[2026-10-11T07:37:05.306Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:37:05.353Z] [EVENT] Position changed → X=15.817 Y=64 Z=-13.6
+[2026-10-11T07:37:05.353Z] [EVENT] Health changed: 15.879132270812988 -> 17.879131317138672
+[2026-10-11T07:37:05.462Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:37:05.463Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.59
+[2026-10-11T07:37:05.853Z] [EVENT] Position changed → X=15.259 Y=64 Z=-12.258
+[2026-10-11T07:37:05.853Z] [EVENT] Health changed: 17.879131317138672 -> 19.879131317138672
+[2026-10-11T07:37:06.353Z] [EVENT] Position changed → X=12.661 Y=64 Z=-9.661
+[2026-10-11T07:37:06.353Z] [EVENT] Health changed: 19.879131317138672 -> 20
+[2026-10-11T07:37:06.592Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=4.59 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:06.593Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.59
+[2026-10-11T07:37:06.859Z] [EVENT] Position changed → X=14.196 Y=64 Z=-11.197
+[2026-10-11T07:37:07.361Z] [EVENT] Position changed → X=16.649 Y=64.42 Z=-11.707
+[2026-10-11T07:37:07.493Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=2.28
+[2026-10-11T07:37:07.494Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:37:07.651Z] [PVP-EXPERT] swing_issued weapon=sword distance=1.64 eye_hitbox_distance=1.13; awaiting server damage confirmation
+[2026-10-11T07:37:07.750Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=2
+[2026-10-11T07:37:07.863Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:37:07.868Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=true maceHeldClose=true distance=2.21 attackCooldownMs=408 action=emergency_disengage
+[2026-10-11T07:37:07.868Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_evade_no_totem dist=2.21
+[2026-10-11T07:37:07.871Z] [EVENT] Position changed → X=16.845 Y=65 Z=-12.155
+[2026-10-11T07:37:07.871Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:08.379Z] [EVENT] Position changed → X=18.526 Y=64 Z=-10.627
+[2026-10-11T07:37:08.381Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:08.879Z] [EVENT] Position changed → X=19.373 Y=64 Z=-7.944
+[2026-10-11T07:37:09.378Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=6.81 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:09.386Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.81
+[2026-10-11T07:37:09.395Z] [EVENT] Position changed → X=18.759 Y=64 Z=-5.3
+[2026-10-11T07:37:09.904Z] [EVENT] Position changed → X=18.3 Y=64 Z=-7.21
+[2026-10-11T07:37:10.440Z] [EVENT] Position changed → X=17.461 Y=64 Z=-9.5
+[2026-10-11T07:37:10.449Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.42 attackCooldownMs=0 action=backstab
+[2026-10-11T07:37:10.451Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.42
+[2026-10-11T07:37:10.454Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.42 eye_hitbox_distance=2.04; awaiting server damage confirmation
+[2026-10-11T07:37:10.566Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=3
+[2026-10-11T07:37:10.651Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.39
+[2026-10-11T07:37:10.909Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.37
+[2026-10-11T07:37:10.939Z] [EVENT] Position changed → X=16.819 Y=64 Z=-8.652
+[2026-10-11T07:37:11.220Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.59
+[2026-10-11T07:37:11.241Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.59 eye_hitbox_distance=2.20; awaiting server damage confirmation
+[2026-10-11T07:37:11.370Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=4
+[2026-10-11T07:37:11.453Z] [EVENT] Position changed → X=15.806 Y=64 Z=-8.357
+[2026-10-11T07:37:11.649Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.38 attackCooldownMs=217 action=approach
+[2026-10-11T07:37:11.675Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.38
+[2026-10-11T07:37:11.917Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.50
+[2026-10-11T07:37:11.939Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.50 eye_hitbox_distance=2.08; awaiting server damage confirmation
+[2026-10-11T07:37:11.960Z] [EVENT] Position changed → X=15.586 Y=64 Z=-9.321
+[2026-10-11T07:37:12.040Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=5
+[2026-10-11T07:37:12.089Z] [PHYSICS] Server knockback velocity: x=-0.2090 y=0.4000 z=0.3600
+[2026-10-11T07:37:12.139Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.08
+[2026-10-11T07:37:12.269Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=1.89
+[2026-10-11T07:37:12.471Z] [EVENT] Position changed → X=14.728 Y=64 Z=-9.943
+[2026-10-11T07:37:12.560Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.09
+[2026-10-11T07:37:12.982Z] [EVENT] Position changed → X=15.5 Y=64 Z=-10.54
+[2026-10-11T07:37:13.151Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:13.792Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
+[2026-10-11T07:37:13.793Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=totem_of_undying targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.30 attackCooldownMs=0 action=defensive_strafe
+[2026-10-11T07:37:13.796Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=failed_action_backoff dist=3.30
+[2026-10-11T07:37:13.950Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.31
+[2026-10-11T07:37:13.951Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.31 eye_hitbox_distance=2.01; awaiting server damage confirmation
+[2026-10-11T07:37:13.994Z] [EVENT] Position changed → X=15.806 Y=64 Z=-11.313
+[2026-10-11T07:37:14.050Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=6
+[2026-10-11T07:37:14.152Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=1.87
+[2026-10-11T07:37:14.190Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:14.400Z] [PVP-EXPERT] style=sword action=defensive_strafe reason=failed_action_backoff dist=3.10
+[2026-10-11T07:37:14.508Z] [EVENT] Position changed → X=16.148 Y=64 Z=-12.283
+[2026-10-11T07:37:14.733Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=3.30
+[2026-10-11T07:37:15.020Z] [EVENT] Position changed → X=16.825 Y=64 Z=-11.58
+[2026-10-11T07:37:15.182Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:15.521Z] [EVENT] Position changed → X=17.5 Y=64 Z=-11.476
+[2026-10-11T07:37:15.981Z] [PVP-EXPERT] enemy_totem_equipment=not_equipped target=ShubhTheGOAT
+[2026-10-11T07:37:15.999Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=shield targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=6.06 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:37:15.999Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=6.06
+[2026-10-11T07:37:16.032Z] [EVENT] Position changed → X=18.296 Y=64 Z=-11.486
+[2026-10-11T07:37:16.037Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-11T07:37:16.039Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:16.164Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:16.779Z] [EVENT] Position changed → X=18.264 Y=70.041 Z=-11.507
+[2026-10-11T07:37:16.834Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:16.842Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:17.152Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.5589 z=0.0000
+[2026-10-11T07:37:17.285Z] [EVENT] Position changed → X=18.577 Y=68.249 Z=-11.439
+[2026-10-11T07:37:17.788Z] [EVENT] Position changed → X=19.896 Y=64 Z=-11.076
+[2026-10-11T07:37:17.789Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:18.153Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:19.133Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.15 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:19.134Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.15
+[2026-10-11T07:37:19.153Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:19.812Z] [EVENT] Position changed → X=22.615 Y=64 Z=-9.44
+[2026-10-11T07:37:20.019Z] [PVP-EXPERT] style=axe action=shield_drain reason=shield_drain_sequence dist=2.71
+[2026-10-11T07:37:20.024Z] [PVP-EXPERT] swing_issued weapon=axe distance=2.71 eye_hitbox_distance=1.68; awaiting server damage confirmation
+[2026-10-11T07:37:20.312Z] [EVENT] Position changed → X=25.107 Y=64 Z=-9.757
+[2026-10-11T07:37:20.313Z] [EVENT] Held item changed: wind_charge -> netherite_axe
+[2026-10-11T07:37:20.433Z] [PVP-EXPERT] swing_unconfirmed weapon=axe target=ShubhTheGOAT; action will enter bounded backoff
+[2026-10-11T07:37:20.525Z] [PVP-EXPERT] strike_unconfirmed action=shield_drain retryPolicy=weapon_cooldown backoffMs=1600
+[2026-10-11T07:37:20.635Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.79 attackCooldownMs=389 action=strafe_pressure
+[2026-10-11T07:37:20.636Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.79
+[2026-10-11T07:37:20.821Z] [EVENT] Position changed → X=26.7 Y=64 Z=-9.992
+[2026-10-11T07:37:20.821Z] [EVENT] Held item changed: netherite_axe -> netherite_sword
+[2026-10-11T07:37:21.116Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.84
+[2026-10-11T07:37:21.118Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.84 eye_hitbox_distance=2.18; awaiting server damage confirmation
+[2026-10-11T07:37:21.233Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=7
+[2026-10-11T07:37:21.320Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.80
+[2026-10-11T07:37:21.323Z] [EVENT] Position changed → X=26.58 Y=64 Z=-10.674
+[2026-10-11T07:37:21.568Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.21
+[2026-10-11T07:37:21.806Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.57 attackCooldownMs=0 action=melee_attack
+[2026-10-11T07:37:21.810Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.57
+[2026-10-11T07:37:21.813Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.57 eye_hitbox_distance=2.19; awaiting server damage confirmation
+[2026-10-11T07:37:21.832Z] [EVENT] Position changed → X=25.698 Y=64 Z=-11.392
+[2026-10-11T07:37:21.910Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=8
+[2026-10-11T07:37:22.022Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.38
+[2026-10-11T07:37:22.263Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.31
+[2026-10-11T07:37:22.346Z] [EVENT] Position changed → X=25.34 Y=64 Z=-10.831
+[2026-10-11T07:37:22.503Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.58
+[2026-10-11T07:37:22.504Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.58 eye_hitbox_distance=1.97; awaiting server damage confirmation
+[2026-10-11T07:37:22.614Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=9
+[2026-10-11T07:37:22.732Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.66
+[2026-10-11T07:37:22.852Z] [EVENT] Position changed → X=24.702 Y=64 Z=-12.098
+[2026-10-11T07:37:22.854Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.01 attackCooldownMs=275 action=strafe_pressure
+[2026-10-11T07:37:22.952Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.29
+[2026-10-11T07:37:23.110Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.64
+[2026-10-11T07:37:23.220Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.39
+[2026-10-11T07:37:23.230Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.39 eye_hitbox_distance=2.06; awaiting server damage confirmation
+[2026-10-11T07:37:23.352Z] [EVENT] Position changed → X=23.795 Y=64 Z=-12.747
+[2026-10-11T07:37:23.579Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=10
+[2026-10-11T07:37:23.600Z] [PHYSICS] Server knockback velocity: x=0.2400 y=0.2008 z=0.0026
+[2026-10-11T07:37:23.687Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=0.41
+[2026-10-11T07:37:23.852Z] [EVENT] Position changed → X=22.768 Y=64 Z=-13.4
+[2026-10-11T07:37:23.852Z] [EVENT] Health changed: 20 -> 19.50295639038086
+[2026-10-11T07:37:23.886Z] [PVP-EXPERT] combat_state selfHP=19.5 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.75 attackCooldownMs=0 action=spacing_retreat
+[2026-10-11T07:37:24.103Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.16
+[2026-10-11T07:37:24.352Z] [EVENT] Position changed → X=23.523 Y=64 Z=-14.494
+[2026-10-11T07:37:24.353Z] [EVENT] Health changed: 19.50295639038086 -> 20
+[2026-10-11T07:37:24.659Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:24.867Z] [EVENT] Position changed → X=22.5 Y=64 Z=-14.548
+[2026-10-11T07:37:24.868Z] [EVENT] Health changed: 20 -> 19.639999389648438
+[2026-10-11T07:37:25.582Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
+[2026-10-11T07:37:25.698Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=shield targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=4.60 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:37:25.706Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.60
+[2026-10-11T07:37:25.717Z] [EVENT] Position changed → X=22.3 Y=64 Z=-13.96
+[2026-10-11T07:37:25.719Z] [EVENT] Health changed: 19.639999389648438 -> 20
+[2026-10-11T07:37:25.725Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-11T07:37:25.735Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:26.219Z] [EVENT] Position changed → X=22.309 Y=68.642 Z=-14.018
+[2026-10-11T07:37:26.220Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:26.225Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:26.659Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.2760 z=0.0000
+[2026-10-11T07:37:26.723Z] [EVENT] Position changed → X=22.262 Y=69.816 Z=-13.966
+[2026-10-11T07:37:26.724Z] [EVENT] Health changed: 20 -> 19.639999389648438
+[2026-10-11T07:37:27.265Z] [EVENT] Position changed → X=21.602 Y=65.05 Z=-12.75
+[2026-10-11T07:37:27.276Z] [EVENT] Health changed: 19.639999389648438 -> 20
+[2026-10-11T07:37:27.655Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:27.767Z] [EVENT] Position changed → X=21.222 Y=64 Z=-12.032
+[2026-10-11T07:37:27.768Z] [EVENT] Health changed: 20 -> 19.639999389648438
+[2026-10-11T07:37:27.771Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:28.268Z] [EVENT] Health changed: 19.639999389648438 -> 20
+[2026-10-11T07:37:28.657Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:28.778Z] [EVENT] Health changed: 20 -> 19.639999389648438
+[2026-10-11T07:37:28.889Z] [PVP-EXPERT] combat_state selfHP=19.6 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=wind_charge targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=5.85 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:28.890Z] [PVP-EXPERT] style=mace action=approach reason=failed_action_backoff dist=5.85
+[2026-10-11T07:37:29.278Z] [EVENT] Position changed → X=20.464 Y=64 Z=-10.741
+[2026-10-11T07:37:29.283Z] [EVENT] Health changed: 19.639999389648438 -> 19.939998626708984
+[2026-10-11T07:37:29.668Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:29.792Z] [EVENT] Position changed → X=19.465 Y=64 Z=-8.5
+[2026-10-11T07:37:29.798Z] [EVENT] Health changed: 19.939998626708984 -> 19.639999389648438
+[2026-10-11T07:37:30.037Z] [PVP-EXPERT] enemy_totem_equipment=not_equipped target=ShubhTheGOAT
+[2026-10-11T07:37:30.039Z] [PVP-EXPERT] combat_state selfHP=19.6 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.41 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:37:30.040Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=3.41
+[2026-10-11T07:37:30.042Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:37:30.193Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:37:30.196Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.70
+[2026-10-11T07:37:30.308Z] [EVENT] Position changed → X=20.112 Y=64 Z=-8.712
+[2026-10-11T07:37:30.315Z] [EVENT] Health changed: 19.639999389648438 -> 19.773332595825195
+[2026-10-11T07:37:30.358Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_evade_no_totem dist=2.66
+[2026-10-11T07:37:30.655Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:37:30.811Z] [EVENT] Position changed → X=21.972 Y=64 Z=-8.998
+[2026-10-11T07:37:30.812Z] [EVENT] Health changed: 19.773332595825195 -> 19.54666519165039
+[2026-10-11T07:37:31.311Z] [EVENT] Position changed → X=24.042 Y=64 Z=-10.423
+[2026-10-11T07:37:31.312Z] [EVENT] Health changed: 19.54666519165039 -> 19.67999839782715
+[2026-10-11T07:37:31.820Z] [EVENT] Position changed → X=26.089 Y=64 Z=-12.419
+[2026-10-11T07:37:31.822Z] [EVENT] Health changed: 19.67999839782715 -> 19.813331604003906
+[2026-10-11T07:37:31.861Z] [PVP-EXPERT] combat_state selfHP=19.8 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=wind_charge targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=6.94 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:31.861Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.94
+[2026-10-11T07:37:32.329Z] [EVENT] Position changed → X=26.505 Y=64 Z=-10.679
+[2026-10-11T07:37:32.831Z] [EVENT] Position changed → X=26.811 Y=65.249 Z=-7.602
+[2026-10-11T07:37:32.831Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:33.046Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
+[2026-10-11T07:37:33.048Z] [PVP-EXPERT] combat_state selfHP=19.8 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=totem_of_undying targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=4.86 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:37:33.048Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.86
+[2026-10-11T07:37:33.346Z] [EVENT] Position changed → X=27.423 Y=65.994 Z=-6.529
+[2026-10-11T07:37:33.347Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:33.348Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:33.847Z] [EVENT] Position changed → X=27.617 Y=70.836 Z=-6.146
+[2026-10-11T07:37:33.847Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:34.359Z] [EVENT] Position changed → X=28.425 Y=66.916 Z=-5.813
+[2026-10-11T07:37:34.874Z] [EVENT] Position changed → X=29.498 Y=64 Z=-5.524
+[2026-10-11T07:37:34.875Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:34.878Z] [HEARTBEAT] Zoya online | Health=19.813331604003906 | Pos=(29.498,64,-5.524) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:37:35.899Z] [EVENT] Health changed: 19.813331604003906 -> 20
+[2026-10-11T07:37:35.901Z] [EVENT] Hunger changed: 20 -> 19
+[2026-10-11T07:37:36.211Z] [PVP-EXPERT] enemy_totem_equipment=not_equipped target=ShubhTheGOAT
+[2026-10-11T07:37:36.212Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=7.29 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:36.212Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=7.29
+[2026-10-11T07:37:36.404Z] [EVENT] Position changed → X=29.989 Y=64 Z=-5.389
+[2026-10-11T07:37:36.913Z] [EVENT] Position changed → X=32.717 Y=64 Z=-5.505
+[2026-10-11T07:37:37.329Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.74 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:37:37.329Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=3.74
+[2026-10-11T07:37:37.331Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:37:37.419Z] [EVENT] Position changed → X=33.856 Y=64 Z=-4.224
+[2026-10-11T07:37:37.484Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:37:37.491Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.36
+[2026-10-11T07:37:37.576Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_evade_no_totem dist=2.76
+[2026-10-11T07:37:37.919Z] [EVENT] Position changed → X=32.575 Y=64 Z=-5.364
+[2026-10-11T07:37:38.429Z] [EVENT] Position changed → X=31.857 Y=64 Z=-8.085
+[2026-10-11T07:37:38.942Z] [EVENT] Position changed → X=32.385 Y=64 Z=-9.823
+[2026-10-11T07:37:39.085Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=6.25 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:39.086Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.25
+[2026-10-11T07:37:39.442Z] [EVENT] Position changed → X=32.486 Y=64 Z=-9.148
+[2026-10-11T07:37:39.955Z] [EVENT] Position changed → X=33.111 Y=64 Z=-6.883
+[2026-10-11T07:37:40.128Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=2.56 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:37:40.128Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=2.56
+[2026-10-11T07:37:40.129Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:37:40.269Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.23 eye_hitbox_distance=1.77; awaiting server damage confirmation
+[2026-10-11T07:37:40.369Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=11
+[2026-10-11T07:37:40.459Z] [EVENT] Position changed → X=33.232 Y=64 Z=-5.82
+[2026-10-11T07:37:40.459Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-11T07:37:40.468Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:37:40.470Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.05
+[2026-10-11T07:37:41.016Z] [EVENT] Position changed → X=33.7 Y=64 Z=-4.839
+[2026-10-11T07:37:41.017Z] [EVENT] Held item changed: netherite_sword -> dirt
+[2026-10-11T07:37:41.017Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:41.556Z] [EVENT] Position changed → X=35.319 Y=64 Z=-4.472
+[2026-10-11T07:37:41.779Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=4.62 attackCooldownMs=0 action=approach
+[2026-10-11T07:37:41.785Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=4.62
+[2026-10-11T07:37:41.942Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=2.47
+[2026-10-11T07:37:41.942Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:37:42.010Z] [PHYSICS] Server knockback velocity: x=-0.4176 y=0.0030 z=0.0206
+[2026-10-11T07:37:42.070Z] [PHYSICS] Damage 13.182859420776367 health; observed server velocity = (-0.4176, 0.0030, 0.0206).
+[2026-10-11T07:37:42.072Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:37:42.074Z] [EVENT] Position changed → X=35.29 Y=65.024 Z=-4.379
+[2026-10-11T07:37:42.074Z] [EVENT] Health changed: 20 -> 6.817140579223633
+[2026-10-11T07:37:42.075Z] [EVENT] Held item changed: dirt -> empty
+[2026-10-11T07:37:42.076Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:42.077Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:42.090Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.50 eye_hitbox_distance=2.17; awaiting server damage confirmation
+[2026-10-11T07:37:42.200Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=12
+[2026-10-11T07:37:42.286Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:37:42.288Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=2.27
+[2026-10-11T07:37:42.600Z] [EVENT] Position changed → X=30.892 Y=70.176 Z=-4.012
+[2026-10-11T07:37:42.600Z] [EVENT] Held item changed: empty -> netherite_sword
+[2026-10-11T07:37:42.920Z] [PVP-EXPERT] combat_state selfHP=6.8 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.26 attackCooldownMs=0 action=heal
+[2026-10-11T07:37:42.921Z] [PVP-EXPERT] style=utility action=heal reason=emergency_heal_safe_gap dist=8.26
+[2026-10-11T07:37:43.110Z] [EVENT] Position changed → X=28.553 Y=65.776 Z=-2.761
+[2026-10-11T07:37:43.111Z] [EVENT] Held item changed: netherite_sword -> golden_apple
+[2026-10-11T07:37:43.458Z] [PHYSICS] Server knockback velocity: x=-0.0416 y=-0.0784 z=-0.0048
+[2026-10-11T07:37:43.611Z] [EVENT] Position changed → X=27.906 Y=64 Z=-2.364
+[2026-10-11T07:37:43.621Z] [EVENT] Health changed: 6.817140579223633 -> 6.2171406745910645
+[2026-10-11T07:37:43.621Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:44.122Z] [EVENT] Position changed → X=26.805 Y=65.33 Z=-2.7
+[2026-10-11T07:37:44.122Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:37:44.650Z] [PVP-EXPERT] combat_state selfHP=7.2 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=5.93 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:37:44.651Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=5.93
+[2026-10-11T07:37:44.736Z] [EVENT] Position changed → X=26.3 Y=64 Z=-2.7
+[2026-10-11T07:37:44.741Z] [EVENT] Health changed: 6.2171406745910645 -> 8.217140197753906
+[2026-10-11T07:37:44.741Z] [EVENT] Hunger changed: 19 -> 20
+[2026-10-11T07:37:44.742Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:37:44.754Z] [EVENT] Inventory changed.
+[2026-10-11T07:37:44.758Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:37:45.243Z] [EVENT] Health changed: 8.217140197753906 -> 9.217140197753906
+[2026-10-11T07:37:45.748Z] [EVENT] Health changed: 9.217140197753906 -> 10.217140197753906
+[2026-10-11T07:37:45.808Z] [PHYSICS] Server knockback velocity: x=-0.2395 y=0.2008 z=0.0158
+[2026-10-11T07:37:46.255Z] [PVP-EXPERT] combat_state selfHP=11.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=5.29 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:37:46.256Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=5.29
+[2026-10-11T07:37:46.258Z] [EVENT] Health changed: 10.217140197753906 -> 11.040750503540039
+[2026-10-11T07:37:46.472Z] [PVP-EXPERT] style=utility action=heal reason=safe_heal_window dist=8.12
+[2026-10-11T07:37:46.758Z] [EVENT] Position changed → X=26.3 Y=64 Z=-1.812
+[2026-10-11T07:37:46.759Z] [EVENT] Health changed: 11.040750503540039 -> 11.640750885009766
+[2026-10-11T07:37:46.762Z] [EVENT] Held item changed: netherite_sword -> golden_apple
+[2026-10-11T07:37:47.262Z] [EVENT] Health changed: 11.640750885009766 -> 13.074084281921387
+[2026-10-11T07:37:47.437Z] [PHYSICS] Server knockback velocity: x=-0.1701 y=0.2008 z=0.1694
+[2026-10-11T07:37:47.475Z] [PHYSICS] Damage 13.074084281921387 health; observed server velocity = (-0.1701, 0.2008, 0.1694).
+[2026-10-11T07:37:47.476Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:37:47.488Z] [TASK] Cancelled #9 pvp: health_depleted
+[2026-10-11T07:37:47.488Z] [SAFETY] Health reached 0; active task cancelled immediately.
+[2026-10-11T07:37:47.489Z] [EVENT] Zoya died. Waiting for respawn/state recovery.
+[2026-10-11T07:37:47.505Z] [TASK] Cancelled #9 pvp: death
+[2026-10-11T07:37:47.505Z] [SAFETY] Movement interrupted: death
+[2026-10-11T07:37:47.735Z] [EVENT] Zoya respawned.
+[2026-10-11T07:37:47.736Z] [EVENT] Health changed: 13.074084281921387 -> 0
+[2026-10-11T07:37:47.737Z] [EVENT] Zoya died (health reached 0).
+[2026-10-11T07:37:47.737Z] [EVENT] Block below changed: grass_block -> unknown
+[2026-10-11T07:37:47.738Z] [EVENT] Entity left nearby range: 375
+[2026-10-11T07:37:47.754Z] [TASK] Finished #9 pvp -> cancelled (death).
+[2026-10-11T07:37:47.755Z] [BRAIN] Action failed: pvp
+[2026-10-11T07:37:47.776Z] [EVENT] Position changed → X=1.5 Y=65 Z=1.5
+[2026-10-11T07:37:47.780Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:37:48.281Z] [EVENT] Health changed: 0 -> 20
+[2026-10-11T07:37:48.282Z] [EVENT] Zoya respawned (health restored).
+[2026-10-11T07:37:48.284Z] [EVENT] Block below changed: unknown -> grass_block
+[2026-10-11T07:37:51.760Z] [BRAIN] Thinking (event)...
+[2026-10-11T07:37:53.072Z] [BRAIN] Plan: Respond to player request | actions=chat.
+[2026-10-11T07:37:53.072Z] [TASK] Started #10 manual:clean:chat.
+[2026-10-11T07:37:53.086Z] [TASK] Finished #10 manual:clean:chat -> completed.
+[2026-10-11T07:37:56.082Z] [EVENT] Entity detected: ShubhTheGOAT (distance 13.67m)
+[2026-10-11T07:38:03.445Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya hit me
+[2026-10-11T07:38:05.221Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(1.5,65,1.5) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:38:06.076Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> Set the time to 1000]
+[2026-10-11T07:38:11.769Z] [BRAIN] Thinking (player_message)...
+[2026-10-11T07:38:12.587Z] [BRAIN] Plan: Set time to 1000 | actions=op_command.
+[2026-10-11T07:38:12.588Z] [TASK] Started #11 manual:clean:op_command.
+[2026-10-11T07:38:12.603Z] [TASK] Finished #11 manual:clean:op_command -> completed.
+[2026-10-11T07:38:17.345Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya hit me
+[2026-10-11T07:38:19.772Z] [BRAIN] Thinking (player_message)...
+[2026-10-11T07:38:20.612Z] [BRAIN] Plan: Respond to player | actions=chat.
+[2026-10-11T07:38:20.614Z] [TASK] Started #12 manual:clean:chat.
+[2026-10-11T07:38:20.617Z] [TASK] Finished #12 manual:clean:chat -> completed.
+[2026-10-11T07:38:26.475Z] [CHAT] Routing message to Groq planner: ShubhTheGOAT -> zoya hit me
+[2026-10-11T07:38:27.779Z] [BRAIN] Thinking (player_message)...
+[2026-10-11T07:38:28.641Z] [BRAIN] Plan: Respond to owner request to attack | actions=pvp.
+[2026-10-11T07:38:28.692Z] [TASK] Started #13 pvp -> ShubhTheGOAT.
+[2026-10-11T07:38:28.736Z] [PVP-EXPERT] brain_version=pvp-expert-brain-v4-theo-impossible difficulty=theobald-impossible styleLockMs=500 styleSwitchMargin=10 strafeMs=95 sprintResetMs=62
+[2026-10-11T07:38:28.748Z] [PVP-EXPERT] combat_armor_preflight equipped=none_needed slots=head,torso,legs,feet
+[2026-10-11T07:38:28.783Z] [PVP-EXPERT] combat_loadout totem_equipped=false offhand=empty inventoryCount=0
+[2026-10-11T07:38:28.784Z] [PVP-EXPERT] active target=ShubhTheGOAT
+[2026-10-11T07:38:28.844Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.43 attackCooldownMs=0 action=backstab
+[2026-10-11T07:38:28.845Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.43
+[2026-10-11T07:38:28.935Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.43 eye_hitbox_distance=2.02; awaiting server damage confirmation
+[2026-10-11T07:38:28.998Z] [EVENT] Position changed → X=1.854 Y=65 Z=0.982
+[2026-10-11T07:38:29.005Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:38:29.019Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=13
+[2026-10-11T07:38:29.265Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.64
+[2026-10-11T07:38:29.591Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:38:30.097Z] [EVENT] Position changed → X=0.611 Y=65 Z=1.552
+[2026-10-11T07:38:30.412Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.19 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:30.414Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.19
+[2026-10-11T07:38:30.590Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.69
+[2026-10-11T07:38:30.591Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.69 eye_hitbox_distance=2.26; awaiting server damage confirmation
+[2026-10-11T07:38:30.598Z] [EVENT] Position changed → X=0.531 Y=65 Z=2.235
+[2026-10-11T07:38:30.603Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:38:30.712Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=14
+[2026-10-11T07:38:30.835Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=1.94
+[2026-10-11T07:38:31.090Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.07
+[2026-10-11T07:38:31.102Z] [EVENT] Position changed → X=0.7 Y=64 Z=2.3
+[2026-10-11T07:38:31.106Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:38:31.458Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.71 attackCooldownMs=0 action=spacing_retreat
+[2026-10-11T07:38:31.462Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.71
+[2026-10-11T07:38:31.618Z] [EVENT] Position changed → X=0.551 Y=65 Z=2.885
+[2026-10-11T07:38:31.618Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:38:32.000Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.60
+[2026-10-11T07:38:32.115Z] [EVENT] Position changed → X=2.104 Y=65 Z=1.685
+[2026-10-11T07:38:32.115Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:38:32.627Z] [EVENT] Position changed → X=0.49 Y=65 Z=0.063
+[2026-10-11T07:38:32.782Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.94 attackCooldownMs=0 action=shield
+[2026-10-11T07:38:32.784Z] [PVP-EXPERT] style=shield action=shield reason=incoming_melee_block dist=3.94
+[2026-10-11T07:38:33.128Z] [PVP-EXPERT] shield_block completed; melee weapon restored
+[2026-10-11T07:38:33.130Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.44
+[2026-10-11T07:38:33.135Z] [EVENT] Position changed → X=-0.051 Y=65 Z=-0.164
+[2026-10-11T07:38:33.139Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-11T07:38:33.635Z] [EVENT] Position changed → X=-0.047 Y=69.644 Z=-0.196
+[2026-10-11T07:38:33.638Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:33.639Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:38:34.549Z] [PVP-EXPERT] mace_smash_issued distance=2.50 fall=5.36; awaiting server damage confirmation
+[2026-10-11T07:38:34.657Z] [EVENT] Position changed → X=-0.634 Y=65 Z=1.268
+[2026-10-11T07:38:34.659Z] [EVENT] Held item changed: wind_charge -> mace
+[2026-10-11T07:38:34.661Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:34.664Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:38:34.697Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=15
+[2026-10-11T07:38:34.698Z] [PHYSICS] Server knockback velocity: x=0.0000 y=0.0100 z=0.0000
+[2026-10-11T07:38:34.734Z] [PVP-EXPERT] mace_smash_confirmed=true
+[2026-10-11T07:38:34.742Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=true maceHeldClose=true distance=1.67 attackCooldownMs=1474 action=mace_evasion
+[2026-10-11T07:38:34.764Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=1.67
+[2026-10-11T07:38:34.774Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:38:34.914Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:38:34.944Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.46
+[2026-10-11T07:38:35.247Z] [EVENT] Position changed → X=0.507 Y=65 Z=-0.013
+[2026-10-11T07:38:35.248Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(0.507,65,-0.013) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:38:36.101Z] [EVENT] Position changed → X=-1.423 Y=65 Z=2.685
+[2026-10-11T07:38:36.196Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=4.79 attackCooldownMs=20 action=approach
+[2026-10-11T07:38:36.197Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=4.79
+[2026-10-11T07:38:36.280Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=1.61
+[2026-10-11T07:38:36.281Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:38:36.428Z] [PVP-EXPERT] swing_issued weapon=sword distance=1.83 eye_hitbox_distance=1.41; awaiting server damage confirmation
+[2026-10-11T07:38:36.540Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=16
+[2026-10-11T07:38:36.614Z] [EVENT] Position changed → X=-1.502 Y=65 Z=3.415
+[2026-10-11T07:38:36.615Z] [EVENT] Held item changed: mace -> netherite_sword
+[2026-10-11T07:38:36.629Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:38:36.737Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.84
+[2026-10-11T07:38:36.925Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.84
+[2026-10-11T07:38:37.124Z] [EVENT] Position changed → X=-1.15 Y=65 Z=2.313
+[2026-10-11T07:38:37.126Z] [EVENT] Entity detected: wind_charge (distance 3.7m)
+[2026-10-11T07:38:37.629Z] [EVENT] Position changed → X=1.113 Y=65 Z=1.452
+[2026-10-11T07:38:37.694Z] [EVENT] Entity left nearby range: 654
+[2026-10-11T07:38:38.223Z] [EVENT] Position changed → X=2.609 Y=65 Z=-0.391
+[2026-10-11T07:38:38.243Z] [EVENT] Entity left nearby range: 375
+[2026-10-11T07:38:38.304Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=27.36 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:38.306Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=27.36
+[2026-10-11T07:38:39.092Z] [EVENT] Position changed → X=2.497 Y=64.766 Z=-1.523
+[2026-10-11T07:38:39.868Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=26.73 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:39.875Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=26.73
+[2026-10-11T07:38:40.335Z] [EVENT] Position changed → X=2.505 Y=64 Z=-1.341
+[2026-10-11T07:38:40.337Z] [EVENT] Held item changed: netherite_sword -> shield
+[2026-10-11T07:38:40.338Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:40.988Z] [EVENT] Held item changed: shield -> netherite_sword
+[2026-10-11T07:38:40.989Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:41.362Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=25.78 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:41.364Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=25.78
+[2026-10-11T07:38:41.725Z] [EVENT] Held item changed: netherite_sword -> mace
+[2026-10-11T07:38:41.726Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:42.544Z] [EVENT] Held item changed: mace -> wind_charge
+[2026-10-11T07:38:42.555Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:42.738Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=21.55 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:42.738Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=21.55
+[2026-10-11T07:38:43.262Z] [EVENT] Held item changed: wind_charge -> golden_apple
+[2026-10-11T07:38:43.262Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:43.953Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:38:43.953Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:44.124Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=17.36 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:44.124Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=17.36
+[2026-10-11T07:38:44.668Z] [EVENT] Held item changed: netherite_sword -> elytra
+[2026-10-11T07:38:44.669Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:45.633Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=17.36 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:45.638Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=17.36
+[2026-10-11T07:38:45.998Z] [EVENT] Held item changed: elytra -> netherite_axe
+[2026-10-11T07:38:45.999Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:46.851Z] [EVENT] Held item changed: netherite_axe -> wind_charge
+[2026-10-11T07:38:46.859Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:47.290Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=19.21 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:47.291Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=19.21
+[2026-10-11T07:38:47.570Z] [EVENT] Held item changed: wind_charge -> shield
+[2026-10-11T07:38:47.575Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:48.322Z] [EVENT] Held item changed: shield -> mace
+[2026-10-11T07:38:48.322Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:48.881Z] [EVENT] Held item changed: mace -> golden_apple
+[2026-10-11T07:38:48.882Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:49.139Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=29.98 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:49.191Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=29.98
+[2026-10-11T07:38:49.794Z] [EVENT] Held item changed: golden_apple -> elytra
+[2026-10-11T07:38:49.800Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:50.453Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=29.87 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:50.575Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=29.87
+[2026-10-11T07:38:51.218Z] [EVENT] Held item changed: elytra -> mace
+[2026-10-11T07:38:51.219Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:51.805Z] [EVENT] Held item changed: mace -> cooked_beef
+[2026-10-11T07:38:51.805Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:51.898Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=34.01 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:51.898Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=34.01
+[2026-10-11T07:38:52.489Z] [EVENT] Held item changed: cooked_beef -> golden_apple
+[2026-10-11T07:38:52.499Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:53.104Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:53.143Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=42.40 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:53.151Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=42.40
+[2026-10-11T07:38:53.963Z] [EVENT] Held item changed: golden_apple -> wind_charge
+[2026-10-11T07:38:53.965Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:54.538Z] [EVENT] Held item changed: wind_charge -> cooked_beef
+[2026-10-11T07:38:54.699Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:54.723Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=62.01 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:54.734Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=62.01
+[2026-10-11T07:38:55.327Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:55.971Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=62.01 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:55.971Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=62.01
+[2026-10-11T07:38:56.514Z] [EVENT] Held item changed: cooked_beef -> golden_apple
+[2026-10-11T07:38:56.529Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:57.138Z] [EVENT] Held item changed: golden_apple -> mace
+[2026-10-11T07:38:57.138Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:57.244Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=62.01 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:57.247Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=62.01
+[2026-10-11T07:38:57.761Z] [EVENT] Held item changed: mace -> elytra
+[2026-10-11T07:38:57.762Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:58.381Z] [EVENT] Held item changed: elytra -> wind_charge
+[2026-10-11T07:38:58.381Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:58.483Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=62.01 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:58.498Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=62.01
+[2026-10-11T07:38:59.345Z] [EVENT] Held item changed: wind_charge -> cooked_beef
+[2026-10-11T07:38:59.345Z] [EVENT] Inventory changed.
+[2026-10-11T07:38:59.820Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=44.31 attackCooldownMs=0 action=approach
+[2026-10-11T07:38:59.820Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=44.31
+[2026-10-11T07:39:00.011Z] [EVENT] Held item changed: cooked_beef -> wind_charge
+[2026-10-11T07:39:00.012Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:01.018Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:01.217Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=62.01 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:01.218Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=62.01
+[2026-10-11T07:39:01.727Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-11T07:39:01.727Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:02.585Z] [EVENT] Held item changed: netherite_sword -> cooked_beef
+[2026-10-11T07:39:02.601Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:02.634Z] [EVENT] Entity detected: ShubhTheGOAT (distance 8.49m)
+[2026-10-11T07:39:02.693Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.49 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:02.709Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=8.49
+[2026-10-11T07:39:03.118Z] [EVENT] Position changed → X=-0.635 Y=65 Z=0.52
+[2026-10-11T07:39:03.352Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:04.024Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=5.06 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:39:04.026Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.06
+[2026-10-11T07:39:04.031Z] [EVENT] Held item changed: cooked_beef -> wind_charge
+[2026-10-11T07:39:04.549Z] [EVENT] Position changed → X=-1.023 Y=71.067 Z=0.668
+[2026-10-11T07:39:04.762Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:04.767Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:05.050Z] [EVENT] Position changed → X=-1.615 Y=66.52 Z=0.777
+[2026-10-11T07:39:05.744Z] [EVENT] Position changed → X=-2.236 Y=65 Z=0.888
+[2026-10-11T07:39:06.026Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:06.029Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(-2.236,65,0.888) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:39:07.208Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.87 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:07.209Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.87
+[2026-10-11T07:39:07.842Z] [EVENT] Position changed → X=-3.494 Y=66 Z=0.44
+[2026-10-11T07:39:08.356Z] [EVENT] Position changed → X=-4.572 Y=65 Z=1.583
+[2026-10-11T07:39:08.478Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=4.14 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:08.479Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=4.14
+[2026-10-11T07:39:08.868Z] [EVENT] Position changed → X=-5.7 Y=64.766 Z=1.474
+[2026-10-11T07:39:09.379Z] [EVENT] Position changed → X=-6.5 Y=65.024 Z=1.521
+[2026-10-11T07:39:09.380Z] [EVENT] Block below changed: grass_block -> cobblestone
+[2026-10-11T07:39:09.442Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=2.79
+[2026-10-11T07:39:09.454Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:39:09.892Z] [EVENT] Position changed → X=-6.7 Y=65 Z=0.3
+[2026-10-11T07:39:09.914Z] [EVENT] Held item changed: wind_charge -> empty
+[2026-10-11T07:39:10.413Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:10.529Z] [EVENT] Block below changed: cobblestone -> grass_block
+[2026-10-11T07:39:10.653Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.47 eye_hitbox_distance=2.08; awaiting server damage confirmation
+[2026-10-11T07:39:10.750Z] [EVENT] Held item changed: empty -> netherite_sword
+[2026-10-11T07:39:10.840Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=17
+[2026-10-11T07:39:10.958Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:39:10.960Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=1.56 attackCooldownMs=318 action=mace_evasion
+[2026-10-11T07:39:10.960Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=1.56
+[2026-10-11T07:39:10.961Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:39:11.101Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:39:11.103Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_evade_no_totem dist=1.03
+[2026-10-11T07:39:11.253Z] [EVENT] Position changed → X=-6.7 Y=65 Z=1.024
+[2026-10-11T07:39:11.258Z] [EVENT] Block below changed: grass_block -> cobblestone
+[2026-10-11T07:39:11.753Z] [EVENT] Position changed → X=-6.695 Y=65 Z=0.3
+[2026-10-11T07:39:11.855Z] [EVENT] Block below changed: cobblestone -> grass_block
+[2026-10-11T07:39:12.129Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.66 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:12.129Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.66
+[2026-10-11T07:39:12.454Z] [EVENT] Position changed → X=-6.275 Y=66.001 Z=0.421
+[2026-10-11T07:39:12.455Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:13.476Z] [PHYSICS] Server knockback velocity: x=-0.0961 y=0.2008 z=-0.2199
+[2026-10-11T07:39:13.627Z] [PHYSICS] Damage 18.20897674560547 health; observed server velocity = (-0.0961, 0.2008, -0.2199).
+[2026-10-11T07:39:13.628Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:13.667Z] [EVENT] Position changed → X=-5.189 Y=66 Z=0.574
+[2026-10-11T07:39:13.668Z] [EVENT] Health changed: 20 -> 2.624356508255005
+[2026-10-11T07:39:13.668Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:13.896Z] [PVP-EXPERT] combat_state selfHP=2.6 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.70 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:39:13.904Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=3.70
+[2026-10-11T07:39:14.173Z] [PVP-EXPERT] style=utility action=heal reason=emergency_heal_safe_gap dist=8.89
+[2026-10-11T07:39:14.182Z] [EVENT] Position changed → X=-7.33 Y=66 Z=-5.33
+[2026-10-11T07:39:14.184Z] [EVENT] Health changed: 2.624356508255005 -> 3.2910232543945312
+[2026-10-11T07:39:14.185Z] [EVENT] Held item changed: netherite_sword -> golden_apple
+[2026-10-11T07:39:14.188Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:14.711Z] [EVENT] Position changed → X=-7.894 Y=64 Z=-5.866
+[2026-10-11T07:39:14.974Z] [EVENT] Health changed: 3.2910232543945312 -> 3.7910232543945312
+[2026-10-11T07:39:14.988Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:15.220Z] [EVENT] Health changed: 3.7910232543945312 -> 4.124356746673584
+[2026-10-11T07:39:15.720Z] [EVENT] Health changed: 4.124356746673584 -> 4.457690238952637
+[2026-10-11T07:39:15.865Z] [PVP-EXPERT] combat_state selfHP=4.5 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=7.07 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:39:15.867Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=7.07
+[2026-10-11T07:39:16.227Z] [EVENT] Position changed → X=-7.169 Y=64 Z=-7.361
+[2026-10-11T07:39:16.238Z] [EVENT] Health changed: 4.457690238952637 -> 6.457690238952637
+[2026-10-11T07:39:16.239Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:39:16.240Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:16.521Z] [PVP-EXPERT] style=utility action=heal reason=emergency_heal_safe_gap dist=8.28
+[2026-10-11T07:39:16.758Z] [EVENT] Position changed → X=-6.3 Y=64 Z=-7.7
+[2026-10-11T07:39:16.763Z] [EVENT] Health changed: 6.457690238952637 -> 7.457690238952637
+[2026-10-11T07:39:16.765Z] [EVENT] Held item changed: netherite_sword -> golden_apple
+[2026-10-11T07:39:17.444Z] [EVENT] Health changed: 7.457690238952637 -> 9.457690238952637
+[2026-10-11T07:39:17.929Z] [EVENT] Health changed: 9.457690238952637 -> 10.457690238952637
+[2026-10-11T07:39:18.229Z] [PVP-EXPERT] combat_state selfHP=11.2 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=true maceHeldClose=true distance=1.40 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:39:18.232Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=1.40
+[2026-10-11T07:39:18.440Z] [EVENT] Position changed → X=-6.3 Y=64 Z=-7.143
+[2026-10-11T07:39:18.440Z] [EVENT] Health changed: 10.457690238952637 -> 12.224356651306152
+[2026-10-11T07:39:18.441Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:39:18.442Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:18.442Z] [EVENT] Entity detected: wind_charge (distance 3.07m)
+[2026-10-11T07:39:18.968Z] [EVENT] Position changed → X=-6.3 Y=64 Z=-5.3
+[2026-10-11T07:39:19.075Z] [EVENT] Health changed: 12.224356651306152 -> 13.224356651306152
+[2026-10-11T07:39:19.084Z] [EVENT] Entity left nearby range: 751
+[2026-10-11T07:39:19.470Z] [EVENT] Health changed: 13.224356651306152 -> 14.224356651306152
+[2026-10-11T07:39:19.754Z] [PVP-EXPERT] combat_state selfHP=16.2 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.18 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:39:19.754Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=3.18
+[2026-10-11T07:39:19.755Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:39:19.774Z] [PHYSICS] Server knockback velocity: x=0.0451 y=0.2008 z=0.2357
+[2026-10-11T07:39:19.820Z] [PHYSICS] Damage 1.3843517303466797 health; observed server velocity = (0.0451, 0.2008, 0.2357).
+[2026-10-11T07:39:19.825Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:19.898Z] [PVP-EXPERT] swing_issued weapon=sword distance=1.78 eye_hitbox_distance=1.15; awaiting server damage confirmation
+[2026-10-11T07:39:19.972Z] [EVENT] Health changed: 14.224356651306152 -> 14.840005874633789
+[2026-10-11T07:39:20.006Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=18
+[2026-10-11T07:39:20.097Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:39:20.157Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=3.36
+[2026-10-11T07:39:20.159Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=3.36
+[2026-10-11T07:39:20.471Z] [EVENT] Position changed → X=-7.192 Y=65.024 Z=-5.45
+[2026-10-11T07:39:20.472Z] [EVENT] Health changed: 14.840005874633789 -> 15.840005874633789
+[2026-10-11T07:39:20.473Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:20.567Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.55
+[2026-10-11T07:39:21.073Z] [EVENT] Position changed → X=-6.884 Y=64 Z=-6.226
+[2026-10-11T07:39:21.086Z] [EVENT] Health changed: 15.840005874633789 -> 18.84000587463379
+[2026-10-11T07:39:21.089Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:21.452Z] [PVP-EXPERT] combat_state selfHP=18.8 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=1.09 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:39:21.453Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=1.09
+[2026-10-11T07:39:21.453Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:39:21.581Z] [EVENT] Position changed → X=-5.782 Y=65 Z=-8.677
+[2026-10-11T07:39:21.583Z] [EVENT] Health changed: 18.84000587463379 -> 19.540006637573242
+[2026-10-11T07:39:21.598Z] [PVP-EXPERT] swing_issued weapon=sword distance=1.69 eye_hitbox_distance=1.28; awaiting server damage confirmation
+[2026-10-11T07:39:22.063Z] [PVP-EXPERT] swing_unconfirmed weapon=sword target=ShubhTheGOAT; action will enter bounded backoff
+[2026-10-11T07:39:22.073Z] [PVP-EXPERT] mace_evasion_counter confirmed=false
+[2026-10-11T07:39:22.128Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:39:22.138Z] [EVENT] Position changed → X=-6.742 Y=65 Z=-8.18
+[2026-10-11T07:39:22.148Z] [EVENT] Health changed: 19.540006637573242 -> 20
+[2026-10-11T07:39:22.281Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.03 eye_hitbox_distance=1.61; awaiting server damage confirmation
+[2026-10-11T07:39:22.408Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=19
+[2026-10-11T07:39:22.508Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:39:22.524Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=4.12 attackCooldownMs=382 action=approach
+[2026-10-11T07:39:22.533Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.12
+[2026-10-11T07:39:22.791Z] [EVENT] Position changed → X=-5.789 Y=65 Z=-8.591
+[2026-10-11T07:39:23.248Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=1.96
+[2026-10-11T07:39:23.248Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:39:23.298Z] [PHYSICS] Server knockback velocity: x=0.2312 y=-0.2305 z=-0.0642
+[2026-10-11T07:39:23.300Z] [EVENT] Position changed → X=-7.333 Y=64 Z=-7.486
+[2026-10-11T07:39:23.310Z] [PHYSICS] Damage 4.451686859130859 health; observed server velocity = (0.2312, -0.2305, -0.0642).
+[2026-10-11T07:39:23.312Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:23.391Z] [PVP-EXPERT] swing_issued weapon=sword distance=1.91 eye_hitbox_distance=1.50; awaiting server damage confirmation
+[2026-10-11T07:39:23.506Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=20
+[2026-10-11T07:39:23.600Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:39:23.601Z] [PVP-EXPERT] combat_state selfHP=15.5 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=5.64 attackCooldownMs=415 action=emergency_disengage
+[2026-10-11T07:39:23.603Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_burst_evade dist=5.64
+[2026-10-11T07:39:23.839Z] [EVENT] Position changed → X=-2.137 Y=74.013 Z=-7.219
+[2026-10-11T07:39:23.844Z] [EVENT] Health changed: 20 -> 15.54831314086914
+[2026-10-11T07:39:23.850Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:23.857Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=9.19
+[2026-10-11T07:39:24.347Z] [EVENT] Position changed → X=0.054 Y=75.954 Z=-6.479
+[2026-10-11T07:39:24.348Z] [EVENT] Health changed: 15.54831314086914 -> 16.448312759399414
+[2026-10-11T07:39:24.854Z] [EVENT] Position changed → X=0.907 Y=70.369 Z=-6.191
+[2026-10-11T07:39:24.855Z] [EVENT] Health changed: 16.448312759399414 -> 16.814979553222656
+[2026-10-11T07:39:25.148Z] [PVP-EXPERT] combat_state selfHP=16.8 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=14.24 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:25.154Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=14.24
+[2026-10-11T07:39:25.470Z] [EVENT] Position changed → X=0.3 Y=64.753 Z=-6.528
+[2026-10-11T07:39:25.470Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:26.915Z] [PVP-EXPERT] combat_state selfHP=17.3 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.52 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:39:26.915Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=3.52
+[2026-10-11T07:39:26.918Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:39:26.935Z] [EVENT] Position changed → X=-1.672 Y=65 Z=-6.021
+[2026-10-11T07:39:26.936Z] [EVENT] Health changed: 16.814979553222656 -> 17.281646728515625
+[2026-10-11T07:39:27.060Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:39:27.063Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=6.40
+[2026-10-11T07:39:27.382Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_evade_no_totem dist=2.59
+[2026-10-11T07:39:27.445Z] [EVENT] Position changed → X=0.547 Y=64.922 Z=-5.535
+[2026-10-11T07:39:27.449Z] [EVENT] Health changed: 17.281646728515625 -> 17.314979553222656
+[2026-10-11T07:39:27.954Z] [EVENT] Position changed → X=0.3 Y=64 Z=-6.269
+[2026-10-11T07:39:27.954Z] [EVENT] Health changed: 17.314979553222656 -> 17.348312377929688
+[2026-10-11T07:39:28.467Z] [EVENT] Position changed → X=0.3 Y=64 Z=-8.7
+[2026-10-11T07:39:28.467Z] [EVENT] Health changed: 17.348312377929688 -> 17.38164520263672
+[2026-10-11T07:39:28.893Z] [PVP-EXPERT] combat_state selfHP=17.4 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.11 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:28.893Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.11
+[2026-10-11T07:39:28.971Z] [EVENT] Health changed: 17.38164520263672 -> 17.41497802734375
+[2026-10-11T07:39:29.068Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.79
+[2026-10-11T07:39:29.509Z] [EVENT] Position changed → X=0.3 Y=64 Z=-6.862
+[2026-10-11T07:39:29.512Z] [EVENT] Health changed: 17.41497802734375 -> 17.44831085205078
+[2026-10-11T07:39:29.864Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.46
+[2026-10-11T07:39:30.013Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.46 eye_hitbox_distance=2.06; awaiting server damage confirmation
+[2026-10-11T07:39:30.119Z] [PHYSICS] Server knockback velocity: x=-0.2216 y=0.2008 z=0.0922
+[2026-10-11T07:39:30.123Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (-0.2216, 0.2008, 0.0922).
+[2026-10-11T07:39:30.126Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:30.130Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=21
+[2026-10-11T07:39:30.132Z] [EVENT] Position changed → X=0.382 Y=64 Z=-5.554
+[2026-10-11T07:39:30.134Z] [EVENT] Health changed: 17.44831085205078 -> 16.341163635253906
+[2026-10-11T07:39:30.361Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=1.80
+[2026-10-11T07:39:30.363Z] [PVP-EXPERT] combat_state selfHP=16.4 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.80 attackCooldownMs=275 action=spacing_retreat
+[2026-10-11T07:39:30.363Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.80
+[2026-10-11T07:39:30.530Z] [PHYSICS] Server knockback velocity: x=-0.2227 y=0.3332 z=0.0894
+[2026-10-11T07:39:30.634Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.70
+[2026-10-11T07:39:30.641Z] [EVENT] Position changed → X=1.193 Y=65.171 Z=-6.224
+[2026-10-11T07:39:30.643Z] [EVENT] Health changed: 16.341163635253906 -> 15.537932395935059
+[2026-10-11T07:39:30.645Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:31.087Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.71
+[2026-10-11T07:39:31.089Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.71 eye_hitbox_distance=2.41; awaiting server damage confirmation
+[2026-10-11T07:39:31.147Z] [EVENT] Position changed → X=0.725 Y=64 Z=-7.187
+[2026-10-11T07:39:31.148Z] [EVENT] Health changed: 15.537932395935059 -> 15.571266174316406
+[2026-10-11T07:39:31.149Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:31.186Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=22
+[2026-10-11T07:39:31.289Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.54
+[2026-10-11T07:39:31.407Z] [PVP-EXPERT] combat_state selfHP=15.6 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.10 attackCooldownMs=307 action=approach
+[2026-10-11T07:39:31.408Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.10
+[2026-10-11T07:39:31.614Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:31.657Z] [EVENT] Position changed → X=1.5 Y=64 Z=-6.524
+[2026-10-11T07:39:31.658Z] [EVENT] Health changed: 15.571266174316406 -> 15.244600296020508
+[2026-10-11T07:39:32.111Z] [PHYSICS] Server knockback velocity: x=-0.2368 y=0.2008 z=0.0388
+[2026-10-11T07:39:32.113Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (-0.2368, 0.2008, 0.0388).
+[2026-10-11T07:39:32.113Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:32.159Z] [EVENT] Health changed: 15.244600296020508 -> 14.13745403289795
+[2026-10-11T07:39:32.568Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=3.13
+[2026-10-11T07:39:32.569Z] [PVP-EXPERT] combat_state selfHP=14.2 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.13 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:32.570Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.13
+[2026-10-11T07:39:32.669Z] [EVENT] Position changed → X=1.525 Y=65.001 Z=-6.524
+[2026-10-11T07:39:32.730Z] [EVENT] Health changed: 14.13745403289795 -> 14.170787811279297
+[2026-10-11T07:39:32.746Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:32.847Z] [PHYSICS] Server knockback velocity: x=-0.2368 y=0.2481 z=0.0391
+[2026-10-11T07:39:32.861Z] [PHYSICS] Damage 1.1404800415039062 health; observed server velocity = (-0.2368, 0.2481, 0.0391).
+[2026-10-11T07:39:32.862Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:33.004Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.70
+[2026-10-11T07:39:33.006Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.70 eye_hitbox_distance=2.33; awaiting server damage confirmation
+[2026-10-11T07:39:33.117Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=23
+[2026-10-11T07:39:33.174Z] [EVENT] Position changed → X=2.193 Y=64 Z=-6.524
+[2026-10-11T07:39:33.175Z] [EVENT] Health changed: 14.170787811279297 -> 13.063641548156738
+[2026-10-11T07:39:33.176Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:33.208Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.31
+[2026-10-11T07:39:33.451Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.33
+[2026-10-11T07:39:33.676Z] [EVENT] Position changed → X=3.119 Y=64 Z=-6.408
+[2026-10-11T07:39:33.868Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:34.175Z] [EVENT] Health changed: 13.063641548156738 -> 12.703641891479492
+[2026-10-11T07:39:34.217Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=2.69
+[2026-10-11T07:39:34.219Z] [PVP-EXPERT] combat_state selfHP=12.7 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.69 attackCooldownMs=0 action=melee_attack
+[2026-10-11T07:39:34.219Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.69
+[2026-10-11T07:39:34.224Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.21 eye_hitbox_distance=1.84; awaiting server damage confirmation
+[2026-10-11T07:39:34.316Z] [PHYSICS] Damage 1.3679990768432617 health; observed server velocity = (0.0000, -0.0784, 0.0000).
+[2026-10-11T07:39:34.316Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:34.320Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=24
+[2026-10-11T07:39:34.372Z] [PHYSICS] Server knockback velocity: x=-0.2621 y=0.3332 z=0.0764
+[2026-10-11T07:39:34.420Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.82
+[2026-10-11T07:39:34.682Z] [EVENT] Position changed → X=2.899 Y=64.104 Z=-6.418
+[2026-10-11T07:39:34.695Z] [EVENT] Health changed: 12.703641891479492 -> 11.33564281463623
+[2026-10-11T07:39:34.997Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.64
+[2026-10-11T07:39:35.184Z] [EVENT] Position changed → X=1.065 Y=64 Z=-6.51
+[2026-10-11T07:39:35.296Z] [PVP-EXPERT] combat_state selfHP=11.3 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.25 attackCooldownMs=0 action=spacing_hold
+[2026-10-11T07:39:35.359Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:35.499Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=2.69
+[2026-10-11T07:39:35.500Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.69
+[2026-10-11T07:39:35.501Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.74 eye_hitbox_distance=2.30; awaiting server damage confirmation
+[2026-10-11T07:39:35.610Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=25
+[2026-10-11T07:39:35.685Z] [EVENT] Position changed → X=1.419 Y=65.166 Z=-7.53
+[2026-10-11T07:39:35.685Z] [EVENT] Health changed: 11.33564281463623 -> 10.975643157958984
+[2026-10-11T07:39:35.688Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:35.702Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.58
+[2026-10-11T07:39:36.193Z] [EVENT] Position changed → X=2.327 Y=64 Z=-6.5
+[2026-10-11T07:39:36.193Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:36.194Z] [HEARTBEAT] Zoya online | Health=10.975643157958984 | Pos=(2.327,64,-6.5) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:39:36.269Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.38
+[2026-10-11T07:39:36.355Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:36.575Z] [PHYSICS] Damage 1.008000373840332 health; observed server velocity = (0.0000, -0.0784, 0.0000).
+[2026-10-11T07:39:36.577Z] [SAFETY] Damage observed; preserving active task ownership.
+[2026-10-11T07:39:36.695Z] [EVENT] Position changed → X=2.064 Y=64 Z=-5.25
+[2026-10-11T07:39:36.696Z] [EVENT] Health changed: 10.975643157958984 -> 9.607643127441406
+[2026-10-11T07:39:37.059Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=1.55
+[2026-10-11T07:39:37.060Z] [PVP-EXPERT] combat_state selfHP=10.6 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.55 attackCooldownMs=0 action=spacing_retreat
+[2026-10-11T07:39:37.060Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.55
+[2026-10-11T07:39:37.207Z] [EVENT] Position changed → X=2.93 Y=65.166 Z=-4.62
+[2026-10-11T07:39:37.208Z] [EVENT] Health changed: 9.607643127441406 -> 10.607643127441406
+[2026-10-11T07:39:37.209Z] [EVENT] Hunger changed: 20 -> 19
+[2026-10-11T07:39:37.210Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:37.243Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.34
+[2026-10-11T07:39:37.761Z] [PVP-EXPERT] style=sword action=falling_crit reason=falling_crit dist=3.02
+[2026-10-11T07:39:37.827Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.2277 z=0.0000
+[2026-10-11T07:39:37.858Z] [EVENT] Position changed → X=3.094 Y=64.031 Z=-4.192
+[2026-10-11T07:39:37.863Z] [EVENT] Health changed: 10.607643127441406 -> 10.24764347076416
+[2026-10-11T07:39:37.864Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:38.351Z] [EVENT] Position changed → X=5.773 Y=64 Z=-6.204
+[2026-10-11T07:39:38.396Z] [PHYSICS] Server knockback velocity: x=0.1917 y=0.2008 z=-0.1525
+[2026-10-11T07:39:38.749Z] [PVP-EXPERT] jump_reset triggered after observed damage at distance=2.57
+[2026-10-11T07:39:38.752Z] [PVP-EXPERT] combat_state selfHP=9.4 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.57 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:39:38.755Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_heal_distance dist=2.57
+[2026-10-11T07:39:38.851Z] [EVENT] Position changed → X=6.762 Y=65.001 Z=-7.025
+[2026-10-11T07:39:38.851Z] [EVENT] Health changed: 10.24764347076416 -> 9.411079406738281
+[2026-10-11T07:39:38.852Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:39.354Z] [EVENT] Position changed → X=6.688 Y=64 Z=-8.969
+[2026-10-11T07:39:39.355Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:39.455Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:39.628Z] [PVP-EXPERT] style=utility action=heal reason=emergency_heal_safe_gap dist=5.11
+[2026-10-11T07:39:39.856Z] [EVENT] Position changed → X=6.193 Y=64 Z=-10.428
+[2026-10-11T07:39:39.857Z] [EVENT] Health changed: 9.411079406738281 -> 9.051079750061035
+[2026-10-11T07:39:39.858Z] [EVENT] Held item changed: netherite_sword -> golden_apple
+[2026-10-11T07:39:40.480Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:40.872Z] [EVENT] Health changed: 9.051079750061035 -> 9.691080093383789
+[2026-10-11T07:39:40.924Z] [EVENT] Hunger changed: 19 -> 18
+[2026-10-11T07:39:41.316Z] [PVP-EXPERT] combat_state selfHP=9.7 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.96 attackCooldownMs=0 action=emergency_disengage
+[2026-10-11T07:39:41.322Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=emergency_retreat_lock dist=1.96
+[2026-10-11T07:39:41.376Z] [EVENT] Health changed: 9.691080093383789 -> 10.691080093383789
+[2026-10-11T07:39:41.385Z] [EVENT] Hunger changed: 18 -> 20
+[2026-10-11T07:39:41.390Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:39:41.398Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:41.422Z] [PHYSICS] Server knockback velocity: x=0.0986 y=0.2008 z=-0.2188
+[2026-10-11T07:39:41.878Z] [EVENT] Position changed → X=8.785 Y=64 Z=-10.637
+[2026-10-11T07:39:41.881Z] [EVENT] Health changed: 10.691080093383789 -> 11.691080093383789
+[2026-10-11T07:39:42.192Z] [PVP-EXPERT] style=utility action=heal reason=safe_heal_window dist=4.81
+[2026-10-11T07:39:42.391Z] [EVENT] Position changed → X=10.7 Y=64 Z=-9.593
+[2026-10-11T07:39:42.391Z] [EVENT] Health changed: 11.691080093383789 -> 12.691080093383789
+[2026-10-11T07:39:42.392Z] [EVENT] Held item changed: netherite_sword -> golden_apple
+[2026-10-11T07:39:42.449Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:42.894Z] [EVENT] Health changed: 12.691080093383789 -> 14.691080093383789
+[2026-10-11T07:39:43.297Z] [PHYSICS] Server knockback velocity: x=0.2120 y=0.2008 z=0.1124
+[2026-10-11T07:39:43.407Z] [EVENT] Health changed: 14.691080093383789 -> 15.62441349029541
+[2026-10-11T07:39:43.908Z] [EVENT] Health changed: 15.62441349029541 -> 17.22441291809082
+[2026-10-11T07:39:43.957Z] [PVP-EXPERT] combat_state selfHP=17.2 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.73 attackCooldownMs=0 action=spacing_retreat
+[2026-10-11T07:39:43.959Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.73
+[2026-10-11T07:39:44.021Z] [PHYSICS] Server knockback velocity: x=0.2193 y=0.2008 z=0.0974
+[2026-10-11T07:39:44.420Z] [EVENT] Position changed → X=10.779 Y=64 Z=-8.376
+[2026-10-11T07:39:44.420Z] [EVENT] Health changed: 17.22441291809082 -> 19.22441291809082
+[2026-10-11T07:39:44.421Z] [EVENT] Held item changed: golden_apple -> netherite_sword
+[2026-10-11T07:39:44.422Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:44.464Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.72
+[2026-10-11T07:39:44.933Z] [EVENT] Position changed → X=12.181 Y=64 Z=-8.7
+[2026-10-11T07:39:44.934Z] [EVENT] Health changed: 19.22441291809082 -> 20
+[2026-10-11T07:39:45.119Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:45.231Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.30 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:45.232Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.30
+[2026-10-11T07:39:45.444Z] [EVENT] Position changed → X=12.383 Y=64 Z=-9.304
+[2026-10-11T07:39:45.476Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.70
+[2026-10-11T07:39:45.477Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.70 eye_hitbox_distance=2.34; awaiting server damage confirmation
+[2026-10-11T07:39:45.574Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=26
+[2026-10-11T07:39:45.678Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.78
+[2026-10-11T07:39:45.895Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.67
+[2026-10-11T07:39:45.952Z] [EVENT] Position changed → X=13.228 Y=64 Z=-8.604
+[2026-10-11T07:39:46.112Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:46.344Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.12 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:46.344Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.12
+[2026-10-11T07:39:46.451Z] [EVENT] Position changed → X=12.665 Y=64 Z=-7.441
+[2026-10-11T07:39:46.507Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.61
+[2026-10-11T07:39:46.510Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.61 eye_hitbox_distance=2.19; awaiting server damage confirmation
+[2026-10-11T07:39:46.610Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=27
+[2026-10-11T07:39:46.719Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.19
+[2026-10-11T07:39:47.103Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.15
+[2026-10-11T07:39:47.114Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:47.354Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=1.83 attackCooldownMs=0 action=spacing_retreat
+[2026-10-11T07:39:47.355Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.83
+[2026-10-11T07:39:47.492Z] [EVENT] Position changed → X=11.703 Y=64 Z=-8.131
+[2026-10-11T07:39:47.950Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=2.66
+[2026-10-11T07:39:47.952Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:39:47.994Z] [EVENT] Position changed → X=13.7 Y=64 Z=-6.739
+[2026-10-11T07:39:48.101Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.48 eye_hitbox_distance=2.13; awaiting server damage confirmation
+[2026-10-11T07:39:48.110Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:48.200Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=28
+[2026-10-11T07:39:48.304Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:39:48.306Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.73
+[2026-10-11T07:39:48.460Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.41 attackCooldownMs=266 action=approach
+[2026-10-11T07:39:48.461Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.41
+[2026-10-11T07:39:48.509Z] [EVENT] Position changed → X=13.7 Y=64 Z=-6.197
+[2026-10-11T07:39:49.020Z] [EVENT] Position changed → X=12.5 Y=64 Z=-5.596
+[2026-10-11T07:39:49.115Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:49.707Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=5.02 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:39:49.718Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.02
+[2026-10-11T07:39:50.026Z] [EVENT] Position changed → X=12.529 Y=66.746 Z=-5.561
+[2026-10-11T07:39:50.030Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-11T07:39:50.031Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:50.032Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:50.112Z] [PHYSICS] Server knockback velocity: x=0.0059 y=0.6305 z=0.0071
+[2026-10-11T07:39:50.528Z] [EVENT] Position changed → X=12.57 Y=64.775 Z=-4.959
+[2026-10-11T07:39:50.528Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:51.040Z] [EVENT] Position changed → X=12.7 Y=64 Z=-4.066
+[2026-10-11T07:39:51.041Z] [EVENT] Entity detected: ender_pearl (distance 7.32m)
+[2026-10-11T07:39:51.049Z] [EVENT] Entity detected: wind_charge (distance 7.35m)
+[2026-10-11T07:39:51.117Z] [PHYSICS] Server knockback velocity: x=0.0000 y=-0.0784 z=0.0000
+[2026-10-11T07:39:51.540Z] [EVENT] Entity left nearby range: 825
+[2026-10-11T07:39:51.540Z] [EVENT] Entity left nearby range: 827
+[2026-10-11T07:39:52.052Z] [EVENT] Entity detected: wind_charge (distance 14.4m)
+[2026-10-11T07:39:52.053Z] [EVENT] Entity left nearby range: 375
+[2026-10-11T07:39:52.558Z] [EVENT] Entity left nearby range: 827
+[2026-10-11T07:39:52.834Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=9.95 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:52.834Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=9.95
+[2026-10-11T07:39:53.084Z] [EVENT] Position changed → X=12.516 Y=64 Z=-3.28
+[2026-10-11T07:39:53.085Z] [EVENT] Entity detected: ShubhTheGOAT (distance 4.27m)
+[2026-10-11T07:39:53.593Z] [EVENT] Position changed → X=12.489 Y=65 Z=-1.5
+[2026-10-11T07:39:53.994Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=5.38 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:53.996Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=5.38
+[2026-10-11T07:39:54.619Z] [EVENT] Position changed → X=13.549 Y=65 Z=0.829
+[2026-10-11T07:39:55.423Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=4.70 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:39:55.423Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=4.70
+[2026-10-11T07:39:55.433Z] [EVENT] Position changed → X=13.521 Y=65 Z=1.386
+[2026-10-11T07:39:55.436Z] [EVENT] Entity detected: ender_pearl (distance 4.94m)
+[2026-10-11T07:39:55.936Z] [EVENT] Position changed → X=13.641 Y=70.008 Z=0.386
+[2026-10-11T07:39:55.950Z] [EVENT] Inventory changed.
+[2026-10-11T07:39:55.950Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:39:56.468Z] [EVENT] Position changed → X=14.062 Y=66.928 Z=0.673
+[2026-10-11T07:39:56.471Z] [EVENT] Entity detected: ender_pearl (distance 3.24m)
+[2026-10-11T07:39:56.474Z] [EVENT] Entity left nearby range: 836
+[2026-10-11T07:39:56.979Z] [EVENT] Position changed → X=14.797 Y=65 Z=1.474
+[2026-10-11T07:39:56.981Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:39:56.983Z] [EVENT] Entity left nearby range: 841
+[2026-10-11T07:39:57.492Z] [EVENT] Entity detected: ender_pearl (distance 5.28m)
+[2026-10-11T07:39:57.993Z] [EVENT] Entity left nearby range: 844
+[2026-10-11T07:39:58.507Z] [EVENT] Entity detected: wind_charge (distance 5.31m)
+[2026-10-11T07:39:58.514Z] [EVENT] Entity left nearby range: 375
+[2026-10-11T07:39:58.614Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=26.15 attackCooldownMs=0 action=approach
+[2026-10-11T07:39:58.614Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=26.15
+[2026-10-11T07:39:59.171Z] [EVENT] Position changed → X=15.569 Y=65 Z=3.146
+[2026-10-11T07:39:59.171Z] [EVENT] Entity left nearby range: 846
+[2026-10-11T07:39:59.961Z] [EVENT] Position changed → X=18.186 Y=65 Z=4.481
+[2026-10-11T07:40:00.056Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=57.96 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:00.056Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=57.96
+[2026-10-11T07:40:00.523Z] [EVENT] Position changed → X=20.407 Y=65 Z=4.571
+[2026-10-11T07:40:01.035Z] [EVENT] Position changed → X=21.752 Y=66.166 Z=5.752
+[2026-10-11T07:40:01.035Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:01.248Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=54.10 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:01.250Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=54.10
+[2026-10-11T07:40:01.634Z] [EVENT] Position changed → X=23.585 Y=66 Z=6.517
+[2026-10-11T07:40:01.634Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:02.151Z] [EVENT] Position changed → X=25.685 Y=66 Z=7.405
+[2026-10-11T07:40:02.417Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=48.16 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:02.420Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=48.16
+[2026-10-11T07:40:03.001Z] [EVENT] Position changed → X=28.076 Y=66 Z=7.506
+[2026-10-11T07:40:03.502Z] [EVENT] Position changed → X=31.022 Y=67.024 Z=8.109
+[2026-10-11T07:40:03.585Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=44.51 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:03.586Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=44.51
+[2026-10-11T07:40:04.009Z] [EVENT] Position changed → X=32.988 Y=67 Z=8.493
+[2026-10-11T07:40:04.625Z] [EVENT] Position changed → X=36.074 Y=67 Z=8.499
+[2026-10-11T07:40:05.064Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=40.18 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:05.066Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=40.18
+[2026-10-11T07:40:05.315Z] [EVENT] Position changed → X=36.111 Y=68.249 Z=9.676
+[2026-10-11T07:40:05.316Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:06.104Z] [EVENT] Position changed → X=39.72 Y=68 Z=10.519
+[2026-10-11T07:40:06.108Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:06.461Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=32.92 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:06.461Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=32.92
+[2026-10-11T07:40:06.825Z] [EVENT] Position changed → X=43.931 Y=68 Z=10.5
+[2026-10-11T07:40:06.827Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(43.931,68,10.5) | Nearby=0 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:40:07.531Z] [EVENT] Position changed → X=48.418 Y=68 Z=10.5
+[2026-10-11T07:40:07.615Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=25.66 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:07.616Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=25.66
+[2026-10-11T07:40:08.141Z] [EVENT] Position changed → X=51.014 Y=68 Z=8.16
+[2026-10-11T07:40:08.644Z] [EVENT] Position changed → X=53.238 Y=68 Z=6.859
+[2026-10-11T07:40:08.723Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=18.44 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:08.723Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=18.44
+[2026-10-11T07:40:09.157Z] [EVENT] Position changed → X=54.447 Y=69 Z=6.447
+[2026-10-11T07:40:09.675Z] [EVENT] Position changed → X=56.219 Y=69 Z=4.803
+[2026-10-11T07:40:09.900Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=14.78 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:09.903Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=14.78
+[2026-10-11T07:40:10.190Z] [EVENT] Position changed → X=57.603 Y=69 Z=2.518
+[2026-10-11T07:40:10.192Z] [EVENT] Entity detected: ShubhTheGOAT (distance 13.62m)
+[2026-10-11T07:40:10.703Z] [EVENT] Position changed → X=59.227 Y=68 Z=1.247
+[2026-10-11T07:40:11.030Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=9.44 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:11.030Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=9.44
+[2026-10-11T07:40:11.218Z] [EVENT] Position changed → X=60.526 Y=68 Z=-0.867
+[2026-10-11T07:40:11.728Z] [EVENT] Position changed → X=62.137 Y=68 Z=-3.152
+[2026-10-11T07:40:12.193Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.45 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:12.194Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.45
+[2026-10-11T07:40:12.240Z] [EVENT] Position changed → X=63.29 Y=69.249 Z=-4.798
+[2026-10-11T07:40:12.246Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:12.749Z] [EVENT] Position changed → X=64.61 Y=69 Z=-6.325
+[2026-10-11T07:40:12.761Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:13.256Z] [EVENT] Position changed → X=64.497 Y=69 Z=-9.111
+[2026-10-11T07:40:13.256Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:13.438Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
+[2026-10-11T07:40:13.439Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=totem_of_undying targetTotemEquipped=true targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=11.32 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:13.440Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=11.32
+[2026-10-11T07:40:13.762Z] [EVENT] Position changed → X=64.582 Y=68 Z=-11.554
+[2026-10-11T07:40:13.763Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:14.261Z] [EVENT] Position changed → X=65.777 Y=67.232 Z=-12.581
+[2026-10-11T07:40:14.546Z] [PVP-EXPERT] enemy_totem_equipment=not_equipped target=ShubhTheGOAT
+[2026-10-11T07:40:14.547Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.04 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:14.547Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.04
+[2026-10-11T07:40:14.763Z] [EVENT] Position changed → X=65.13 Y=67 Z=-14.803
+[2026-10-11T07:40:15.186Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.73
+[2026-10-11T07:40:15.193Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.73 eye_hitbox_distance=2.32; awaiting server damage confirmation
+[2026-10-11T07:40:15.266Z] [EVENT] Position changed → X=64.412 Y=67 Z=-17.165
+[2026-10-11T07:40:15.266Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-11T07:40:15.269Z] [EVENT] Block below changed: grass_block -> short_grass
+[2026-10-11T07:40:15.290Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=29
+[2026-10-11T07:40:15.390Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.02
+[2026-10-11T07:40:15.638Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.68 attackCooldownMs=180 action=strafe_pressure
+[2026-10-11T07:40:15.770Z] [EVENT] Position changed → X=65.295 Y=66 Z=-17.3
+[2026-10-11T07:40:15.770Z] [EVENT] Block below changed: short_grass -> grass_block
+[2026-10-11T07:40:15.890Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=1.95
+[2026-10-11T07:40:15.892Z] [PVP-EXPERT] swing_issued weapon=sword distance=1.95 eye_hitbox_distance=1.50; awaiting server damage confirmation
+[2026-10-11T07:40:15.996Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=30
+[2026-10-11T07:40:16.094Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.59
+[2026-10-11T07:40:16.357Z] [PVP-EXPERT] style=sword action=spacing_hold reason=spacing_recovery_window dist=2.51
+[2026-10-11T07:40:16.676Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=netherite_sword targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.35 attackCooldownMs=0 action=backstab
+[2026-10-11T07:40:16.680Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.35
+[2026-10-11T07:40:16.841Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.45 eye_hitbox_distance=1.76; awaiting server damage confirmation
+[2026-10-11T07:40:16.953Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=31
+[2026-10-11T07:40:17.116Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.67
+[2026-10-11T07:40:17.206Z] [PVP-EXPERT] enemy_totem_equipment=equipped target=ShubhTheGOAT
+[2026-10-11T07:40:17.377Z] [PVP-EXPERT] style=spear action=approach reason=close_distance dist=3.20
+[2026-10-11T07:40:17.395Z] [EVENT] Position changed → X=64.5 Y=66 Z=-17.5
+[2026-10-11T07:40:17.901Z] [EVENT] Position changed → X=64.3 Y=66.753 Z=-17.5
+[2026-10-11T07:40:18.514Z] [EVENT] Position changed → X=62.427 Y=67 Z=-16.563
+[2026-10-11T07:40:18.614Z] [PVP-EXPERT] enemy_totem_equipment=not_equipped target=ShubhTheGOAT
+[2026-10-11T07:40:18.615Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=7.68 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:18.617Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=7.68
+[2026-10-11T07:40:19.020Z] [EVENT] Position changed → X=60.964 Y=67 Z=-15.468
+[2026-10-11T07:40:19.534Z] [EVENT] Position changed → X=58.049 Y=67 Z=-15.13
+[2026-10-11T07:40:19.848Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.27 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:19.849Z] [PVP-EXPERT] style=spear action=approach reason=failed_action_backoff dist=8.27
+[2026-10-11T07:40:20.050Z] [EVENT] Position changed → X=56.172 Y=68.024 Z=-14.213
+[2026-10-11T07:40:20.053Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:20.562Z] [EVENT] Position changed → X=54.123 Y=68 Z=-12.122
+[2026-10-11T07:40:20.562Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:20.962Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.88 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:40:20.962Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=3.88
+[2026-10-11T07:40:21.063Z] [EVENT] Position changed → X=52.368 Y=68 Z=-10.367
+[2026-10-11T07:40:21.066Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-11T07:40:21.578Z] [EVENT] Position changed → X=52.57 Y=73.527 Z=-10.62
+[2026-10-11T07:40:21.579Z] [EVENT] Inventory changed.
+[2026-10-11T07:40:21.580Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:21.581Z] [EVENT] Entity detected: ender_pearl (distance 5.64m)
+[2026-10-11T07:40:21.582Z] [EVENT] Entity detected: wind_charge (distance 5.57m)
+[2026-10-11T07:40:22.091Z] [EVENT] Position changed → X=52.367 Y=71.762 Z=-10.385
+[2026-10-11T07:40:22.603Z] [EVENT] Position changed → X=51.533 Y=68 Z=-9.395
+[2026-10-11T07:40:22.604Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:22.606Z] [EVENT] Entity left nearby range: 375
+[2026-10-11T07:40:22.608Z] [EVENT] Entity left nearby range: 1031
+[2026-10-11T07:40:23.116Z] [EVENT] Entity detected: ShubhTheGOAT (distance 13.01m)
+[2026-10-11T07:40:23.118Z] [EVENT] Entity left nearby range: 1033
+[2026-10-11T07:40:24.101Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=0.94 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:40:24.104Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=0.94
+[2026-10-11T07:40:24.106Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:40:24.255Z] [PVP-EXPERT] swing_issued weapon=sword distance=1.43 eye_hitbox_distance=1.04; awaiting server damage confirmation
+[2026-10-11T07:40:24.365Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=32
+[2026-10-11T07:40:24.453Z] [PVP-EXPERT] mace_evasion_counter confirmed=true
+[2026-10-11T07:40:24.456Z] [PVP-EXPERT] style=sword action=spacing_retreat reason=too_close_spacing dist=1.85
+[2026-10-11T07:40:24.586Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.13
+[2026-10-11T07:40:24.640Z] [EVENT] Position changed → X=49.861 Y=68 Z=-8.818
+[2026-10-11T07:40:24.641Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-11T07:40:25.141Z] [EVENT] Position changed → X=50.627 Y=68 Z=-9.5
+[2026-10-11T07:40:25.659Z] [EVENT] Position changed → X=53.26 Y=68 Z=-10.103
+[2026-10-11T07:40:25.924Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=ender_pearl targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=5.77 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:40:25.934Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.77
+[2026-10-11T07:40:26.341Z] [EVENT] Position changed → X=53.743 Y=68 Z=-10.424
+[2026-10-11T07:40:26.342Z] [EVENT] Held item changed: netherite_sword -> wind_charge
+[2026-10-11T07:40:26.349Z] [EVENT] Inventory changed.
+[2026-10-11T07:40:26.837Z] [EVENT] Position changed → X=53.759 Y=73.895 Z=-10.347
+[2026-10-11T07:40:26.837Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:26.838Z] [EVENT] Entity detected: ender_pearl (distance 9.28m)
+[2026-10-11T07:40:27.348Z] [EVENT] Position changed → X=55.147 Y=68 Z=-10.699
+[2026-10-11T07:40:27.349Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:27.863Z] [EVENT] Entity left nearby range: 1044
+[2026-10-11T07:40:29.294Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=7.63 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:29.295Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=7.63
+[2026-10-11T07:40:30.033Z] [EVENT] Position changed → X=58.576 Y=68 Z=-11.593
+[2026-10-11T07:40:30.388Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=true maceHeldClose=true distance=2.77 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:40:30.698Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=2.77
+[2026-10-11T07:40:30.698Z] [PVP-EXPERT] mace_evasion predictive_side=left
+[2026-10-11T07:40:30.703Z] [EVENT] Position changed → X=59.777 Y=68 Z=-13.146
+[2026-10-11T07:40:30.703Z] [EVENT] Entity detected: ender_pearl (distance 8.59m)
+[2026-10-11T07:40:30.849Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:40:30.850Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=4.34
+[2026-10-11T07:40:31.206Z] [EVENT] Entity left nearby range: 1044
+[2026-10-11T07:40:31.240Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_evade_no_totem dist=2.53
+[2026-10-11T07:40:31.718Z] [EVENT] Position changed → X=59.241 Y=67.536 Z=-15.044
+[2026-10-11T07:40:32.223Z] [EVENT] Position changed → X=58.621 Y=67 Z=-17.407
+[2026-10-11T07:40:32.719Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.11 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:32.720Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.11
+[2026-10-11T07:40:32.731Z] [EVENT] Position changed → X=59.001 Y=67 Z=-20.516
+[2026-10-11T07:40:33.242Z] [EVENT] Position changed → X=60.052 Y=67 Z=-18.931
+[2026-10-11T07:40:33.755Z] [EVENT] Position changed → X=60.73 Y=67 Z=-16.12
+[2026-10-11T07:40:33.847Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=true distance=3.26 attackCooldownMs=0 action=mace_evasion
+[2026-10-11T07:40:33.848Z] [PVP-EXPERT] style=utility action=mace_evasion reason=preemptive_close_mace_evasion dist=3.26
+[2026-10-11T07:40:33.851Z] [PVP-EXPERT] mace_evasion predictive_side=right
+[2026-10-11T07:40:34.000Z] [PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown
+[2026-10-11T07:40:34.002Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.41
+[2026-10-11T07:40:34.314Z] [EVENT] Position changed → X=60.825 Y=67 Z=-15.152
+[2026-10-11T07:40:34.321Z] [PVP-EXPERT] style=utility action=emergency_disengage reason=mace_evade_no_totem dist=1.97
+[2026-10-11T07:40:34.816Z] [EVENT] Position changed → X=61.626 Y=67 Z=-16.979
+[2026-10-11T07:40:35.329Z] [EVENT] Position changed → X=63.109 Y=67 Z=-19.384
+[2026-10-11T07:40:35.330Z] [EVENT] Block below changed: grass_block -> short_grass
+[2026-10-11T07:40:35.520Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=mace targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=8.26 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:35.533Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=8.26
+[2026-10-11T07:40:36.341Z] [EVENT] Position changed → X=62.241 Y=67 Z=-17.028
+[2026-10-11T07:40:36.347Z] [EVENT] Block below changed: short_grass -> grass_block
+[2026-10-11T07:40:36.791Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=10.02 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:36.793Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=10.02
+[2026-10-11T07:40:36.849Z] [EVENT] Position changed → X=62.316 Y=67 Z=-15.196
+[2026-10-11T07:40:36.852Z] [HEARTBEAT] Zoya online | Health=20 | Pos=(62.316,67,-15.196) | Nearby=1 | Rain=NO | AutonomousMovement=ON
+[2026-10-11T07:40:37.352Z] [EVENT] Position changed → X=60.941 Y=68.177 Z=-14.033
+[2026-10-11T07:40:37.360Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:37.863Z] [EVENT] Position changed → X=59.37 Y=68 Z=-12.397
+[2026-10-11T07:40:37.864Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:37.993Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=11.21 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:37.999Z] [PVP-EXPERT] style=sword action=approach reason=failed_action_backoff dist=11.21
+[2026-10-11T07:40:38.378Z] [EVENT] Position changed → X=57.989 Y=68 Z=-10.99
+[2026-10-11T07:40:38.891Z] [EVENT] Position changed → X=56.029 Y=68 Z=-10.061
+[2026-10-11T07:40:39.170Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=10.07 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:39.177Z] [PVP-EXPERT] style=sword action=approach reason=default_engagement dist=10.07
+[2026-10-11T07:40:39.393Z] [EVENT] Position changed → X=53.994 Y=68 Z=-8.853
+[2026-10-11T07:40:39.901Z] [EVENT] Position changed → X=51.958 Y=68 Z=-6.966
+[2026-10-11T07:40:40.319Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=5.21 attackCooldownMs=0 action=wind_mace_launch
+[2026-10-11T07:40:40.322Z] [PVP-EXPERT] style=mace action=wind_mace_launch reason=wind_charge_mace_setup dist=5.21
+[2026-10-11T07:40:40.400Z] [EVENT] Position changed → X=50.266 Y=68 Z=-5.266
+[2026-10-11T07:40:40.899Z] [EVENT] Position changed → X=50.458 Y=73.217 Z=-5.461
+[2026-10-11T07:40:40.900Z] [EVENT] Inventory changed.
+[2026-10-11T07:40:40.901Z] [EVENT] Block below changed: grass_block -> air
+[2026-10-11T07:40:41.410Z] [EVENT] Position changed → X=50.416 Y=71.647 Z=-5.182
+[2026-10-11T07:40:41.914Z] [EVENT] Position changed → X=49.83 Y=68 Z=-3.747
+[2026-10-11T07:40:41.914Z] [EVENT] Block below changed: air -> grass_block
+[2026-10-11T07:40:43.438Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=3.44 attackCooldownMs=0 action=approach
+[2026-10-11T07:40:43.445Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.44
+[2026-10-11T07:40:43.800Z] [PVP-EXPERT] style=sword action=backstab reason=verified_rear_arc dist=2.37
+[2026-10-11T07:40:43.955Z] [EVENT] Position changed → X=48.774 Y=68 Z=-2.97
+[2026-10-11T07:40:44.465Z] [EVENT] Position changed → X=46.907 Y=68 Z=-2.796
+[2026-10-11T07:40:44.542Z] [PVP-EXPERT] combat_state selfHP=20.0 selfTotemEquipped=false selfTotemInventory=0 target=ShubhTheGOAT targetHP=unknown targetHeld=golden_apple targetTotemEquipped=false targetTotemPopWindow=false maceThreat=false maceHeldClose=false distance=2.83 attackCooldownMs=0 action=melee_attack
+[2026-10-11T07:40:44.542Z] [PVP-EXPERT] style=sword action=melee_attack reason=sword_attack dist=2.83
+[2026-10-11T07:40:44.545Z] [PVP-EXPERT] swing_issued weapon=sword distance=2.83 eye_hitbox_distance=2.40; awaiting server damage confirmation
+[2026-10-11T07:40:44.639Z] [PVP-EXPERT] hit_confirmed source=entityHurt target=ShubhTheGOAT totalHits=33
+[2026-10-11T07:40:44.746Z] [PVP-EXPERT] style=sword action=strafe_pressure reason=maintain_pressure dist=2.41
+[2026-10-11T07:40:44.977Z] [EVENT] Held item changed: wind_charge -> netherite_sword
+[2026-10-11T07:40:44.981Z] [PVP-EXPERT] style=sword action=approach reason=close_distance dist=3.15
+[2026-10-11T07:40:46.036Z] [EVENT] Entity left nearby range: 375
+[2026-10-11T07:40:46.269Z] [TASK] Finished #13 pvp -> failed (target_lost).
+[2026-10-11T07:40:46.277Z] [BRAIN] Action failed: pvp
+[
