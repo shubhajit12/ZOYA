@@ -14,6 +14,9 @@ assert.equal(isGroundedEntity({onGround:null,velocity:{y:-0.24}}),false,
   "unknown onGround metadata must not make a falling bot look grounded");
 assert.equal(isGroundedEntity({onGround:null,velocity:{y:0.01}}),true,
   "unknown onGround metadata may fall back to near-zero vertical velocity");
+assert.ok(controllerSource.includes("pearlCatchReady:Boolean") && controllerSource.includes("diagonalPearlCatchReady:Boolean") &&
+  controllerSource.split("diagonalPearlCatchReady:Boolean")[1]?.split("\n")[0]?.includes("isGroundedEntity(bot.entity)"),
+  "both pearl-catch variants must share the same velocity-aware grounded prerequisite");
 
 
 {
