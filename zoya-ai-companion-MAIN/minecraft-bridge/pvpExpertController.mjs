@@ -88,6 +88,27 @@ export function isEntityBlockingWithShield(entity) {
   return main==="shield";
 }
 
+export function chooseMaceDodgeSide({botYaw=0,botPosition=null,targetPosition=null,targetYaw=0,targetVelocity={x:0,y:0,z:0}}={}) {
+  if(!botPosition||!targetPosition)return 1;
+  const n=v=>Number.isFinite(Number(v))?Number(v):0;
+  const right={x:Math.cos(n(botYaw)),z:Math.sin(n(botYaw))};
+  const targetFuture={
+    x:n(targetPosition.x)+n(targetVelocity?.x)*2,
+    z:n(targetPosition.z)+n(targetVelocity?.z)*2
+  };
+  const fx=-Math.sin(n(targetYaw)),fz=Math.cos(n(targetYaw));
+  const score=sign=>{
+    const candidate={x:n(botPosition.x)+right.x*sign*.75,z:n(botPosition.z)+right.z*sign*.75};
+    const dx=candidate.x-targetFuture.x,dz=candidate.z-targetFuture.z;
+    const distance=Math.hypot(dx,dz);
+    const len=Math.hypot(dx,dz)||1;
+    const facingAlignment=Math.abs((dx/len)*fx+(dz/len)*fz);
+    return distance+.8*(1-facingAlignment);
+  };
+  const rightScore=score(1),leftScore=score(-1);
+  return rightScore===leftScore?1:rightScore>leftScore?1:-1;
+}
+
 export function canStartStunSlam({hasAxe=false,hasMace=false,hasWind=false,axeHotbar=false,maceHotbar=false,shielding=false,distance=Infinity,attackReady=false}={}) {
   const d=Number(distance);
   return Boolean(hasAxe&&hasMace&&hasWind&&axeHotbar&&maceHotbar&&shielding&&attackReady&&
@@ -450,7 +471,12 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     // a short lateral + backward sprint burst, then punish only if sword reach
     // and the normal vanilla cooldown still permit a real hit.
     state.maceEvasionCooldownUntil=Date.now()+650;
-    const side=state.strafe<0?"left":"right";
+    const dodgeSide=chooseMaceDodgeSide({
+      botYaw:bot.entity?.yaw,botPosition:bot.entity?.position,
+      targetPosition:t.position,targetYaw:t.yaw,targetVelocity:t.velocity
+    });
+    const side=dodgeSide<0?"left":"right";
+    log("[PVP-EXPERT] mace_evasion predictive_side="+(dodgeSide>0?"right":"left"));
     try{
       await lookAtTarget(t,.02);
       bot.setControlState("forward",false);
