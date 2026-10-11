@@ -2306,7 +2306,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const enemyHorizDist=Math.max(.001,Math.hypot(num(bot.entity?.position?.x)-num(t.position?.x),num(bot.entity?.position?.z)-num(t.position?.z)));
         const enemyClosing=((num(targetVelocity.x)*(num(bot.entity?.position?.x)-num(t.position?.x))+num(targetVelocity.z)*(num(bot.entity?.position?.z)-num(t.position?.z)))/enemyHorizDist)>.018;
         const enemyMeleeWeapon=/sword|axe|spear|mace|trident/.test(enemyHeld);
-        const meleeBlockReady=enemyClosing&&enemyMeleeWeapon&&d>=2.65&&d<=4.25&&!enemyMaceThreat;
+        const meleeBlockReady=enemyClosing&&enemyMeleeWeapon&&d>=2.25&&d<=5.2&&!enemyMaceThreat;
         const botDx=num(bot.entity?.position?.x)-num(t.position?.x);
         const botDz=num(bot.entity?.position?.z)-num(t.position?.z);
         const botHoriz=Math.hypot(botDx,botDz)||1;
