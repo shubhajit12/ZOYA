@@ -2,9 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { chooseMaceDodgeSide, canStartStunSlam, estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isCrystalFallbackSafe, isAnchorFallbackSafe, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
+
+{
+  const botPosition={x:0,y:64,z:0},targetPosition={x:0,y:64,z:3};
+  const sideA=chooseMaceDodgeSide({botYaw:0,botPosition,targetPosition,targetYaw:Math.PI,targetVelocity:{x:0,y:0,z:0}});
+  const sideB=chooseMaceDodgeSide({botYaw:0,botPosition,targetPosition,targetYaw:0,targetVelocity:{x:.2,y:0,z:0}});
+  assert.ok(sideA===1||sideA===-1,"mace dodge must choose a concrete lateral side");
+  assert.ok(sideB===1||sideB===-1,"mace dodge must choose a concrete lateral side against a moving target");
+  assert.notEqual(chooseMaceDodgeSide({}),0,"missing geometry must still return a safe deterministic side");
+}
 
 {
   const baseStun={hasAxe:true,hasMace:true,hasWind:true,axeHotbar:true,maceHotbar:true,shielding:true,distance:2.8,attackReady:true};
@@ -133,6 +142,8 @@ const base={
   assert.equal(isProjectileOnCollisionCourse(
     {x:2,y:0,z:0},{x:1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},1.35,8
   ),false,"nearby projectiles moving away must not trigger dodge");
+  assert.ok(controllerSource.includes("chooseMaceDodgeSide("),
+  "mace evasion must select its lateral direction from opponent facing and motion");
   assert.ok(controllerSource.includes("predictive_side="),
     "projectile dodging must choose a trajectory-aware lateral side");
 }
