@@ -1524,25 +1524,33 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // throw a high pearl, then hit the pearl with a second wind charge to teleport
   // to it and gain a fast aerial mace window. It is not an ordinary escape pearl.
   const pearlCatch=async(t,diagonal=false)=>{
+    const pearlSlot=hotbarSlot("pearl"),windSlot=hotbarSlot("wind");
     if(!t?.position||!has(bot,"pearl")||!has(bot,"mace")||count(bot,"wind")<2||!bot.entity?.position)return false;
+    // A catch is a same-line, low-delay projectile combo. Do not pretend an
+    // inventory swap is fast enough: both items must already be in hotbar slots.
+    if(pearlSlot==null||windSlot==null||pearlSlot===windSlot){
+      log("[PVP-EXPERT] pearl_catch_skipped reason=pearl_and_wind_must_be_in_distinct_hotbar_slots pearlHotbar="+(pearlSlot!=null)+" windHotbar="+(windSlot!=null));
+      return false;
+    }
     if(Date.now()<num(state.pearlCatchCooldownUntil))return false;
     state.pearlCatchCooldownUntil=Date.now()+3500;
     let catchSucceeded=false;
     let catchFailureReason="execution_failed";
-    const p=bot.entity.position,tp=t.position;
+    const p=bot.entity.position.clone(),tp=t.position;
     const dx=p.x-tp.x,dz=p.z-tp.z,len=Math.hypot(dx,dz)||1;
     const awayX=dx/len,awayZ=dz/len,sideX=-awayZ,sideZ=awayX;
     const before=new Set(Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))).map(e=>e.id));
     const startY=num(p.y);
     try{
-      // Launch off the ground with the first wind charge.
       if(bot.entity?.onGround===false){catchFailureReason="already_airborne";return false}
+      // Launch upward with the first charge, then confirm that server physics
+      // actually gave ZOYA upward velocity before committing the pearl.
       bot.setControlState("jump",true);
       await sleep(55);
       bot.setControlState("jump",false);
-      if(!await equip("wind"))return false;
-      await bot.lookAt(p.offset(0,-1.25,0),true);
-      bot.activateItem();await sleep(65);bot.deactivateItem();
+      if(!selectHotbarItem("wind")){catchFailureReason="wind_hotbar_select_failed";return false}
+      await bot.lookAt(bot.entity.position.offset(0,-1.25,0),true);
+      bot.activateItem();await sleep(55);bot.deactivateItem();
       let launched=false;
       const launchUntil=Date.now()+650;
       while(state.active&&taskIsActive()&&Date.now()<launchUntil){
@@ -1551,47 +1559,41 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       if(!launched){catchFailureReason="self_launch_unconfirmed";return false}
 
-      // Throw from the bot's *current airborne position*, not its ground
-      // launch point. The old +17Y / ~2-block horizontal aim was nearly
-      // vertical, so the pearl could rise almost straight up instead of
-      // following a controllable arc that the second wind charge can meet.
-      // Use a deliberate ~45-55 degree upward throw with meaningful horizontal
-      // travel; the diagonal variant adds lateral travel across the target line.
-      if(!await equip("pearl"))return false;
-      const launchPos=bot.entity.position.clone();
-      const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*7.0;
-      const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*7.0;
+      // Vanilla pearl catching depends on the wind charge intersecting the
+      // pearl's flight path. Throw the pearl and immediately fire a wind charge
+      // along the same upward ray; waiting to find the pearl and aiming at its
+      // later position lets it travel past the charge's collision window.
+      const hx=diagonal?(awayX*4.0+sideX*5.0):awayX*3.5;
+      const hz=diagonal?(awayZ*4.0+sideZ*5.0):awayZ*3.5;
       const hy=diagonal?7.5:8.0;
       const horizontal=Math.hypot(hx,hz);
       const pitchDeg=Math.atan2(hy,horizontal)*180/Math.PI;
-      const pearlAim=launchPos.offset(hx,hy,hz);
-      await bot.lookAt(pearlAim,true);
+      if(!selectHotbarItem("pearl")){catchFailureReason="pearl_hotbar_select_failed";return false}
+      const pearlAim=()=>bot.entity.position.offset(hx,hy,hz);
+      await bot.lookAt(pearlAim(),true);
       log("[PVP-EXPERT] pearl_catch_throw_aim mode="+(diagonal?"diagonal":"standard")+
         " horizontal="+horizontal.toFixed(2)+" vertical="+hy.toFixed(2)+
-        " elevationDeg="+pitchDeg.toFixed(1)+" originY="+num(launchPos.y).toFixed(2)+
-        " aimY="+num(pearlAim.y).toFixed(2));
-      bot.activateItem();await sleep(85);bot.deactivateItem();
+        " elevationDeg="+pitchDeg.toFixed(1)+" originY="+num(bot.entity.position.y).toFixed(2)+
+        " aimY="+num(pearlAim().y).toFixed(2));
+      bot.activateItem();await sleep(45);bot.deactivateItem();
       state.lastPearlAt=Date.now();state.pearlCooldownUntil=state.lastPearlAt+1000;state.lastPearlType=diagonal?"diagonal_catch":"catch";
-      state.pearlCatchCooldownUntil=Date.now()+3500;
+
+      // Switch directly between already-selected hotbar items and fire along
+      // the same ray within a few ticks; no projectile-observation wait here.
+      if(!selectHotbarItem("wind")){catchFailureReason="wind_hotbar_select_failed";return false}
+      await bot.lookAt(pearlAim(),true);
+      bot.activateItem();await sleep(45);bot.deactivateItem();
 
       let pearl=null;
-      const pearlUntil=Date.now()+600;
+      const pearlUntil=Date.now()+700;
       while(state.active&&taskIsActive()&&Date.now()<pearlUntil&&!pearl){
         pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!before.has(e.id)&&e.position)
           .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0]||null;
         if(!pearl)await sleep(20);
       }
-      if(!pearl){catchFailureReason="pearl_projectile_not_observed";return false}
+      if(!pearl){catchFailureReason="pearl_projectile_not_observed";log("[PVP-EXPERT] pearl_catch pearl_found=false same_line_followup=true");return false}
 
-      // Use the second charge to collide with the live pearl projectile.
-      if(!await equip("wind"))return false;
-      const v=pearl.velocity||{x:0,y:0,z:0};
-      await bot.lookAt(pearl.position.offset(num(v.x)*3,num(v.y)*3,num(v.z)*3),true);
       const beforePos=bot.entity.position.clone();
-      bot.activateItem();await sleep(65);bot.deactivateItem();
-      // This pearl is deliberately thrown high (aim point ~17 blocks above
-      // the player). A 1.2 s confirmation window expires before many valid
-      // flights land, so allow the server-observed teleport time to complete.
       const catchUntil=Date.now()+2800;
       let caught=false;
       while(state.active&&taskIsActive()&&Date.now()<catchUntil){
@@ -1604,7 +1606,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await equipBestMelee();
       catchSucceeded=caught;
       if(!caught)catchFailureReason="teleport_unconfirmed";
-      log("[PVP-EXPERT] pearl_catch mode="+(diagonal?"diagonal":"standard")+" pearl_found=true pearl_removed="+(!bot.entities?.[pearl.id])+" teleport_confirmed="+caught);
+      log("[PVP-EXPERT] pearl_catch mode="+(diagonal?"diagonal":"standard")+
+        " pearl_found=true pearl_removed="+(!bot.entities?.[pearl.id])+
+        " same_line_followup=true teleport_confirmed="+caught);
       if(caught&&has(bot,"mace")){
         await sleep(80);
         await maceSmash(t);
@@ -2560,8 +2564,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            maceAttributeSwapReady:Boolean(has(bot,"mace")&&has(bot,"sword")&&hotbarSlot("mace")!=null&&hotbarSlot("sword")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&d<=3.1),
            maceCrystalDTapReady:Boolean(has(bot,"mace")&&has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t))&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.35&&d<=3.1),
           windMaceSmashReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&d>=3.5&&d<=6.5&&num(state.nextAttackAt)<=Date.now()&&!isAirborne(t)&&hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat),
-          pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7),
-           diagonalPearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&enemy.retreating),
+          pearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null&&hotbarSlot("pearl")!==hotbarSlot("wind")&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7),
+           diagonalPearlCatchReady:Boolean(has(bot,"pearl")&&has(bot,"mace")&&count(bot,"wind")>=2&&hotbarSlot("pearl")!=null&&hotbarSlot("wind")!=null&&hotbarSlot("pearl")!==hotbarSlot("wind")&&bot.entity?.onGround!==false&&Date.now()>=state.pearlCatchCooldownUntil&&d>=4.5&&d<=12&&lineOfSight&&hp>7&&enemy.retreating),
            pearlEscapeReady:pearlReady("escape",t),
           pearlAmbushReady:pearlReady("ambush",t),
            pearlGrappleReady:Boolean(pearlReady("grapple",t)),
