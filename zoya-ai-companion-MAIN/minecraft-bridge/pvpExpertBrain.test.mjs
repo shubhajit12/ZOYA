@@ -50,7 +50,10 @@ const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"
     "potion throw must be confirmed from a new projectile/cloud or inventory decrement");
   assert.ok(potionBody.includes("effect_confirmed=false"),
     "potion projectile spawn must not be mislabeled as a confirmed useful effect");
-  assert.ok(!/return true;/.test(potionBody),
+  assert.ok(controllerSource.includes('" shieldReady="+Boolean(ctx.shieldReady)+" meleeBlockReady="+Boolean(ctx.meleeBlockReady)+" projectileThreat="+Boolean(ctx.projectileThreat)'),
+  "combat diagnostics must not conflate shield cooldown readiness with melee-block eligibility");
+
+assert.ok(!/return true;/.test(potionBody),
     "potion action must not return unconditional success after issuing a use packet");
 }
 
