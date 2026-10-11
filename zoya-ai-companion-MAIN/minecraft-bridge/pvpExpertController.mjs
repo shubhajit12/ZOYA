@@ -387,8 +387,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   };
 
   const hotbarSlot=type=>{
-    const i=item(bot,type);
-    return i&&Number.isInteger(i.slot)&&i.slot>=36&&i.slot<=44?i.slot-36:null;
+    // Inventory order is not a hotbar preference: the first matching stack may
+    // be in the main inventory even when another stack is already on the hotbar.
+    // Search all matching stacks and select an actually usable hotbar slot.
+    const candidates=inv(bot).filter(i=>
+      ITEMS[type]?.includes(lname(i))&&Number.isInteger(i.slot)&&i.slot>=36&&i.slot<=44
+    );
+    candidates.sort((a,b)=>num(b.count)-num(a.count)||a.slot-b.slot);
+    return candidates.length?candidates[0].slot-36:null;
   };
   const selectHotbarItem=type=>{
     const slot=hotbarSlot(type);
