@@ -460,15 +460,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const targetSpeed=speed(t);
       const until=Date.now()+(targetSpeed>.35?1400:1100);
       const start=dist(bot.entity,t);
+      const startPos=bot.entity?.position?.clone?.()||null;
       while(state.active&&taskIsActive()&&Date.now()<until){
         if(dist(bot.entity,t)<=range) return true;
         await sleep(75);
       }
       const remaining=dist(bot.entity,t);
-      // Starting a valid path and making progress is a successful navigation
-      // action; do not mark it failed merely because 650 ms was not enough to
-      // reach a moving player.
-      return remaining<=start-0.35 || remaining<=range+0.5;
+      const botMoved=startPos&&bot.entity?.position?bot.entity.position.distanceTo(startPos):0;
+      // A moving/pearl-teleporting opponent can increase separation even while
+      // the pathfinder is making real progress. Do not back off the navigation
+      // task solely because target-relative distance did not shrink.
+      return remaining<=start-0.35 || remaining<=range+0.5 || botMoved>=0.35;
     }finally{
       try{bot.pathfinder.setGoal(null)}catch{}
     }
