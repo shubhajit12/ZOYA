@@ -367,7 +367,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(live?.position&&dist(bot.entity,live)<=3.05&&Date.now()>=state.nextAttackAt&&has(bot,"sword")){
       const confirmed=await attack(live,"sword",3.05);
       log("[PVP-EXPERT] mace_evasion_counter confirmed="+confirmed);
-      return confirmed;
+      return true; // the evasive movement succeeded even if the follow-up swing did not land
     }
     log("[PVP-EXPERT] mace_evasion completed counter=not_in_range_or_cooldown");
     return true;
