@@ -20,7 +20,7 @@ const ITEMS=Object.freeze({
   totem:["totem_of_undying"], chestplate:["netherite_chestplate","diamond_chestplate","iron_chestplate","chainmail_chestplate","golden_chestplate","leather_chestplate","turtle_shell"], heal:["enchanted_golden_apple","golden_apple"],
   water:["water_bucket"], lava:["lava_bucket"], crystal:["end_crystal"], anchor:["respawn_anchor"],
   glowstone:["glowstone"], obsidian:["obsidian"], web:["cobweb"], shears:["shears"], wind:["wind_charge"],
-  rod:["fishing_rod"], firework:["firework_rocket"], elytra:["elytra"],
+  rod:["fishing_rod"], arrow:["arrow","spectral_arrow","tipped_arrow"], firework:["firework_rocket"], elytra:["elytra"],
   potion:["splash_potion","lingering_potion"]
 });
 
@@ -612,6 +612,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     };
     try{
       if(type==="bow"){
+        // Bows cannot fire without an arrow in the player inventory. Check
+        // before charging so the controller doesn't spend the entire combat
+        // window holding an unloaded bow.
+        if(count(bot,"arrow")<=0){
+          log("[PVP-EXPERT] bow_fire_blocked reason=no_arrow_ammunition");
+          return false;
+        }
         await keepAim();
         bot.activateItem();
         const deadline=Date.now()+1050;
@@ -625,10 +632,17 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         return true;
       }
       if(type==="crossbow"){
+        // Crossbows can fire a previously loaded projectile without spare
+        // inventory arrows, but loading requires ammunition. Never claim a
+        // shot when the crossbow is empty and no projectile is available.
+        let charged=crossbowChargeState();
+        if(charged!==true&&count(bot,"arrow")<=0){
+          log("[PVP-EXPERT] crossbow_fire_blocked reason=unloaded_no_arrow_ammunition");
+          return false;
+        }
         // Crossbows must be loaded before the firing click. A short 160 ms
         // use is not a shot: it usually only starts loading and was a silent
         // failure mode in the previous executor.
-        let charged=crossbowChargeState();
         if(charged!==true){
           await keepAim();
           bot.activateItem();
@@ -1890,6 +1904,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           hasShield:has(bot,"shield"),hasPearl:has(bot,"pearl"),hasTotem:has(bot,"totem"),hasHeal:has(bot,"heal"),
           hasWaterBucket:has(bot,"water"),hasBurst:has(bot,"mace")||has(bot,"axe")||has(bot,"crystal"),
           hasDebuff:has(bot,"potion"),hasRod:has(bot,"rod"),
+          hasBowAmmo:count(bot,"arrow")>0,
+          hasCrossbowAmmo:count(bot,"arrow")>0||crossbowChargeState()===true,
           webbed:Boolean(bot.blockAt?.(bot.entity.position)?.name==="cobweb"||bot.blockAt?.(bot.entity.position.offset(0,1,0))?.name==="cobweb"),
           attackReadyAt:state.nextAttackAt,healDistanceMin:4.2,
           inventory:{
