@@ -118,7 +118,11 @@ export function createPvpExpertBrain(options={}){
     // could remain committed for nearly a second at 2.5m, producing strafes
     // instead of attacks while the opponent was already in reach.
     const urgentMeleeFallback=d<=3.05&&has(c,"sword")&&preferred==="sword"&&styleMemory!=="sword";
-    if(!styleMemory||(!c.hardCounter&&(now>=styleLockUntil||urgentMeleeFallback)&&scores[preferred]>scores[styleMemory]+Number(difficulty.styleSwitchMargin||18))){
+    const urgentRangedFallback=c.lineOfSight&&styleMemory!=="bow"&&styleMemory!=="crossbow"&&
+      ((preferred==="bow"&&d>=7&&invHas(c,"bow")&&c.hasBowAmmo!==false)||
+       (preferred==="crossbow"&&d>=8&&invHas(c,"crossbow")&&c.hasCrossbowAmmo!==false));
+    if(!styleMemory||(!c.hardCounter&&(now>=styleLockUntil||urgentMeleeFallback||urgentRangedFallback)&&
+      (urgentMeleeFallback||urgentRangedFallback||scores[preferred]>scores[styleMemory]+Number(difficulty.styleSwitchMargin||18)))){
       styleMemory=preferred;
       styleLockUntil=now+Number(difficulty.styleLockMs||450);
     }
