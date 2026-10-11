@@ -7,7 +7,7 @@
  */
 import { THEO_PVP_DIFFICULTY } from "./pvpDifficulty.mjs";
 
-const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
+const num=(v,d=0)=>v==null||v===""?d:Number.isFinite(Number(v))?Number(v):d;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const has=(c,k)=>c?.capabilities?.[k]===true;
 const invHas=(c,k)=>num(c?.inventory?.[k])>0;
