@@ -1581,8 +1581,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const enemyTotemPopped=isLikelyTotemPop({wasEquipped:state.enemyTotemWasEquipped,nowEquipped:enemyTotemNow,targetHealth:t.health,recentConfirmedHit});
         if(enemyTotemPopped){
           state.enemyTotemPopUntil=Date.now()+2600;
-          if(!recentConfirmedHit&&!(t.health!=null&&Number.isFinite(Number(t.health))&&Number(t.health)<=4))
-            log("[PVP-EXPERT] enemy_totem_pop_inferred target="+state.targetUsername+" source=equipment_transition_after_confirmed_hit");
+          log("[PVP-EXPERT] enemy_totem_pop_inferred target="+state.targetUsername+" source=equipment_transition_after_confirmed_hit");
         }
         state.enemyTotemWasEquipped=enemyTotemNow;
         const lineOfSight=typeof bot.canSeeEntity==="function"?bot.canSeeEntity(t):true;
