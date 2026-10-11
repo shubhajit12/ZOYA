@@ -35,8 +35,8 @@ function styleScores(c){
   // only when a shield counter is actually needed.
   if(invHas(c,"axe")) s.axe=34+(e.shield&&e.usingItem?62:0)+(d<=3.5?5:0);
   if(invHas(c,"sword")) s.sword=56+(d<=3.15?30:0)+(e.airborne?14:0);
-  if(invHas(c,"bow")) s.bow=30+(d>=7?35:0)+(e.retreating?18:0);
-  if(invHas(c,"crossbow")) s.crossbow=34+(d>=8?35:0)+(e.retreating?18:0);
+  if(invHas(c,"bow")&&c.hasBowAmmo!==false) s.bow=30+(d>=7?35:0)+(e.retreating?18:0);
+  if(invHas(c,"crossbow")&&c.hasCrossbowAmmo!==false) s.crossbow=34+(d>=8?35:0)+(e.retreating?18:0);
   if(invHas(c,"crystal")&&invHas(c,"obsidian")) s.crystal=38+(c.crystalArena?38:0)+(d<=6?18:0);
   if(invHas(c,"respawn_anchor")&&invHas(c,"glowstone")&&c.anchorArena) s.anchor=42+(d<=7?25:0);
   if(c.elytraEquipped&&invHas(c,"mace")) s.elytra=60+(c.elytraMaceReady?70:0)+(d>7?15:0);
