@@ -231,8 +231,10 @@ export function createPvpExpertBrain(options={}){
     if(styleMemory==="anchor"&&c.anchorCycleSafe&&d<=7)
       return {action:"anchor_cycle",style:"anchor",priority:8800,reason:"safe_anchor_cycle"};
 
-    if((styleMemory==="bow"||styleMemory==="crossbow")&&d>=7&&c.lineOfSight)
-      return {action:"ranged_attack",style:styleMemory,priority:7600,reason:"ranged_spacing"};
+    if(styleMemory==="bow"&&d>=7&&c.lineOfSight&&c.hasBowAmmo!==false)
+      return {action:"ranged_attack",style:"bow",priority:7600,reason:"ranged_spacing_with_ammo"};
+    if(styleMemory==="crossbow"&&d>=7&&c.lineOfSight&&c.hasCrossbowAmmo!==false)
+      return {action:"ranged_attack",style:"crossbow",priority:7600,reason:"crossbow_loaded_or_ammo_available"};
     if(c.recoveryPearlReady&&c.pearlEscapeReady&&c.recoveryPearlReady&&(
       c.knockbacked||c.stuck||c.hazard||c.badPosition
     ))
