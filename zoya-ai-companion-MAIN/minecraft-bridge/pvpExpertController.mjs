@@ -1941,9 +1941,21 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       let peakY=startY;
       const launchDeadline=Date.now()+1050;
       await bot.lookAt(bot.entity.position.offset(0,-1.35,0),true);
-      bot.activateItem();
-      await sleep(70);
-      bot.deactivateItem();
+      // Competitive mace technique: jump at the same moment as the ground-
+      // targeted wind-charge use to maximize the upward impulse. Only issue
+      // the jump input when grounded; airborne reset/correction actions must
+      // not inject a second jump command.
+      const jumpSynced=bot.entity?.onGround===true;
+      if(jumpSynced)bot.setControlState("jump",true);
+      try{
+        bot.activateItem();
+        await sleep(70);
+        bot.deactivateItem();
+      }finally{
+        if(jumpSynced)bot.setControlState("jump",false);
+      }
+      log("[PVP-EXPERT] wind_mace_launch_input jump_synchronized="+jumpSynced+
+        " use_issued=true; verifying observed upward impulse");
 
       // Verify an actual self-launch, not merely a tiny velocity change.
       let launched=false;
