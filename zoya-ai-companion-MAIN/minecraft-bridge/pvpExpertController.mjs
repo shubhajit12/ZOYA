@@ -187,9 +187,9 @@ export function estimateObservedFallDistance(entity, peakY) {
   return Math.max(0,num(entity?.fallDistance),num(peakY,y)-y);
 }
 
-export function predictTargetPosition(position,velocity={},acceleration={},leadTicks=2) {
+export function predictTargetPosition(position,velocity={},acceleration={},leadTicks=2,maxLeadTicks=4) {
   if(!position)return null;
-  const ticks=Math.max(0,Math.min(4,num(leadTicks)));
+  const ticks=Math.max(0,Math.min(Math.max(0,num(maxLeadTicks,4)),num(leadTicks)));
   const axis=(key)=>{
     const p=num(position[key]),v=num(velocity?.[key]),a=Math.max(-0.035,Math.min(0.035,num(acceleration?.[key])));
     return p+v*ticks+0.5*a*ticks*ticks;
@@ -447,7 +447,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!t?.position) return false;
     const v=t.velocity||{x:0,y:0,z:0};
     const leadTicks=Math.max(0,Math.min(12,num(lead)*20));
-    const predicted=predictTargetPosition(t.position,v,state.targetAcceleration,leadTicks);
+    const predicted=predictTargetPosition(t.position,v,state.targetAcceleration,leadTicks,12);
     const p=t.position.offset(predicted.x-num(t.position.x),predicted.y-num(t.position.y),predicted.z-num(t.position.z));
     try{await bot.lookAt(p.offset(0,Math.max(.9,num(t.height,1.8)*.62),0),true);return true}catch{return false}
   };
