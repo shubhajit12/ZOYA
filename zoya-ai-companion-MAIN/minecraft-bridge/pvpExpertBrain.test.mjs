@@ -1075,6 +1075,10 @@ assert.ok(controllerSource.includes("const crystalCycleSafeForTarget=(t,base=cry
   controllerSource.includes("const crystalCycleReady=crystalCycleSafeForTarget(t);") &&
   controllerSource.includes("if(!base||!crystalCycleSafeForTarget(t,base))return false"),
   "crystal style selection and crystal execution must share the same live self-damage safety gate");
+assert.ok(controllerSource.includes("crystal_cycle_skipped reason=") &&
+  controllerSource.includes("anchor_cycle_skipped reason=no_safe_reachable_anchor_candidate") &&
+  controllerSource.includes("anchor_cycle_skipped reason=dimension_or_item_or_api_prerequisite"),
+  "crystal and anchor skill failures must report concrete skip reasons instead of silently disappearing");
 assert.ok(controllerSource.includes("hp>7&&!enemyMaceHeldClose&&!enemyMaceThreat"),
   "pearl-catch readiness must be suppressed when a close enemy mace threat makes the setup unsafe");
 
