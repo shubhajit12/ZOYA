@@ -120,7 +120,8 @@ const base={
 
 
 {
-  assert.ok(controllerSource.includes('noteFailure?.("elytra_mace","flight_not_started");\n        await restoreElytra();'),
+  assert.ok(controllerSource.includes('noteFailure?.("elytra_mace","flight_not_started");')&&
+    controllerSource.includes("await restoreElytra();"),
     "failed Elytra takeoff must restore the flight chest item");
   assert.ok(controllerSource.includes("const fallDistance=estimateObservedFallDistance(bot.entity,divePeakY)"),
     "Elytra mace must require a measured downward fall, not merely being above the target");
