@@ -162,7 +162,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
     lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,pearlCatchCooldownUntil:0,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
-    lastAttackConfirmedAt:0,pendingEntityHitUntil:0,
+    lastAttackConfirmedAt:0,pendingEntityHitUntil:0,lastTargetHurtAt:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,maceEvasionCooldownUntil:0,
     lastTargetVelocity:null,lastTargetVelocityAt:0,targetAcceleration:{x:0,y:0,z:0},
     lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null,lastCombatDiagAt:0
@@ -929,6 +929,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await equipBestMelee();
       await lookAtTarget(crystal,.0);
       const targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+      const targetHurtBefore=state.lastTargetHurtAt;
       const selfHealthBefore=num(bot.health,20);
       bot.attack(crystal);
       const deadline=Date.now()+450;
@@ -937,11 +938,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         const crystalGone=!bot.entities?.[crystal.id];
         const targetHealthAfter=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
         const targetDamaged=targetHealthBefore!=null&&targetHealthAfter!=null&&targetHealthAfter<targetHealthBefore-.05;
+        const targetHurtObserved=state.lastTargetHurtAt>targetHurtBefore;
         const selfDamaged=num(bot.health,20)<selfHealthBefore-.05;
-        if(crystalGone&&(targetDamaged||selfDamaged)){confirmed=true;break}
+        if(crystalGone&&(targetDamaged||targetHurtObserved||selfDamaged)){confirmed=true;break}
         await sleep(20);
       }
-      log("[PVP-EXPERT] crystal_detonation_confirmed="+confirmed);
+      log("[PVP-EXPERT] crystal_detonation_confirmed="+confirmed+
+        " target_hurt_event="+(state.lastTargetHurtAt>targetHurtBefore));
       return confirmed;
     }catch(error){log("[PVP-EXPERT] crystal cycle failed: "+(error?.message||String(error)));}
     return false;
@@ -1015,17 +1018,21 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       const blast=chosen.pos.offset(.5,.5,.5);
       if(blast.distanceTo(bot.entity.position)<7.5||blast.distanceTo((targetOf(bot,state.targetUsername)||t).position)>4.5)return false;
       const liveTarget=targetOf(bot,state.targetUsername)||t;
-      const targetHealthBefore=Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
+      const targetHealthBefore=liveTarget.health!=null&&Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
+      const targetHurtBefore=state.lastTargetHurtAt;
       const selfHealthBefore=num(bot.health,20);
       try{await bot.unequip("hand")}catch{}
       await bot.activateBlock(anchor);
       await sleep(350);
-      const targetHealthAfter=Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
+      const targetHealthAfter=liveTarget.health!=null&&Number.isFinite(Number(liveTarget.health))?Number(liveTarget.health):null;
       const targetDamaged=targetHealthBefore!=null&&targetHealthAfter!=null&&targetHealthAfter<targetHealthBefore;
+      const targetHurtObserved=state.lastTargetHurtAt>targetHurtBefore;
       const selfDamaged=num(bot.health,20)<selfHealthBefore;
       const exploded=bot.blockAt(chosen.pos)?.name!=="respawn_anchor";
-      const confirmed=exploded&&(targetDamaged||selfDamaged);
-      log("[PVP-EXPERT] anchor_detonation_confirmed="+confirmed+" target_damage_observed="+targetDamaged+" self_damage_observed="+selfDamaged+" self_distance="+blast.distanceTo(bot.entity.position).toFixed(2));
+      const confirmed=exploded&&(targetDamaged||targetHurtObserved||selfDamaged);
+      log("[PVP-EXPERT] anchor_detonation_confirmed="+confirmed+" target_damage_observed="+targetDamaged+
+        " target_hurt_event="+targetHurtObserved+" self_damage_observed="+selfDamaged+
+        " self_distance="+blast.distanceTo(bot.entity.position).toFixed(2));
       await equipBestMelee();
       return confirmed;
     }catch(error){
@@ -1740,6 +1747,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const onTargetHurt=(entity,source)=>{
       const target=targetOf(bot,state.targetUsername);
       if(!state.active||!target||entity?.id!==target.id) return;
+      // Record all observed target damage for explosion/utility confirmation,
+      // even when it was not caused by a direct attack from ZOYA.
+      state.lastTargetHurtAt=Date.now();
       const age=Date.now()-state.lastAttackAttemptAt;
       if(age<0||age>450) return;
       // When Mineflayer identifies the source, reject damage from other
