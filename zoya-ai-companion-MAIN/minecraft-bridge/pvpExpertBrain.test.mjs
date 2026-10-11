@@ -1017,3 +1017,17 @@ console.log("Projectile shield impact-window tests passed.");
     "wind-charge mace combo must call the smash executor when the falling hitbox enters real reach");
 }
 console.log("Falling mace hitbox-window tests passed.");
+
+
+// High pearl-catch throws need enough time for a real server-side landing;
+// a short timeout incorrectly labels a still-flying pearl as a failed catch.
+{
+  const catchStart=controllerSource.indexOf("const pearlCatch=async(t,diagonal=false)=>");
+  const catchEnd=controllerSource.indexOf("const windChargeCancel=async t=>",catchStart);
+  const catchBody=controllerSource.slice(catchStart,catchEnd);
+  assert.ok(catchBody.includes("const catchUntil=Date.now()+2800"),
+    "high pearl-catch throws must wait long enough for the pearl to land and the teleport to be observed");
+  assert.ok(catchBody.includes("isConfirmedPearlCatch(displaced,pearlStillExists)"),
+    "longer pearl-catch waiting must still require real displacement and projectile disappearance, not just time elapsed");
+}
+console.log("High pearl-catch landing-window tests passed.");
