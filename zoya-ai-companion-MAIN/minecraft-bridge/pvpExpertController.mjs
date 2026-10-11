@@ -1552,6 +1552,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const awayX=dx/len,awayZ=dz/len,sideX=-awayZ,sideZ=awayX;
     const before=new Set(Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))).map(e=>e.id));
     const startY=num(p.y);
+    let spawnedPearl=null, pearlSpawnListener=null, catchBaseline=null;
     try{
       if(bot.entity?.onGround===false){catchFailureReason="already_airborne";return false}
       // Launch upward with the first charge, then confirm that server physics
@@ -1595,6 +1596,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         " horizontal="+horizontal.toFixed(2)+" vertical="+hy.toFixed(2)+
         " elevationDeg="+pitchDeg.toFixed(1)+" originY="+num(bot.entity.position.y).toFixed(2)+
         " aimY="+num(pearlAim().y).toFixed(2));
+      // Capture entitySpawn before throwing: a successful same-line catch can
+      // destroy/consume the pearl before a later polling loop ever sees it.
+      catchBaseline=bot.entity.position.clone();
+      pearlSpawnListener=e=>{
+        if(!e||! /ender_pearl/.test(lname(e))||before.has(e.id)||!e.position)return;
+        if(e.position.distanceTo(catchBaseline)<3.0)spawnedPearl=e;
+      };
+      bot.on?.("entitySpawn",pearlSpawnListener);
       bot.activateItem();await sleep(45);bot.deactivateItem();
       state.lastPearlAt=Date.now();state.pearlCooldownUntil=state.lastPearlAt+1000;state.lastPearlType=diagonal?"diagonal_catch":"catch";
 
@@ -1612,16 +1621,19 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       log("[PVP-EXPERT] pearl_catch_wind_followup_projectile_observed="+windProjectileObserved);
 
-      let pearl=null;
+      let pearl=spawnedPearl;
       const pearlUntil=Date.now()+700;
       while(state.active&&taskIsActive()&&Date.now()<pearlUntil&&!pearl){
-        pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!before.has(e.id)&&e.position)
-          .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0]||null;
+        pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!before.has(e.id)&&e.position&&e.position.distanceTo(catchBaseline)<3.0)
+          .sort((a,b)=>a.position.distanceTo(catchBaseline)-b.position.distanceTo(catchBaseline))[0]||null;
         if(!pearl)await sleep(20);
       }
       if(!pearl){catchFailureReason="pearl_projectile_not_observed";log("[PVP-EXPERT] pearl_catch pearl_found=false same_line_followup=true");return false}
 
-      const beforePos=bot.entity.position.clone();
+      // The baseline is captured before the pearl throw, not after the wind
+      // burst. Otherwise an instant catch could teleport before tracking starts
+      // and the later displacement check would compare against the new location.
+      const beforePos=catchBaseline;
       const catchUntil=Date.now()+2800;
       let caught=false;
       while(state.active&&taskIsActive()&&Date.now()<catchUntil){
@@ -1651,6 +1663,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       return false;
     }finally{
       try{bot.setControlState("jump",false)}catch{}
+      try{if(pearlSpawnListener)bot.removeListener?.("entitySpawn",pearlSpawnListener)}catch{}
       if(catchSucceeded){
         state.pearlCatchFailureStreak=0;
         state.pearlCatchCooldownUntil=Date.now()+3500;
