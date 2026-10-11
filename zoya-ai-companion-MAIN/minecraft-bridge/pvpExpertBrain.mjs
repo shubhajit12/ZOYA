@@ -29,7 +29,7 @@ function styleScores(c){
   // Promote it only when the controller has verified a real launch/smash or
   // Elytra setup window; height is a modest opportunity, not a permanent lock.
   if(invHas(c,"mace")) s.mace=12+(c.selfMaceSmashReady?62:0)+(c.windMaceSmashReady?54:0)+(c.elytraMaceReady?58:0)+(c.heightAdvantage?10:0)-(d>8?28:0)-(c.enemyMaceHeldClose?35:0)-(c.enemyMaceThreat?45:0);
-  if(invHas(c,"spear")) s.spear=20+(d>=3&&d<=4.75?38:0)+(e.retreating?12:0);
+  if(invHas(c,"spear")) s.spear=40+(d>=3&&d<=4.75?45:0)+(e.retreating?15:0);
   // Sword is the default combo weapon: its sustained attack speed is more
   // valuable than an axe's small per-hit advantage. Select axe aggressively
   // only when a shield counter is actually needed.
@@ -41,8 +41,10 @@ function styleScores(c){
   // reached the ranged_attack branch unless opponent-retreat adaptation fired.
   if(invHas(c,"bow")&&c.hasBowAmmo!==false) s.bow=30+(d>=7?55:0)+(e.retreating?18:0);
   if(invHas(c,"crossbow")&&c.hasCrossbowAmmo!==false) s.crossbow=34+(d>=8?55:0)+(e.retreating?18:0);
-  if(invHas(c,"crystal")&&invHas(c,"obsidian")) s.crystal=38+(c.crystalArena?38:0)+(d<=6?18:0);
-  if(invHas(c,"respawn_anchor")&&invHas(c,"glowstone")&&c.anchorArena) s.anchor=42+(d<=7?25:0);
+  // Safe, executable kit windows must beat the sword style lock; otherwise
+  // a close-range sword selection can make crystal/anchor cycles unreachable.
+  if(invHas(c,"crystal")&&invHas(c,"obsidian")) s.crystal=38+(c.crystalArena?68:0)+(d<=6?18:0);
+  if(invHas(c,"respawn_anchor")&&invHas(c,"glowstone")&&c.anchorCycleSafe) s.anchor=70+(d<=7?40:0);
   if(c.elytraEquipped&&invHas(c,"mace")) s.elytra=60+(c.elytraMaceReady?70:0)+(d>7?15:0);
   if(invHas(c,"shield")) s.shield=18+(e.meleeThreat?30:0)+(c.projectileThreat?35:0);
   s.utility=15+(c.projectileThreat?30:0)+(c.hazard?30:0);
@@ -121,8 +123,11 @@ export function createPvpExpertBrain(options={}){
     const urgentRangedFallback=c.lineOfSight&&styleMemory!=="bow"&&styleMemory!=="crossbow"&&
       ((preferred==="bow"&&d>=7&&invHas(c,"bow")&&c.hasBowAmmo!==false)||
        (preferred==="crossbow"&&d>=8&&invHas(c,"crossbow")&&c.hasCrossbowAmmo!==false));
-    if(!styleMemory||(!c.hardCounter&&(now>=styleLockUntil||urgentMeleeFallback||urgentRangedFallback)&&
-      (urgentMeleeFallback||urgentRangedFallback||scores[preferred]>scores[styleMemory]+Number(difficulty.styleSwitchMargin||18)))){
+    const urgentCrystalFallback=c.crystalArena&&d<=6&&has(c,"crystal")&&has(c,"obsidian")&&styleMemory!=="crystal";
+    const urgentAnchorFallback=c.anchorCycleSafe&&d<=7&&has(c,"respawn_anchor")&&has(c,"glowstone")&&styleMemory!=="anchor";
+    const urgentKitFallback=urgentCrystalFallback||urgentAnchorFallback;
+    if(!styleMemory||(!c.hardCounter&&(now>=styleLockUntil||urgentMeleeFallback||urgentRangedFallback||urgentKitFallback)&&
+      (urgentMeleeFallback||urgentRangedFallback||urgentKitFallback||scores[preferred]>scores[styleMemory]+Number(difficulty.styleSwitchMargin||18)))){
       styleMemory=preferred;
       styleLockUntil=now+Number(difficulty.styleLockMs||450);
     }
