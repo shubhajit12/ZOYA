@@ -2302,11 +2302,13 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // entities. Some servers omit source metadata, so the short attack-time
       // + target-identity window is the fallback for PvP players.
       if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;
-      // A server-attributed hit from ZOYA may arrive after a projectile flight;
-      // if source metadata is missing, require the short melee timing window.
-      if(source&&(source.id===bot.entity?.id||source.username===bot.username)||age>=0&&age<=450)
-        state.lastSelfTargetHurtAt=now;
-      if(age<0||age>450) return;
+      // Mineflayer entityHurt(entity, source) exposes the attacking entity.
+      // Trust explicit self attribution even when a projectile takes longer
+      // than the melee window to land; use the short timing window only when
+      // the server omitted source metadata.
+      const sourceIsSelf=Boolean(source&&(source.id===bot.entity?.id||source.username===bot.username));
+      if(sourceIsSelf||(age>=0&&age<=450))state.lastSelfTargetHurtAt=now;
+      if(!sourceIsSelf&&(age<0||age>450))return;
       // Health-delta polling and entityHurt may report the same server hit.
       // Count the first confirmation only; the 450ms attack window is also
       // the maximum plausible overlap for these two Mineflayer signals.
