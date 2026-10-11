@@ -217,7 +217,7 @@ export function createPvpExpertBrain(options={}){
     // Briefly block an advancing melee opponent when shield is available. Do not
     // raise it at point-blank collision range, during a mace burst escape, or
     // against an opponent already shielding (axe counter logic handles that).
-    if(c.meleeBlockReady&&c.shieldReady&&has(c,"shield")&&d>=2.65&&d<=4.25&&!e.shield) return {action:"shield",style:"shield",priority:9520,reason:"incoming_melee_block"};
+    if(c.meleeBlockReady&&c.shieldReady&&has(c,"shield")&&d>=2.25&&d<=5.2&&!e.shield) return {action:"shield",style:"shield",priority:9520,reason:"incoming_melee_block"};
     if(c.projectileThreat&&c.projectileDodge) return {action:"dodge_projectile",style:"utility",priority:9490,reason:"projectile_dodge"};
     if(e.retreating&&d>=4&&d<=9&&has(c,"rod")) return {action:"rod_control",style:"utility",priority:7550,reason:"rod_control"};
 
@@ -279,8 +279,8 @@ export function createPvpExpertBrain(options={}){
       c.knockbacked||c.stuck||c.hazard||c.badPosition
     ))
       return {action:"pearl_recover",style:"utility",priority:7350,reason:"tactical_recovery"};
-    if(d>=6&&d<=12&&e.retreating&&has(c,"pearl")&&has(c,"burst")&&c.pearlAmbushReady)
-      return {action:"pearl_ambush",style:"utility",priority:7500,reason:"close_retreat"};
+    if(d>=6&&d<=12&&e.retreating&&has(c,"pearl")&&c.recoveryPearlReady&&c.pearlAmbushReady)
+      return {action:"pearl_ambush",style:"utility",priority:7500,reason:"retreating_target_pearl_intercept"};
 
     if(c.spearLungeReady&&has(c,"spear")&&d>=2.0&&d<=3.2&&attackReady)
       return {action:"spear_lunge",style:"spear",priority:7420,reason:"enchanted_spear_jab_lunge"};
