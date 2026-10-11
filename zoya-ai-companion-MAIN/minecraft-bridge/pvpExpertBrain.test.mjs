@@ -151,6 +151,8 @@ const base={
   assert.equal(isProjectileOnCollisionCourse(
     {x:2,y:0,z:0},{x:1,y:0,z:0},{x:0,y:0,z:0},{x:0,y:0,z:0},1.35,8
   ),false,"nearby projectiles moving away must not trigger dodge");
+  assert.ok(controllerSource.includes('bot.blockAt(bot.entity?.position?.offset(0,1,0))'),
+  "spear Lunge readiness must reject water at both feet and head");
   assert.ok(controllerSource.includes('case "spear_lunge": ok=await spearLunge(t);'),
   "spear lunge brain action must route to a real spear-jab executor");
   assert.ok(controllerSource.includes("const lungeObserved=confirmed&&displacement>.65")&&
