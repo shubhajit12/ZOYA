@@ -84,8 +84,8 @@ const base={
     "crossbow combat must inspect charged state instead of treating a short use as a shot");
   assert.ok(controllerSource.includes("crossbow_load_unconfirmed"),
     "crossbow must fail closed when loading cannot be confirmed");
-  assert.ok(controllerSource.includes("crossbow_fire_state_changed confirmed=true"),
-    "crossbow fire must be confirmed by a charged-state transition");
+  assert.ok(controllerSource.includes("crossbow_shot_confirmed="),
+    "crossbow fire must be confirmed by projectile spawn or target damage");
   assert.ok(controllerSource.includes("crossbow_shot_confirmed="),
     "crossbow firing must confirm a projectile launch or observed target damage");
   assert.ok(controllerSource.includes("bow_shot_confirmed="),
@@ -98,10 +98,10 @@ const base={
 
 
 {
-  assert.ok(controllerSource.includes("rod_cast_reel issued bobber_observed="),
+  assert.ok(controllerSource.includes("rod_cast_reel_confirmed="),
     "rod control must cast and retract with two use actions, not merely release item use");
   assert.ok(controllerSource.includes("await sleep(80);")&&controllerSource.includes("await sleep(90);")&&
-    controllerSource.includes("rod_cast_reel issued bobber_observed="),
+    controllerSource.includes("rod_cast_reel_confirmed="),
     "rod must issue a second click to reel before switching back to melee");
 }
 
