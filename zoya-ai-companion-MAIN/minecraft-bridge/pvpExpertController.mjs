@@ -1659,35 +1659,43 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       if(!selectHotbarItem("wind")){catchFailureReason="wind_hotbar_select_failed";return false}
       const beforeWindCharges=new Set(Object.values(bot.entities||{}).filter(e=>/wind_charge/.test(lname(e))).map(e=>e.id));
       await bot.lookAt(pearlAim(),true);
+      const beforeFollowupPos=bot.entity.position.clone();
+      let lastObservedPosition=beforeFollowupPos.clone();
       bot.activateItem();await sleep(45);bot.deactivateItem();
-      let windProjectileObserved=false;
-      const windProjectileUntil=Date.now()+300;
-      while(state.active&&taskIsActive()&&Date.now()<windProjectileUntil&&!windProjectileObserved){
-        windProjectileObserved=Object.values(bot.entities||{}).some(e=>/wind_charge/.test(lname(e))&&!beforeWindCharges.has(e.id));
-        if(!windProjectileObserved)await sleep(15);
-      }
-      log("[PVP-EXPERT] pearl_catch_wind_followup_projectile_observed="+windProjectileObserved);
 
+      // Observe pearl spawn, wind-charge spawn, and teleport in one loop. The
+      // pearl can be caught before a later polling phase starts, so retain the
+      // entitySpawn event object and measure a per-update teleport-sized jump
+      // from immediately before the follow-up (not cumulative wind knockback).
       let pearl=spawnedPearl;
       const pearlUntil=Date.now()+700;
-      while(state.active&&taskIsActive()&&Date.now()<pearlUntil&&!pearl){
-        pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!before.has(e.id)&&e.position&&e.position.distanceTo(catchBaseline)<3.0)
-          .sort((a,b)=>a.position.distanceTo(catchBaseline)-b.position.distanceTo(catchBaseline))[0]||null;
-        if(!pearl)await sleep(20);
-      }
-      if(!pearl){catchFailureReason="pearl_projectile_not_observed";log("[PVP-EXPERT] pearl_catch pearl_found=false same_line_followup=true");return false}
-
-      // The baseline is captured before the pearl throw, not after the wind
-      // burst. Otherwise an instant catch could teleport before tracking starts
-      // and the later displacement check would compare against the new location.
-      const beforePos=catchBaseline;
       const catchUntil=Date.now()+2800;
-      let caught=false;
+      let caught=false,windProjectileObserved=false,pearlObservationExpired=false;
       while(state.active&&taskIsActive()&&Date.now()<catchUntil){
-        const pearlStillExists=Boolean(bot.entities?.[pearl.id]);
-        const displaced=bot.entity.position.distanceTo(beforePos)>3.0;
-        if(isConfirmedPearlCatch(displaced,pearlStillExists)){caught=true;break}
-        await sleep(25);
+        const now=Date.now();
+        if(!pearl&&now<pearlUntil){
+          pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!before.has(e.id)&&e.position&&e.position.distanceTo(catchBaseline)<3.0)
+            .sort((a,b)=>a.position.distanceTo(catchBaseline)-b.position.distanceTo(catchBaseline))[0]||null;
+        }
+        windProjectileObserved=windProjectileObserved||Object.values(bot.entities||{}).some(e=>
+          /wind_charge/.test(lname(e))&&!beforeWindCharges.has(e.id));
+        if(!pearl&&now>=pearlUntil){pearlObservationExpired=true;break}
+        if(pearl){
+          const currentPosition=bot.entity.position.clone();
+          const movementStep=currentPosition.distanceTo(lastObservedPosition);
+          lastObservedPosition=currentPosition;
+          const pearlStillExists=Boolean(bot.entities?.[pearl.id]);
+          if(isConfirmedPearlCatch(movementStep>3.0,pearlStillExists)){caught=true;break}
+        }else{
+          lastObservedPosition=bot.entity.position.clone();
+        }
+        await sleep(20);
+      }
+      log("[PVP-EXPERT] pearl_catch_wind_followup_projectile_observed="+windProjectileObserved);
+      if(!pearl){
+        catchFailureReason="pearl_projectile_not_observed";
+        log("[PVP-EXPERT] pearl_catch pearl_found=false same_line_followup=true observation_expired="+pearlObservationExpired);
+        return false;
       }
       state.pearlCatchCooldownUntil=Date.now()+3500;
       await equipBestMelee();
