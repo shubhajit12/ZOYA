@@ -158,15 +158,15 @@ export function createPvpExpertBrain(options={}){
     // Do not waste a weapon cooldown on attacks through walls or around
     // corners. Survival/escape decisions above remain higher priority.
     if(!c.lineOfSight) return {action:"reacquire",style:styleMemory||"sword",priority:9580,reason:"lost_los_before_attack"};
-    // Prefer the bounded multi-strike shield-drain executor when its full
-    // prerequisites are ready. Otherwise issue one confirmed axe shield-break
-    // strike; never fake a same-tick axe+mace attack.
+    // When a real falling window, axe, mace, and wind charge are all ready,
+    // run the full shield-disable → wind launch → confirmed mace-smash sequence.
+    // Otherwise use the bounded shield-drain or one-strike fallback.
+    if(c.stunSlamReady&&has(c,"axe")&&has(c,"mace")&&has(c,"wind"))
+      return {action:"stun_slam",style:"mace",priority:9450,reason:"confirmed_shield_disable_wind_mace_slam"};
     if(e.shield&&e.usingItem&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady&&c.shieldDrainReady)
       return {action:"shield_drain",style:"axe",priority:9440,reason:"shield_drain_sequence"};
     if(e.shield&&e.usingItem&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady)
       return {action:"shield_break",style:"axe",priority:9430,reason:"active_shield_disable_before_mace"};
-    if(c.stunSlamReady&&has(c,"axe")&&has(c,"mace"))
-      return {action:"stun_slam",style:"mace",priority:9420,reason:"falling_shield_disable_setup"};
     if(c.windCancelReady&&has(c,"wind")&&d>=3&&d<=7)
       return {action:"wind_charge_cancel",style:"utility",priority:9390,reason:"cancel_airborne_approach"};
     if(c.backstabReady&&has(c,"sword")&&d>=2.15&&d<=3.05&&attackReady)
