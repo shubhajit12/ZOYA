@@ -830,3 +830,10 @@ console.log("PvP failed-strike cooldown regression tests passed.");
   assert.equal(d.action,"mace_d_tap","validated mace smash window with a safe crystal base should select mace-crystal D-tap");
 }
 console.log("Mace-crystal D-tap and attribute-swap separation tests passed.");
+
+{
+  assert.ok(controllerSource.includes('mace_d_tap sequence_complete=true mace_confirmed=true crystal_followup_confirmed=') &&
+    controllerSource.includes('return true;\n  };\n\n  const maceSmash=async'),
+    "a confirmed mace hit must not be reclassified as failure merely because the optional crystal follow-up is unsafe or unconfirmed");
+}
+
