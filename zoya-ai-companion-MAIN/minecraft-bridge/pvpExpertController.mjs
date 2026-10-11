@@ -1104,7 +1104,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!await equip("pearl"))return false;
     const beforePos=bot.entity.position.clone();
     const beforePearls=new Set(Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))).map(e=>e.id));
+    let observedPearl=null, pearlSpawnListener=null;
+    const launchOrigin=beforePos.clone();
     try{
+      pearlSpawnListener=e=>{
+        if(!e||! /ender_pearl/.test(lname(e))||beforePearls.has(e.id)||!e.position)return;
+        if(e.position.distanceTo(launchOrigin)<3.0)observedPearl=e;
+      };
+      bot.on?.("entitySpawn",pearlSpawnListener);
       // A pearl follows a ballistic arc; looking directly at the landing block
       // points below the needed trajectory and often makes the pearl hit short.
       // Compensate for gravity using approximate flight ticks (1.35 blocks/tick
@@ -1120,11 +1127,11 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       bot.activateItem();
       await sleep(85);
       bot.deactivateItem();
-      let pearl=null;
+      let pearl=observedPearl;
       const projectileDeadline=Date.now()+650;
       while(state.active&&taskIsActive()&&Date.now()<projectileDeadline&&!pearl){
-        pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!beforePearls.has(e.id)&&e.position)
-          .sort((a,b)=>a.position.distanceTo(bot.entity.position)-b.position.distanceTo(bot.entity.position))[0]||null;
+        pearl=Object.values(bot.entities||{}).filter(e=>/ender_pearl/.test(lname(e))&&!beforePearls.has(e.id)&&e.position&&e.position.distanceTo(launchOrigin)<3.0)
+          .sort((a,b)=>a.position.distanceTo(launchOrigin)-b.position.distanceTo(launchOrigin))[0]||null;
         if(!pearl)await sleep(20);
       }
       if(!pearl){
@@ -1152,6 +1159,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       log("[PVP-EXPERT] pearl_throw mode="+mode+" failed: "+(error?.message||String(error)));
       notePearlFailure(mode,"exception");
       return false;
+    }finally{
+      try{if(pearlSpawnListener)bot.removeListener?.("entitySpawn",pearlSpawnListener)}catch{}
     }
   };
 
