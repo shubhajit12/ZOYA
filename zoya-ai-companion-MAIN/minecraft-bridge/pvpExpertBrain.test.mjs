@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -11,6 +11,19 @@ const heldCloseDeclaration=controllerSource.indexOf("const enemyMaceHeldClose=Bo
 const windMaceReadiness=controllerSource.indexOf("windMaceSmashReady:Boolean(");
 assert.ok(heldCloseDeclaration>=0,"enemyMaceHeldClose must be explicitly defined in the combat tick");
 assert.ok(windMaceReadiness>heldCloseDeclaration,"enemyMaceHeldClose must be defined before wind-mace readiness reads it");
+
+assert.ok(controllerSource.includes('combat_loadout totem_equipped='),"PvP startup must log and prepare an available offhand totem");
+
+{
+  assert.equal(isLikelyTotemPop({wasEquipped:true,nowEquipped:false,targetHealth:null,recentConfirmedHit:true}),true,
+    "a recent confirmed hit plus disappearance of the equipped totem should trigger the pop-pressure window when player health is unavailable");
+  assert.equal(isLikelyTotemPop({wasEquipped:true,nowEquipped:false,targetHealth:3,recentConfirmedHit:false}),true,
+    "low observed target health may corroborate an equipment transition");
+  assert.equal(isLikelyTotemPop({wasEquipped:true,nowEquipped:false,targetHealth:null,recentConfirmedHit:false}),false,
+    "equipment disappearance without a recent hit must not be mislabeled as a pop");
+  assert.equal(isLikelyTotemPop({wasEquipped:false,nowEquipped:false,targetHealth:1,recentConfirmedHit:true}),false,
+    "a target without an equipped totem cannot have a totem pop inferred");
+}
 
 
 const base={
