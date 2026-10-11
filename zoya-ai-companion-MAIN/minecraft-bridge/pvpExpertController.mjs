@@ -42,6 +42,16 @@ export function estimateObservedFallDistance(entity, peakY) {
   return Math.max(0,num(entity?.fallDistance),num(peakY,y)-y);
 }
 
+export function predictTargetPosition(position,velocity={},acceleration={},leadTicks=2) {
+  if(!position)return null;
+  const ticks=Math.max(0,Math.min(4,num(leadTicks)));
+  const axis=(key)=>{
+    const p=num(position[key]),v=num(velocity?.[key]),a=Math.max(-0.035,Math.min(0.035,num(acceleration?.[key])));
+    return p+v*ticks+0.5*a*ticks*ticks;
+  };
+  return {x:axis("x"),y:axis("y"),z:axis("z")};
+}
+
 // Pure spacing policy shared with deterministic tests. Never extends hit reach.
 export function pressureOrbitMode(distance) {
   const d=Number(distance);
@@ -146,6 +156,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     lastPearlAt:0,pearlCooldownUntil:0,lastPearlType:null,pearlCatchCooldownUntil:0,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
     lastAttackConfirmedAt:0,pendingEntityHitUntil:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,maceEvasionCooldownUntil:0,
+    lastTargetVelocity:null,lastTargetVelocityAt:0,targetAcceleration:{x:0,y:0,z:0},
     lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null,lastCombatDiagAt:0
   };
 
@@ -201,7 +212,8 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     if(!t?.position) return false;
     const v=t.velocity||{x:0,y:0,z:0};
     const leadTicks=Math.max(0,Math.min(4,num(lead)*20));
-    const p=t.position.offset(num(v.x)*leadTicks,num(v.y)*leadTicks,num(v.z)*leadTicks);
+    const predicted=predictTargetPosition(t.position,v,state.targetAcceleration,leadTicks);
+    const p=t.position.offset(predicted.x-num(t.position.x),predicted.y-num(t.position.y),predicted.z-num(t.position.z));
     try{await bot.lookAt(p.offset(0,Math.max(.9,num(t.height,1.8)*.62),0),true);return true}catch{return false}
   };
 
@@ -1497,6 +1509,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     state.targetLandedAt=0;
     state.lastAttackAttemptAt=0;
     state.lastAttackConfirmedAt=0;state.pendingEntityHitUntil=0;
+    state.lastTargetVelocity=null;state.lastTargetVelocityAt=0;state.targetAcceleration={x:0,y:0,z:0};
     state.selfPeakY=num(bot.entity?.position?.y);
     const onTargetGone=e=>{
       if(e?.username&&String(e.username).toLowerCase()===state.targetUsername.toLowerCase()) state.lastTargetSeenAt=0;
@@ -1561,6 +1574,22 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         }
         state.lastTargetSeenAt=Date.now();
         if(t.health!=null&&num(t.health)<=0){task.terminationReason="target_defeated";return true}
+        // Estimate target acceleration from tick-scaled velocity samples. Clamp
+        // noisy packet deltas and reset stale samples after long action waits.
+        const motionAt=Date.now(),motionV=t.velocity||{x:0,y:0,z:0};
+        const motionDt=motionAt-state.lastTargetVelocityAt;
+        if(state.lastTargetVelocity&&motionDt>=25&&motionDt<=250){
+          const ticks=motionDt/50;
+          for(const axis of ["x","y","z"]){
+            const observed=(num(motionV[axis])-num(state.lastTargetVelocity[axis]))/ticks;
+            const bounded=Math.max(-0.035,Math.min(0.035,observed));
+            state.targetAcceleration[axis]=state.targetAcceleration[axis]*0.55+bounded*0.45;
+          }
+        }else if(motionDt>250){state.targetAcceleration={x:0,y:0,z:0}}
+        if(motionDt>=25||!state.lastTargetVelocity){
+          state.lastTargetVelocity={x:num(motionV.x),y:num(motionV.y),z:num(motionV.z)};
+          state.lastTargetVelocityAt=motionAt;
+        }
 
         const hp=num(bot.health,20),th=num(t.health,20),d=dist(bot.entity,t);
         const selfY=num(bot.entity?.position?.y);
