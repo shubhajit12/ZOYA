@@ -326,7 +326,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     failedActions:Object.create(null),failedActionUntil:0,
     committedStyle:null,styleCommitUntil:0,totemEquipped:false,
     lastPearlAt:0,pearlCooldownUntil:0,pearlFailureUntil:0,pearlFailureStreak:0,lastPearlType:null,pearlCatchCooldownUntil:0,pearlCatchFailureStreak:0,maceEscapeCooldownUntil:0,emergencyRetreatUntil:0,spacingLockUntil:0,shieldCooldownUntil:0,
-    lastAttackConfirmedAt:0,pendingEntityHitUntil:0,lastTargetHurtAt:0,
+    lastAttackConfirmedAt:0,pendingEntityHitUntil:0,lastTargetHurtAt:0,lastSelfTargetHurtAt:0,
     maceLaunchUntil:0,lastMaceSmashAt:0,lastJumpResetAt:0,lastTargetOnGround:null,targetLandedAt:0,maceEvasionCooldownUntil:0,
     lastTargetVelocity:null,lastTargetVelocityAt:0,targetAcceleration:{x:0,y:0,z:0},
     lastAttackAttemptAt:0,lastAttackConfirmedAt:0,selfPeakY:null,lastCombatDiagAt:0
@@ -874,7 +874,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           return false;
         }
         const before=new Set(Object.values(bot.entities||{}).filter(e=>/arrow|spectral_arrow/.test(lname(e))).map(e=>e.id));
-        const targetHurtBefore=state.lastTargetHurtAt;
+        const targetHurtBefore=state.lastSelfTargetHurtAt;
         await keepAim();
         bot.activateItem();
         const deadline=Date.now()+1050;
@@ -929,7 +929,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           log("[PVP-EXPERT] crossbow_load_confirmed");
         }
         const beforeProjectiles=new Set(Object.values(bot.entities||{}).filter(e=>/arrow|spectral_arrow|firework_rocket/.test(lname(e))).map(e=>e.id));
-        const targetHurtBefore=state.lastTargetHurtAt;
+        const targetHurtBefore=state.lastSelfTargetHurtAt;
         await keepAim();
         bot.activateItem();
         await sleep(90);
@@ -2290,6 +2290,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       // entities. Some servers omit source metadata, so the short attack-time
       // + target-identity window is the fallback for PvP players.
       if(source&&(source.id!==bot.entity?.id&&source.username!==bot.username)) return;
+      // Keep a separate self-attributed hit signal for ranged attacks. The
+      // general timestamp above intentionally includes environmental/other-player
+      // damage for explosion and utility telemetry, but must not prove our arrow hit.
+      state.lastSelfTargetHurtAt=Date.now();
       // Health-delta polling and entityHurt may report the same server hit.
       // Count the first confirmation only; the 450ms attack window is also
       // the maximum plausible overlap for these two Mineflayer signals.
