@@ -903,12 +903,39 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         return projectileSeen||targetHurt;
       }
       if(type==="potion"){
-        await keepAim();
+        // A use packet is not proof that a potion was thrown. Observe both the
+        // inventory transition and newly spawned potion/cloud entities, then
+        // separately report whether the target was observed taking damage.
+        const live=await keepAim();
+        if(!live?.position||dist(bot.entity,live)>8.0)return false;
+        const beforeCount=count(bot,"potion");
+        const beforeProjectiles=new Set(Object.values(bot.entities||{})
+          .filter(e=>/^(potion|area_effect_cloud)$/.test(lname(e)))
+          .map(e=>e.id));
+        const targetHurtBefore=state.lastTargetHurtAt;
         bot.activateItem();
-        await sleep(180);
+        await sleep(100);
         bot.deactivateItem();
-        await sleep(90);
-        return true;
+        const deadline=Date.now()+420;
+        let projectileSpawned=false;
+        while(state.active&&taskIsActive()&&Date.now()<deadline){
+          projectileSpawned=Object.values(bot.entities||{}).some(e=>
+            e?.position&&/^(potion|area_effect_cloud)$/.test(lname(e))&&!beforeProjectiles.has(e.id)
+          );
+          if(projectileSpawned||count(bot,"potion")<beforeCount||state.lastTargetHurtAt>targetHurtBefore)break;
+          await sleep(20);
+        }
+        const inventoryDecreased=count(bot,"potion")<beforeCount;
+        const targetHurt=state.lastTargetHurtAt>targetHurtBefore;
+        const thrown=projectileSpawned||inventoryDecreased;
+        log("[PVP-EXPERT] potion_throw_confirmed="+thrown+
+          " projectile_spawned="+projectileSpawned+
+          " inventory_decreased="+inventoryDecreased+
+          " target_hurt_observed="+targetHurt+
+          " effect_confirmed=false");
+        // Projectile existence proves only a throw, not that it hit or had a
+        // useful effect. Never report a successful debuff from activation alone.
+        return thrown;
       }
       return false;
     }catch(error){
