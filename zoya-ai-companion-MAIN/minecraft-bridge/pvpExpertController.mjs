@@ -670,11 +670,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         if(bobberSeen)break;
         await sleep(35);
       }
-      // Retract regardless of whether the server exposes the bobber entity;
-      // this keeps the rod from remaining in a stale cast state.
+      // Release the cast use state before the second right-click. Without
+      // this release, some Mineflayer/protocol combinations treat the second
+      // use as a held-item continuation rather than a fresh reel-in click.
       await sleep(80);
+      bot.deactivateItem();
+      await sleep(50);
       bot.activateItem();
       await sleep(90);
+      bot.deactivateItem();
+      await sleep(50);
       await equipBestMelee();
       const current=targetOf(bot,state.targetUsername)||t;
       if(current?.position)await lookAtTarget(current,.04);
