@@ -579,8 +579,9 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       await equipBestMelee();
       const current=targetOf(bot,state.targetUsername)||t;
       if(current?.position)await lookAtTarget(current,.04);
-      log("[PVP-EXPERT] rod_cast_reel issued bobber_observed="+bobberSeen+"; melee_followup_ready=true");
-      return true;
+      log("[PVP-EXPERT] rod_cast_reel_confirmed="+bobberSeen+" bobber_observed="+bobberSeen+
+        "; melee_followup_ready=true");
+      return bobberSeen;
     }catch(error){
       log("[PVP-EXPERT] rod_control_failed error="+(error?.message||String(error)));
       try{bot.deactivateItem()}catch{}
@@ -663,13 +664,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     };
     try{
       if(type==="bow"){
-        // Bows cannot fire without an arrow in the player inventory. Check
-        // before charging so the controller doesn't spend the entire combat
-        // window holding an unloaded bow.
+        // Bows cannot fire without an arrow in inventory. Record projectile
+        // identities before release so a successful charge is not mistaken
+        // for a shot when the server rejects or cancels the release.
         if(count(bot,"arrow")<=0){
           log("[PVP-EXPERT] bow_fire_blocked reason=no_arrow_ammunition");
           return false;
         }
+        const before=new Set(Object.values(bot.entities||{}).filter(e=>/arrow|spectral_arrow/.test(lname(e))).map(e=>e.id));
+        const targetHurtBefore=state.lastTargetHurtAt;
         await keepAim();
         bot.activateItem();
         const deadline=Date.now()+1050;
@@ -678,17 +681,27 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           await sleep(70);
         }
         bot.deactivateItem();
-        await sleep(100);
-        log("[PVP-EXPERT] bow_release_issued charge_ms=1050");
-        return true;
+        const confirmUntil=Date.now()+350;
+        let projectileSeen=false;
+        while(state.active&&taskIsActive()&&Date.now()<confirmUntil){
+          projectileSeen=Object.values(bot.entities||{}).some(e=>
+            e?.position&&/arrow|spectral_arrow/.test(lname(e))&&!before.has(e.id)
+          );
+          if(projectileSeen||state.lastTargetHurtAt>targetHurtBefore)break;
+          await sleep(20);
+        }
+        const targetHurt=state.lastTargetHurtAt>targetHurtBefore;
+        log("[PVP-EXPERT] bow_shot_confirmed="+(projectileSeen||targetHurt)+
+          " projectile_spawned="+projectileSeen+" target_hurt_observed="+targetHurt);
+        return projectileSeen||targetHurt;
       }
       if(type==="crossbow"){
         // Crossbows can fire a previously loaded projectile without spare
         // inventory arrows, but loading requires ammunition. Never claim a
         // shot when the crossbow is empty and no projectile is available.
         let charged=crossbowChargeState();
-        if(charged!==true&&count(bot,"arrow")<=0){
-          log("[PVP-EXPERT] crossbow_fire_blocked reason=unloaded_no_arrow_ammunition");
+        if(charged!==true&&count(bot,"arrow")<=0&&count(bot,"firework")<=0){
+          log("[PVP-EXPERT] crossbow_fire_blocked reason=unloaded_no_valid_ammunition");
           return false;
         }
         // Crossbows must be loaded before the firing click. A short 160 ms
@@ -713,18 +726,32 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           }
           log("[PVP-EXPERT] crossbow_load_confirmed");
         }
+        const beforeProjectiles=new Set(Object.values(bot.entities||{}).filter(e=>/arrow|spectral_arrow|firework_rocket/.test(lname(e))).map(e=>e.id));
+        const targetHurtBefore=state.lastTargetHurtAt;
         await keepAim();
         bot.activateItem();
         await sleep(90);
         bot.deactivateItem();
         await sleep(120);
         const after=crossbowChargeState();
-        if(after===false){
-          log("[PVP-EXPERT] crossbow_fire_state_changed confirmed=true");
-          return true;
+        const fired=after===false;
+        if(!fired){
+          log("[PVP-EXPERT] crossbow_fire_unconfirmed nbt_state="+String(after));
+          return false;
         }
-        log("[PVP-EXPERT] crossbow_fire_unconfirmed nbt_state="+String(after));
-        return false;
+        const confirmUntil=Date.now()+350;
+        let projectileSeen=false;
+        while(state.active&&taskIsActive()&&Date.now()<confirmUntil){
+          projectileSeen=Object.values(bot.entities||{}).some(e=>
+            e?.position&&/arrow|spectral_arrow|firework_rocket/.test(lname(e))&&!beforeProjectiles.has(e.id)
+          );
+          if(projectileSeen||state.lastTargetHurtAt>targetHurtBefore)break;
+          await sleep(20);
+        }
+        const targetHurt=state.lastTargetHurtAt>targetHurtBefore;
+        log("[PVP-EXPERT] crossbow_shot_confirmed="+(projectileSeen||targetHurt)+
+          " projectile_spawned="+projectileSeen+" target_hurt_observed="+targetHurt);
+        return projectileSeen||targetHurt;
       }
       if(type==="potion"){
         await keepAim();
