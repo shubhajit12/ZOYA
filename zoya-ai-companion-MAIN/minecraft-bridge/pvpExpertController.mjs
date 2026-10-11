@@ -61,7 +61,7 @@ function targetOf(bot,u){
   return Object.values(bot.players||{}).find(p=>String(p?.username||"").toLowerCase()===w)?.entity||null;
 }
 function speed(e){return Math.hypot(num(e?.velocity?.x),num(e?.velocity?.z))}
-function isAirborne(e){return e?.onGround===false}
+function isAirborne(e){return e?.onGround===false||(e?.onGround==null&&num(e?.velocity?.y)<-.08)}
 function isElytraItem(i){return lname(i)==="elytra"}
 
 export function isCrystalFallbackSafe({health=null,selfDistance=0,targetDistance=Infinity,totemEquipped=false}={}) {
@@ -2536,7 +2536,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         };
         const ctx={
           distance:d,health:hp,maxHealth:num(bot.maxHealth,20),food:num(bot.food,20),
-          onGround:bot.entity?.onGround!==false,falling:num(bot.entity?.velocity?.y)<-.08,
+          onGround:bot.entity?.onGround===true||(bot.entity?.onGround==null&&Math.abs(num(bot.entity?.velocity?.y))<.08),falling:num(bot.entity?.velocity?.y)<-.08,
           fallDistance:selfFallDistance,heightAdvantage:num(bot.entity?.position?.y)>num(t.position?.y)+1.5,
           knockbacked:speed(bot.entity)>.84,lineOfSight,enemy,
           projectileThreat:projectileIncoming,projectileDodge:projectileIncoming,
