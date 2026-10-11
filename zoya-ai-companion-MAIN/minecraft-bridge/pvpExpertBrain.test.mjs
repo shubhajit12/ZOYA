@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isEntityUsingItem, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isEntityUsingItem, isEntityBlockingWithShield, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -188,6 +188,19 @@ const base={
     "explicit high-level use state takes precedence when available");
   assert.ok(controllerSource.includes("usingItem:isEntityUsingItem(t)"),
     "combat brain must use protocol-aware active-hand detection for enemy counterplay");
+}
+
+
+{
+  assert.equal(isEntityBlockingWithShield({equipment:[{name:"diamond_sword"},{name:"shield"}],metadata:{8:1}}),false,
+    "using a main-hand item while carrying an offhand shield is not active shield blocking");
+  assert.equal(isEntityBlockingWithShield({equipment:[{name:"diamond_sword"},{name:"shield"}],metadata:{8:3}}),true,
+    "the offhand active-hand bit must detect actual offhand shield blocking");
+  assert.equal(isEntityBlockingWithShield({equipment:[{name:"shield"},{name:"totem_of_undying"}],metadata:{8:1}}),true,
+    "main-hand shield use must be recognized");
+  assert.equal(isEntityBlockingWithShield({equipment:[{name:"diamond_sword"},{name:"shield"}],metadata:{8:0}}),false);
+  assert.ok(controllerSource.includes("usingItem:isEntityBlockingWithShield(t)"),
+    "brain shield logic must receive active-shield state, not generic item-use state");
 }
 
 console.log("PvP Expert Brain deterministic tests passed.");
