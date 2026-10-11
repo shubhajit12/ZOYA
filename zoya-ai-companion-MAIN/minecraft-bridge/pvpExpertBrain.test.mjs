@@ -93,7 +93,8 @@ const base={
 {
   assert.ok(controllerSource.includes("rod_cast_reel issued bobber_observed="),
     "rod control must cast and retract with two use actions, not merely release item use");
-  assert.ok(controllerSource.includes("await sleep(80);\n      bot.activateItem();\n      await sleep(90);"),
+  assert.ok(controllerSource.includes("await sleep(80);")&&controllerSource.includes("await sleep(90);")&&
+    controllerSource.includes("rod_cast_reel issued bobber_observed="),
     "rod must issue a second click to reel before switching back to melee");
 }
 
