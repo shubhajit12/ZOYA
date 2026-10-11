@@ -178,6 +178,28 @@ const base={
 }
 
 {
+  const brain=makeBrain();
+  brain.decide({...base,distance:2.4});
+  const d=brain.decide({...base,distance:4,inventory:{...base.inventory,crystal:4,obsidian:16},
+    crystalArena:true,crystalCycleSafe:true,
+    capabilities:{...base.capabilities,crystal:true,obsidian:true,burst:true,crystalCycleSafe:true}});
+  assert.equal(d.action,"crystal_cycle",
+    "a newly safe crystal window must break the prior sword style lock instead of leaving the cycle unreachable");
+}
+{
+  const brain=makeBrain();
+  brain.decide({...base,distance:2.4});
+  const d=brain.decide({...base,distance:4,inventory:{...base.inventory,respawn_anchor:4,glowstone:16},
+    anchorArena:true,anchorCycleSafe:true,
+    capabilities:{...base.capabilities,respawn_anchor:true,glowstone:true}});
+  assert.equal(d.action,"anchor_cycle",
+    "a valid anchor kit must break the prior sword style lock when an anchor cycle is in range");
+}
+assert.ok(controllerSource.includes('respawn_anchor:has(bot,"anchor"),glowstone:has(bot,"glowstone")'),
+  "controller context must expose anchor and glowstone capabilities consumed by urgent kit selection");
+
+
+{
   const d=makeBrain().decide({...base,health:5,hasTotem:true});
   assert.equal(d.action,"totem");
 }
