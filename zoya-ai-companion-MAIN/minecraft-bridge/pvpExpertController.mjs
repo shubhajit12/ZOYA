@@ -1259,16 +1259,18 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       state.attackCount++;
       await sleep(80);
       const confirmed=await waitForHitConfirmation(live,hitsBefore,healthBefore,280);
-      const impulseDeadline=Date.now()+180;
+      const impulseDeadline=Date.now()+350;
       while(confirmed&&state.active&&taskIsActive()&&Date.now()<impulseDeadline){
         if(bot.entity.position.distanceTo(before)>.65)break;
         await sleep(20);
       }
       const displacement=bot.entity.position.distanceTo(before);
-      log("[PVP-EXPERT] spear_lunge_hit_confirmed="+confirmed+
+      const lungeObserved=confirmed&&displacement>.65;
+      log("[PVP-EXPERT] spear_lunge_confirmed="+lungeObserved+
+        " hit_confirmed="+confirmed+
         " enchant_level="+getEnchantmentLevel(spear,"lunge")+
         " observed_displacement="+displacement.toFixed(2));
-      return confirmed;
+      return lungeObserved;
     }catch(error){
       log("[PVP-EXPERT] spear_lunge_failed error="+(error?.message||String(error)));
       return false;
