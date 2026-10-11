@@ -1560,6 +1560,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       if(!(bot.entity?.elytraFlying||state.elytraFlying)){
         noteFailure?.("elytra_mace","flight_not_started");
+        await restoreElytra();
         return false;
       }
 
@@ -1590,42 +1591,47 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
       }
       if(!await equip("mace","hand")){await restoreElytra();return false}
 
-      const diveUntil=Date.now()+1800;
+      const diveUntil=Date.now()+2200;
+      let divePeakY=num(bot.entity?.position?.y);
       while(state.active&&taskIsActive()&&Date.now()<diveUntil){
         const live=targetOf(bot,state.targetUsername)||t;
-        if(!live)break;
+        if(!live?.position)break;
         const d=dist(bot.entity,live);
         const vy=num(bot.entity?.velocity?.y);
         const y=num(bot.entity?.position?.y);
+        divePeakY=Math.max(divePeakY,y);
+        const fallDistance=estimateObservedFallDistance(bot.entity,divePeakY);
         await lookAtTarget(live,.0);
-        // Keep moving toward the target while descending. Do not attack until
-        // the target is within real mace hit range and the bot is falling.
-        bot.setControlState("forward",true);
-        if(d<=3.05&&vy<-.12&&y>num(live.position?.y)+.3){
+        // Vanilla mace bonus requires a real downward fall, not merely being
+        // above the target. Track the dive apex and enforce the same fall
+        // threshold used by the ordinary mace-smash executor.
+        bot.setControlState("forward",d>3.05);
+        bot.setControlState("back",d<2.35);
+        if(d<=3.05&&d>=2.35&&vy<-.12&&y>num(live.position?.y)+.3&&fallDistance>1.5){
+          const hitsBefore=state.hits;
+          const targetHealthBefore=live.health!=null&&Number.isFinite(Number(live.health))?Number(live.health):null;
           const enemyHeld=lname(live.equipment?.[0]||live.heldItem||"");
           const enemyShielding=/shield/.test(enemyHeld)&&Boolean(live.isUsingItem||live.metadata?.isUsingItem);
-          if(enemyShielding&&has(bot,"axe")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null){
-            // Elytra stun-slam uses the same synchronous axe→mace hotbar
-            // packet sequence; never pretend a slow inventory transfer is a stun.
-            const originalSlot=Number.isInteger(bot.quickBarSlot)?bot.quickBarSlot:null;
-            if(selectHotbarItem("axe")){bot.attack(live);selectHotbarItem("mace");bot.attack(live)}
-            else bot.attack(live);
-            if(originalSlot!=null)try{bot.setQuickBarSlot(originalSlot)}catch{}
-          }else{
-            bot.attack(live);
-          }
+          // Never send two attacks in the same tick and label that a stun:
+          // Minecraft has a shared attack-strength cooldown. The brain must
+          // schedule shield-break pressure as its own action before this dive.
+          bot.attack(live);
           state.lastAttackAt=Date.now();
           state.lastAttackAttemptAt=state.lastAttackAt;
           state.nextAttackAt=state.lastAttackAt+1667;
+          state.lastMaceSmashAt=Date.now();
           state.attackCount++;
-          log("[PVP-EXPERT] elytra_mace_smash_issued distance="+d.toFixed(2)+" shield_stun_attempt="+enemyShielding+"; awaiting server damage confirmation");
+          log("[PVP-EXPERT] elytra_mace_smash_issued distance="+d.toFixed(2)+
+            " fall="+fallDistance.toFixed(2)+" enemy_shielding="+enemyShielding+
+            "; awaiting server damage confirmation");
           stop();
           await sleep(180);
+          const confirmed=await waitForHitConfirmation(live,hitsBefore,targetHealthBefore,280);
+          log("[PVP-EXPERT] elytra_mace_smash_confirmed="+confirmed);
           await restoreElytra();
-          await sleep(120);
-          return true;
+          return confirmed;
         }
-        await sleep(30);
+        await sleep(25);
       }
       stop();
       await restoreElytra();
