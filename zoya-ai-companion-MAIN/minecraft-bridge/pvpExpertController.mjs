@@ -2651,9 +2651,16 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
         // A stale failure cooldown must never replace survival, healing, or
         // escape decisions with an approach/attack action at critical health.
         if(shouldApplyFailedActionBackoff(decision.action)&&blockedUntil>Date.now()){
+          // Never replace a blocked approach/reacquire with the same approach
+          // action: that immediately reinstalls the path that just failed and
+          // defeats the cooldown. Reposition briefly, then let the brain retry
+          // after the bounded backoff expires.
+          const navigationAction=new Set(["approach","reacquire","mace_approach"]).has(decision.action);
           decision = d<=3.3
             ? {action:"defensive_strafe",style:state.style||"sword",priority:5000,reason:"failed_action_backoff"}
-            : {action:"approach",style:state.style||"sword",priority:5000,reason:"failed_action_backoff"};
+            : navigationAction
+              ? {action:"reposition",style:state.style||"sword",priority:5000,reason:"failed_navigation_reposition"}
+              : {action:"approach",style:state.style||"sword",priority:5000,reason:"failed_action_backoff"};
         }
         state.style=decision.style||state.style;state.action=decision.action;
         if(decision.style&&decision.style!=="utility"&&decision.style!==state.committedStyle){state.committedStyle=decision.style;state.styleCommitUntil=Date.now()+Number(combatDifficulty.styleLockMs||450);}
