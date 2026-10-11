@@ -2641,6 +2641,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
             // Missing these flags silently disabled crystal D-tap and prevented
             // observed retreat patterns from boosting ranged style scores.
             bow:has(bot,"bow"),crossbow:has(bot,"crossbow"),crystal:has(bot,"crystal"),obsidian:has(bot,"obsidian"),
+            respawn_anchor:has(bot,"anchor"),glowstone:has(bot,"glowstone"),
             crystalCycleSafe:has(bot,"crystal")&&has(bot,"obsidian")&&Boolean(crystalBase(t)),
             anchorArena:["overworld","the_end"].includes(String(bot.game?.dimension||"")),
             anchorCycleSafe:["overworld","the_end"].includes(String(bot.game?.dimension||""))&&has(bot,"anchor")&&has(bot,"glowstone")&&num(bot.health,20)>=10,
