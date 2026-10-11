@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, projectileClosestApproach, isEntityUsingItem, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -173,6 +173,21 @@ const base={
     "target hurt events must be observable independently of direct melee attack confirmation");
   assert.ok(controllerSource.includes("targetHurtObserved=state.lastTargetHurtAt>targetHurtBefore"),
     "crystal and anchor detonation must accept observed target damage when player health is unavailable");
+}
+
+
+{
+  assert.equal(isEntityUsingItem({metadata:{8:1}}),true,
+    "Java living-entity hand-state bit 0 must detect shield/bow/eating use");
+  assert.equal(isEntityUsingItem({metadata:{8:{value:1}}}),true,
+    "typed Mineflayer metadata must also detect active item use");
+  assert.equal(isEntityUsingItem({metadata:{8:2}}),false,
+    "offhand-selection bit alone must not be mistaken for active item use");
+  assert.equal(isEntityUsingItem({metadata:{8:0}}),false);
+  assert.equal(isEntityUsingItem({isUsingItem:true}),true,
+    "explicit high-level use state takes precedence when available");
+  assert.ok(controllerSource.includes("usingItem:isEntityUsingItem(t)"),
+    "combat brain must use protocol-aware active-hand detection for enemy counterplay");
 }
 
 console.log("PvP Expert Brain deterministic tests passed.");
