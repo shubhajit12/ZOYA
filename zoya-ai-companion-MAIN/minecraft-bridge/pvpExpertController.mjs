@@ -1299,7 +1299,15 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     const crystalPos=base.position.offset(.5,1,.5);
     const enemyDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(t,crystalPos,6,false):null;
     const selfDamage=typeof bot.getExplosionDamages==="function"?bot.getExplosionDamages(bot.entity,crystalPos,6,false):null;
-    if(selfDamage!=null&&enemyDamage!=null)return selfDamage<=Math.max(6,enemyDamage*.8);
+    if(selfDamage!=null&&enemyDamage!=null){
+      const health=num(bot.health,20);
+      const survivalMargin=state.totemEquipped?2:4;
+      // Relative trade value is not enough: never accept a predicted blast that
+      // can kill ZOYA merely because it might hurt the opponent more.
+      if(!Number.isFinite(Number(selfDamage))||!Number.isFinite(Number(enemyDamage))||
+        Number(selfDamage)>=health-survivalMargin)return false;
+      return Number(selfDamage)<=Math.max(6,Number(enemyDamage)*.8);
+    }
     const selfDistance=bot.entity.position.distanceTo(crystalPos);
     const targetDistance=t.position.distanceTo(crystalPos);
     return isCrystalFallbackSafe({health:bot.health,selfDistance,targetDistance,totemEquipped:state.totemEquipped});
