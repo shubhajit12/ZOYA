@@ -720,6 +720,14 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
     peakY=Math.max(peakY,num(bot.entity?.position?.y));
     const valid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&estimateObservedFallDistance(bot.entity,peakY)>=.45&&distanceToEntityHitbox(bot.entity,t)<=3.05;
     if(!valid){stop();return false}
+    // Java critical hits are invalid while sprinting. Release sprint before
+    // the falling strike, then re-check the real server-observable window so
+    // the jump setup does not become a normal sprint hit by accident.
+    bot.setControlState("sprint",false);
+    await sleep(30);
+    const critWindowStillValid=isAirborne(bot.entity)&&num(bot.entity.velocity?.y)<-.05&&
+      estimateObservedFallDistance(bot.entity,peakY)>=.45&&distanceToEntityHitbox(bot.entity,t)<=3.05;
+    if(!critWindowStillValid){stop();return false}
     await lookAtTarget(t,.02);
     const hitsBefore=state.hits,targetHealthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
     bot.attack(t);state.lastAttackAt=Date.now();state.lastAttackAttemptAt=state.lastAttackAt;state.nextAttackAt=state.lastAttackAt+625;state.attackCount++;
