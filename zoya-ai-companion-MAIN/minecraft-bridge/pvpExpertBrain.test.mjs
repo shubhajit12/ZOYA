@@ -317,6 +317,22 @@ console.log("Theobald-impossible difficulty regression tests passed.");
 
 console.log("Hit-dedupe and emergency hysteresis regression tests passed.");
 
+// A close mace holder is evaded before ZOYA takes the first burst hit.
+{
+  const d=makeBrain().decide({...base,distance:3.2,health:20,maceEvasionReady:true,enemyMaceHeldClose:true,
+    enemy:{...base.enemy,held:"mace",airborne:false,falling:false}});
+  assert.equal(d.action,"mace_evasion","close-range mace pressure must trigger a proactive lateral/backstep before waiting for low health");
+}
+{
+  const d=makeBrain().decide({...base,distance:3.2,health:20,maceEvasionReady:false,enemyMaceHeldClose:true,
+    enemy:{...base.enemy,held:"mace",airborne:false,falling:false}});
+  assert.notEqual(d.action,"mace_evasion","mace evasion cooldown must prevent a movement-action spam loop");
+}
+assert.ok(controllerSource.includes('case "mace_evasion": ok=await maceEvasion(t);break;'),
+  "the proactive mace-evasion decision must be connected to a real controller executor");
+assert.ok(controllerSource.includes("maceEvasionCooldownUntil=Date.now()+650"),
+  "mace evasion must have a bounded cooldown so it can counterattack instead of retreating forever");
+
 // Predict a credible airborne mace threat before the damage lands.
 assert.equal(isEnemyMaceDiveThreat({heldItem:"mace",airborne:true,distance:5.8,targetY:65,selfY:64,targetVelocityY:0,verticalDelta:0}),true,"an airborne mace holder in dive range is a threat before downward velocity is observed");
 assert.equal(isEnemyMaceDiveThreat({heldItem:"mace",airborne:false,distance:9,targetY:64,selfY:64,targetVelocityY:0,verticalDelta:0}),false,"a distant grounded mace holder is not an immediate dive threat");
