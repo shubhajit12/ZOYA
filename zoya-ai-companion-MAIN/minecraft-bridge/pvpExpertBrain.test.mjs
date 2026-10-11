@@ -1074,6 +1074,16 @@ assert.ok(throwPearlBody.includes("const teleportDeadline=Date.now()+3500") &&
   throwPearlBody.includes("pearl_throw_aim mode="),
   "pearl throws must expose aim geometry and allow a bounded landing/teleport confirmation window");
 
+assert.ok(throwPearlBody.includes('bot.on?.("entitySpawn",pearlSpawnListener)') &&
+  throwPearlBody.includes('bot.removeListener?.("entitySpawn",pearlSpawnListener)') &&
+  throwPearlBody.includes("let observedPearl=null, pearlSpawnListener=null"),
+  "ordinary pearl tracking must capture fast entity spawns and always remove its listener");
+assert.ok(catchTimingBody.includes('bot.on?.("entitySpawn",pearlSpawnListener)') &&
+  catchTimingBody.includes("const beforePos=catchBaseline") &&
+  catchTimingBody.includes('bot.removeListener?.("entitySpawn",pearlSpawnListener)'),
+  "instant pearl catches must retain the pearl spawn and measure displacement from before teleport, with listener cleanup");
+
+
 assert.ok(catchTimingBody.includes("pearl_catch_wind_followup_projectile_observed="),
   "pearl catch telemetry must distinguish an unobserved wind-charge follow-up from a failed teleport");
 
