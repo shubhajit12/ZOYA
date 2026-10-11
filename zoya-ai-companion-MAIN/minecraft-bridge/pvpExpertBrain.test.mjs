@@ -62,7 +62,12 @@ const brainSource=readFileSync(new URL("./pvpExpertBrain.mjs",import.meta.url),"
     "potion throw must be confirmed from a new projectile/cloud or inventory decrement");
   assert.ok(potionBody.includes("effect_confirmed=false"),
     "potion projectile spawn must not be mislabeled as a confirmed useful effect");
-  assert.ok(controllerSource.includes("shield_block_confirmed=")&&controllerSource.includes("isEntityBlockingWithShield(bot.entity)"),
+  assert.ok(controllerSource.includes("emergency_disengage_confirmed=")&&controllerSource.includes("return reachedGap||progressed;"),
+    "emergency disengage must not report success if it neither reaches a safe gap nor gains distance");
+  assert.ok(controllerSource.includes("mace_evasion_confirmed=")&&controllerSource.includes("return evasionConfirmed;"),
+    "mace evasion must confirm observed displacement instead of succeeding from issued movement inputs alone");
+
+assert.ok(controllerSource.includes("shield_block_confirmed=")&&controllerSource.includes("isEntityBlockingWithShield(bot.entity)"),
     "shield execution must observe an active shield raise instead of reporting success from a use packet alone");
 
 assert.ok(controllerSource.includes('" shieldReady="+Boolean(ctx.shieldReady)+" meleeBlockReady="+Boolean(ctx.meleeBlockReady)+" projectileThreat="+Boolean(ctx.projectileThreat)'),
