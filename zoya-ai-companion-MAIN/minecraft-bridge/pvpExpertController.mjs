@@ -1334,39 +1334,47 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
   // Stun-slam: only attempts the axe stun + mace impact when already falling
   // through a real smash window and the target is visibly using a shield.
   const stunSlam=async t=>{
-    if(!t?.position||!isAirborne(bot.entity)||!has(bot,"axe")||!has(bot,"mace"))return false;
+    if(!t?.position||!isAirborne(bot.entity)||!has(bot,"axe")||!has(bot,"mace")||!has(bot,"wind"))return false;
     if(hotbarSlot("axe")==null||hotbarSlot("mace")==null)return false;
-    const held=lname(t.equipment?.[0]||t.heldItem||"");
     const shielding=isEntityBlockingWithShield(t);
     const d=dist(bot.entity,t);
     if(!shielding||d<2.25||d>3.2||num(bot.entity?.velocity?.y)>=-.08||
       estimateObservedFallDistance(bot.entity,state.selfPeakY)<=1.5||num(state.nextAttackAt)>Date.now())return false;
-    // An axe shield-disable and a mace hit are not two independent attacks
-    // that can safely be emitted in the same tick: Minecraft shares attack
-    // strength cooldown. Execute and confirm the axe strike only; the brain
-    // will reassess the live fall window and schedule a separate mace smash
-    // only if the cooldown and fall geometry still permit it.
-    const hitsBefore=state.hits;
-    const healthBefore=t.health!=null&&Number.isFinite(Number(t.health))?Number(t.health):null;
+    // Real multi-phase stun-slam: confirm an axe shield-disable first, create
+    // enough separation to use a wind charge, then wait for the launch and
+    // execute a normal server-confirmed falling mace smash. Never send two
+    // attack packets in one tick or call the axe hit itself a slam.
     const axeHit=await attack(t,"axe",3.2);
     if(!axeHit){
-      log("[PVP-EXPERT] stun_slam_setup_confirmed=false reason=axe_hit_unconfirmed");
+      log("[PVP-EXPERT] stun_slam_confirmed=false phase=axe reason=hit_unconfirmed");
       return false;
     }
-    await sleep(90);
+    const gapDeadline=Date.now()+1050;
+    while(state.active&&taskIsActive()&&Date.now()<gapDeadline){
+      const live=targetOf(bot,state.targetUsername)||t;
+      if(!live?.position)break;
+      const gap=dist(bot.entity,live);
+      if(gap>=3.6&&gap<=6.5)break;
+      await lookAtTarget(live,.04);
+      bot.setControlState("back",gap<3.6);
+      bot.setControlState("forward",gap>6.5);
+      bot.setControlState("sprint",gap<6.5);
+      bot.setControlState(state.strafe<0?"left":"right",true);
+      await sleep(35);
+    }
+    stop();
     const live=targetOf(bot,state.targetUsername)||t;
-    const liveHeld=lname(live?.equipment?.[0]||live?.heldItem||"");
-    const stillShielding=isEntityBlockingWithShield(live);
-    const fall=estimateObservedFallDistance(bot.entity,state.selfPeakY);
-    const canFollowWithMace=Boolean(live?.position&&isAirborne(bot.entity)&&
-      num(bot.entity?.velocity?.y)<-.08&&fall>1.5&&dist(bot.entity,live)>=2.35&&
-      dist(bot.entity,live)<=3.05&&Date.now()>=state.nextAttackAt&&!stillShielding);
-    log("[PVP-EXPERT] stun_slam_setup_confirmed=true shield_disabled="+(!stillShielding)+
-      " mace_followup_window="+canFollowWithMace+" prior_hits="+hitsBefore+
-      " target_health_before="+String(healthBefore));
-    // Do not claim a slam occurred here. A later brain decision must issue and
-    // confirm the actual mace impact; no fake same-tick double-attack success.
-    return true;
+    const shieldDisabled=!isEntityBlockingWithShield(live);
+    const gap=dist(bot.entity,live);
+    if(!shieldDisabled||gap<3.5||gap>6.5||!state.active||!taskIsActive()){
+      log("[PVP-EXPERT] stun_slam_confirmed=false phase=setup shield_disabled="+shieldDisabled+
+        " distance="+gap.toFixed(2)+"; no unverified mace claim");
+      return false;
+    }
+    const maceConfirmed=await wind(live);
+    log("[PVP-EXPERT] stun_slam_confirmed="+maceConfirmed+
+      " axe_shield_disable_confirmed=true wind_launch_and_mace_followup="+maceConfirmed);
+    return maceConfirmed;
   };
 
   // Mid-air wind-charge reset: use a downward charge to brake a dangerous
@@ -1997,7 +2005,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
            windChargeResetReady:Boolean(has(bot,"wind")&&has(bot,"mace")&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.25&&selfFallDistance>1.5&&d>=2.25&&d<=3.25),
            shieldDrainReady:Boolean(eq.shield&&enemy.usingItem),
            backstabReady:Boolean(backstabReady),
-           stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
+           stunSlamReady:Boolean(has(bot,"axe")&&has(bot,"mace")&&has(bot,"wind")&&hotbarSlot("axe")!=null&&hotbarSlot("mace")!=null&&isAirborne(bot.entity)&&num(bot.entity?.velocity?.y)<-.08&&selfFallDistance>1.5&&num(state.nextAttackAt)<=Date.now()&&d>=2.25&&d<=3.2&&eq.shield&&enemy.usingItem),
           maceEscapeReady:Boolean(Date.now()>=state.maceEscapeCooldownUntil&&d>=2.8),
           maceEvasionReady:Boolean(Date.now()>=state.maceEvasionCooldownUntil),
           recoveryPearlReady:Boolean(has(bot,"pearl")&&Date.now()>=state.pearlCooldownUntil),
