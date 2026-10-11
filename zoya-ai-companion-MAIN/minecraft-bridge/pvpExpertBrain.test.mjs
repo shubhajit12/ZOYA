@@ -943,7 +943,7 @@ assert.ok(controllerSource.includes("retreating:speed(t)>.18&&!enemyClosing"),
   "retreat adaptation must distinguish movement away from ZOYA from generic target movement");
 
 
-assert.ok(controllerSource.includes('const PVP_EXPERT_BUILD_MARKER="2026-10-11-pearl-catch-hotbar-same-line-v3"') && controllerSource.includes('"controller_build="+PVP_EXPERT_BUILD_MARKER'), "runtime logs must identify the exact PvP controller build so stale executables are detectable");
+assert.ok(controllerSource.includes('const PVP_EXPERT_BUILD_MARKER="2026-10-11-pearl-catch-hotbar-same-line-v3"') && controllerSource.includes('controller_build="+PVP_EXPERT_BUILD_MARKER'), "runtime logs must identify the exact PvP controller build so stale executables are detectable");
 assert.ok(controllerSource.includes("const finishDistance=dist(bot.entity,t)") &&
   controllerSource.includes("if(finishDistance<2.05)") &&
   controllerSource.includes("else if(finishDistance>2.85)"),
