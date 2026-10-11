@@ -889,10 +889,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           projectileSeen=Object.values(bot.entities||{}).some(e=>
             e?.position&&/arrow|spectral_arrow/.test(lname(e))&&!before.has(e.id)
           );
-          if(projectileSeen||state.lastTargetHurtAt>targetHurtBefore)break;
+          if(projectileSeen||state.lastSelfTargetHurtAt>targetHurtBefore)break;
           await sleep(20);
         }
-        const targetHurt=state.lastTargetHurtAt>targetHurtBefore;
+        const targetHurt=state.lastSelfTargetHurtAt>targetHurtBefore;
         log("[PVP-EXPERT] bow_shot_confirmed="+(projectileSeen||targetHurt)+
           " projectile_spawned="+projectileSeen+" target_hurt_observed="+targetHurt);
         return projectileSeen||targetHurt;
@@ -947,10 +947,10 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           projectileSeen=Object.values(bot.entities||{}).some(e=>
             e?.position&&/arrow|spectral_arrow|firework_rocket/.test(lname(e))&&!beforeProjectiles.has(e.id)
           );
-          if(projectileSeen||state.lastTargetHurtAt>targetHurtBefore)break;
+          if(projectileSeen||state.lastSelfTargetHurtAt>targetHurtBefore)break;
           await sleep(20);
         }
-        const targetHurt=state.lastTargetHurtAt>targetHurtBefore;
+        const targetHurt=state.lastSelfTargetHurtAt>targetHurtBefore;
         log("[PVP-EXPERT] crossbow_shot_confirmed="+(projectileSeen||targetHurt)+
           " projectile_spawned="+projectileSeen+" target_hurt_observed="+targetHurt);
         return projectileSeen||targetHurt;
