@@ -33,7 +33,7 @@ function styleScores(c){
   // Sword is the default combo weapon: its sustained attack speed is more
   // valuable than an axe's small per-hit advantage. Select axe aggressively
   // only when a shield counter is actually needed.
-  if(invHas(c,"axe")) s.axe=34+(e.shield?62:0)+(d<=3.5?5:0);
+  if(invHas(c,"axe")) s.axe=34+(e.shield&&e.usingItem?62:0)+(d<=3.5?5:0);
   if(invHas(c,"sword")) s.sword=56+(d<=3.15?30:0)+(e.airborne?14:0);
   if(invHas(c,"bow")) s.bow=30+(d>=7?35:0)+(e.retreating?18:0);
   if(invHas(c,"crossbow")) s.crossbow=34+(d>=8?35:0)+(e.retreating?18:0);
@@ -176,8 +176,7 @@ export function createPvpExpertBrain(options={}){
     if(c.projectileThreat&&c.projectileDodge) return {action:"dodge_projectile",style:"utility",priority:9490,reason:"projectile_dodge"};
     if(e.retreating&&d>=4&&d<=9&&has(c,"rod")) return {action:"rod_control",style:"utility",priority:7550,reason:"rod_control"};
 
-    if(e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_counter"};
-    if(e.usingItem&&e.shield&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
+    if(e.shield&&e.usingItem&&has(c,"axe")&&d>=2.45&&d<=3.4&&attackReady) return {action:"shield_break",style:"axe",priority:9400,reason:"shield_bait_counter"};
 
     // The pop signal has a short lifetime; spend it on immediate melee pressure.
     if(e.totemPopped&&d<=3.05&&has(c,"sword")){
