@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createPvpExpertBrain } from "./pvpExpertBrain.mjs";
 import { failedActionBackoffMs } from "./pvpExpertController.mjs";
-import { estimateObservedFallDistance, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
+import { estimateObservedFallDistance, predictTargetPosition, isNewHitConfirmation, isHitConfirmed, shouldCountHealthDeltaHit, shouldApplyFailedActionBackoff, isConfirmedPearlCatch, isConfirmedPearlTeleport, isProjectileOnCollisionCourse, isEnemyMaceDiveThreat, pressureOrbitMode, isLikelyTotemPop } from "./pvpExpertController.mjs";
 
 const makeBrain=()=>createPvpExpertBrain();
 
@@ -282,6 +282,15 @@ console.log("PvP Expert tactical pearl/mace regression tests passed.");
     enemy:{...base.enemy,airborne:true}});
   assert.notEqual(d.action,"hit_select","an airborne target alone is not a landing-timed hit-select window");
 }
+{
+  const predicted=predictTargetPosition({x:10,y:64,z:0},{x:0.2,y:0,z:0},{x:0.02,y:0,z:-0.01},3);
+  assert.ok(Math.abs(predicted.x-10.69)<0.001,"target aim should include bounded acceleration as well as velocity");
+  assert.ok(Math.abs(predicted.y-64)<0.001,"vertical prediction should preserve level movement when vertical velocity and acceleration are zero");
+  assert.ok(Math.abs(predicted.z+0.045)<0.001,"lateral acceleration should be included in short-horizon prediction");
+  const capped=predictTargetPosition({x:0,y:0,z:0},{x:1,y:0,z:0},{x:1,y:0,z:0},20);
+  assert.ok(capped.x<=4.28,"target prediction horizon and acceleration must be bounded to avoid aiming far ahead");
+}
+
 {
   const distance=estimateObservedFallDistance({position:{y:65},onGround:false,velocity:{y:-0.4}},70.4);
   assert.ok(Math.abs(distance-5.4)<0.001,"wind-charge descent must be estimated from observed Y positions when Mineflayer exposes no fallDistance field");
