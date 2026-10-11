@@ -2628,7 +2628,7 @@ export function createPvpExpertController({bot,goals,taskIsActive=()=>true,log=(
           webbed:Boolean(bot.blockAt?.(bot.entity.position)?.name==="cobweb"||bot.blockAt?.(bot.entity.position.offset(0,1,0))?.name==="cobweb"),
           attackReadyAt:state.nextAttackAt,healDistanceMin:4.2,
           inventory:{
-            sword:count(bot,"sword"),axe:count(bot,"axe"),mace:count(bot,"mace"),spear:count(bot,"spear"),
+            sword:count(bot,"sword"),axe:count(bot,"axe"),mace:count(bot,"mace"),spear:count(bot,"spear"),shield:count(bot,"shield"),
             bow:count(bot,"bow"),crossbow:count(bot,"crossbow"),crystal:count(bot,"crystal"),
             obsidian:count(bot,"obsidian"),respawn_anchor:count(bot,"anchor"),glowstone:count(bot,"glowstone"),
              elytra:count(bot,"elytra"),firework:count(bot,"firework")
