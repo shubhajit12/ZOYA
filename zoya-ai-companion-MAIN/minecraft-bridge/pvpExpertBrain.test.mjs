@@ -1101,7 +1101,8 @@ assert.ok(throwPearlBody.includes('bot.on?.("entitySpawn",pearlSpawnListener)') 
   throwPearlBody.includes("let observedPearl=null, pearlSpawnListener=null"),
   "ordinary pearl tracking must capture fast entity spawns and always remove its listener");
 assert.ok(catchTimingBody.includes('bot.on?.("entitySpawn",pearlSpawnListener)') &&
-  catchTimingBody.includes("const beforePos=catchBaseline") &&
+  catchTimingBody.includes("const beforeFollowupPos=bot.entity.position.clone()") &&
+  catchTimingBody.includes("const movementStep=currentPosition.distanceTo(lastObservedPosition)") &&
   catchTimingBody.includes('bot.removeListener?.("entitySpawn",pearlSpawnListener)'),
   "instant pearl catches must retain the pearl spawn and measure displacement from before teleport, with listener cleanup");
 
@@ -1109,6 +1110,9 @@ assert.ok(catchTimingBody.includes('bot.on?.("entitySpawn",pearlSpawnListener)')
 assert.ok(catchTimingBody.includes("pearl_catch_wind_followup_projectile_observed="),
   "pearl catch telemetry must distinguish an unobserved wind-charge follow-up from a failed teleport");
 
+assert.ok(catchTimingBody.includes("let caught=false,windProjectileObserved=false,pearlObservationExpired=false") &&
+  catchTimingBody.includes("isConfirmedPearlCatch(movementStep>3.0,pearlStillExists)"),
+  "pearl catch must confirm a teleport-sized per-update displacement rather than cumulative blast knockback");
 assert.ok(catchTimingBody.includes("const firstWindAt=Date.now()") &&
   catchTimingBody.includes("const windReadyAt=firstWindAt+650") &&
   catchTimingBody.includes("pearl_catch_first_wind_cooldown_elapsed_ms="),
