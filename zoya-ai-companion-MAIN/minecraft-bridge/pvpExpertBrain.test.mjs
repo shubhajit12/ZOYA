@@ -634,7 +634,7 @@ console.log("PvP Expert heal/pearl recovery priority tests passed.");
 }
 {
   const d=makeBrain().decide({...base,distance:2.8,shieldDrainReady:true,attackReadyAt:0,enemy:{...base.enemy,shield:true,usingItem:true}});
-  assert.equal(d.action,"shield_drain","raised shield with axe available should select bounded drain sequence");
+  assert.equal(d.action,"shield_break","raised shield should first trigger a real confirmed axe disable before any drain follow-up");
 }
 {
   const d=makeBrain().decide({...base,distance:2.8,backstabReady:true,attackReadyAt:0});
